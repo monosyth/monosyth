@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>LeaseGenius - AI-Powered Leasing Assistant</title>
+    <!-- Add IBM Plex Sans font -->
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Add main stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav-container">
+        <div class="nav-content">
+            <a href="index.html" class="logo">
+                <img src="images/LeaseGeniusLogo.png" alt="LeaseGenius">
+            </a>
+            <div class="nav-links">
+                <a href="index.html" class="active">Home</a>
+                <div class="nav-item">
+                    <a href="solutions.html">Solutions</a>
+                    <div class="submenu">
+                        <a href="resident-engagement.html">24/7 Engagement</a>
+                        <a href="virtual-leasing.html">Virtual Leasing Agent</a>
+                        <a href="boost-efficiency.html">Efficiency & ROI</a>
+                        <a href="data-insights.html">Data-Driven Insights</a>
+                        <a href="seamless-integration.html">Seamless Integration</a>
+                        <a href="experience.html">Two Decades of Experience</a>
+                    </div>
+                </div>
+                <a href="about-us.html">About Us</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Background video element -->
+    <div class="video-container">
+        <video
+            autoplay
+            muted
+            loop
+            playsinline
+            id="bgVideo"
+            preload="auto">
+            <source src="LG-Starfield-v1.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+
+    <!-- Main content -->
+    <div class="content">
+        <section class="hero">
+            <div class="hero-content">
+                <a href="#explore" class="cta-button">Explore the Future</a>
+            </div>
+        </section>
+
+        <section class="section" id="explore">
+            <div class="section-content">
+                <h2>Welcome to the Future of Property Leasing</h2>
+                <p>At LeaseGenius, we're transforming traditional leasing into an AI-first experience. Our platform goes far beyond simple posting tools. By harnessing advanced artificial intelligence, we automate lead engagement, streamline appointment scheduling, and optimize every step of the leasing journey - 24 hours a day, 7 days a week.</p>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Why Choose LeaseGenius.ai?</h2>
+            <div class="feature-grid">
+                <a href="resident-engagement.html" class="feature-item">
+                    <h3>24/7 Virtual Leasing Agent</h3>
+                    <p>Never miss a prospective tenant again. Our AI handles inquiries and books tours around the clock, ensuring you capture every opportunity-even after hours.</p>
+                    <span class="learn-more">Learn More →</span>
+                </a>
+                <a href="boost-efficiency.html" class="feature-item">
+                    <h3>Boost Efficiency & ROI</h3>
+                    <p>Free up valuable staff time and cut labor costs. Our intelligent assistant handles routine tasks, so your team can focus on closing deals. Clients often see rapid ROI, with leasing performance improvements of over 200%.</p>
+                    <span class="learn-more">Learn More →</span>
+                </a>
+                <a href="data-insights.html" class="feature-item">
+                    <h3>Data-Driven Insights</h3>
+                    <p>Leverage decades of rental market experience. Our platform uses deep data analytics to optimize lead qualification and engagement, delivering actionable insights that drive results.</p>
+                    <span class="learn-more">Learn More →</span>
+                </a>
+                <a href="seamless-integration.html" class="feature-item">
+                    <h3>Seamless Integration</h3>
+                    <p>Designed to work with your existing property management systems, LeaseGenius.ai makes the transition to AI-powered leasing effortless and risk-free.</p>
+                    <span class="learn-more">Learn More →</span>
+                </a>
+                <a href="experience.html" class="feature-item">
+                    <h3>Two Decades of Experience</h3>
+                    <p>With over 20 years in property management and leasing, we've combined our deep industry expertise with cutting-edge AI technology to create solutions that truly understand and address the real challenges of modern leasing operations.</p>
+                    <span class="learn-more">Learn More →</span>
+                </a>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>How It Works</h2>
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <h3>1. Instant Lead Response</h3>
+                    <p>Our AI engages prospects the moment they inquire, answering questions and scheduling property tours in real time.</p>
+                </div>
+                <div class="feature-item">
+                    <h3>2. Smart Lead Qualification</h3>
+                    <p>By automating repetitive tasks and handling routine queries, our platform ensures that only the highest-quality leads reach your leasing team.</p>
+                </div>
+                <div class="feature-item">
+                    <h3>3. Continuous Improvement</h3>
+                    <p>With built-in analytics and feedback loops, LeaseGenius.ai continuously learns and adapts, delivering better results with every interaction.</p>
+                </div>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <h2>The LeaseGenius Advantage</h2>
+                <p>Transform your leasing operations by reducing missed calls, slashing response times, and significantly boosting conversion rates-all without increasing your headcount. With LeaseGenius.ai, your team becomes more productive, your prospects receive superior service, and your bottom line improves.</p>
+                <h3>Ready to Experience the Future of Leasing?</h3>
+                <a href="https://www.WebListers.com" class="cta-button demo-button" target="_blank">Get Your Personalized Demo</a>
+                <p class="emphasis">Join the revolution. Embrace AI, and let LeaseGenius.ai elevate your leasing strategy to genius-level performance.</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Debug and ensure video plays
+        document.addEventListener('DOMContentLoaded', function() {
+            const video = document.getElementById('bgVideo');
+            const videoContainer = document.querySelector('.video-container');
+
+            // Log initial state
+            console.log('Initial video state:', {
+                src: video.currentSrc,
+                readyState: video.readyState,
+                networkState: video.networkState,
+                paused: video.paused,
+                error: video.error,
+                style: {
+                    opacity: video.style.opacity,
+                    display: video.style.display,
+                    width: video.style.width,
+                    height: video.style.height
+                }
+            });
+
+            // Function to handle video loading
+            function initVideo() {
+                if (video.paused) {
+                    video.style.opacity = '1';
+                    videoContainer.style.background = 'transparent';
+
+                    // Force video play with multiple fallback attempts
+                    const playPromise = video.play();
+
+                    if (playPromise !== undefined) {
+                        playPromise
+                            .then(() => {
+                                console.log('Video playback started successfully');
+                                // Make sure video is fully visible
+                                video.style.opacity = '1';
+                            })
+                            .catch(error => {
+                                console.log('Video play failed:', error);
+                                // Retry play after a short delay
+                                setTimeout(() => {
+                                    video.play().catch(e => console.log('Retry failed:', e));
+                                }, 1000);
+                            });
+                    }
+                }
+            }
+
+            // Try to initialize video immediately if metadata is loaded
+            if (video.readyState >= 2) {
+                console.log('Video metadata already loaded, initializing...');
+                initVideo();
+            } else {
+                // Wait for metadata to load
+                console.log('Waiting for video metadata to load...');
+                video.addEventListener('loadedmetadata', initVideo);
+            }
+        });
+    </script>
+</body>
+</html>
