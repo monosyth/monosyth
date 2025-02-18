@@ -266,6 +266,10 @@ li::before {
     position: relative;
 }
 
+.principles-list li::before {
+    content: none;
+}
+
 /* Navigation Styles */
 .nav-container {
     position: fixed;
