@@ -42,7 +42,7 @@ export function AuthConsoleCard() {
   } = useAuth();
 
   return (
-    <div className="flex w-full max-w-3xl flex-col gap-8 rounded-[2rem] bg-stone-950 px-6 py-8 text-stone-50 shadow-[0_30px_80px_rgba(0,0,0,0.22)] sm:px-8 sm:py-10">
+    <div className="flex min-h-[34rem] w-full max-w-3xl flex-col justify-between rounded-[2rem] bg-stone-950 px-6 py-6 text-stone-50 shadow-[0_30px_80px_rgba(0,0,0,0.22)] sm:px-8 sm:py-8">
       <div className="flex items-center justify-between">
         <p className="font-mono text-xs uppercase tracking-[0.3em] text-stone-400">
           Private access
@@ -56,34 +56,20 @@ export function AuthConsoleCard() {
         />
       </div>
 
-      <div className="space-y-3">
-        <p className="text-4xl font-semibold tracking-[-0.06em] sm:text-5xl">
-          monosyth
-        </p>
-        <p className="font-mono text-sm uppercase tracking-[0.38em] text-[var(--gold)]">
-          sign in
-        </p>
-        <p className="max-w-xl text-base leading-8 text-stone-300">
-          {status === "unconfigured"
-            ? "Private access is not connected."
-            : status === "signed_in"
-              ? "Studio access is open."
-              : "Sign in to continue."}
-        </p>
-      </div>
+      <div />
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         {status === "signed_in" ? (
           <>
-            <ActionButton onClick={() => void signOut()} disabled={isWorking}>
-              {isWorking ? "Working..." : "Sign out"}
-            </ActionButton>
             <Link
               href="/app"
               className="rounded-full bg-[var(--gold)] px-4 py-2 text-sm font-medium text-stone-950 transition hover:bg-[#ffd774]"
             >
               Open studio
             </Link>
+            <ActionButton onClick={() => void signOut()} disabled={isWorking}>
+              {isWorking ? "Working..." : "Sign out"}
+            </ActionButton>
           </>
         ) : (
           <ActionButton
