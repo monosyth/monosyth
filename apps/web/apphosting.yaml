@@ -12,7 +12,7 @@ env:
       - BUILD
       - RUNTIME
   - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    value: monosyth-490705
+    value: monosyth
     availability:
       - BUILD
       - RUNTIME
