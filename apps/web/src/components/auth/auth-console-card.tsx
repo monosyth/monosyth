@@ -42,7 +42,7 @@ export function AuthConsoleCard() {
   } = useAuth();
 
   return (
-    <div className="flex min-h-[34rem] w-full max-w-3xl flex-col justify-between rounded-[2rem] bg-stone-950 px-6 py-6 text-stone-50 shadow-[0_30px_80px_rgba(0,0,0,0.22)] sm:px-8 sm:py-8">
+    <div className="flex min-h-[18rem] w-full max-w-3xl flex-col justify-between rounded-[2rem] bg-stone-950 px-6 py-6 text-stone-50 shadow-[0_30px_80px_rgba(0,0,0,0.22)] sm:px-8 sm:py-7">
       <div className="flex items-center justify-between">
         <p className="font-mono text-xs uppercase tracking-[0.3em] text-stone-400">
           Private access
@@ -56,8 +56,6 @@ export function AuthConsoleCard() {
         />
       </div>
 
-      <div />
-
       <div className="flex flex-wrap items-center gap-3">
         {status === "signed_in" ? (
           <>
@@ -65,10 +63,10 @@ export function AuthConsoleCard() {
               href="/app"
               className="rounded-full bg-[var(--gold)] px-4 py-2 text-sm font-medium text-stone-950 transition hover:bg-[#ffd774]"
             >
-              Open studio
+              enter
             </Link>
             <ActionButton onClick={() => void signOut()} disabled={isWorking}>
-              {isWorking ? "Working..." : "Sign out"}
+              {isWorking ? "working..." : "sign out"}
             </ActionButton>
           </>
         ) : (
@@ -77,7 +75,7 @@ export function AuthConsoleCard() {
             primary
             disabled={!isConfigured || isWorking}
           >
-            {isWorking ? "Working..." : "Sign in with Google"}
+            {isWorking ? "working..." : "sign in"}
           </ActionButton>
         )}
       </div>
