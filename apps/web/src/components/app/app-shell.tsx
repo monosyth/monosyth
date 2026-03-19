@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { ProfileEditor } from "@/components/app/profile-editor";
 
 function formatTimestamp(value: string | null) {
   if (!value) {
@@ -149,6 +150,10 @@ export function AppShell() {
           </p>
         </article>
       </section>
+
+      <ProfileEditor
+        key={`${user?.uid ?? "guest"}:${profile?.updatedAt ?? profile?.createdAt ?? "new"}`}
+      />
 
       <section className="glass-panel rounded-[1.75rem] px-5 py-6">
         <p className="font-mono text-xs uppercase tracking-[0.28em] text-stone-500">

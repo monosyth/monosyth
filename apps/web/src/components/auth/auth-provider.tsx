@@ -17,10 +17,21 @@ import {
 
 import { getFirebaseAuth, getGoogleProvider } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
-import { UserProfile, ensureUserProfile } from "@/lib/firebase/profiles";
+import {
+  EditableUserProfile,
+  UserProfile,
+  ensureUserProfile,
+  saveUserProfile,
+} from "@/lib/firebase/profiles";
 
 type AuthStatus = "loading" | "signed_out" | "signed_in" | "unconfigured";
-type ProfileStatus = "idle" | "loading" | "ready" | "error" | "unconfigured";
+type ProfileStatus =
+  | "idle"
+  | "loading"
+  | "ready"
+  | "saving"
+  | "error"
+  | "unconfigured";
 
 type AuthContextValue = {
   error: string | null;
@@ -28,7 +39,10 @@ type AuthContextValue = {
   isWorking: boolean;
   profile: UserProfile | null;
   profileError: string | null;
+  profileSaveMessage: string | null;
+  profileSaveState: "idle" | "saving" | "saved" | "error";
   profileStatus: ProfileStatus;
+  saveProfile: (input: EditableUserProfile) => Promise<void>;
   status: AuthStatus;
   user: User | null;
   signInWithGoogle: () => Promise<void>;
@@ -50,6 +64,10 @@ export function AuthProvider({
   const [isWorking, setIsWorking] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileSaveMessage, setProfileSaveMessage] = useState<string | null>(null);
+  const [profileSaveState, setProfileSaveState] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
   const [profileStatus, setProfileStatus] = useState<ProfileStatus>(
     isFirebaseConfigured() ? "idle" : "unconfigured",
   );
@@ -63,6 +81,8 @@ export function AuthProvider({
       if (!nextUser) {
         setProfile(null);
         setProfileError(null);
+        setProfileSaveMessage(null);
+        setProfileSaveState("idle");
         setProfileStatus(isFirebaseConfigured() ? "idle" : "unconfigured");
       }
     });
@@ -93,6 +113,8 @@ export function AuthProvider({
       startTransition(() => {
         setProfile(null);
         setProfileError(null);
+        setProfileSaveMessage(null);
+        setProfileSaveState("idle");
         setProfileStatus("unconfigured");
       });
       return;
@@ -102,6 +124,8 @@ export function AuthProvider({
       startTransition(() => {
         setProfile(null);
         setProfileError(null);
+        setProfileSaveMessage(null);
+        setProfileSaveState("idle");
         setProfileStatus("idle");
       });
       return;
@@ -112,6 +136,7 @@ export function AuthProvider({
     startTransition(() => {
       setProfileStatus("loading");
       setProfileError(null);
+      setProfileSaveMessage(null);
     });
 
     void ensureUserProfile(user)
@@ -135,6 +160,7 @@ export function AuthProvider({
         startTransition(() => {
           setProfileStatus("error");
           setProfileError(message);
+          setProfileSaveState("error");
         });
       });
 
@@ -190,6 +216,42 @@ export function AuthProvider({
     }
   }
 
+  async function saveProfile(input: EditableUserProfile) {
+    if (!user) {
+      setProfileSaveState("error");
+      setProfileSaveMessage("Sign in first to save your profile.");
+      return;
+    }
+
+    setProfileSaveState("saving");
+    setProfileSaveMessage(null);
+    setProfileError(null);
+    setProfileStatus("saving");
+
+    try {
+      const nextProfile = await saveUserProfile(user, input);
+
+      startTransition(() => {
+        setProfile(nextProfile);
+        setProfileStatus("ready");
+        setProfileSaveState("saved");
+        setProfileSaveMessage("Profile saved.");
+      });
+    } catch (nextError) {
+      const message =
+        nextError instanceof Error
+          ? nextError.message
+          : "Profile save failed.";
+
+      startTransition(() => {
+        setProfileStatus("error");
+        setProfileError(message);
+        setProfileSaveState("error");
+        setProfileSaveMessage("Profile could not be saved.");
+      });
+    }
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -198,7 +260,10 @@ export function AuthProvider({
         isWorking,
         profile,
         profileError,
+        profileSaveMessage,
+        profileSaveState,
         profileStatus,
+        saveProfile,
         status,
         user,
         signInWithGoogle,
