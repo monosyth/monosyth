@@ -31,6 +31,10 @@ Optional values:
 
 - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
 - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+- `AMBIENT_API_KEY`
+- `AMBIENT_APPLICATION_KEY`
+- `AMBIENT_MAC_ADDRESS`
+- `WEATHER_LIMIT`
 
 Then enable the Google provider in Firebase Authentication.
 
@@ -49,8 +53,10 @@ committing it to source control.
 
 - `/`: brand home and auth-aware landing page
 - `/app`: first protected app shell
+- `/weather`: Ambient Weather dashboard route
 
 ## Notes
 
 - The app uses the Firebase Web SDK on the client.
 - If Firebase keys are missing, the UI shows setup guidance instead of crashing.
+- The weather route reads Ambient keys only on the server.

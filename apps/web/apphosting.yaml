@@ -41,3 +41,19 @@ env:
     availability:
       - BUILD
       - RUNTIME
+  - variable: AMBIENT_API_KEY
+    secret: AMBIENT_API_KEY
+    availability:
+      - RUNTIME
+  - variable: AMBIENT_APPLICATION_KEY
+    secret: AMBIENT_APPLICATION_KEY
+    availability:
+      - RUNTIME
+  - variable: AMBIENT_MAC_ADDRESS
+    secret: AMBIENT_MAC_ADDRESS
+    availability:
+      - RUNTIME
+  - variable: WEATHER_LIMIT
+    value: "48"
+    availability:
+      - RUNTIME
