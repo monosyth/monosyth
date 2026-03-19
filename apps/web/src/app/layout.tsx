@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
+
+import { AuthProvider } from "@/components/auth/auth-provider";
+
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -46,7 +49,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full scroll-smooth antialiased">
-      <body className={bodyClassName}>{children}</body>
+      <body className={bodyClassName}>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

@@ -12,6 +12,16 @@ This repo is set up to grow into a multi-app workspace:
 2. Run `npm install` in `apps/web`
 3. Start the app with `npm run dev`
 
+## Firebase auth setup
+
+The app includes a first-pass Firebase Auth foundation and a protected `/app`
+route. To finish wiring it:
+
+1. Copy `apps/web/.env.example` to `apps/web/.env.local`
+2. Fill in the Firebase web app values from the `monosyth` Firebase app
+3. Enable Google sign-in in Firebase Authentication
+4. Restart the dev server
+
 ## Firebase App Hosting
 
 Use Firebase App Hosting with:

@@ -1,3 +1,8 @@
+import Link from "next/link";
+
+import { AuthConsoleCard } from "@/components/auth/auth-console-card";
+import { FirebaseSetupPanel } from "@/components/auth/firebase-setup-panel";
+
 export default function Home() {
   const pillars = [
     {
@@ -54,53 +59,26 @@ export default function Home() {
 
               <div className="flex flex-col gap-4 sm:flex-row">
                 <a
-                  href="#foundation"
+                  href="#platform"
                   className="rounded-full bg-[var(--pine)] px-6 py-3 text-center text-sm font-medium text-stone-50 transition-transform duration-200 hover:-translate-y-0.5"
                 >
-                  Build the foundation
+                  Build the platform
                 </a>
-                <a
-                  href="#tracks"
+                <Link
+                  href="/app"
                   className="rounded-full border border-stone-900/10 bg-white/65 px-6 py-3 text-center text-sm font-medium text-stone-900 transition-colors duration-200 hover:bg-white"
                 >
-                  Explore the roadmap
-                </a>
+                  Enter /app
+                </Link>
               </div>
             </div>
 
-            <div className="flex flex-col gap-4 rounded-[1.75rem] bg-stone-950 px-5 py-5 text-stone-50 sm:px-6">
-              <div className="flex items-center justify-between">
-                <p className="font-mono text-xs uppercase tracking-[0.3em] text-stone-400">
-                  Stack direction
-                </p>
-                <div className="h-3 w-3 rounded-full bg-[var(--gold)] shadow-[0_0_24px_rgba(244,201,93,0.65)]" />
-              </div>
-              <div className="space-y-3">
-                <p className="text-2xl font-semibold tracking-[-0.04em]">
-                  Next.js + Firebase + App Hosting
-                </p>
-                <p className="text-sm leading-7 text-stone-300">
-                  A full-stack web foundation that keeps the main site fast,
-                  leaves room for future products, and fits naturally with
-                  React Native if mobile apps show up later.
-                </p>
-              </div>
-              <div className="mt-2 grid gap-3">
-                {tracks.map((track) => (
-                  <div
-                    key={track}
-                    className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-stone-200"
-                  >
-                    {track}
-                  </div>
-                ))}
-              </div>
-            </div>
+            <AuthConsoleCard />
           </div>
         </section>
 
         <section
-          id="foundation"
+          id="platform"
           className="grid gap-5 lg:grid-cols-[1.05fr_1fr]"
         >
           <div className="glass-panel rounded-[2rem] px-6 py-8 sm:px-8">
@@ -138,6 +116,8 @@ export default function Home() {
           </div>
         </section>
 
+        <FirebaseSetupPanel />
+
         <section
           id="tracks"
           className="glass-panel rounded-[2rem] px-6 py-8 sm:px-8 lg:px-10"
@@ -155,6 +135,17 @@ export default function Home() {
               The first version should feel calm and intentional, but the
               platform underneath it is meant for movement.
             </p>
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {tracks.map((track) => (
+              <div
+                key={track}
+                className="rounded-2xl border border-stone-900/10 bg-white/70 px-4 py-3 text-sm font-medium text-stone-700"
+              >
+                {track}
+              </div>
+            ))}
           </div>
 
           <div className="mt-8 grid gap-4 lg:grid-cols-3">
