@@ -48,11 +48,11 @@ export function FirebaseSetupPanel() {
             03
           </p>
           <h3 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">
-            Visit the app shell
+            Enable Firestore
           </h3>
           <p className="mt-3 text-sm leading-7 text-stone-100/90">
-            Once the keys are in place, the new `/app` route becomes the first
-            private space for future tools.
+            Create a Firestore database so user profiles can persist on first
+            login inside the new `/app` route.
           </p>
         </article>
       </div>

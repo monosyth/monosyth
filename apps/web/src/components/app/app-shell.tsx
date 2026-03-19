@@ -4,9 +4,30 @@ import Link from "next/link";
 
 import { useAuth } from "@/components/auth/auth-provider";
 
+function formatTimestamp(value: string | null) {
+  if (!value) {
+    return "Pending sync";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
 export function AppShell() {
-  const { error, isConfigured, isWorking, signInWithGoogle, signOut, status, user } =
-    useAuth();
+  const {
+    error,
+    isConfigured,
+    isWorking,
+    profile,
+    profileError,
+    profileStatus,
+    signInWithGoogle,
+    signOut,
+    status,
+    user,
+  } = useAuth();
 
   if (status !== "signed_in") {
     return (
@@ -90,7 +111,7 @@ export function AppShell() {
             Identity
           </p>
           <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">
-            Signed in as {user?.displayName ?? user?.email ?? "Monosyth"}
+            Signed in as {profile?.displayName ?? user?.displayName ?? user?.email ?? "Monosyth"}
           </h2>
           <p className="mt-3 text-sm leading-7 text-stone-700">
             Use this identity layer for private notes, admin controls, and
@@ -102,12 +123,18 @@ export function AppShell() {
             Foundation
           </p>
           <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">
-            Auth is working
+            Firestore profile
           </h2>
           <p className="mt-3 text-sm leading-7 text-stone-700">
-            The route is auth-aware and ready for Firestore-backed features,
-            role checks, and future server-side session work.
+            {profileStatus === "ready"
+              ? "A profile document has been created and synced for this user."
+              : profileStatus === "loading"
+                ? "Signing in worked. Firestore is syncing the profile now."
+                : "The route is ready for Firestore-backed features and profile persistence."}
           </p>
+          <div className="mt-4 rounded-2xl border border-stone-900/10 bg-white/70 px-4 py-3 text-sm text-stone-700">
+            Last login: {formatTimestamp(profile?.lastLoginAt ?? null)}
+          </div>
         </article>
         <article className="glass-panel rounded-[1.75rem] px-5 py-6">
           <p className="font-mono text-xs uppercase tracking-[0.28em] text-stone-500">
@@ -121,6 +148,33 @@ export function AppShell() {
             lightweight product idea powered by Firebase data.
           </p>
         </article>
+      </section>
+
+      <section className="glass-panel rounded-[1.75rem] px-5 py-6">
+        <p className="font-mono text-xs uppercase tracking-[0.28em] text-stone-500">
+          Profile document
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-stone-900/10 bg-white/70 px-4 py-3 text-sm text-stone-700">
+            Email: <span className="font-medium text-stone-900">{profile?.email ?? user?.email ?? "Unknown"}</span>
+          </div>
+          <div className="rounded-2xl border border-stone-900/10 bg-white/70 px-4 py-3 text-sm text-stone-700">
+            UID: <span className="font-medium text-stone-900">{profile?.uid ?? user?.uid ?? "Unknown"}</span>
+          </div>
+          <div className="rounded-2xl border border-stone-900/10 bg-white/70 px-4 py-3 text-sm text-stone-700">
+            Created: <span className="font-medium text-stone-900">{formatTimestamp(profile?.createdAt ?? null)}</span>
+          </div>
+          <div className="rounded-2xl border border-stone-900/10 bg-white/70 px-4 py-3 text-sm text-stone-700">
+            Providers: <span className="font-medium text-stone-900">{profile?.providerIds.join(", ") || "Pending sync"}</span>
+          </div>
+        </div>
+
+        {profileError ? (
+          <p className="mt-4 rounded-2xl border border-[#d46d31]/25 bg-[#d46d31]/10 px-4 py-3 text-sm text-[#8b3f18]">
+            {profileError}. If this is your first time using Firestore in this
+            project, create the database in Firebase Console first.
+          </p>
+        ) : null}
       </section>
     </div>
   );

@@ -1,5 +1,6 @@
 import { FirebaseApp, getApp, getApps, initializeApp } from "firebase/app";
 import { Auth, GoogleAuthProvider, getAuth } from "firebase/auth";
+import { Firestore, getFirestore } from "firebase/firestore";
 
 import { getFirebaseConfig } from "./config";
 
@@ -23,6 +24,16 @@ export function getFirebaseAuth(): Auth | null {
   }
 
   return getAuth(app);
+}
+
+export function getFirebaseDb(): Firestore | null {
+  const app = getFirebaseApp();
+
+  if (!app) {
+    return null;
+  }
+
+  return getFirestore(app);
 }
 
 export function getGoogleProvider() {

@@ -32,8 +32,17 @@ function ActionButton({
 }
 
 export function AuthConsoleCard() {
-  const { error, isConfigured, isWorking, signInWithGoogle, signOut, status, user } =
-    useAuth();
+  const {
+    error,
+    isConfigured,
+    isWorking,
+    profile,
+    profileStatus,
+    signInWithGoogle,
+    signOut,
+    status,
+    user,
+  } = useAuth();
 
   return (
     <div className="flex flex-col gap-4 rounded-[1.75rem] bg-stone-950 px-5 py-5 text-stone-50 sm:px-6">
@@ -82,6 +91,16 @@ export function AuthConsoleCard() {
           Firebase config:{" "}
           <span className="font-medium text-stone-50">
             {isConfigured ? "Connected" : "Needs keys"}
+          </span>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-stone-200">
+          Firestore profile:{" "}
+          <span className="font-medium text-stone-50">
+            {status !== "signed_in"
+              ? "Waiting for sign-in"
+              : profileStatus === "ready"
+                ? `Saved for ${profile?.email ?? "current user"}`
+                : profileStatus}
           </span>
         </div>
       </div>

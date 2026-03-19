@@ -17,13 +17,18 @@ import {
 
 import { getFirebaseAuth, getGoogleProvider } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
+import { UserProfile, ensureUserProfile } from "@/lib/firebase/profiles";
 
 type AuthStatus = "loading" | "signed_out" | "signed_in" | "unconfigured";
+type ProfileStatus = "idle" | "loading" | "ready" | "error" | "unconfigured";
 
 type AuthContextValue = {
   error: string | null;
   isConfigured: boolean;
   isWorking: boolean;
+  profile: UserProfile | null;
+  profileError: string | null;
+  profileStatus: ProfileStatus;
   status: AuthStatus;
   user: User | null;
   signInWithGoogle: () => Promise<void>;
@@ -43,12 +48,31 @@ export function AuthProvider({
   );
   const [error, setError] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileStatus, setProfileStatus] = useState<ProfileStatus>(
+    isFirebaseConfigured() ? "idle" : "unconfigured",
+  );
 
   const applyUser = useEffectEvent((nextUser: User | null) => {
     startTransition(() => {
       setUser(nextUser);
       setStatus(nextUser ? "signed_in" : "signed_out");
       setError(null);
+
+      if (!nextUser) {
+        setProfile(null);
+        setProfileError(null);
+        setProfileStatus(isFirebaseConfigured() ? "idle" : "unconfigured");
+      }
+    });
+  });
+
+  const applyProfile = useEffectEvent((nextProfile: UserProfile | null) => {
+    startTransition(() => {
+      setProfile(nextProfile);
+      setProfileStatus(nextProfile ? "ready" : "idle");
+      setProfileError(null);
     });
   });
 
@@ -63,6 +87,61 @@ export function AuthProvider({
       applyUser(nextUser);
     });
   }, []);
+
+  useEffect(() => {
+    if (!isFirebaseConfigured()) {
+      startTransition(() => {
+        setProfile(null);
+        setProfileError(null);
+        setProfileStatus("unconfigured");
+      });
+      return;
+    }
+
+    if (!user) {
+      startTransition(() => {
+        setProfile(null);
+        setProfileError(null);
+        setProfileStatus("idle");
+      });
+      return;
+    }
+
+    let cancelled = false;
+
+    startTransition(() => {
+      setProfileStatus("loading");
+      setProfileError(null);
+    });
+
+    void ensureUserProfile(user)
+      .then((nextProfile) => {
+        if (cancelled) {
+          return;
+        }
+
+        applyProfile(nextProfile);
+      })
+      .catch((nextError) => {
+        if (cancelled) {
+          return;
+        }
+
+        const message =
+          nextError instanceof Error
+            ? nextError.message
+            : "Firestore profile sync failed.";
+
+        startTransition(() => {
+          setProfileStatus("error");
+          setProfileError(message);
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   async function signInWithGoogle() {
     const auth = getFirebaseAuth();
@@ -117,6 +196,9 @@ export function AuthProvider({
         error,
         isConfigured: isFirebaseConfigured(),
         isWorking,
+        profile,
+        profileError,
+        profileStatus,
         status,
         user,
         signInWithGoogle,
