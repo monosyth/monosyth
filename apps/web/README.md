@@ -42,6 +42,9 @@ This app is deployed from Firebase App Hosting with:
 - Repo: `monosyth/monosyth`
 - Root directory: `apps/web`
 
+Set `NEXT_PUBLIC_FIREBASE_API_KEY` in the App Hosting Environment UI instead of
+committing it to source control.
+
 ## Routes
 
 - `/`: brand home and auth-aware landing page
