@@ -1,16 +1,21 @@
-## Hi there 👋
+# monosyth
 
-<!--
-**monosyth/monosyth** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+The main `monosyth.com` app lives in [`apps/web`](/Users/scottwaite/monosyth/apps/web).
 
-Here are some ideas to get you started:
+This repo is set up to grow into a multi-app workspace:
 
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+- `apps/web`: the primary Next.js site for the Monosyth brand
+
+## Local development
+
+1. Load Node with `nvm use 22`
+2. Run `npm install` in `apps/web`
+3. Start the app with `npm run dev`
+
+## Firebase App Hosting
+
+Use Firebase App Hosting with:
+
+- Firebase project: `monosyth-490705`
+- GitHub repo: `monosyth/monosyth`
+- App root directory: `apps/web`

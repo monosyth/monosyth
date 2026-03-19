@@ -1,0 +1,18 @@
+runConfig:
+  minInstances: 0
+  maxInstances: 2
+  concurrency: 40
+  cpu: 1
+  memoryMiB: 512
+
+env:
+  - variable: NEXT_PUBLIC_SITE_URL
+    value: https://monosyth.com
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: monosyth-490705
+    availability:
+      - BUILD
+      - RUNTIME
