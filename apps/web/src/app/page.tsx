@@ -1,32 +1,31 @@
 import Link from "next/link";
 
 import { AuthConsoleCard } from "@/components/auth/auth-console-card";
-import { FirebaseSetupPanel } from "@/components/auth/firebase-setup-panel";
 
 export default function Home() {
   const pillars = [
     {
       title: "Identity",
       description:
-        "A central home for the Monosyth story, links, writing, and whatever becomes essential over time.",
+        "A long-held name with history behind it, finally getting a proper home on the web.",
     },
     {
-      title: "Apps",
+      title: "Work",
       description:
-        "A launch surface for experiments, client work, product ideas, and niche utilities that deserve their own space.",
+        "A platform for client projects, internal tools, and practical systems that need to be built with care.",
     },
     {
-      title: "Agents",
+      title: "Experiments",
       description:
-        "An AI-forward workspace built to explore automation, assistants, and practical systems on Google infrastructure.",
+        "A place to test product ideas, AI agents, strange utilities, and whatever earns a future here.",
     },
   ];
 
-  const tracks = [
-    "Brand home and narrative",
-    "Product studio and experiments",
-    "Client and business prototypes",
-    "Firebase-backed auth and data",
+  const currents = [
+    "Private app workspace",
+    "Profile and identity system",
+    "Tools for people and businesses",
+    "AI-assisted product experiments",
   ];
 
   return (
@@ -44,31 +43,32 @@ export default function Home() {
 
               <div className="space-y-6">
                 <p className="font-mono text-sm uppercase tracking-[0.32em] text-[var(--ember)]">
-                  Brand home. Product lab. App platform.
+                  Identity site. Studio root. Digital base.
                 </p>
                 <h1 className="max-w-4xl text-5xl font-semibold leading-none tracking-[-0.05em] text-balance sm:text-6xl lg:text-7xl">
-                  A long-lived identity becoming a launch platform for what comes next.
+                  Monosyth is Scott Waite&apos;s long-running online identity,
+                  now becoming the home base for what gets built next.
                 </h1>
                 <p className="max-w-2xl text-lg leading-8 text-stone-700 sm:text-xl">
-                  Monosyth is the center of gravity for experiments, products,
-                  client builds, and AI-assisted systems running on Google
-                  infrastructure. One name. One project space. Room for many
-                  ideas.
+                  I&apos;ve used Monosyth since 1997. This site is where that
+                  name starts to gather more weight: personal history, client
+                  work, product ideas, and a private app layer for the tools
+                  that grow out of it.
                 </p>
               </div>
 
               <div className="flex flex-col gap-4 sm:flex-row">
                 <a
-                  href="#platform"
+                  href="#about"
                   className="rounded-full bg-[var(--pine)] px-6 py-3 text-center text-sm font-medium text-stone-50 transition-transform duration-200 hover:-translate-y-0.5"
                 >
-                  Build the platform
+                  Read the origin
                 </a>
                 <Link
                   href="/app"
                   className="rounded-full border border-stone-900/10 bg-white/65 px-6 py-3 text-center text-sm font-medium text-stone-900 transition-colors duration-200 hover:bg-white"
                 >
-                  Enter /app
+                  Enter the studio
                 </Link>
               </div>
             </div>
@@ -78,21 +78,23 @@ export default function Home() {
         </section>
 
         <section
-          id="platform"
+          id="about"
           className="grid gap-5 lg:grid-cols-[1.05fr_1fr]"
         >
           <div className="glass-panel rounded-[2rem] px-6 py-8 sm:px-8">
             <p className="font-mono text-xs uppercase tracking-[0.28em] text-[var(--teal)]">
-              Foundation
+              About
             </p>
             <h2 className="mt-4 max-w-xl text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
-              One home for identity, apps, experiments, and client work.
+              This is not a rebrand. It&apos;s the same name, built out with
+              more intention.
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-8 text-stone-700">
-              The goal is not just a brochure site. This is the root system for
-              everything that grows under Monosyth: public pages, authenticated
-              tools, business prototypes, and AI agent workflows that can share
-              a common platform.
+              Monosyth has followed me across decades of usernames, logins,
+              forums, projects, and conversations. Now it gets to be something
+              more permanent: a site with a point of view, a place to publish,
+              and a root domain for tools, products, and client work that live
+              under the same banner.
             </p>
           </div>
 
@@ -105,9 +107,6 @@ export default function Home() {
                 <p className="font-mono text-xs uppercase tracking-[0.28em] text-stone-500">
                   {pillar.title}
                 </p>
-                <h3 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">
-                  {pillar.title} first, then scale.
-                </h3>
                 <p className="mt-3 text-sm leading-7 text-stone-700">
                   {pillar.description}
                 </p>
@@ -116,29 +115,28 @@ export default function Home() {
           </div>
         </section>
 
-        <FirebaseSetupPanel />
-
         <section
-          id="tracks"
+          id="current"
           className="glass-panel rounded-[2rem] px-6 py-8 sm:px-8 lg:px-10"
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.28em] text-[var(--ember)]">
-                Next tracks
+                Current direction
               </p>
               <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
-                What this repo is ready to grow into.
+                A quieter front page, with real infrastructure underneath it.
               </h2>
             </div>
             <p className="max-w-xl text-sm leading-7 text-stone-600">
-              The first version should feel calm and intentional, but the
-              platform underneath it is meant for movement.
+              The visible site can stay simple. Under it, Monosyth can keep
+              growing into a private workspace, a public identity surface, and a
+              launch point for useful things.
             </p>
           </div>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {tracks.map((track) => (
+            {currents.map((track) => (
               <div
                 key={track}
                 className="rounded-2xl border border-stone-900/10 bg-white/70 px-4 py-3 text-sm font-medium text-stone-700"
@@ -151,38 +149,39 @@ export default function Home() {
           <div className="mt-8 grid gap-4 lg:grid-cols-3">
             <article className="rounded-[1.75rem] bg-white/80 px-5 py-6">
               <p className="font-mono text-xs uppercase tracking-[0.28em] text-stone-500">
-                01
+                Public side
               </p>
               <h3 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">
-                Main site
+                The front door
               </h3>
               <p className="mt-3 text-sm leading-7 text-stone-700">
-                A polished home for the Monosyth brand, story, links, and
-                future product entry points.
+                A clean home for the name itself, with enough shape and voice to
+                feel like a real place instead of a temporary landing page.
               </p>
             </article>
             <article className="rounded-[1.75rem] bg-stone-950 px-5 py-6 text-stone-50">
               <p className="font-mono text-xs uppercase tracking-[0.28em] text-stone-400">
-                02
+                Private side
               </p>
               <h3 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">
-                Authenticated apps
+                The working layer
               </h3>
               <p className="mt-3 text-sm leading-7 text-stone-300">
-                Shared Firebase Auth, shared data services, and space for tools
-                that support people, businesses, or your own workflows.
+                A signed-in studio for profiles, internal tools, experiments,
+                and future applications that deserve their own lanes.
               </p>
             </article>
             <article className="rounded-[1.75rem] bg-[var(--pine)] px-5 py-6 text-stone-50">
               <p className="font-mono text-xs uppercase tracking-[0.28em] text-stone-300">
-                03
+                Long game
               </p>
               <h3 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">
-                Mobile later
+                Built to last
               </h3>
               <p className="mt-3 text-sm leading-7 text-stone-100/90">
-                When the time comes, the React and Firebase stack makes it much
-                easier to expand into React Native without restarting from zero.
+                The goal is a durable platform that can absorb new projects,
+                products, and experiments without losing the identity at the
+                center of it.
               </p>
             </article>
           </div>
