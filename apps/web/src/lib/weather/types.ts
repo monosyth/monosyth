@@ -53,6 +53,7 @@ export type WeatherPageData =
   | {
       state: "ready";
       data: WeatherOverview;
+      notice?: string;
     }
   | {
       state: "missing-config";

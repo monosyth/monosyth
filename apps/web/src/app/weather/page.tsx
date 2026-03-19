@@ -28,7 +28,7 @@ export default async function WeatherPage() {
                 <p className="max-w-3xl text-base leading-7 text-stone-600 sm:text-lg">
                   {result.state === "ready"
                     ? buildSummary(result.data.station.location, result.data.observationCount)
-                    : "This route is wired for your Ambient Weather station and keeps all credentials on the server. Add the missing Ambient configuration and it will switch from setup mode to live conditions automatically."}
+                    : "This route is wired for your Ambient Weather station and keeps all credentials on the server. If Ambient rejects a fetch, the route now falls back gracefully instead of exposing secrets or browser-side keys."}
                 </p>
               </div>
             </div>
@@ -47,6 +47,11 @@ export default async function WeatherPage() {
 
         {result.state === "ready" ? (
           <>
+            {result.notice ? (
+              <section className="glass-panel rounded-[1.5rem] bg-amber-50/85 p-4 text-sm leading-6 text-amber-950">
+                {result.notice}
+              </section>
+            ) : null}
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               {result.data.metrics.map((metric) => (
                 <article
@@ -153,7 +158,7 @@ export default async function WeatherPage() {
             <h2 className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-stone-950">
               {result.state === "missing-config"
                 ? "One more Ambient key and this route goes live."
-                : "The weather route is wired, but Ambient returned an error."}
+                : "The weather route is wired, but Ambient returned an API error."}
             </h2>
             <p className="mt-4 max-w-3xl text-base leading-7 text-stone-600">
               {result.message}
@@ -194,7 +199,9 @@ export default async function WeatherPage() {
                   Next Step
                 </p>
                 <p className="mt-2 text-lg font-semibold tracking-[-0.04em] text-stone-950">
-                  Add the Ambient application key
+                  {result.state === "missing-config"
+                    ? "Add the missing Ambient key"
+                    : "Let Ambient rate limits cool down"}
                 </p>
               </article>
             </div>

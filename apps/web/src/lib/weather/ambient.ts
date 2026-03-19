@@ -2,6 +2,7 @@ import { buildWeatherOverview } from "@/lib/weather/overview";
 import type { WeatherPageData } from "@/lib/weather/types";
 
 const API_BASE_URL = "https://api.ambientweather.net/v1";
+const CACHE_TTL_MS = 60_000;
 
 type WeatherDevice = {
   macAddress?: string;
@@ -15,6 +16,12 @@ type WeatherDevice = {
 };
 
 type WeatherObservation = Record<string, string | number | null | undefined>;
+type WeatherCacheEntry = {
+  expiresAt: number;
+  value: Extract<WeatherPageData, { state: "ready" }>;
+};
+
+let weatherCache: WeatherCacheEntry | null = null;
 
 function readEnv() {
   const apiKey = process.env.AMBIENT_API_KEY?.trim() ?? "";
@@ -132,6 +139,28 @@ function pickDevice(devices: WeatherDevice[], preferredMacAddress: string) {
   );
 }
 
+function readCachedWeatherPageData() {
+  if (!weatherCache) {
+    return null;
+  }
+
+  if (Date.now() > weatherCache.expiresAt) {
+    weatherCache = null;
+    return null;
+  }
+
+  return weatherCache.value;
+}
+
+function writeCachedWeatherPageData(
+  value: Extract<WeatherPageData, { state: "ready" }>,
+) {
+  weatherCache = {
+    expiresAt: Date.now() + CACHE_TTL_MS,
+    value,
+  };
+}
+
 export async function getWeatherPageData(): Promise<WeatherPageData> {
   const missing = getMissingVars();
 
@@ -146,8 +175,26 @@ export async function getWeatherPageData(): Promise<WeatherPageData> {
 
   try {
     const env = readEnv();
-    const devices = await listDevices();
-    const device = pickDevice(devices, env.macAddress);
+    const cached = readCachedWeatherPageData();
+
+    if (cached) {
+      return {
+        ...cached,
+        notice:
+          "Showing a recently cached station snapshot to stay inside Ambient Weather's rate limits.",
+      };
+    }
+
+    let device: WeatherDevice | null = null;
+
+    if (env.macAddress) {
+      device = {
+        macAddress: env.macAddress,
+      };
+    } else {
+      const devices = await listDevices();
+      device = pickDevice(devices, env.macAddress);
+    }
 
     if (!device || !device.macAddress) {
       return {
@@ -158,15 +205,29 @@ export async function getWeatherPageData(): Promise<WeatherPageData> {
     }
 
     const observations = await getDeviceHistory(device.macAddress, env.limit);
-
-    return {
+    const readyResult: Extract<WeatherPageData, { state: "ready" }> = {
       state: "ready",
       data: buildWeatherOverview(device, observations),
     };
+
+    writeCachedWeatherPageData(readyResult);
+
+    return readyResult;
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const cached = readCachedWeatherPageData();
+
+    if (message.includes("above-user-rate-limit") && cached) {
+      return {
+        ...cached,
+        notice:
+          "Ambient Weather rate-limited the live fetch, so this page is temporarily showing the last successful station snapshot.",
+      };
+    }
+
     return {
       state: "error",
-      message: error instanceof Error ? error.message : String(error),
+      message,
     };
   }
 }
