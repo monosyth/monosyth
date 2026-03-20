@@ -11,6 +11,33 @@ export type WeatherStory = {
     stamp: string;
     chips: string[];
   };
+  outfit: {
+    title: string;
+    summary: string;
+    pieces: string[];
+    tone: StoryTone;
+  };
+  activity: Array<{
+    title: string;
+    verdict: string;
+    summary: string;
+    tone: StoryTone;
+  }>;
+  visuals: {
+    wind: {
+      directionDegrees: number | null;
+      directionLabel: string;
+      speedLabel: string;
+      gustLabel: string;
+      tone: StoryTone;
+    };
+    rain: {
+      fillPercent: number;
+      label: string;
+      subtext: string;
+      tone: StoryTone;
+    };
+  };
   categories: Array<{
     id: string;
     title: string;
@@ -40,6 +67,7 @@ export function buildWeatherStory(data: WeatherOverview): WeatherStory {
   const pressure = metricValue(data, "pressure");
   const dewPoint = snapshotNumber(data.snapshot, "dewPoint");
   const hourlyRain = snapshotNumber(data.snapshot, "hourlyrainin");
+  const windDegrees = snapshotNumber(data.snapshot, "winddir");
   const windDirection = cardinalDirection(snapshotNumber(data.snapshot, "winddir"));
 
   return {
@@ -62,6 +90,26 @@ export function buildWeatherStory(data: WeatherOverview): WeatherStory {
         rainChip(rainToday, hourlyRain),
         sunChip(uv, solar),
       ].filter(Boolean),
+    },
+    outfit: buildOutfit({ temperature, wind, rainToday, uv, humidity }),
+    activity: buildActivities({ temperature, wind, rainToday, uv }),
+    visuals: {
+      wind: {
+        directionDegrees: windDegrees,
+        directionLabel: windDirection || "Variable",
+        speedLabel: numberWithUnit(wind, "mph", 1),
+        gustLabel: numberWithUnit(gust, "mph", 1),
+        tone: pickWindTone(wind, gust),
+      },
+      rain: {
+        fillPercent: clamp(percentOf(rainToday, 1.25), 0, 100),
+        label: rainChip(rainToday, hourlyRain) || "Dry ground",
+        subtext:
+          (hourlyRain ?? 0) > 0
+            ? `${numberWithUnit(hourlyRain, "in", 2)} this hour`
+            : `${numberWithUnit(rainToday, "in", 2)} today`,
+        tone: pickRainTone(rainToday, hourlyRain),
+      },
     },
     categories: [
       {
@@ -132,6 +180,92 @@ export function buildWeatherStory(data: WeatherOverview): WeatherStory {
       describeSeriesChange(findSeries(data.series, "rain"), "Rain", "rain"),
     ].filter((value): value is NonNullable<typeof value> => value !== null),
   };
+}
+
+function buildOutfit(values: {
+  temperature: number | null;
+  wind: number | null;
+  rainToday: number | null;
+  uv: number | null;
+  humidity: number | null;
+}) {
+  const pieces = [];
+  const temperature = values.temperature ?? 65;
+  const wind = values.wind ?? 0;
+  const rainToday = values.rainToday ?? 0;
+  const uv = values.uv ?? 0;
+  const humidity = values.humidity ?? 50;
+
+  if (temperature < 45) {
+    pieces.push("jacket");
+  } else if (temperature < 60) {
+    pieces.push("light layer");
+  } else if (temperature > 82) {
+    pieces.push("cool clothes");
+  } else {
+    pieces.push("easy layer");
+  }
+
+  if (wind >= 12) {
+    pieces.push("wind-ready outer layer");
+  }
+
+  if (rainToday > 0 || humidity > 82) {
+    pieces.push("water-resistant shoes");
+  }
+
+  if (uv >= 5) {
+    pieces.push("hat or sunscreen");
+  }
+
+  return {
+    title:
+      temperature < 50
+        ? "Dress for a cool edge."
+        : temperature > 82
+          ? "Dress light and breathable."
+          : "A flexible layer is enough.",
+    summary: `If you were heading out right now, ${outfitSummary(
+      temperature,
+      wind,
+      rainToday,
+      uv,
+    )}`,
+    pieces,
+    tone: pickMoodTone(values),
+  };
+}
+
+function buildActivities(values: {
+  temperature: number | null;
+  wind: number | null;
+  rainToday: number | null;
+  uv: number | null;
+}) {
+  const walkScore = scoreWalk(values);
+  const patioScore = scorePatio(values);
+  const gardenScore = scoreGarden(values);
+
+  return [
+    {
+      title: "Walk",
+      verdict: activityVerdict(walkScore),
+      summary: walkSummary(values, walkScore),
+      tone: activityTone(walkScore),
+    },
+    {
+      title: "Patio time",
+      verdict: activityVerdict(patioScore),
+      summary: patioSummary(values, patioScore),
+      tone: activityTone(patioScore),
+    },
+    {
+      title: "Garden check",
+      verdict: activityVerdict(gardenScore),
+      summary: gardenSummary(values, gardenScore),
+      tone: activityTone(gardenScore),
+    },
+  ];
 }
 
 function metricValue(data: WeatherOverview, id: string) {
@@ -276,6 +410,197 @@ function comfortPhrase(temperature: number | null, humidity: number | null) {
   }
 
   return hum >= 55 ? "It feels hot and heavy" : "It feels hot and dry";
+}
+
+function outfitSummary(
+  temperature: number,
+  wind: number,
+  rainToday: number,
+  uv: number,
+) {
+  if (rainToday > 0.1) {
+    return "plan for a damp day and keep something weather-ready nearby.";
+  }
+
+  if (wind >= 12) {
+    return "the main thing to account for is moving air, not just temperature.";
+  }
+
+  if (temperature >= 82 && uv >= 5) {
+    return "the sun will matter as much as the thermometer.";
+  }
+
+  if (temperature <= 50) {
+    return "a little insulation will make the outside feel much friendlier.";
+  }
+
+  return "you probably only need one easy extra layer.";
+}
+
+function scoreWalk(values: {
+  temperature: number | null;
+  wind: number | null;
+  rainToday: number | null;
+}) {
+  let score = 78;
+
+  if ((values.temperature ?? 65) < 42 || (values.temperature ?? 65) > 92) {
+    score -= 24;
+  }
+
+  if ((values.wind ?? 0) > 18) {
+    score -= 18;
+  }
+
+  if ((values.rainToday ?? 0) > 0.15) {
+    score -= 20;
+  }
+
+  return clamp(score, 0, 100);
+}
+
+function scorePatio(values: {
+  temperature: number | null;
+  wind: number | null;
+  rainToday: number | null;
+  uv: number | null;
+}) {
+  let score = 74;
+
+  if ((values.rainToday ?? 0) > 0.05) {
+    score -= 35;
+  }
+
+  if ((values.wind ?? 0) > 15) {
+    score -= 18;
+  }
+
+  if ((values.temperature ?? 68) < 55 || (values.temperature ?? 68) > 90) {
+    score -= 16;
+  }
+
+  if ((values.uv ?? 0) > 8) {
+    score -= 8;
+  }
+
+  return clamp(score, 0, 100);
+}
+
+function scoreGarden(values: {
+  temperature: number | null;
+  wind: number | null;
+  rainToday: number | null;
+  uv: number | null;
+}) {
+  let score = 70;
+
+  if ((values.rainToday ?? 0) > 0.2) {
+    score -= 25;
+  }
+
+  if ((values.wind ?? 0) > 12) {
+    score -= 10;
+  }
+
+  if ((values.temperature ?? 68) < 38 || (values.temperature ?? 68) > 95) {
+    score -= 20;
+  }
+
+  if ((values.uv ?? 0) > 9) {
+    score -= 10;
+  }
+
+  return clamp(score, 0, 100);
+}
+
+function activityVerdict(score: number) {
+  if (score >= 72) {
+    return "Great";
+  }
+
+  if (score >= 50) {
+    return "Okay";
+  }
+
+  return "Maybe later";
+}
+
+function activityTone(score: number): StoryTone {
+  if (score >= 72) {
+    return "pine";
+  }
+
+  if (score >= 50) {
+    return "gold";
+  }
+
+  return "rain";
+}
+
+function walkSummary(
+  values: { temperature: number | null; wind: number | null; rainToday: number | null },
+  score: number,
+) {
+  if (score >= 72) {
+    return "A walk should feel easy with only minor weather friction.";
+  }
+
+  if ((values.rainToday ?? 0) > 0.15) {
+    return "The rain is the biggest reason to skip the long version.";
+  }
+
+  if ((values.wind ?? 0) > 18) {
+    return "Walking is fine, but the air movement will be the main thing you notice.";
+  }
+
+  return "A short walk is still doable, but the weather is asking for some compromise.";
+}
+
+function patioSummary(
+  values: {
+    temperature: number | null;
+    wind: number | null;
+    rainToday: number | null;
+    uv: number | null;
+  },
+  score: number,
+) {
+  if (score >= 72) {
+    return "Sitting outside looks pretty inviting right now.";
+  }
+
+  if ((values.rainToday ?? 0) > 0.05) {
+    return "Moisture is the main patio spoiler at the moment.";
+  }
+
+  if ((values.uv ?? 0) > 8) {
+    return "Shade matters if you plan to stay out for a while.";
+  }
+
+  return "Patio time works better with a little shelter or timing.";
+}
+
+function gardenSummary(
+  values: {
+    temperature: number | null;
+    wind: number | null;
+    rainToday: number | null;
+  },
+  score: number,
+) {
+  if (score >= 72) {
+    return "This looks like a comfortable window for a quick garden check.";
+  }
+
+  if ((values.rainToday ?? 0) > 0.2) {
+    return "The ground may already be doing enough on its own.";
+  }
+
+  if ((values.wind ?? 0) > 12) {
+    return "Wind will make delicate outdoor chores feel fussier than usual.";
+  }
+
+  return "You can still head out, but the timing is not especially ideal.";
 }
 
 function windPhrase(wind: number | null) {

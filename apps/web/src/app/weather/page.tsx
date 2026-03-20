@@ -183,6 +183,164 @@ export default async function WeatherPage() {
         <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
           <article className="glass-panel rounded-[2rem] bg-white/82 p-6 sm:p-7">
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
+              Out the door
+            </p>
+            <h2 className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-stone-950">
+              What to wear and what the day suits
+            </h2>
+
+            <div className="mt-6 grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+              <article
+                className={`rounded-[1.8rem] border p-5 ${toneClasses[story.outfit.tone].panel}`}
+              >
+                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
+                  Wear suggestion
+                </p>
+                <h3 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-stone-950">
+                  {story.outfit.title}
+                </h3>
+                <p className="mt-3 text-sm leading-6 text-stone-600">
+                  {story.outfit.summary}
+                </p>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  {story.outfit.pieces.map((piece) => (
+                    <span
+                      key={piece}
+                      className="rounded-full border border-white/80 bg-white/75 px-4 py-2 text-sm font-medium text-stone-700"
+                    >
+                      {piece}
+                    </span>
+                  ))}
+                </div>
+              </article>
+
+              <div className="grid gap-4">
+                {story.activity.map((item) => {
+                  const tone = toneClasses[item.tone];
+
+                  return (
+                    <article
+                      key={item.title}
+                      className={`rounded-[1.5rem] border p-4 ${tone.panel}`}
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <p className="text-lg font-semibold tracking-[-0.04em] text-stone-950">
+                          {item.title}
+                        </p>
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${tone.badge}`}
+                        >
+                          {item.verdict}
+                        </span>
+                      </div>
+                      <p className="mt-3 text-sm leading-6 text-stone-600">
+                        {item.summary}
+                      </p>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          </article>
+
+          <article className="glass-panel rounded-[2rem] bg-white/82 p-6 sm:p-7">
+            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
+              Weather toys
+            </p>
+            <h2 className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-stone-950">
+              Wind compass and rain jar
+            </h2>
+
+            <div className="mt-6 grid gap-6 lg:grid-cols-2">
+              <article
+                className={`rounded-[1.8rem] border p-5 ${toneClasses[story.visuals.wind.tone].panel}`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
+                      Wind compass
+                    </p>
+                    <h3 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-stone-950">
+                      {story.visuals.wind.directionLabel}
+                    </h3>
+                  </div>
+                  <div className="text-right text-sm text-stone-600">
+                    <p>{story.visuals.wind.speedLabel}</p>
+                    <p className="mt-1">Gust {story.visuals.wind.gustLabel}</p>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex justify-center">
+                  <div className="relative h-44 w-44 rounded-full border border-white/80 bg-white/70 shadow-inner">
+                    <div className="absolute inset-3 rounded-full border border-dashed border-stone-300/80" />
+                    <div className="absolute left-1/2 top-2 -translate-x-1/2 text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
+                      N
+                    </div>
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
+                      S
+                    </div>
+                    <div className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
+                      W
+                    </div>
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
+                      E
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div
+                        className="relative h-28 w-4 origin-center transition-transform duration-700"
+                        style={{
+                          transform: `rotate(${story.visuals.wind.directionDegrees ?? 0}deg)`,
+                        }}
+                      >
+                        <div className="absolute inset-x-0 bottom-2 top-8 rounded-full bg-sky-200/80" />
+                        <div className="absolute left-1/2 top-0 h-0 w-0 -translate-x-1/2 border-x-[12px] border-b-[24px] border-x-transparent border-b-sky-600" />
+                      </div>
+                    </div>
+                    <div className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-stone-950" />
+                  </div>
+                </div>
+              </article>
+
+              <article
+                className={`rounded-[1.8rem] border p-5 ${toneClasses[story.visuals.rain.tone].panel}`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
+                      Rain jar
+                    </p>
+                    <h3 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-stone-950">
+                      {story.visuals.rain.label}
+                    </h3>
+                  </div>
+                  <p className="text-sm text-stone-600">{story.visuals.rain.subtext}</p>
+                </div>
+
+                <div className="mt-6 flex items-end justify-center gap-5">
+                  <div className="relative h-44 w-28 overflow-hidden rounded-[2rem] border border-white/80 bg-white/70">
+                    <div className="absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-blue-500/85 via-cyan-400/70 to-cyan-200/40" style={{ height: `${story.visuals.rain.fillPercent}%` }} />
+                    <div className="absolute inset-x-0 top-5 h-px bg-white/70" />
+                    <div className="absolute inset-x-0 top-11 h-px bg-white/50" />
+                    <div className="absolute inset-x-0 top-[4.25rem] h-px bg-white/40" />
+                    <div className="absolute inset-x-0 bottom-0 flex items-end justify-center pb-4">
+                      <span className="rounded-full bg-white/85 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-stone-700">
+                        {Math.round(story.visuals.rain.fillPercent)}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="max-w-[11rem] space-y-3 text-sm leading-6 text-stone-600">
+                    <p>The jar rises as daily rain builds, so even non-technical viewers can feel the difference between dry, trace, and genuinely wet.</p>
+                    <p className="font-medium text-stone-800">{story.visuals.rain.subtext}</p>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </article>
+        </section>
+
+        <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+          <article className="glass-panel rounded-[2rem] bg-white/82 p-6 sm:p-7">
+            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
               What changed recently
             </p>
             <h2 className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-stone-950">
