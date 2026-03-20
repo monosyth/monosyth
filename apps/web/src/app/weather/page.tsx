@@ -2,228 +2,378 @@ import Link from "next/link";
 
 import { RefreshButton } from "@/components/weather/refresh-button";
 import { getWeatherPageData } from "@/lib/weather/ambient";
+import { buildWeatherStory } from "@/lib/weather/story";
 import type { WeatherSeries } from "@/lib/weather/types";
 
 export const dynamic = "force-dynamic";
 
+const toneClasses = {
+  gold: {
+    badge: "bg-amber-100 text-amber-950",
+    glow: "from-amber-300/60 via-orange-200/45 to-transparent",
+    meter: "from-amber-400 to-orange-500",
+    panel: "border-amber-200/80 bg-amber-50/70",
+  },
+  sky: {
+    badge: "bg-sky-100 text-sky-950",
+    glow: "from-sky-300/55 via-cyan-200/45 to-transparent",
+    meter: "from-sky-400 to-cyan-500",
+    panel: "border-sky-200/80 bg-sky-50/70",
+  },
+  rain: {
+    badge: "bg-blue-100 text-blue-950",
+    glow: "from-blue-300/55 via-indigo-200/45 to-transparent",
+    meter: "from-blue-500 to-indigo-600",
+    panel: "border-blue-200/80 bg-blue-50/70",
+  },
+  pine: {
+    badge: "bg-emerald-100 text-emerald-950",
+    glow: "from-emerald-300/50 via-teal-200/40 to-transparent",
+    meter: "from-emerald-500 to-teal-600",
+    panel: "border-emerald-200/80 bg-emerald-50/70",
+  },
+} as const;
+
 export default async function WeatherPage() {
   const result = await getWeatherPageData();
+
+  if (result.state !== "ready") {
+    return <WeatherErrorState result={result} />;
+  }
+
+  const story = buildWeatherStory(result.data);
+  const heroTone = toneClasses[story.mood.tone];
 
   return (
     <main className="grid-lines min-h-screen px-5 py-6 text-stone-950 sm:px-8 lg:px-12">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <section className="glass-panel overflow-hidden rounded-[2rem] bg-white/85 p-7 sm:p-10">
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl space-y-5">
-              <div className="flex items-center gap-3 text-xs font-medium uppercase tracking-[0.32em] text-teal-800">
-                <span className="inline-flex h-3 w-3 rounded-full bg-emerald-500 shadow-[0_0_0_6px_rgba(16,185,129,0.14)]" />
-                Ambient Weather
+        <section className="glass-panel relative overflow-hidden rounded-[2rem] bg-white/85 p-7 sm:p-10">
+          <div
+            className={`pointer-events-none absolute inset-x-0 top-0 h-56 bg-gradient-to-br ${heroTone.glow}`}
+          />
+          <div className="relative flex flex-col gap-10 lg:grid lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center gap-3">
+                <span
+                  className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] ${heroTone.badge}`}
+                >
+                  Outside right now
+                </span>
+                <span className="text-xs font-medium uppercase tracking-[0.22em] text-stone-500">
+                  Updated {story.mood.stamp}
+                </span>
               </div>
-              <div className="space-y-3">
+
+              <div className="space-y-4">
+                <p className="text-sm font-medium uppercase tracking-[0.22em] text-stone-500">
+                  Ambient Weather on Monosyth
+                </p>
                 <h1 className="max-w-4xl text-5xl font-semibold leading-none tracking-[-0.08em] text-balance sm:text-6xl lg:text-7xl">
-                  {result.state === "ready"
-                    ? result.data.station.name
-                    : "Personal weather, live on Monosyth"}
+                  {story.mood.title}
                 </h1>
                 <p className="max-w-3xl text-base leading-7 text-stone-600 sm:text-lg">
-                  {result.state === "ready"
-                    ? buildSummary(result.data.station.location, result.data.observationCount)
-                    : "This route is wired for your Ambient Weather station and keeps all credentials on the server. If Ambient rejects a fetch, the route now falls back gracefully instead of exposing secrets or browser-side keys."}
+                  {story.mood.subtitle}
                 </p>
               </div>
+
+              <div className="flex flex-wrap gap-3">
+                {story.mood.chips.map((chip) => (
+                  <span
+                    key={chip}
+                    className="rounded-full border border-white/80 bg-white/75 px-4 py-2 text-sm font-medium text-stone-700 shadow-sm"
+                  >
+                    {chip}
+                  </span>
+                ))}
+              </div>
+
+              {result.notice ? (
+                <div className="rounded-[1.4rem] border border-amber-200/80 bg-amber-50/85 px-4 py-3 text-sm leading-6 text-amber-950">
+                  {result.notice}
+                </div>
+              ) : null}
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="grid gap-4">
+              <article className="rounded-[2rem] border border-white/80 bg-white/80 p-6 shadow-sm">
+                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
+                  Current feel
+                </p>
+                <p className="mt-3 text-5xl font-semibold tracking-[-0.08em] text-stone-950">
+                  {story.mood.temperatureDisplay}
+                </p>
+                <p className="mt-3 max-w-sm text-sm leading-6 text-stone-600">
+                  {buildSummary(result.data.station.location, result.data.observationCount)}
+                </p>
+              </article>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <Link
+                  href="/"
+                  className="rounded-full border border-stone-300/80 bg-white/80 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-950 hover:text-stone-950"
+                >
+                  Back Home
+                </Link>
+                <RefreshButton />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+          {story.categories.map((category) => {
+            const tone = toneClasses[category.tone];
+
+            return (
+              <article
+                key={category.id}
+                className={`glass-panel rounded-[1.9rem] border p-5 ${tone.panel}`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
+                      {category.eyebrow}
+                    </p>
+                    <h2 className="mt-2 text-2xl font-semibold tracking-[-0.06em] text-stone-950">
+                      {category.title}
+                    </h2>
+                  </div>
+                  <div className="relative h-16 w-16 rounded-full border border-white/80 bg-white/60">
+                    <div
+                      className={`absolute inset-3 rounded-full bg-gradient-to-br ${tone.glow}`}
+                    />
+                  </div>
+                </div>
+
+                <p className="mt-4 text-3xl font-semibold tracking-[-0.08em] text-stone-950">
+                  {category.value}
+                </p>
+                <p className="mt-3 min-h-16 text-sm leading-6 text-stone-600">
+                  {category.summary}
+                </p>
+
+                <div className="mt-5">
+                  <div className="mb-2 flex items-center justify-between gap-3 text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                    <span>{category.meterLabel}</span>
+                    <span>{Math.round(category.meterValue)}%</span>
+                  </div>
+                  <div className="h-3 overflow-hidden rounded-full bg-white/70">
+                    <div
+                      className={`h-full rounded-full bg-gradient-to-r ${tone.meter}`}
+                      style={{ width: `${category.meterValue}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-5 space-y-2">
+                  {category.details.map((detail) => (
+                    <p
+                      key={detail}
+                      className="rounded-full border border-white/80 bg-white/70 px-3 py-2 text-sm text-stone-700"
+                    >
+                      {detail}
+                    </p>
+                  ))}
+                </div>
+              </article>
+            );
+          })}
+        </section>
+
+        <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+          <article className="glass-panel rounded-[2rem] bg-white/82 p-6 sm:p-7">
+            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
+              What changed recently
+            </p>
+            <h2 className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-stone-950">
+              The day in plain language
+            </h2>
+            <div className="mt-6 grid gap-4">
+              {story.changes.map((change) => {
+                const tone = toneClasses[change.tone];
+
+                return (
+                  <article
+                    key={change.title}
+                    className={`rounded-[1.6rem] border p-4 ${tone.panel}`}
+                  >
+                    <p className="text-sm font-semibold text-stone-950">
+                      {change.title}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-stone-600">
+                      {change.summary}
+                    </p>
+                  </article>
+                );
+              })}
+            </div>
+          </article>
+
+          <article className="glass-panel rounded-[2rem] bg-white/82 p-6 sm:p-7">
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
+                  Weather motion
+                </p>
+                <h2 className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-stone-950">
+                  Shape of the last readings
+                </h2>
+              </div>
+              <p className="text-sm text-stone-500">
+                Station {result.data.station.macAddress}
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {result.data.series.map((series) => (
+                <WeatherChartCard key={series.id} series={series} />
+              ))}
+            </div>
+          </article>
+        </section>
+
+        <details className="glass-panel rounded-[2rem] bg-white/82 p-6 sm:p-7">
+          <summary className="cursor-pointer list-none">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
+                  Advanced view
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.06em] text-stone-950">
+                  Open the technical station details
+                </h2>
+              </div>
+              <p className="text-sm text-stone-500">
+                Raw payload, sensor keys, and exact values
+              </p>
+            </div>
+          </summary>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {result.data.snapshot.map((item) => (
+              <article
+                key={item.key}
+                className="rounded-[1.4rem] border border-stone-200/80 bg-white/70 p-4"
+              >
+                <p className="font-mono text-[0.7rem] uppercase tracking-[0.22em] text-stone-500">
+                  {item.key}
+                </p>
+                <p className="mt-2 break-words text-sm leading-6 text-stone-700">
+                  {item.value}
+                </p>
+              </article>
+            ))}
+          </div>
+        </details>
+      </div>
+    </main>
+  );
+}
+
+function WeatherErrorState({
+  result,
+}: {
+  result: Exclude<Awaited<ReturnType<typeof getWeatherPageData>>, { state: "ready" }>;
+}) {
+  return (
+    <main className="grid-lines min-h-screen px-5 py-6 text-stone-950 sm:px-8 lg:px-12">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+        <section className="glass-panel rounded-[2rem] bg-white/85 p-7 sm:p-10">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="max-w-3xl">
+              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
+                Weather setup
+              </p>
+              <h1 className="mt-3 text-4xl font-semibold tracking-[-0.08em] text-balance text-stone-950 sm:text-5xl">
+                {result.state === "missing-config"
+                  ? "The weather route is almost ready."
+                  : "Ambient Weather responded, but not in a useful way."}
+              </h1>
+              <p className="mt-4 max-w-3xl text-base leading-7 text-stone-600 sm:text-lg">
+                {result.message}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
               <Link
                 href="/"
-                className="rounded-full border border-stone-300/80 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-950 hover:text-stone-950"
+                className="rounded-full border border-stone-300/80 bg-white/80 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-950 hover:text-stone-950"
               >
                 Back Home
               </Link>
               <RefreshButton />
             </div>
           </div>
-        </section>
 
-        {result.state === "ready" ? (
-          <>
-            {result.notice ? (
-              <section className="glass-panel rounded-[1.5rem] bg-amber-50/85 p-4 text-sm leading-6 text-amber-950">
-                {result.notice}
-              </section>
-            ) : null}
-            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {result.data.metrics.map((metric) => (
-                <article
-                  key={metric.id}
-                  className="glass-panel rounded-[1.75rem] bg-white/82 p-5"
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            <StoryFallbackCard
+              title="Route"
+              value="/weather"
+              body="The public route is live and server-rendered."
+            />
+            <StoryFallbackCard
+              title="Runtime"
+              value="Server-side"
+              body="Your Ambient keys remain on the server."
+            />
+            <StoryFallbackCard
+              title="Next step"
+              value={
+                result.state === "missing-config"
+                  ? "Finish config"
+                  : "Wait out rate limits"
+              }
+              body={
+                result.state === "missing-config"
+                  ? "Add the missing Ambient value listed below."
+                  : "Refresh after Ambient allows another request."
+              }
+            />
+          </div>
+
+          {result.state === "missing-config" ? (
+            <div className="mt-6 flex flex-wrap gap-3">
+              {result.missing.map((key) => (
+                <span
+                  key={key}
+                  className="rounded-full border border-stone-300 bg-stone-50 px-4 py-2 font-mono text-sm text-stone-700"
                 >
-                  <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-                    {metric.label}
-                  </p>
-                  <p className="mt-4 text-3xl font-semibold tracking-[-0.06em] text-stone-950 sm:text-4xl">
-                    {metric.displayValue}
-                  </p>
-                </article>
+                  {key}
+                </span>
               ))}
-            </section>
-
-            <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-              <div className="glass-panel rounded-[2rem] bg-white/82 p-6 sm:p-7">
-                <div className="mb-5 flex items-end justify-between gap-4">
-                  <div>
-                    <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-                      Recent Motion
-                    </p>
-                    <h2 className="mt-2 text-2xl font-semibold tracking-[-0.06em] text-stone-950">
-                      Fast trend read
-                    </h2>
-                  </div>
-                  <p className="text-sm text-stone-500">
-                    Last update {formatDate(result.data.fetchedAt)}
-                  </p>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  {result.data.series.map((series) => (
-                    <WeatherChartCard key={series.id} series={series} />
-                  ))}
-                </div>
-              </div>
-
-              <div className="glass-panel rounded-[2rem] bg-white/82 p-6 sm:p-7">
-                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-                  At A Glance
-                </p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.06em] text-stone-950">
-                  Useful rollups
-                </h2>
-                <div className="mt-6 grid gap-4">
-                  {result.data.highlights.map((highlight) => (
-                    <article
-                      key={highlight.label}
-                      className="rounded-[1.5rem] border border-stone-200/80 bg-stone-50/75 p-4"
-                    >
-                      <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-                        {highlight.label}
-                      </p>
-                      <p className="mt-2 text-xl font-semibold tracking-[-0.04em] text-stone-950">
-                        {highlight.value}
-                      </p>
-                    </article>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            <section className="glass-panel rounded-[2rem] bg-white/82 p-6 sm:p-7">
-              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-                    Raw Snapshot
-                  </p>
-                  <h2 className="mt-2 text-2xl font-semibold tracking-[-0.06em] text-stone-950">
-                    Latest station payload
-                  </h2>
-                </div>
-                <p className="text-sm text-stone-500">
-                  {result.data.station.macAddress
-                    ? `Station ${result.data.station.macAddress}`
-                    : "Station connected"}
-                </p>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {result.data.snapshot.map((item) => (
-                  <article
-                    key={item.key}
-                    className="rounded-[1.4rem] border border-stone-200/80 bg-white/70 p-4"
-                  >
-                    <p className="font-mono text-[0.7rem] uppercase tracking-[0.22em] text-stone-500">
-                      {item.key}
-                    </p>
-                    <p className="mt-2 break-words text-sm leading-6 text-stone-700">
-                      {item.value}
-                    </p>
-                  </article>
-                ))}
-              </div>
-            </section>
-          </>
-        ) : (
-          <section className="glass-panel rounded-[2rem] bg-white/82 p-6 sm:p-7">
-            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-              Weather Setup
-            </p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-stone-950">
-              {result.state === "missing-config"
-                ? "One more Ambient key and this route goes live."
-                : "The weather route is wired, but Ambient returned an API error."}
-            </h2>
-            <p className="mt-4 max-w-3xl text-base leading-7 text-stone-600">
-              {result.message}
-            </p>
-
-            {result.state === "missing-config" ? (
-              <div className="mt-6 flex flex-wrap gap-3">
-                {result.missing.map((key) => (
-                  <span
-                    key={key}
-                    className="rounded-full border border-stone-300 bg-stone-50 px-4 py-2 font-mono text-sm text-stone-700"
-                  >
-                    {key}
-                  </span>
-                ))}
-              </div>
-            ) : null}
-
-            <div className="mt-8 grid gap-4 md:grid-cols-3">
-              <article className="rounded-[1.5rem] border border-stone-200/80 bg-stone-50/75 p-4">
-                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-                  Route
-                </p>
-                <p className="mt-2 text-lg font-semibold tracking-[-0.04em] text-stone-950">
-                  /weather
-                </p>
-              </article>
-              <article className="rounded-[1.5rem] border border-stone-200/80 bg-stone-50/75 p-4">
-                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-                  Runtime
-                </p>
-                <p className="mt-2 text-lg font-semibold tracking-[-0.04em] text-stone-950">
-                  Server-side Ambient fetch
-                </p>
-              </article>
-              <article className="rounded-[1.5rem] border border-stone-200/80 bg-stone-50/75 p-4">
-                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-                  Next Step
-                </p>
-                <p className="mt-2 text-lg font-semibold tracking-[-0.04em] text-stone-950">
-                  {result.state === "missing-config"
-                    ? "Add the missing Ambient key"
-                    : "Let Ambient rate limits cool down"}
-                </p>
-              </article>
             </div>
-          </section>
-        )}
+          ) : null}
+        </section>
       </div>
     </main>
   );
 }
 
-function buildSummary(location: string, observationCount: number) {
-  const locationPrefix = location ? `${location}. ` : "";
-  return `${locationPrefix}${observationCount} recent observations are powering this private station dashboard, with refresh-on-demand and server-side Ambient requests.`;
+function StoryFallbackCard({
+  title,
+  value,
+  body,
+}: {
+  title: string;
+  value: string;
+  body: string;
+}) {
+  return (
+    <article className="rounded-[1.5rem] border border-stone-200/80 bg-stone-50/75 p-4">
+      <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
+        {title}
+      </p>
+      <p className="mt-2 text-lg font-semibold tracking-[-0.04em] text-stone-950">
+        {value}
+      </p>
+      <p className="mt-2 text-sm leading-6 text-stone-600">{body}</p>
+    </article>
+  );
 }
 
-function formatDate(value: string) {
-  return new Date(value).toLocaleString([], {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+function buildSummary(location: string, observationCount: number) {
+  const locationPrefix = location ? `${location}. ` : "";
+  return `${locationPrefix}${observationCount} recent observations are shaping this more visual weather story.`;
 }
 
 function WeatherChartCard({ series }: { series: WeatherSeries }) {
@@ -237,7 +387,9 @@ function WeatherChartCard({ series }: { series: WeatherSeries }) {
   });
 
   const linePath = points
-    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+    .map((point, index) =>
+      `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`,
+    )
     .join(" ");
   const fillPath = `${linePath} L ${width} ${height} L 0 ${height} Z`;
 
@@ -286,7 +438,10 @@ function WeatherChartCard({ series }: { series: WeatherSeries }) {
 }
 
 function formatSeriesRange(series: WeatherSeries) {
-  return `${formatCompact(series.min, series.decimals)} to ${formatCompact(series.max, series.decimals)} ${series.unit}`.trim();
+  return `${formatCompact(series.min, series.decimals)} to ${formatCompact(
+    series.max,
+    series.decimals,
+  )} ${series.unit}`.trim();
 }
 
 function formatCompact(value: number, decimals: number) {
