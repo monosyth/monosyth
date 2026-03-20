@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { AuthConsoleCard } from "@/components/auth/auth-console-card";
 
 export default function Home() {
@@ -12,14 +10,6 @@ export default function Home() {
               <h1 className="text-6xl font-semibold leading-none tracking-[-0.08em] text-balance sm:text-7xl lg:text-8xl">
                 monosyth
               </h1>
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  href="/weather"
-                  className="inline-flex items-center rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5"
-                >
-                  Open Weather
-                </Link>
-              </div>
             </div>
 
             <AuthConsoleCard />
