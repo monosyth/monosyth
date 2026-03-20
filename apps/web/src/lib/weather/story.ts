@@ -1,7 +1,12 @@
-import type { WeatherOverview, WeatherSeries, WeatherSnapshotItem } from "@/lib/weather/types";
+import type {
+  WeatherOverview,
+  WeatherSeries,
+  WeatherSnapshotItem,
+} from "@/lib/weather/types";
 import { formatWeatherDateTime } from "@/lib/weather/time";
 
 type StoryTone = "gold" | "sky" | "rain" | "pine";
+type PressureDirection = "rising" | "falling" | "steady";
 
 export type WeatherStory = {
   mood: {
@@ -11,6 +16,20 @@ export type WeatherStory = {
     temperatureDisplay: string;
     stamp: string;
     chips: string[];
+  };
+  pressure: {
+    title: string;
+    explainer: string;
+    summary: string;
+    current: string;
+    tendency: string;
+    history: string;
+    weatherSignal: string;
+    bodySignal: string;
+    markers: string[];
+    tone: StoryTone;
+    direction: PressureDirection;
+    meterValue: number;
   };
   outfit: {
     title: string;
@@ -70,10 +89,11 @@ export function buildWeatherStory(data: WeatherOverview): WeatherStory {
   const hourlyRain = snapshotNumber(data.snapshot, "hourlyrainin");
   const windDegrees = snapshotNumber(data.snapshot, "winddir");
   const windDirection = cardinalDirection(snapshotNumber(data.snapshot, "winddir"));
+  const pressureStory = buildPressureStory(pressure, findSeries(data.series, "pressure"));
 
   return {
     mood: {
-      title: buildMoodTitle({ temperature, wind, rainToday, uv }),
+      title: buildMoodTitle({ temperature, wind, rainToday, uv, pressureDirection: pressureStory.direction }),
       subtitle: buildMoodSubtitle({
         temperature,
         humidity,
@@ -81,6 +101,7 @@ export function buildWeatherStory(data: WeatherOverview): WeatherStory {
         rainToday,
         uv,
         solar,
+        pressureDirection: pressureStory.direction,
       }),
       tone: pickMoodTone({ wind, rainToday, uv, temperature }),
       temperatureDisplay: formatTemperature(temperature),
@@ -90,8 +111,10 @@ export function buildWeatherStory(data: WeatherOverview): WeatherStory {
         windChip(wind, gust),
         rainChip(rainToday, hourlyRain),
         sunChip(uv, solar),
+        pressureChip(pressureStory.direction),
       ].filter(Boolean),
     },
+    pressure: pressureStory,
     outfit: buildOutfit({ temperature, wind, rainToday, uv, humidity }),
     activity: buildActivities({ temperature, wind, rainToday, uv }),
     visuals: {
@@ -160,9 +183,9 @@ export function buildWeatherStory(data: WeatherOverview): WeatherStory {
       },
       {
         id: "sky",
-        title: "Sky & Sun",
+        title: "Sky, Sun & Pressure",
         eyebrow: sunChip(uv, solar) || "Brightness and pressure",
-        summary: skySummary(uv, solar, pressure),
+        summary: skySummary(uv, solar, pressure, pressureStory.direction),
         value: uvLabel(uv),
         meterLabel: "Sun strength",
         meterValue: clamp(percentOf(uv, 11), 0, 100),
@@ -171,15 +194,70 @@ export function buildWeatherStory(data: WeatherOverview): WeatherStory {
           formatDetail("Solar", numberWithUnit(solar, "W/m2", 0)),
           formatDetail("UV", numberWithUnit(uv, "", 1)),
           formatDetail("Pressure", numberWithUnit(pressure, "inHg", 2)),
+          formatDetail("Pressure signal", pressureOutcomeChip(pressureStory.direction)),
         ],
       },
     ],
     changes: [
       describeSeriesChange(findSeries(data.series, "temperature"), "Temperature", "gold"),
       describeSeriesChange(findSeries(data.series, "wind"), "Wind", "sky"),
+      describeSeriesChange(findSeries(data.series, "pressure"), "Pressure", pressureStory.tone),
       describeSeriesChange(findSeries(data.series, "humidity"), "Humidity", "pine"),
       describeSeriesChange(findSeries(data.series, "rain"), "Rain", "rain"),
     ].filter((value): value is NonNullable<typeof value> => value !== null),
+  };
+}
+
+function buildPressureStory(
+  pressure: number | null,
+  series: WeatherSeries | null,
+): WeatherStory["pressure"] {
+  const current = numberWithUnit(pressure, "inHg", 2);
+
+  if (!series || series.points.length < 2) {
+    return {
+      title: "Pressure is readable, but its trend needs more history.",
+      explainer: "Barometric pressure is the weight of the air above you.",
+      summary:
+        "Higher pressure usually leans steadier and clearer. Lower pressure more often shows up with a less settled setup.",
+      current,
+      tendency: "Not enough history yet",
+      history: "Keep gathering station readings to show the daylong pressure pattern.",
+      weatherSignal:
+        "Once the station has a longer pressure trail, this section can tell you whether the day is leaning calmer or more unsettled.",
+      bodySignal:
+        "Some people notice quick pressure swings as sinus fullness, headache, migraine sensitivity, or achy joints, while others feel nothing at all.",
+      markers: ["Pressure explainer", pressureBandLabel(pressure), "Need more history"],
+      tone: pickPressureTone("steady", pressure),
+      direction: "steady",
+      meterValue: pressureMeter(pressure),
+    };
+  }
+
+  const start = series.points[0];
+  const end = series.points.at(-1) ?? start;
+  const low = Math.min(...series.points.map((point) => point.value));
+  const high = Math.max(...series.points.map((point) => point.value));
+  const delta = end.value - start.value;
+  const direction = pressureDirection(delta);
+
+  return {
+    title: pressureTitle(direction, delta),
+    explainer: "Barometric pressure is the weight of the air above you.",
+    summary: pressureSummary(direction, delta, start.label, end.label),
+    current,
+    tendency: pressureTendency(direction, delta),
+    history: `Today it ranged from ${compact(low, 2)} to ${compact(high, 2)} inHg.`,
+    weatherSignal: pressureWeatherSignal(direction, end.value),
+    bodySignal: pressureBodySignal(delta),
+    markers: [
+      pressureBandLabel(end.value),
+      pressureOutcomeChip(direction),
+      pressureSensitivityChip(delta),
+    ],
+    tone: pickPressureTone(direction, end.value),
+    direction,
+    meterValue: pressureMeter(end.value),
   };
 }
 
@@ -310,7 +388,12 @@ function buildMoodTitle(values: {
   wind: number | null;
   rainToday: number | null;
   uv: number | null;
+  pressureDirection: PressureDirection;
 }) {
+  if (values.pressureDirection === "falling" && (values.rainToday ?? 0) < 0.15) {
+    return "The air feels like it is leaning toward a weather change.";
+  }
+
   if ((values.rainToday ?? 0) >= 0.15) {
     return "Rain has made the day feel active and damp.";
   }
@@ -337,8 +420,16 @@ function buildMoodSubtitle(values: {
   rainToday: number | null;
   uv: number | null;
   solar: number | null;
+  pressureDirection: PressureDirection;
 }) {
-  return `${comfortPhrase(values.temperature, values.humidity)}. ${windPhrase(values.wind)}. ${skyPhrase(values.uv, values.solar)}.`;
+  const pressureSentence =
+    values.pressureDirection === "falling"
+      ? "Pressure is slipping, so the atmosphere looks a little less settled."
+      : values.pressureDirection === "rising"
+        ? "Pressure is climbing, which usually leans calmer and more stable."
+        : "Pressure is steady enough that the broader pattern is not changing fast.";
+
+  return `${comfortPhrase(values.temperature, values.humidity)}. ${windPhrase(values.wind)}. ${skyPhrase(values.uv, values.solar)}. ${pressureSentence}`;
 }
 
 function comfortSummary(
@@ -381,11 +472,12 @@ function skySummary(
   uv: number | null,
   solar: number | null,
   pressure: number | null,
+  direction: PressureDirection,
 ) {
   const pressureText =
     pressure === null
       ? ""
-      : ` Pressure is ${compact(pressure, 2)} inHg, which helps frame the current sky setup.`;
+      : ` Pressure is ${compact(pressure, 2)} inHg and ${direction === "steady" ? "holding fairly even" : direction === "rising" ? "rising" : "falling"}.`;
 
   return `${skyPhrase(uv, solar)}.${pressureText}`;
 }
@@ -741,6 +833,18 @@ function sunChip(uv: number | null, solar: number | null) {
   return "Muted sky";
 }
 
+function pressureChip(direction: PressureDirection) {
+  if (direction === "falling") {
+    return "Pressure dropping";
+  }
+
+  if (direction === "rising") {
+    return "Pressure rising";
+  }
+
+  return "Pressure steady";
+}
+
 function pickMoodTone(values: {
   wind: number | null;
   rainToday: number | null;
@@ -784,6 +888,148 @@ function pickRainTone(rainToday: number | null, hourlyRain: number | null): Stor
 
 function pickSkyTone(uv: number | null, solar: number | null): StoryTone {
   return (uv ?? 0) >= 4 || (solar ?? 0) >= 400 ? "gold" : "sky";
+}
+
+function pickPressureTone(direction: PressureDirection, pressure: number | null): StoryTone {
+  if (direction === "falling") {
+    return "rain";
+  }
+
+  if ((pressure ?? 29.92) >= 30.1) {
+    return "gold";
+  }
+
+  if (direction === "rising") {
+    return "pine";
+  }
+
+  return "sky";
+}
+
+function pressureDirection(delta: number): PressureDirection {
+  if (Math.abs(delta) < 0.03) {
+    return "steady";
+  }
+
+  return delta > 0 ? "rising" : "falling";
+}
+
+function pressureTitle(direction: PressureDirection, delta: number) {
+  if (direction === "falling") {
+    return Math.abs(delta) >= 0.08
+      ? "Pressure is dropping fast and the weather may be turning."
+      : "Pressure is easing down and the day looks less settled.";
+  }
+
+  if (direction === "rising") {
+    return Math.abs(delta) >= 0.08
+      ? "Pressure is climbing fast and the air is settling."
+      : "Pressure is edging up toward a steadier pattern.";
+  }
+
+  return "Pressure has stayed fairly even through the day.";
+}
+
+function pressureSummary(
+  direction: PressureDirection,
+  delta: number,
+  startLabel: string,
+  endLabel: string,
+) {
+  if (direction === "steady") {
+    return `From ${startLabel} to ${endLabel}, the barometer barely moved. That usually means pressure alone is not signaling a major weather swing yet.`;
+  }
+
+  const verb = direction === "rising" ? "climbed" : "fell";
+  return `From ${startLabel} to ${endLabel}, the barometer ${verb} ${compact(Math.abs(delta), 2)} inHg. That kind of move often means the atmosphere is either settling down or getting more changeable.`;
+}
+
+function pressureTendency(direction: PressureDirection, delta: number) {
+  if (direction === "steady") {
+    return "Little pressure change today";
+  }
+
+  return `${direction === "rising" ? "Up" : "Down"} ${compact(Math.abs(delta), 2)} inHg today`;
+}
+
+function pressureWeatherSignal(direction: PressureDirection, pressure: number) {
+  if (direction === "falling") {
+    return pressure < 29.8
+      ? "The barometer is lower and still falling, which often lines up with clouds, wind, or incoming rain."
+      : "A falling barometer usually means the atmosphere is becoming less settled, so more changeable weather is more believable than a clean-up.";
+  }
+
+  if (direction === "rising") {
+    return pressure > 30.1
+      ? "The barometer is high and rising, which usually points toward calmer, more stable weather."
+      : "A rising barometer usually means the air mass is stabilizing, so improving or clearer weather is more likely than stormier weather.";
+  }
+
+  return "A steady barometer suggests pressure alone is not warning of a sharp weather turn right now.";
+}
+
+function pressureBodySignal(delta: number) {
+  const amount = Math.abs(delta);
+
+  if (amount < 0.03) {
+    return "This is a small pressure move, so many people would not feel much from pressure by itself.";
+  }
+
+  if (amount < 0.07) {
+    return "Some pressure-sensitive people notice a shift like this as mild sinus fullness, headache pressure, or a vague achy feeling.";
+  }
+
+  return "Pressure changed quickly enough today that some people may notice sinus pressure, migraine sensitivity, or achy joints more than usual.";
+}
+
+function pressureBandLabel(pressure: number | null) {
+  if (pressure === null) {
+    return "No pressure reading";
+  }
+
+  if (pressure < 29.8) {
+    return "Lower-pressure air";
+  }
+
+  if (pressure > 30.1) {
+    return "Higher-pressure air";
+  }
+
+  return "Near average pressure";
+}
+
+function pressureOutcomeChip(direction: PressureDirection) {
+  if (direction === "falling") {
+    return "Stormier lean";
+  }
+
+  if (direction === "rising") {
+    return "Better-weather lean";
+  }
+
+  return "Pattern holding";
+}
+
+function pressureSensitivityChip(delta: number) {
+  const amount = Math.abs(delta);
+
+  if (amount < 0.03) {
+    return "Low body impact";
+  }
+
+  if (amount < 0.07) {
+    return "Some may feel it";
+  }
+
+  return "Pressure-sensitive alert";
+}
+
+function pressureMeter(value: number | null) {
+  if (value === null) {
+    return 50;
+  }
+
+  return clamp(((value - 29.2) / (30.5 - 29.2)) * 100, 0, 100);
 }
 
 function cardinalDirection(degrees: number | null) {

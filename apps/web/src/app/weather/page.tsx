@@ -47,11 +47,14 @@ export default async function WeatherPage() {
 
   const story = buildWeatherStory(result.data);
   const heroTone = toneClasses[story.mood.tone];
+  const pressureSeries =
+    result.data.series.find((series) => series.id === "pressure") ?? null;
+  const motionSeries = result.data.series.filter((series) => series.id !== "pressure");
 
   return (
     <main className="grid-lines relative min-h-screen overflow-hidden px-5 py-6 text-stone-950 sm:px-8 lg:px-12">
       <div className="weather-drift pointer-events-none absolute left-[-8rem] top-8 h-72 w-72 rounded-full bg-amber-300/20 blur-3xl" />
-      <div className="weather-float pointer-events-none absolute right-[-5rem] top-24 h-80 w-80 rounded-full bg-sky-300/20 blur-3xl" />
+      <div className="weather-drift pointer-events-none absolute right-[-5rem] top-24 h-80 w-80 rounded-full bg-sky-300/20 blur-3xl" />
       <div className="weather-drift pointer-events-none absolute bottom-24 left-1/3 h-72 w-72 rounded-full bg-emerald-300/15 blur-3xl" />
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <section className="glass-panel relative overflow-hidden rounded-[2rem] bg-white/85 p-7 sm:p-10">
@@ -156,7 +159,7 @@ export default async function WeatherPage() {
             return (
               <article
                 key={category.id}
-                className={`glass-panel group weather-float relative overflow-hidden rounded-[1.9rem] border p-5 transition duration-300 hover:-translate-y-1 ${tone.panel}`}
+                className={`glass-panel group relative overflow-hidden rounded-[1.9rem] border p-5 transition duration-300 hover:-translate-y-1 ${tone.panel}`}
               >
                 <div className="pointer-events-none absolute -right-5 -top-5 h-24 w-24 rounded-full bg-white/35 blur-2xl" />
                 <div className="pointer-events-none absolute bottom-3 right-4 text-6xl font-semibold tracking-[-0.08em] text-white/35">
@@ -173,7 +176,7 @@ export default async function WeatherPage() {
                   </div>
                   <div className="relative h-16 w-16 rounded-full border border-white/80 bg-white/60">
                     <div
-                      className={`absolute inset-3 rounded-full bg-gradient-to-br transition duration-300 group-hover:scale-110 ${tone.glow}`}
+                        className={`absolute inset-3 rounded-full bg-gradient-to-br transition duration-300 group-hover:scale-110 ${tone.glow}`}
                     />
                   </div>
                 </div>
@@ -324,7 +327,7 @@ export default async function WeatherPage() {
                     </div>
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div
-                        className="weather-bob relative h-28 w-4 origin-center transition-transform duration-700"
+                        className="relative h-28 w-4 origin-center transition-transform duration-700"
                         style={{
                           transform: `rotate(${story.visuals.wind.directionDegrees ?? 0}deg)`,
                         }}
@@ -380,6 +383,104 @@ export default async function WeatherPage() {
         <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
           <article className="glass-panel rounded-[2rem] bg-white/82 p-6 sm:p-7">
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
+              Pressure story
+            </p>
+            <h2 className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-stone-950">
+              What the barometer is saying
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-stone-600 sm:text-base">
+              {story.pressure.explainer} {story.pressure.summary}
+            </p>
+
+            <div className="mt-6 grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+              <article
+                className={`relative overflow-hidden rounded-[1.8rem] border p-5 ${toneClasses[story.pressure.tone].panel}`}
+              >
+                <div className="weather-glow pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-br from-white/70 via-white/20 to-transparent" />
+                <div className="relative">
+                  <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
+                    Live barometer
+                  </p>
+                  <h3 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-stone-950">
+                    {story.pressure.title}
+                  </h3>
+                </div>
+
+                <div className="mt-6">
+                  <PressureGauge
+                    value={story.pressure.current}
+                    tendency={story.pressure.tendency}
+                    meterValue={story.pressure.meterValue}
+                    tone={story.pressure.tone}
+                  />
+                </div>
+
+                <div className="mt-5 flex flex-wrap gap-3">
+                  {story.pressure.markers.map((marker) => (
+                    <span
+                      key={marker}
+                      className="rounded-full border border-white/85 bg-white/75 px-4 py-2 text-sm font-medium text-stone-700 shadow-sm"
+                    >
+                      {marker}
+                    </span>
+                  ))}
+                </div>
+              </article>
+
+              <div className="grid gap-4">
+                <StoryCalloutCard
+                  title="Weather signal"
+                  body={story.pressure.weatherSignal}
+                  tone={story.pressure.tone}
+                />
+                <StoryCalloutCard
+                  title="What your body may notice"
+                  body={story.pressure.bodySignal}
+                  tone={story.pressure.tone}
+                />
+                <StoryCalloutCard
+                  title="History of the day"
+                  body={story.pressure.history}
+                  tone="sky"
+                />
+              </div>
+            </div>
+          </article>
+
+          <article className="glass-panel rounded-[2rem] bg-white/82 p-6 sm:p-7">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
+                  Pressure history
+                </p>
+                <h2 className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-stone-950">
+                  Storm coming or weather settling?
+                </h2>
+              </div>
+              <p className="text-sm text-stone-500">{story.pressure.tendency}</p>
+            </div>
+
+            <div className="mt-5 grid gap-4">
+              <article className="rounded-[1.6rem] border border-stone-200/80 bg-stone-50/75 p-4">
+                <p className="text-sm leading-6 text-stone-600">
+                  Falling pressure usually means the atmosphere is getting less stable, which can line up with thicker clouds, more wind, or incoming rain. Rising pressure usually leans the other way and often signals calmer, improving weather.
+                </p>
+              </article>
+              {pressureSeries ? (
+                <WeatherChartCard
+                  series={pressureSeries}
+                  title="Barometric pressure"
+                  subtitle={story.pressure.history}
+                  tone={story.pressure.tone}
+                />
+              ) : null}
+            </div>
+          </article>
+        </section>
+
+        <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+          <article className="glass-panel rounded-[2rem] bg-white/82 p-6 sm:p-7">
+            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
               What changed recently
             </p>
             <h2 className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-stone-950">
@@ -423,7 +524,7 @@ export default async function WeatherPage() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              {result.data.series.map((series) => (
+              {motionSeries.map((series) => (
                 <WeatherChartCard key={series.id} series={series} />
               ))}
             </div>
@@ -587,7 +688,7 @@ function WeatherPostcard({
 
   return (
     <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-      <div className="weather-float rounded-[1.8rem] border border-white/80 bg-white/70 p-4">
+      <div className="rounded-[1.8rem] border border-white/80 bg-white/70 p-4">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-stone-500">
@@ -623,7 +724,7 @@ function WeatherPostcard({
         {tone === "sky" ? (
           <>
             <div className="weather-drift absolute right-6 top-10 h-16 w-16 rounded-full border border-sky-200/70 bg-sky-100/40" />
-            <div className="weather-float absolute right-10 top-14 h-8 w-8 rounded-full bg-sky-300/50" />
+            <div className="weather-glow absolute right-10 top-14 h-8 w-8 rounded-full bg-sky-300/50" />
           </>
         ) : null}
         {tone === "gold" ? (
@@ -631,11 +732,11 @@ function WeatherPostcard({
         ) : null}
         {tone === "pine" ? (
           <>
-            <div className="weather-float absolute right-8 top-12 h-12 w-12 rounded-full bg-emerald-200/40" />
+            <div className="weather-glow absolute right-8 top-12 h-12 w-12 rounded-full bg-emerald-200/40" />
             <div className="weather-drift absolute right-16 top-8 h-6 w-24 rounded-full bg-white/40" />
           </>
         ) : null}
-        <div className="weather-bob absolute bottom-4 left-5 rounded-full bg-white/75 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-stone-700">
+        <div className="absolute bottom-4 left-5 rounded-full bg-white/75 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-stone-700">
           outside now
         </div>
       </div>
@@ -643,10 +744,117 @@ function WeatherPostcard({
   );
 }
 
-function WeatherChartCard({ series }: { series: WeatherSeries }) {
+function PressureGauge({
+  value,
+  tendency,
+  meterValue,
+  tone,
+}: {
+  value: string;
+  tendency: string;
+  meterValue: number;
+  tone: keyof typeof toneClasses;
+}) {
+  const angle = meterValue * 1.8 - 90;
+  const needleX = 60 + 36 * Math.cos((angle * Math.PI) / 180);
+  const needleY = 60 + 36 * Math.sin((angle * Math.PI) / 180);
+  const toneClass = toneClasses[tone];
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-[0.95fr_1.05fr] sm:items-center">
+      <div className="flex justify-center">
+        <svg viewBox="0 0 120 84" className="h-40 w-40 overflow-visible" role="img" aria-label="Pressure gauge">
+          <path
+            d="M12 72 A48 48 0 0 1 108 72"
+            fill="none"
+            stroke="rgba(255,255,255,0.75)"
+            strokeWidth="14"
+            strokeLinecap="round"
+          />
+          <path
+            d="M12 72 A48 48 0 0 1 108 72"
+            fill="none"
+            className={`stroke-current text-stone-900/70`}
+            strokeWidth="4"
+            strokeDasharray={`${(meterValue / 100) * 150} 150`}
+            strokeLinecap="round"
+          />
+          <line
+            x1="60"
+            y1="60"
+            x2={needleX}
+            y2={needleY}
+            className="stroke-stone-950"
+            strokeWidth="4"
+            strokeLinecap="round"
+          />
+          <circle cx="60" cy="60" r="7" className="fill-stone-950" />
+          <circle cx="60" cy="60" r="11" className="fill-white/70" />
+          <circle cx="60" cy="60" r="5" className="fill-stone-950" />
+          <text x="12" y="81" className="fill-stone-500 text-[8px] uppercase tracking-[0.18em]">
+            low
+          </text>
+          <text x="53" y="19" className="fill-stone-500 text-[8px] uppercase tracking-[0.18em]">
+            avg
+          </text>
+          <text x="95" y="81" className="fill-stone-500 text-[8px] uppercase tracking-[0.18em]">
+            high
+          </text>
+        </svg>
+      </div>
+
+      <div className="space-y-3">
+        <p className="text-4xl font-semibold tracking-[-0.08em] text-stone-950">{value}</p>
+        <p
+          className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${toneClass.badge}`}
+        >
+          {tendency}
+        </p>
+        <p className="text-sm leading-6 text-stone-600">
+          Think of this gauge as the atmosphere pressing down harder or easing off. High pressure usually leans calmer. Falling pressure usually points toward a less settled setup.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function StoryCalloutCard({
+  title,
+  body,
+  tone,
+}: {
+  title: string;
+  body: string;
+  tone: keyof typeof toneClasses;
+}) {
+  return (
+    <article
+      className={`relative overflow-hidden rounded-[1.5rem] border p-4 ${toneClasses[tone].panel}`}
+    >
+      <div className="pointer-events-none absolute right-3 top-3 h-16 w-16 rounded-full bg-white/30 blur-xl" />
+      <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
+        {title}
+      </p>
+      <p className="mt-2 text-sm leading-6 text-stone-700">{body}</p>
+    </article>
+  );
+}
+
+function WeatherChartCard({
+  series,
+  title,
+  subtitle,
+  tone = "pine",
+}: {
+  series: WeatherSeries;
+  title?: string;
+  subtitle?: string;
+  tone?: keyof typeof toneClasses;
+}) {
   const width = 320;
   const height = 124;
   const span = series.max - series.min || 1;
+  const toneClass = toneClasses[tone];
   const points = series.points.map((point, index) => {
     const x = (index / Math.max(series.points.length - 1, 1)) * width;
     const y = height - ((point.value - series.min) / span) * (height - 12) - 6;
@@ -664,9 +872,9 @@ function WeatherChartCard({ series }: { series: WeatherSeries }) {
     <article className="rounded-[1.5rem] border border-stone-200/80 bg-stone-50/75 p-4">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-stone-950">{series.label}</p>
+          <p className="text-sm font-semibold text-stone-950">{title ?? series.label}</p>
           <p className="mt-1 text-xs uppercase tracking-[0.22em] text-stone-500">
-            {formatSeriesRange(series)}
+            {subtitle ?? formatSeriesRange(series)}
           </p>
         </div>
       </div>
@@ -685,10 +893,21 @@ function WeatherChartCard({ series }: { series: WeatherSeries }) {
           className="stroke-stone-300"
           strokeWidth="1"
         />
-        <path d={fillPath} className="fill-teal-500/12" />
+        <path
+          d={fillPath}
+          className={`fill-current opacity-15 ${tone === "rain" ? "text-blue-500" : tone === "sky" ? "text-sky-500" : tone === "gold" ? "text-amber-500" : "text-emerald-600"}`}
+        />
         <path
           d={linePath}
-          className="stroke-teal-700"
+          className={
+            tone === "rain"
+              ? "stroke-blue-700"
+              : tone === "sky"
+                ? "stroke-sky-700"
+                : tone === "gold"
+                  ? "stroke-amber-700"
+                  : "stroke-emerald-700"
+          }
           strokeWidth="3"
           strokeLinecap="round"
           strokeLinejoin="round"
