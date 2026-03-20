@@ -3,7 +3,7 @@ import type {
   WeatherSeries,
   WeatherSnapshotItem,
 } from "@/lib/weather/types";
-import { formatWeatherDateTime } from "@/lib/weather/time";
+import { formatWeatherClock, formatWeatherDateTime } from "@/lib/weather/time";
 
 type StoryTone = "gold" | "sky" | "rain" | "pine";
 type PressureDirection = "rising" | "falling" | "steady";
@@ -30,6 +30,21 @@ export type WeatherStory = {
     tone: StoryTone;
     direction: PressureDirection;
     meterValue: number;
+  };
+  timeline: {
+    title: string;
+    summary: string;
+    currentLabel: string;
+    items: Array<{
+      timeLabel: string;
+      relativeLabel: string;
+      temperatureLabel: string;
+      status: string;
+      summary: string;
+      tone: StoryTone;
+      kind: "observed" | "now" | "outlook";
+      temperatureValue: number | null;
+    }>;
   };
   outfit: {
     title: string;
@@ -90,6 +105,15 @@ export function buildWeatherStory(data: WeatherOverview): WeatherStory {
   const windDegrees = snapshotNumber(data.snapshot, "winddir");
   const windDirection = cardinalDirection(snapshotNumber(data.snapshot, "winddir"));
   const pressureStory = buildPressureStory(pressure, findSeries(data.series, "pressure"));
+  const timeline = buildWeatherTimeline({
+    data,
+    temperature,
+    humidity,
+    wind,
+    rainToday,
+    pressure,
+    pressureDirection: pressureStory.direction,
+  });
 
   return {
     mood: {
@@ -115,6 +139,7 @@ export function buildWeatherStory(data: WeatherOverview): WeatherStory {
       ].filter(Boolean),
     },
     pressure: pressureStory,
+    timeline,
     outfit: buildOutfit({ temperature, wind, rainToday, uv, humidity }),
     activity: buildActivities({ temperature, wind, rainToday, uv }),
     visuals: {
@@ -258,6 +283,133 @@ function buildPressureStory(
     tone: pickPressureTone(direction, end.value),
     direction,
     meterValue: pressureMeter(end.value),
+  };
+}
+
+function buildWeatherTimeline(values: {
+  data: WeatherOverview;
+  temperature: number | null;
+  humidity: number | null;
+  wind: number | null;
+  rainToday: number | null;
+  pressure: number | null;
+  pressureDirection: PressureDirection;
+}): WeatherStory["timeline"] {
+  const temperatureSeries = findSeries(values.data.series, "temperature");
+  const windSeries = findSeries(values.data.series, "wind");
+  const pressureSeries = findSeries(values.data.series, "pressure");
+  const humiditySeries = findSeries(values.data.series, "humidity");
+  const nowTimestamp =
+    temperatureSeries?.points.at(-1)?.timestamp ??
+    pressureSeries?.points.at(-1)?.timestamp ??
+    Date.parse(values.data.fetchedAt);
+  const temperatureSlope = trendPerHour(temperatureSeries);
+  const windSlope = trendPerHour(windSeries);
+  const pressureSlope = trendPerHour(pressureSeries);
+  const items = Array.from({ length: 13 }, (_, index) => {
+    const hourOffset = index - 6;
+    const targetTimestamp = nowTimestamp + hourOffset * 60 * 60 * 1000;
+
+    if (hourOffset <= 0) {
+      const observedTemperature =
+        sampleSeriesAtOrBefore(temperatureSeries, targetTimestamp) ?? values.temperature;
+      const observedWind = sampleSeriesAtOrBefore(windSeries, targetTimestamp) ?? values.wind;
+      const observedPressure =
+        sampleSeriesAtOrBefore(pressureSeries, targetTimestamp) ?? values.pressure;
+      const observedHumidity =
+        sampleSeriesAtOrBefore(humiditySeries, targetTimestamp) ?? values.humidity;
+      const tone = pickTimelineTone({
+        temperature: observedTemperature,
+        wind: observedWind,
+        pressureDirection:
+          observedPressure === null || values.pressure === null
+            ? values.pressureDirection
+            : observedPressure < values.pressure - 0.04
+              ? "falling"
+              : observedPressure > values.pressure + 0.04
+                ? "rising"
+                : "steady",
+        rainToday: values.rainToday,
+      });
+
+      return {
+        timeLabel: formatWeatherClock(targetTimestamp),
+        relativeLabel: hourOffset === 0 ? "Now" : `${Math.abs(hourOffset)}h ago`,
+        temperatureLabel: formatTemperature(observedTemperature),
+        status: timelineStatus({
+          temperature: observedTemperature,
+          wind: observedWind,
+          pressureDirection: values.pressureDirection,
+          rainToday: values.rainToday,
+          humidity: observedHumidity,
+          future: false,
+        }),
+        summary: timelineSummary({
+          temperature: observedTemperature,
+          wind: observedWind,
+          pressureDirection: values.pressureDirection,
+          rainToday: values.rainToday,
+          humidity: observedHumidity,
+          future: false,
+        }),
+        tone,
+        kind: (hourOffset === 0 ? "now" : "observed") as "now" | "observed",
+        temperatureValue: observedTemperature,
+      };
+    }
+
+    const projectedTemperature = projectValue(values.temperature, temperatureSlope, hourOffset);
+    const projectedWind = clampNullable(projectValue(values.wind, windSlope, hourOffset), 0, 60);
+    const projectedPressure = projectValue(values.pressure, pressureSlope, hourOffset);
+    const projectedPressureDirection = projectedPressureDirectionFor(
+      values.pressure,
+      projectedPressure,
+      values.pressureDirection,
+    );
+    const projectedHumidity = values.humidity;
+    const tone = pickTimelineTone({
+      temperature: projectedTemperature,
+      wind: projectedWind,
+      pressureDirection: projectedPressureDirection,
+      rainToday: values.rainToday,
+    });
+
+    return {
+      timeLabel: formatWeatherClock(targetTimestamp),
+      relativeLabel: `+${hourOffset}h`,
+      temperatureLabel: formatTemperature(projectedTemperature),
+      status: timelineStatus({
+        temperature: projectedTemperature,
+        wind: projectedWind,
+        pressureDirection: projectedPressureDirection,
+        rainToday: values.rainToday,
+        humidity: projectedHumidity,
+        future: true,
+      }),
+      summary: timelineSummary({
+        temperature: projectedTemperature,
+        wind: projectedWind,
+        pressureDirection: projectedPressureDirection,
+        rainToday: values.rainToday,
+        humidity: projectedHumidity,
+        future: true,
+      }),
+      tone,
+      kind: "outlook" as const,
+      temperatureValue: projectedTemperature,
+    };
+  });
+
+  return {
+    title: "Twelve-hour weather ribbon",
+    summary:
+      values.pressureDirection === "falling"
+        ? "Left side is what the station already saw. Right side is the next few hours leaning more changeable as pressure trends down."
+        : values.pressureDirection === "rising"
+          ? "Left side is station history. Right side is a short-range outlook leaning steadier as pressure rises."
+          : "Left side is observed. Right side is a short-range outlook based on the current trend rather than a full forecast model.",
+    currentLabel: formatWeatherClock(nowTimestamp),
+    items,
   };
 }
 
@@ -1030,6 +1182,149 @@ function pressureMeter(value: number | null) {
   }
 
   return clamp(((value - 29.2) / (30.5 - 29.2)) * 100, 0, 100);
+}
+
+function sampleSeriesAtOrBefore(series: WeatherSeries | null, timestamp: number) {
+  if (!series || !series.points.length) {
+    return null;
+  }
+
+  const eligible = series.points.filter((point) => point.timestamp <= timestamp);
+  const point = eligible.at(-1) ?? series.points[0];
+  return point?.value ?? null;
+}
+
+function trendPerHour(series: WeatherSeries | null) {
+  if (!series || series.points.length < 2) {
+    return 0;
+  }
+
+  const recent = series.points.slice(-12);
+  const first = recent[0];
+  const last = recent.at(-1) ?? first;
+  const elapsedHours = Math.max((last.timestamp - first.timestamp) / (60 * 60 * 1000), 1 / 6);
+  return (last.value - first.value) / elapsedHours;
+}
+
+function projectValue(current: number | null, slopePerHour: number, hoursAhead: number) {
+  if (current === null) {
+    return null;
+  }
+
+  return current + slopePerHour * hoursAhead;
+}
+
+function clampNullable(value: number | null, min: number, max: number) {
+  if (value === null) {
+    return null;
+  }
+
+  return clamp(value, min, max);
+}
+
+function projectedPressureDirectionFor(
+  currentPressure: number | null,
+  projectedPressure: number | null,
+  fallback: PressureDirection,
+): PressureDirection {
+  if (currentPressure === null || projectedPressure === null) {
+    return fallback;
+  }
+
+  return pressureDirection(projectedPressure - currentPressure);
+}
+
+function pickTimelineTone(values: {
+  temperature: number | null;
+  wind: number | null;
+  pressureDirection: PressureDirection;
+  rainToday: number | null;
+}): StoryTone {
+  if ((values.rainToday ?? 0) > 0.12 || values.pressureDirection === "falling") {
+    return "rain";
+  }
+
+  if ((values.wind ?? 0) > 10) {
+    return "sky";
+  }
+
+  if ((values.temperature ?? 0) >= 72) {
+    return "gold";
+  }
+
+  return "pine";
+}
+
+function timelineStatus(values: {
+  temperature: number | null;
+  wind: number | null;
+  pressureDirection: PressureDirection;
+  rainToday: number | null;
+  humidity: number | null;
+  future: boolean;
+}) {
+  if ((values.rainToday ?? 0) > 0.15) {
+    return values.future ? "Still damp" : "Wet stretch";
+  }
+
+  if (values.pressureDirection === "falling") {
+    return values.future ? "Turning unsettled" : "Less settled";
+  }
+
+  if (values.pressureDirection === "rising") {
+    return values.future ? "Settling down" : "Steadier air";
+  }
+
+  if ((values.wind ?? 0) >= 12) {
+    return "Breezy";
+  }
+
+  if ((values.temperature ?? 0) >= 75) {
+    return "Warmer";
+  }
+
+  if ((values.temperature ?? 0) <= 48) {
+    return "Cooler";
+  }
+
+  return "Even pace";
+}
+
+function timelineSummary(values: {
+  temperature: number | null;
+  wind: number | null;
+  pressureDirection: PressureDirection;
+  rainToday: number | null;
+  humidity: number | null;
+  future: boolean;
+}) {
+  if ((values.rainToday ?? 0) > 0.15) {
+    return values.future
+      ? "Moisture stays in the picture."
+      : "Rain was already shaping the feel.";
+  }
+
+  if (values.pressureDirection === "falling") {
+    return values.future
+      ? "Pressure keeps leaning toward more change."
+      : "The atmosphere looked increasingly less settled.";
+  }
+
+  if (values.pressureDirection === "rising") {
+    return values.future
+      ? "Pressure leans toward calmer weather."
+      : "The air was getting more stable.";
+  }
+
+  if ((values.wind ?? 0) >= 12) {
+    return "Wind stands out more than the temperature.";
+  }
+
+  if ((values.humidity ?? 0) >= 72) {
+    return "Air moisture is part of the feel.";
+  }
+
+  return values.future ? "Conditions should hold near this feel." : "This part of the day stayed fairly readable.";
 }
 
 function cardinalDirection(degrees: number | null) {

@@ -152,6 +152,59 @@ export default async function WeatherPage() {
           </div>
         </section>
 
+        <section className="glass-panel rounded-[2rem] bg-white/82 p-6 sm:p-7">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
+                Weather ribbon
+              </p>
+              <h2 className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-stone-950">
+                Six hours back, six hours ahead
+              </h2>
+            </div>
+            <p className="text-sm text-stone-500">Current time centered at {story.timeline.currentLabel}</p>
+          </div>
+
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-stone-600 sm:text-base">
+            {story.timeline.summary}
+          </p>
+
+          <div className="mt-6 overflow-x-auto pb-2">
+            <div className="min-w-[980px]">
+              <div className="grid grid-cols-13 text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
+                <div className="col-span-6 rounded-full bg-stone-100/80 px-3 py-2 text-left">
+                  Observed
+                </div>
+                <div className="col-span-1 text-center text-stone-900">Now</div>
+                <div className="col-span-6 rounded-full bg-stone-100/80 px-3 py-2 text-right">
+                  Outlook
+                </div>
+              </div>
+
+              <div className="relative mt-3 overflow-hidden rounded-[1.8rem] border border-stone-200/80 bg-white/70">
+                <div className="pointer-events-none absolute inset-x-6 top-16 h-6 rounded-full bg-stone-200/70" />
+                <div className="pointer-events-none absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-stone-950/15" />
+                <div className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-stone-950 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white">
+                  Current hour
+                </div>
+
+                <div className="grid grid-cols-13 gap-px bg-stone-200/50">
+                  {story.timeline.items.map((item, index) => (
+                    <WeatherRibbonSegment
+                      key={`${item.kind}-${item.timeLabel}-${index}`}
+                      item={item}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-4 text-xs leading-6 text-stone-500">
+            The left half is the station record. The right half is a short-range outlook based on recent trend and pressure movement, so it should read as a weather lean rather than a full forecast model.
+          </p>
+        </section>
+
         <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
           {story.categories.map((category) => {
             const tone = toneClasses[category.tone];
@@ -818,6 +871,60 @@ function PressureGauge({
   );
 }
 
+function WeatherRibbonSegment({
+  item,
+}: {
+  item: ReturnType<typeof buildWeatherStory>["timeline"]["items"][number];
+}) {
+  const surfaceClass =
+    item.kind === "outlook"
+      ? "bg-white/85"
+      : item.kind === "now"
+        ? "bg-stone-50/95"
+        : "bg-white/75";
+
+  return (
+    <article className={`relative min-h-44 p-3 ${surfaceClass}`}>
+      <div
+        className={`absolute inset-x-0 bottom-0 h-7 ${
+          item.kind === "outlook" ? "opacity-80" : "opacity-100"
+        }`}
+        style={{ background: buildRibbonGradient(item.tone, item.temperatureValue) }}
+      />
+      <div className="relative flex h-full flex-col justify-between gap-4">
+        <div>
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-stone-500">
+              {item.timeLabel}
+            </p>
+            <span
+              className={`rounded-full px-2 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.16em] ${
+                item.kind === "outlook"
+                  ? "bg-stone-100 text-stone-700"
+                  : item.kind === "now"
+                    ? "bg-stone-950 text-white"
+                    : "bg-white/85 text-stone-700"
+              }`}
+            >
+              {item.relativeLabel}
+            </span>
+          </div>
+
+          <p className="mt-4 text-2xl font-semibold tracking-[-0.08em] text-stone-950">
+            {item.temperatureLabel}
+          </p>
+          <p className="mt-2 text-sm font-semibold text-stone-900">{item.status}</p>
+          <p className="mt-2 text-sm leading-6 text-stone-600">{item.summary}</p>
+        </div>
+
+        <div className="rounded-full bg-white/80 px-3 py-2 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-stone-600">
+          {item.kind === "outlook" ? "Trend-based outlook" : item.kind === "now" ? "Current station feel" : "Observed station reading"}
+        </div>
+      </div>
+    </article>
+  );
+}
+
 function StoryCalloutCard({
   title,
   body,
@@ -935,4 +1042,33 @@ function formatCompact(value: number, decimals: number) {
     minimumFractionDigits: 0,
     maximumFractionDigits: decimals,
   });
+}
+
+function buildRibbonGradient(
+  tone: keyof typeof toneClasses,
+  temperatureValue: number | null,
+) {
+  const temperatureColor =
+    temperatureValue === null
+      ? "rgba(148, 163, 184, 0.82)"
+      : temperatureValue < 45
+        ? "rgba(59, 130, 246, 0.88)"
+        : temperatureValue < 58
+          ? "rgba(56, 189, 248, 0.88)"
+          : temperatureValue < 72
+            ? "rgba(16, 185, 129, 0.88)"
+            : temperatureValue < 82
+              ? "rgba(245, 158, 11, 0.9)"
+              : "rgba(239, 68, 68, 0.9)";
+
+  const toneColor =
+    tone === "rain"
+      ? "rgba(59, 130, 246, 0.9)"
+      : tone === "sky"
+        ? "rgba(14, 165, 233, 0.9)"
+        : tone === "gold"
+          ? "rgba(251, 191, 36, 0.92)"
+          : "rgba(16, 185, 129, 0.88)";
+
+  return `linear-gradient(90deg, ${temperatureColor} 0%, ${toneColor} 100%)`;
 }
