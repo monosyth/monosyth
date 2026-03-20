@@ -445,9 +445,9 @@ export default async function WeatherPage() {
               {story.pressure.explainer} {story.pressure.summary}
             </p>
 
-            <div className="mt-6 grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="mt-6 grid gap-5 2xl:grid-cols-[0.9fr_1.1fr]">
               <article
-                className={`relative overflow-hidden rounded-[1.8rem] border p-5 ${toneClasses[story.pressure.tone].panel}`}
+                className={`relative min-w-0 overflow-hidden rounded-[1.8rem] border p-5 ${toneClasses[story.pressure.tone].panel}`}
               >
                 <div className="weather-glow pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-br from-white/70 via-white/20 to-transparent" />
                 <div className="relative">
@@ -480,7 +480,7 @@ export default async function WeatherPage() {
                 </div>
               </article>
 
-              <div className="grid gap-4">
+              <div className="grid min-w-0 gap-4">
                 <StoryCalloutCard
                   title="Weather signal"
                   body={story.pressure.weatherSignal}
@@ -814,7 +814,7 @@ function PressureGauge({
   const toneClass = toneClasses[tone];
 
   return (
-    <div className="grid gap-4 sm:grid-cols-[0.95fr_1.05fr] sm:items-center">
+    <div className="grid justify-items-center gap-5 text-center">
       <div className="flex justify-center">
         <svg viewBox="0 0 120 84" className="h-40 w-40 overflow-visible" role="img" aria-label="Pressure gauge">
           <path
@@ -856,8 +856,10 @@ function PressureGauge({
         </svg>
       </div>
 
-      <div className="space-y-3">
-        <p className="text-4xl font-semibold tracking-[-0.08em] text-stone-950">{value}</p>
+      <div className="min-w-0 space-y-3">
+        <p className="break-words text-3xl font-semibold tracking-[-0.08em] text-stone-950 sm:text-4xl">
+          {value}
+        </p>
         <p
           className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${toneClass.badge}`}
         >
