@@ -1,8 +1,13 @@
 import { buildWeatherOverview } from "@/lib/weather/overview";
+import { getHourlyForecast } from "@/lib/weather/nws";
 import type { WeatherPageData } from "@/lib/weather/types";
 
 const API_BASE_URL = "https://api.ambientweather.net/v1";
 const CACHE_TTL_MS = 60_000;
+const SEATTLE_COORDINATES = {
+  latitude: 47.6062,
+  longitude: -122.3321,
+};
 
 type WeatherDevice = {
   macAddress?: string;
@@ -161,6 +166,41 @@ function writeCachedWeatherPageData(
   };
 }
 
+function pickNumber(source: WeatherObservation | null, keys: string[]) {
+  if (!source) {
+    return null;
+  }
+
+  for (const key of keys) {
+    const raw = source[key];
+
+    if (typeof raw === "number" && Number.isFinite(raw)) {
+      return raw;
+    }
+
+    if (typeof raw === "string" && raw.trim() !== "") {
+      const parsed = Number(raw);
+
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+  }
+
+  return null;
+}
+
+function resolveForecastCoordinates(observations: WeatherObservation[]) {
+  const latest = observations.at(-1) ?? null;
+  const latitude = pickNumber(latest, ["lat", "latitude"]);
+  const longitude = pickNumber(latest, ["lon", "long", "longitude"]);
+
+  return {
+    latitude: latitude ?? SEATTLE_COORDINATES.latitude,
+    longitude: longitude ?? SEATTLE_COORDINATES.longitude,
+  };
+}
+
 export async function getWeatherPageData(): Promise<WeatherPageData> {
   const missing = getMissingVars();
 
@@ -205,9 +245,14 @@ export async function getWeatherPageData(): Promise<WeatherPageData> {
     }
 
     const observations = await getDeviceHistory(device.macAddress, env.limit);
+    const coordinates = resolveForecastCoordinates(observations);
+    const forecast = await getHourlyForecast(
+      coordinates.latitude,
+      coordinates.longitude,
+    ).catch(() => []);
     const readyResult: Extract<WeatherPageData, { state: "ready" }> = {
       state: "ready",
-      data: buildWeatherOverview(device, observations),
+      data: buildWeatherOverview(device, observations, forecast),
     };
 
     writeCachedWeatherPageData(readyResult);

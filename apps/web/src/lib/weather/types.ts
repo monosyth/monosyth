@@ -3,6 +3,8 @@ export type WeatherStationSummary = {
   location: string;
   macAddress: string;
   lastObservationAt: string;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 export type WeatherMetric = {
@@ -39,6 +41,18 @@ export type WeatherSnapshotItem = {
   value: string;
 };
 
+export type WeatherForecastPeriod = {
+  startTime: string;
+  endTime: string;
+  temperature: number | null;
+  temperatureUnit: string;
+  shortForecast: string;
+  detailedForecast: string;
+  windSpeed: string;
+  windDirection: string;
+  isDaytime: boolean;
+};
+
 export type WeatherOverview = {
   fetchedAt: string;
   observationCount: number;
@@ -47,6 +61,7 @@ export type WeatherOverview = {
   highlights: WeatherHighlight[];
   series: WeatherSeries[];
   snapshot: WeatherSnapshotItem[];
+  forecast: WeatherForecastPeriod[];
 };
 
 export type WeatherPageData =

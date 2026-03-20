@@ -1,4 +1,5 @@
 import type {
+  WeatherForecastPeriod,
   WeatherHighlight,
   WeatherOverview,
   WeatherSeries,
@@ -45,6 +46,7 @@ const seriesDefinitions = [
 export function buildWeatherOverview(
   device: WeatherDevice,
   observations: WeatherObservation[],
+  forecast: WeatherForecastPeriod[] = [],
 ): WeatherOverview {
   const chronological = [...observations]
     .map((observation) => normalizeObservation(observation))
@@ -56,11 +58,12 @@ export function buildWeatherOverview(
   return {
     fetchedAt: new Date().toISOString(),
     observationCount: chronological.length,
-    station: describeDevice(device),
+    station: describeDevice(device, latest),
     metrics: buildMetrics(latest),
     highlights: buildHighlights(chronological),
     series: buildSeries(chronological),
     snapshot: latest ? flattenSnapshot(latest) : [],
+    forecast,
   };
 }
 
@@ -71,12 +74,17 @@ function normalizeObservation(observation: WeatherObservation) {
   };
 }
 
-function describeDevice(device: WeatherDevice): WeatherStationSummary {
+function describeDevice(
+  device: WeatherDevice,
+  latest: WeatherObservation | null,
+): WeatherStationSummary {
   return {
     name: device.info?.name ?? "Ambient Station",
     location: device.info?.location ?? "",
     macAddress: device.macAddress ?? "",
     lastObservationAt: formatTimestamp(device.lastData?.dateutc),
+    latitude: pickNumber(latest ?? {}, ["lat", "latitude"]),
+    longitude: pickNumber(latest ?? {}, ["lon", "long", "longitude"]),
   };
 }
 

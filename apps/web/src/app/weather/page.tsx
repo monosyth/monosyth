@@ -201,7 +201,9 @@ export default async function WeatherPage() {
           </div>
 
           <p className="mt-4 text-xs leading-6 text-stone-500">
-            The left half is the station record. The right half is a short-range outlook based on recent trend and pressure movement, so it should read as a weather lean rather than a full forecast model.
+            {result.data.forecast.length
+              ? "The left half is your station record. The right half is the official NOAA hourly forecast for the same area."
+              : "The left half is the station record. The right half is a short-range outlook based on recent trend and pressure movement, so it should read as a weather lean rather than a full forecast model."}
           </p>
         </section>
 

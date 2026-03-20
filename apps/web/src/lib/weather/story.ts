@@ -1,4 +1,5 @@
 import type {
+  WeatherForecastPeriod,
   WeatherOverview,
   WeatherSeries,
   WeatherSnapshotItem,
@@ -358,6 +359,24 @@ function buildWeatherTimeline(values: {
       };
     }
 
+    const forecastPeriod = findForecastPeriod(values.data.forecast, targetTimestamp);
+
+    if (forecastPeriod) {
+      const forecastTemperature = forecastTemperatureInFahrenheit(forecastPeriod);
+      const tone = pickForecastTimelineTone(forecastPeriod, forecastTemperature);
+
+      return {
+        timeLabel: formatWeatherClock(targetTimestamp),
+        relativeLabel: `+${hourOffset}h`,
+        temperatureLabel: formatForecastTemperature(forecastPeriod),
+        status: forecastPeriod.shortForecast || "Forecast",
+        summary: timelineForecastSummary(forecastPeriod),
+        tone,
+        kind: "outlook" as const,
+        temperatureValue: forecastTemperature,
+      };
+    }
+
     const projectedTemperature = projectValue(values.temperature, temperatureSlope, hourOffset);
     const projectedWind = clampNullable(projectValue(values.wind, windSlope, hourOffset), 0, 60);
     const projectedPressure = projectValue(values.pressure, pressureSlope, hourOffset);
@@ -402,8 +421,9 @@ function buildWeatherTimeline(values: {
 
   return {
     title: "Twelve-hour weather ribbon",
-    summary:
-      values.pressureDirection === "falling"
+    summary: values.data.forecast.length
+      ? "Left side is what your station already recorded. Right side is NOAA's hourly forecast for the next several hours."
+      : values.pressureDirection === "falling"
         ? "Left side is what the station already saw. Right side is the next few hours leaning more changeable as pressure trends down."
         : values.pressureDirection === "rising"
           ? "Left side is station history. Right side is a short-range outlook leaning steadier as pressure rises."
@@ -1220,6 +1240,87 @@ function clampNullable(value: number | null, min: number, max: number) {
   }
 
   return clamp(value, min, max);
+}
+
+function findForecastPeriod(
+  periods: WeatherForecastPeriod[],
+  timestamp: number,
+) {
+  const exactMatch = periods.find((period) => {
+    const start = Date.parse(period.startTime);
+    const end = Date.parse(period.endTime);
+    return Number.isFinite(start) && Number.isFinite(end) && start <= timestamp && timestamp < end;
+  });
+
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  const future = periods
+    .map((period) => ({ period, start: Date.parse(period.startTime) }))
+    .filter(({ start }) => Number.isFinite(start) && start >= timestamp)
+    .sort((left, right) => left.start - right.start);
+
+  return future[0]?.period ?? null;
+}
+
+function forecastTemperatureInFahrenheit(period: WeatherForecastPeriod) {
+  if (period.temperature === null) {
+    return null;
+  }
+
+  if (period.temperatureUnit === "F") {
+    return period.temperature;
+  }
+
+  if (period.temperatureUnit === "C") {
+    return period.temperature * (9 / 5) + 32;
+  }
+
+  return period.temperature;
+}
+
+function formatForecastTemperature(period: WeatherForecastPeriod) {
+  if (period.temperature === null) {
+    return "No reading";
+  }
+
+  return `${compact(period.temperature, 0)} ${period.temperatureUnit}`;
+}
+
+function pickForecastTimelineTone(
+  period: WeatherForecastPeriod,
+  temperatureF: number | null,
+): StoryTone {
+  const summary = `${period.shortForecast} ${period.detailedForecast}`.toLowerCase();
+
+  if (summary.includes("rain") || summary.includes("showers") || summary.includes("drizzle")) {
+    return "rain";
+  }
+
+  if (summary.includes("wind") || summary.includes("breeze")) {
+    return "sky";
+  }
+
+  if ((temperatureF ?? 0) >= 72 || summary.includes("sun") || summary.includes("clear")) {
+    return "gold";
+  }
+
+  return period.isDaytime ? "pine" : "sky";
+}
+
+function timelineForecastSummary(period: WeatherForecastPeriod) {
+  const parts = [period.shortForecast];
+
+  if (period.windSpeed) {
+    parts.push(`Wind ${period.windSpeed} ${period.windDirection}`.trim());
+  }
+
+  if (period.detailedForecast && period.detailedForecast !== period.shortForecast) {
+    parts.push(period.detailedForecast);
+  }
+
+  return parts.filter(Boolean).join(". ");
 }
 
 function projectedPressureDirectionFor(
