@@ -50,6 +50,7 @@ export default async function WeatherPage() {
   const pressureSeries =
     result.data.series.find((series) => series.id === "pressure") ?? null;
   const motionSeries = result.data.series.filter((series) => series.id !== "pressure");
+  const hasOfficialForecast = result.data.forecast.length > 0;
 
   return (
     <main className="grid-lines relative min-h-screen overflow-hidden px-5 py-6 text-stone-950 sm:px-8 lg:px-12">
@@ -172,20 +173,29 @@ export default async function WeatherPage() {
           <div className="mt-6 overflow-x-auto pb-2">
             <div className="min-w-[980px]">
               <div className="grid grid-cols-13 text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-                <div className="col-span-6 rounded-full bg-stone-100/80 px-3 py-2 text-left">
-                  Observed
+                <div className="col-span-6 rounded-full border border-emerald-200/70 bg-emerald-50/80 px-3 py-2 text-left text-emerald-900">
+                  Observed by station
                 </div>
                 <div className="col-span-1 text-center text-stone-900">Now</div>
-                <div className="col-span-6 rounded-full bg-stone-100/80 px-3 py-2 text-right">
-                  Outlook
+                <div className="col-span-6 rounded-full border border-sky-200/70 bg-sky-50/80 px-3 py-2 text-right text-sky-950">
+                  {hasOfficialForecast ? "Forecast from NOAA" : "Short-range outlook"}
                 </div>
               </div>
 
               <div className="relative mt-3 overflow-hidden rounded-[1.8rem] border border-stone-200/80 bg-white/70">
                 <div className="pointer-events-none absolute inset-x-6 top-16 h-6 rounded-full bg-stone-200/70" />
-                <div className="pointer-events-none absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-stone-950/15" />
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-emerald-50/45 to-transparent" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-sky-50/55 to-transparent" />
+                <div className="pointer-events-none absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-stone-950/20" />
+                <div className="pointer-events-none absolute left-1/2 top-0 bottom-0 w-14 -translate-x-1/2 bg-gradient-to-r from-emerald-100/45 via-white/90 to-sky-100/50" />
                 <div className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-stone-950 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white">
                   Current hour
+                </div>
+                <div className="pointer-events-none absolute left-[calc(50%-4.75rem)] top-14 rounded-full border border-emerald-200/80 bg-white/92 px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-emerald-900">
+                  Measured
+                </div>
+                <div className="pointer-events-none absolute left-[calc(50%+0.9rem)] top-14 rounded-full border border-sky-200/80 bg-white/92 px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-sky-950">
+                  {hasOfficialForecast ? "Forecast" : "Projected"}
                 </div>
 
                 <div className="grid grid-cols-13 gap-px bg-stone-200/50">
@@ -193,6 +203,7 @@ export default async function WeatherPage() {
                     <WeatherRibbonSegment
                       key={`${item.kind}-${item.timeLabel}-${index}`}
                       item={item}
+                      hasOfficialForecast={hasOfficialForecast}
                     />
                   ))}
                 </div>
@@ -201,7 +212,7 @@ export default async function WeatherPage() {
           </div>
 
           <p className="mt-4 text-xs leading-6 text-stone-500">
-            {result.data.forecast.length
+            {hasOfficialForecast
               ? "The left half is your station record. The right half is the official NOAA hourly forecast for the same area."
               : "The left half is the station record. The right half is a short-range outlook based on recent trend and pressure movement, so it should read as a weather lean rather than a full forecast model."}
           </p>
@@ -877,18 +888,32 @@ function PressureGauge({
 
 function WeatherRibbonSegment({
   item,
+  hasOfficialForecast,
 }: {
   item: ReturnType<typeof buildWeatherStory>["timeline"]["items"][number];
+  hasOfficialForecast: boolean;
 }) {
   const surfaceClass =
     item.kind === "outlook"
-      ? "bg-white/85"
+      ? "bg-sky-50/55"
       : item.kind === "now"
         ? "bg-stone-50/95"
-        : "bg-white/75";
+        : "bg-emerald-50/45";
+  const footerLabel =
+    item.kind === "outlook"
+      ? hasOfficialForecast
+        ? "NOAA forecast hour"
+        : "Trend-based outlook"
+      : item.kind === "now"
+        ? "Current station feel"
+        : "Observed station reading";
 
   return (
-    <article className={`relative min-h-44 p-3 ${surfaceClass}`}>
+    <article
+      className={`relative min-h-44 p-3 ${surfaceClass} ${
+        item.kind === "now" ? "ring-1 ring-stone-900/10" : ""
+      }`}
+    >
       <div
         className={`absolute inset-x-0 bottom-0 h-7 ${
           item.kind === "outlook" ? "opacity-80" : "opacity-100"
@@ -904,10 +929,10 @@ function WeatherRibbonSegment({
             <span
               className={`rounded-full px-2 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.16em] ${
                 item.kind === "outlook"
-                  ? "bg-stone-100 text-stone-700"
+                  ? "bg-sky-100 text-sky-900"
                   : item.kind === "now"
                     ? "bg-stone-950 text-white"
-                    : "bg-white/85 text-stone-700"
+                    : "bg-emerald-100 text-emerald-900"
               }`}
             >
               {item.relativeLabel}
@@ -921,8 +946,8 @@ function WeatherRibbonSegment({
           <p className="mt-2 text-sm leading-6 text-stone-600">{item.summary}</p>
         </div>
 
-        <div className="rounded-full bg-white/80 px-3 py-2 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-stone-600">
-          {item.kind === "outlook" ? "Trend-based outlook" : item.kind === "now" ? "Current station feel" : "Observed station reading"}
+        <div className="rounded-full bg-white/85 px-3 py-2 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-stone-600">
+          {footerLabel}
         </div>
       </div>
     </article>
