@@ -1,4 +1,5 @@
 import type { WeatherOverview, WeatherSeries, WeatherSnapshotItem } from "@/lib/weather/types";
+import { formatWeatherDateTime } from "@/lib/weather/time";
 
 type StoryTone = "gold" | "sky" | "rain" | "pine";
 
@@ -83,7 +84,7 @@ export function buildWeatherStory(data: WeatherOverview): WeatherStory {
       }),
       tone: pickMoodTone({ wind, rainToday, uv, temperature }),
       temperatureDisplay: formatTemperature(temperature),
-      stamp: data.station.lastObservationAt || formatDate(data.fetchedAt),
+      stamp: data.station.lastObservationAt || formatWeatherDateTime(data.fetchedAt),
       chips: [
         comfortChip(temperature, humidity),
         windChip(wind, gust),
@@ -871,13 +872,4 @@ function comfortMeter(temperature: number | null, humidity: number | null) {
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
-}
-
-function formatDate(value: string) {
-  return new Date(value).toLocaleString([], {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
 }

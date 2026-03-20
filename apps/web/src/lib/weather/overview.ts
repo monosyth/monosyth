@@ -5,6 +5,10 @@ import type {
   WeatherSnapshotItem,
   WeatherStationSummary,
 } from "@/lib/weather/types";
+import {
+  formatWeatherClock,
+  formatWeatherLong,
+} from "@/lib/weather/time";
 
 type WeatherDevice = {
   macAddress?: string;
@@ -135,10 +139,7 @@ function buildSeries(observations: WeatherObservation[]): WeatherSeries[] {
         return {
           timestamp,
           value,
-          label: new Date(timestamp).toLocaleTimeString([], {
-            hour: "numeric",
-            minute: "2-digit",
-          }),
+          label: formatWeatherClock(timestamp),
         };
       })
       .filter((value): value is NonNullable<typeof value> => value !== null);
@@ -234,7 +235,7 @@ function formatTimestamp(value: unknown) {
     return "";
   }
 
-  return new Date(timestamp).toLocaleString();
+  return formatWeatherLong(timestamp);
 }
 
 function describeRange(values: number[], decimals: number, unit: string) {

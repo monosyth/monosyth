@@ -13,24 +13,28 @@ const toneClasses = {
     glow: "from-amber-300/60 via-orange-200/45 to-transparent",
     meter: "from-amber-400 to-orange-500",
     panel: "border-amber-200/80 bg-amber-50/70",
+    wash: "from-amber-100/90 via-orange-50/70 to-white/70",
   },
   sky: {
     badge: "bg-sky-100 text-sky-950",
     glow: "from-sky-300/55 via-cyan-200/45 to-transparent",
     meter: "from-sky-400 to-cyan-500",
     panel: "border-sky-200/80 bg-sky-50/70",
+    wash: "from-sky-100/90 via-cyan-50/70 to-white/70",
   },
   rain: {
     badge: "bg-blue-100 text-blue-950",
     glow: "from-blue-300/55 via-indigo-200/45 to-transparent",
     meter: "from-blue-500 to-indigo-600",
     panel: "border-blue-200/80 bg-blue-50/70",
+    wash: "from-blue-100/90 via-indigo-50/70 to-white/70",
   },
   pine: {
     badge: "bg-emerald-100 text-emerald-950",
     glow: "from-emerald-300/50 via-teal-200/40 to-transparent",
     meter: "from-emerald-500 to-teal-600",
     panel: "border-emerald-200/80 bg-emerald-50/70",
+    wash: "from-emerald-100/90 via-teal-50/70 to-white/70",
   },
 } as const;
 
@@ -45,12 +49,17 @@ export default async function WeatherPage() {
   const heroTone = toneClasses[story.mood.tone];
 
   return (
-    <main className="grid-lines min-h-screen px-5 py-6 text-stone-950 sm:px-8 lg:px-12">
+    <main className="grid-lines relative min-h-screen overflow-hidden px-5 py-6 text-stone-950 sm:px-8 lg:px-12">
+      <div className="weather-drift pointer-events-none absolute left-[-8rem] top-8 h-72 w-72 rounded-full bg-amber-300/20 blur-3xl" />
+      <div className="weather-float pointer-events-none absolute right-[-5rem] top-24 h-80 w-80 rounded-full bg-sky-300/20 blur-3xl" />
+      <div className="weather-drift pointer-events-none absolute bottom-24 left-1/3 h-72 w-72 rounded-full bg-emerald-300/15 blur-3xl" />
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <section className="glass-panel relative overflow-hidden rounded-[2rem] bg-white/85 p-7 sm:p-10">
           <div
-            className={`pointer-events-none absolute inset-x-0 top-0 h-56 bg-gradient-to-br ${heroTone.glow}`}
+            className={`weather-glow pointer-events-none absolute inset-x-0 top-0 h-56 bg-gradient-to-br ${heroTone.glow}`}
           />
+          <div className="weather-drift pointer-events-none absolute right-[-3rem] top-[-3rem] h-40 w-40 rounded-full border border-white/40 bg-white/20" />
+          <div className="pointer-events-none absolute left-1/2 top-20 h-px w-48 -translate-x-1/2 bg-white/40" />
           <div className="relative flex flex-col gap-10 lg:grid lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
             <div className="space-y-6">
               <div className="flex flex-wrap items-center gap-3">
@@ -95,16 +104,36 @@ export default async function WeatherPage() {
             </div>
 
             <div className="grid gap-4">
-              <article className="rounded-[2rem] border border-white/80 bg-white/80 p-6 shadow-sm">
-                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-                  Current feel
-                </p>
-                <p className="mt-3 text-5xl font-semibold tracking-[-0.08em] text-stone-950">
-                  {story.mood.temperatureDisplay}
-                </p>
-                <p className="mt-3 max-w-sm text-sm leading-6 text-stone-600">
-                  {buildSummary(result.data.station.location, result.data.observationCount)}
-                </p>
+              <article
+                className={`relative overflow-hidden rounded-[2rem] border border-white/80 bg-gradient-to-br p-6 shadow-sm ${heroTone.wash}`}
+              >
+                <div className="pointer-events-none absolute inset-x-6 top-6 h-32 rounded-[1.6rem] bg-white/35" />
+                <div className="relative grid gap-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
+                        Current feel
+                      </p>
+                      <p className="mt-3 text-5xl font-semibold tracking-[-0.08em] text-stone-950">
+                        {story.mood.temperatureDisplay}
+                      </p>
+                    </div>
+                    <div
+                      className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] ${heroTone.badge}`}
+                    >
+                      Live station
+                    </div>
+                  </div>
+
+                  <WeatherPostcard
+                    temperature={story.mood.temperatureDisplay}
+                    tone={story.mood.tone}
+                    subtitle={buildSummary(
+                      result.data.station.location,
+                      result.data.observationCount,
+                    )}
+                  />
+                </div>
               </article>
 
               <div className="flex flex-wrap items-center gap-3">
@@ -127,8 +156,12 @@ export default async function WeatherPage() {
             return (
               <article
                 key={category.id}
-                className={`glass-panel rounded-[1.9rem] border p-5 ${tone.panel}`}
+                className={`glass-panel group weather-float relative overflow-hidden rounded-[1.9rem] border p-5 transition duration-300 hover:-translate-y-1 ${tone.panel}`}
               >
+                <div className="pointer-events-none absolute -right-5 -top-5 h-24 w-24 rounded-full bg-white/35 blur-2xl" />
+                <div className="pointer-events-none absolute bottom-3 right-4 text-6xl font-semibold tracking-[-0.08em] text-white/35">
+                  {category.id.slice(0, 1).toUpperCase()}
+                </div>
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
@@ -140,7 +173,7 @@ export default async function WeatherPage() {
                   </div>
                   <div className="relative h-16 w-16 rounded-full border border-white/80 bg-white/60">
                     <div
-                      className={`absolute inset-3 rounded-full bg-gradient-to-br ${tone.glow}`}
+                      className={`absolute inset-3 rounded-full bg-gradient-to-br transition duration-300 group-hover:scale-110 ${tone.glow}`}
                     />
                   </div>
                 </div>
@@ -191,8 +224,9 @@ export default async function WeatherPage() {
 
             <div className="mt-6 grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
               <article
-                className={`rounded-[1.8rem] border p-5 ${toneClasses[story.outfit.tone].panel}`}
+                className={`relative overflow-hidden rounded-[1.8rem] border p-5 ${toneClasses[story.outfit.tone].panel}`}
               >
+                <div className="pointer-events-none absolute -left-10 top-8 h-28 w-28 rounded-full bg-white/30 blur-2xl" />
                 <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
                   Wear suggestion
                 </p>
@@ -206,7 +240,7 @@ export default async function WeatherPage() {
                   {story.outfit.pieces.map((piece) => (
                     <span
                       key={piece}
-                      className="rounded-full border border-white/80 bg-white/75 px-4 py-2 text-sm font-medium text-stone-700"
+                      className="rotate-[-1deg] rounded-2xl border border-white/80 bg-white/75 px-4 py-2 text-sm font-medium text-stone-700 shadow-sm odd:rotate-[1.5deg]"
                     >
                       {piece}
                     </span>
@@ -221,8 +255,9 @@ export default async function WeatherPage() {
                   return (
                     <article
                       key={item.title}
-                      className={`rounded-[1.5rem] border p-4 ${tone.panel}`}
+                      className={`relative overflow-hidden rounded-[1.5rem] border p-4 ${tone.panel}`}
                     >
+                      <div className="pointer-events-none absolute -right-6 top-3 h-16 w-16 rounded-full bg-white/30 blur-xl" />
                       <div className="flex items-center justify-between gap-4">
                         <p className="text-lg font-semibold tracking-[-0.04em] text-stone-950">
                           {item.title}
@@ -253,8 +288,9 @@ export default async function WeatherPage() {
 
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
               <article
-                className={`rounded-[1.8rem] border p-5 ${toneClasses[story.visuals.wind.tone].panel}`}
+                className={`relative overflow-hidden rounded-[1.8rem] border p-5 ${toneClasses[story.visuals.wind.tone].panel}`}
               >
+                <div className="pointer-events-none absolute inset-x-4 top-4 h-16 rounded-full bg-white/20 blur-2xl" />
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
@@ -273,6 +309,7 @@ export default async function WeatherPage() {
                 <div className="mt-6 flex justify-center">
                   <div className="relative h-44 w-44 rounded-full border border-white/80 bg-white/70 shadow-inner">
                     <div className="absolute inset-3 rounded-full border border-dashed border-stone-300/80" />
+                    <div className="absolute inset-7 rounded-full border border-white/60" />
                     <div className="absolute left-1/2 top-2 -translate-x-1/2 text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
                       N
                     </div>
@@ -287,7 +324,7 @@ export default async function WeatherPage() {
                     </div>
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div
-                        className="relative h-28 w-4 origin-center transition-transform duration-700"
+                        className="weather-bob relative h-28 w-4 origin-center transition-transform duration-700"
                         style={{
                           transform: `rotate(${story.visuals.wind.directionDegrees ?? 0}deg)`,
                         }}
@@ -296,14 +333,15 @@ export default async function WeatherPage() {
                         <div className="absolute left-1/2 top-0 h-0 w-0 -translate-x-1/2 border-x-[12px] border-b-[24px] border-x-transparent border-b-sky-600" />
                       </div>
                     </div>
-                    <div className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-stone-950" />
+                    <div className="weather-glow absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-stone-950 shadow-[0_0_0_8px_rgba(255,255,255,0.55)]" />
                   </div>
                 </div>
               </article>
 
               <article
-                className={`rounded-[1.8rem] border p-5 ${toneClasses[story.visuals.rain.tone].panel}`}
+                className={`relative overflow-hidden rounded-[1.8rem] border p-5 ${toneClasses[story.visuals.rain.tone].panel}`}
               >
+                <div className="pointer-events-none absolute right-3 top-3 h-20 w-20 rounded-full bg-white/25 blur-2xl" />
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
@@ -317,8 +355,9 @@ export default async function WeatherPage() {
                 </div>
 
                 <div className="mt-6 flex items-end justify-center gap-5">
-                  <div className="relative h-44 w-28 overflow-hidden rounded-[2rem] border border-white/80 bg-white/70">
-                    <div className="absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-blue-500/85 via-cyan-400/70 to-cyan-200/40" style={{ height: `${story.visuals.rain.fillPercent}%` }} />
+                  <div className="relative h-44 w-28 overflow-hidden rounded-[2rem] border border-white/80 bg-white/70 shadow-inner">
+                    <div className="weather-glow absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-blue-500/85 via-cyan-400/70 to-cyan-200/40" style={{ height: `${story.visuals.rain.fillPercent}%` }} />
+                    <div className="absolute inset-x-0 bottom-0 h-full bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.45),transparent_35%)]" style={{ height: `${story.visuals.rain.fillPercent}%` }} />
                     <div className="absolute inset-x-0 top-5 h-px bg-white/70" />
                     <div className="absolute inset-x-0 top-11 h-px bg-white/50" />
                     <div className="absolute inset-x-0 top-[4.25rem] h-px bg-white/40" />
@@ -353,8 +392,9 @@ export default async function WeatherPage() {
                 return (
                   <article
                     key={change.title}
-                    className={`rounded-[1.6rem] border p-4 ${tone.panel}`}
+                    className={`relative overflow-hidden rounded-[1.6rem] border p-4 ${tone.panel}`}
                   >
+                    <div className="pointer-events-none absolute right-3 top-3 h-12 w-12 rounded-full bg-white/30 blur-xl" />
                     <p className="text-sm font-semibold text-stone-950">
                       {change.title}
                     </p>
@@ -532,6 +572,75 @@ function StoryFallbackCard({
 function buildSummary(location: string, observationCount: number) {
   const locationPrefix = location ? `${location}. ` : "";
   return `${locationPrefix}${observationCount} recent observations are shaping this more visual weather story.`;
+}
+
+function WeatherPostcard({
+  temperature,
+  tone,
+  subtitle,
+}: {
+  temperature: string;
+  tone: keyof typeof toneClasses;
+  subtitle: string;
+}) {
+  const accent = toneClasses[tone];
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+      <div className="weather-float rounded-[1.8rem] border border-white/80 bg-white/70 p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-stone-500">
+              Weather postcard
+            </p>
+            <p className="mt-2 text-3xl font-semibold tracking-[-0.08em] text-stone-950">
+              {temperature}
+            </p>
+          </div>
+          <span
+            className={`rounded-full px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.18em] ${accent.badge}`}
+          >
+            live
+          </span>
+        </div>
+        <p className="mt-3 text-sm leading-6 text-stone-600">{subtitle}</p>
+      </div>
+
+      <div className={`relative min-h-44 overflow-hidden rounded-[1.8rem] border border-white/80 bg-gradient-to-br ${accent.wash}`}>
+        <div className="absolute inset-x-0 bottom-0 h-20 rounded-t-[45%] bg-emerald-950/12" />
+        <div className="absolute inset-x-4 bottom-0 h-16 rounded-t-[40%] bg-emerald-800/18" />
+        <div className="weather-glow absolute left-6 top-6 h-14 w-14 rounded-full bg-white/65 shadow-[0_0_50px_rgba(255,255,255,0.65)]" />
+        {tone === "rain" ? (
+          <>
+            <div className="weather-drift absolute left-8 top-8 h-10 w-24 rounded-full bg-white/70" />
+            <div className="weather-drift absolute left-16 top-14 h-8 w-20 rounded-full bg-white/55" />
+            <div className="weather-rain absolute left-10 top-24 h-8 w-px bg-blue-500/60" />
+            <div className="weather-rain absolute left-20 top-28 h-10 w-px bg-blue-500/50 [animation-delay:0.25s]" />
+            <div className="weather-rain absolute left-28 top-22 h-8 w-px bg-blue-500/60 [animation-delay:0.5s]" />
+            <div className="weather-rain absolute left-36 top-30 h-9 w-px bg-blue-500/50 [animation-delay:0.75s]" />
+          </>
+        ) : null}
+        {tone === "sky" ? (
+          <>
+            <div className="weather-drift absolute right-6 top-10 h-16 w-16 rounded-full border border-sky-200/70 bg-sky-100/40" />
+            <div className="weather-float absolute right-10 top-14 h-8 w-8 rounded-full bg-sky-300/50" />
+          </>
+        ) : null}
+        {tone === "gold" ? (
+          <div className="weather-glow absolute right-8 top-8 h-20 w-20 rounded-full bg-amber-300/65 shadow-[0_0_60px_rgba(251,191,36,0.55)]" />
+        ) : null}
+        {tone === "pine" ? (
+          <>
+            <div className="weather-float absolute right-8 top-12 h-12 w-12 rounded-full bg-emerald-200/40" />
+            <div className="weather-drift absolute right-16 top-8 h-6 w-24 rounded-full bg-white/40" />
+          </>
+        ) : null}
+        <div className="weather-bob absolute bottom-4 left-5 rounded-full bg-white/75 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-stone-700">
+          outside now
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function WeatherChartCard({ series }: { series: WeatherSeries }) {
