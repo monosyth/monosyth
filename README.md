@@ -2,6 +2,9 @@
 
 Monosyth is set up as a multi-app workspace.
 
+Use this file as the quick overview.
+For the full working playbook, deployment notes, and Firebase setup, read [`MONOSYTH_SETUP.md`](/Users/scottwaite/monosyth/MONOSYTH_SETUP.md).
+
 ## Active apps
 
 - `apps/web`: the primary Next.js site for the Monosyth brand
@@ -42,4 +45,5 @@ Use Firebase App Hosting with:
 
 ## Project notes
 
-- Full setup and deployment notes live in [`MONOSYTH_SETUP.md`](/Users/scottwaite/monosyth/MONOSYTH_SETUP.md)
+- `README.md`: quick repo overview
+- [`MONOSYTH_SETUP.md`](/Users/scottwaite/monosyth/MONOSYTH_SETUP.md): detailed setup, deploy, and platform playbook
