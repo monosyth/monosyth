@@ -29,3 +29,13 @@ export function formatWeatherLong(value: string | number | Date) {
     timeZoneName: "short",
   }).format(new Date(value));
 }
+
+export function getWeatherHour(value: string | number | Date) {
+  return Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: WEATHER_TIME_ZONE,
+      hour: "numeric",
+      hour12: false,
+    }).format(new Date(value)),
+  );
+}

@@ -40,6 +40,7 @@ const seriesDefinitions = [
   { id: "humidity", label: "Humidity", keys: ["humidity"], unit: "%", decimals: 0 },
   { id: "wind", label: "Wind Speed", keys: ["windspeedmph"], unit: "mph", decimals: 1 },
   { id: "pressure", label: "Pressure", keys: ["baromrelin", "baromabsin"], unit: "inHg", decimals: 2 },
+  { id: "solar", label: "Solar", keys: ["solarradiation"], unit: "W/m2", decimals: 0 },
   { id: "rain", label: "Daily Rain", keys: ["dailyrainin"], unit: "in", decimals: 2 },
 ] as const;
 

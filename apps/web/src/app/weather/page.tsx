@@ -182,32 +182,10 @@ export default async function WeatherPage() {
                 </div>
               </div>
 
-              <div className="relative mt-3 overflow-hidden rounded-[1.8rem] border border-stone-200/80 bg-white/70">
-                <div className="pointer-events-none absolute inset-x-6 top-16 h-6 rounded-full bg-stone-200/70" />
-                <div className="pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-emerald-50/45 to-transparent" />
-                <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-sky-50/55 to-transparent" />
-                <div className="pointer-events-none absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-stone-950/20" />
-                <div className="pointer-events-none absolute left-1/2 top-0 bottom-0 w-14 -translate-x-1/2 bg-gradient-to-r from-emerald-100/45 via-white/90 to-sky-100/50" />
-                <div className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-stone-950 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white">
-                  Current hour
-                </div>
-                <div className="pointer-events-none absolute left-[calc(50%-4.75rem)] top-14 rounded-full border border-emerald-200/80 bg-white/92 px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-emerald-900">
-                  Measured
-                </div>
-                <div className="pointer-events-none absolute left-[calc(50%+0.9rem)] top-14 rounded-full border border-sky-200/80 bg-white/92 px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-sky-950">
-                  {hasOfficialForecast ? "Forecast" : "Projected"}
-                </div>
-
-                <div className="grid grid-cols-13 gap-px bg-stone-200/50">
-                  {story.timeline.items.map((item, index) => (
-                    <WeatherRibbonSegment
-                      key={`${item.kind}-${item.timeLabel}-${index}`}
-                      item={item}
-                      hasOfficialForecast={hasOfficialForecast}
-                    />
-                  ))}
-                </div>
-              </div>
+              <WeatherRibbonGraph
+                items={story.timeline.items}
+                hasOfficialForecast={hasOfficialForecast}
+              />
             </div>
           </div>
 
@@ -886,71 +864,186 @@ function PressureGauge({
   );
 }
 
-function WeatherRibbonSegment({
-  item,
+function WeatherRibbonGraph({
+  items,
   hasOfficialForecast,
 }: {
-  item: ReturnType<typeof buildWeatherStory>["timeline"]["items"][number];
+  items: ReturnType<typeof buildWeatherStory>["timeline"]["items"];
   hasOfficialForecast: boolean;
 }) {
-  const surfaceClass =
-    item.kind === "outlook"
-      ? "bg-sky-50/55"
-      : item.kind === "now"
-        ? "bg-stone-50/95"
-        : "bg-emerald-50/45";
-  const footerLabel =
-    item.kind === "outlook"
-      ? hasOfficialForecast
-        ? "NOAA forecast hour"
-        : "Trend-based outlook"
-      : item.kind === "now"
-        ? "Current station feel"
-        : "Observed station reading";
+  const width = 1120;
+  const height = 360;
+  const left = 54;
+  const right = 24;
+  const top = 24;
+  const laneHeight = 62;
+  const laneGap = 28;
+  const plotWidth = width - left - right;
+  const xStep = plotWidth / Math.max(items.length - 1, 1);
+  const points = items.map((item, index) => ({
+    ...item,
+    x: left + index * xStep,
+  }));
+  const tempValues = items.map((item) => item.temperatureValue).filter(isNumber);
+  const windValues = items.map((item) => item.windValue).filter(isNumber);
+  const tempRange = {
+    min: Math.min(...tempValues, 0),
+    max: Math.max(...tempValues, 1),
+  };
+  const windRange = {
+    min: 0,
+    max: Math.max(...windValues, 12),
+  };
+  const tempPath = buildGraphPath(
+    points.map((point) => ({ x: point.x, value: point.temperatureValue })),
+    top,
+    laneHeight,
+    tempRange.min,
+    tempRange.max,
+  );
+  const windPath = buildGraphPath(
+    points.map((point) => ({ x: point.x, value: point.windValue })),
+    top + laneHeight + laneGap,
+    laneHeight,
+    windRange.min,
+    windRange.max,
+  );
+  const lightPath = buildGraphPath(
+    points.map((point) => ({ x: point.x, value: point.lightValue })),
+    top + (laneHeight + laneGap) * 2,
+    laneHeight,
+    0,
+    100,
+  );
+  const centerX = points.find((point) => point.kind === "now")?.x ?? width / 2;
 
   return (
-    <article
-      className={`relative min-h-44 p-3 ${surfaceClass} ${
-        item.kind === "now" ? "ring-1 ring-stone-900/10" : ""
-      }`}
-    >
-      <div
-        className={`absolute inset-x-0 bottom-0 h-7 ${
-          item.kind === "outlook" ? "opacity-80" : "opacity-100"
-        }`}
-        style={{ background: buildRibbonGradient(item.tone, item.temperatureValue) }}
-      />
-      <div className="relative flex h-full flex-col justify-between gap-4">
-        <div>
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-stone-500">
-              {item.timeLabel}
-            </p>
-            <span
-              className={`rounded-full px-2 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.16em] ${
-                item.kind === "outlook"
-                  ? "bg-sky-100 text-sky-900"
-                  : item.kind === "now"
-                    ? "bg-stone-950 text-white"
-                    : "bg-emerald-100 text-emerald-900"
-              }`}
+    <div className="relative mt-3 overflow-hidden rounded-[1.8rem] border border-stone-200/80 bg-white/70">
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-emerald-50/45 to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-sky-50/55 to-transparent" />
+      <div className="pointer-events-none absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-stone-950/20" />
+      <div className="pointer-events-none absolute left-1/2 top-0 bottom-0 w-14 -translate-x-1/2 bg-gradient-to-r from-emerald-100/45 via-white/90 to-sky-100/50" />
+      <div className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-stone-950 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white">
+        Current hour
+      </div>
+
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label="Twelve hour weather graph"
+        className="h-[26rem] w-full min-w-[1120px]"
+      >
+        <text x={left} y={top - 4} className="fill-stone-500 text-[12px] uppercase tracking-[0.18em]">
+          Temp
+        </text>
+        <text x={left} y={top + laneHeight + laneGap - 4} className="fill-stone-500 text-[12px] uppercase tracking-[0.18em]">
+          Wind
+        </text>
+        <text x={left} y={top + (laneHeight + laneGap) * 2 - 4} className="fill-stone-500 text-[12px] uppercase tracking-[0.18em]">
+          Sky
+        </text>
+
+        {[top, top + laneHeight + laneGap, top + (laneHeight + laneGap) * 2].map((laneTop) => (
+          <g key={laneTop}>
+            <line x1={left} y1={laneTop} x2={width - right} y2={laneTop} className="stroke-stone-200" strokeWidth="1" />
+            <line
+              x1={left}
+              y1={laneTop + laneHeight}
+              x2={width - right}
+              y2={laneTop + laneHeight}
+              className="stroke-stone-200"
+              strokeWidth="1"
+            />
+          </g>
+        ))}
+
+        {points.map((point) => (
+          <line
+            key={`grid-${point.x}`}
+            x1={point.x}
+            y1={top}
+            x2={point.x}
+            y2={top + (laneHeight + laneGap) * 2 + laneHeight}
+            className={point.kind === "now" ? "stroke-stone-400" : "stroke-stone-200"}
+            strokeWidth={point.kind === "now" ? "2" : "1"}
+          />
+        ))}
+
+        <path d={tempPath} fill="none" stroke="#f59e0b" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={windPath} fill="none" stroke="#0ea5e9" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={lightPath} fill="none" stroke="#6366f1" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+
+        {points.map((point) => (
+          <g key={`temp-${point.x}`}>
+            <circle
+              cx={point.x}
+              cy={graphY(point.temperatureValue, top, laneHeight, tempRange.min, tempRange.max)}
+              r="5"
+              fill="#fff"
+              stroke="#f59e0b"
+              strokeWidth="3"
+            />
+            <circle
+              cx={point.x}
+              cy={graphY(point.windValue, top + laneHeight + laneGap, laneHeight, windRange.min, windRange.max)}
+              r="5"
+              fill="#fff"
+              stroke="#0ea5e9"
+              strokeWidth="3"
+            />
+            <circle
+              cx={point.x}
+              cy={graphY(point.lightValue, top + (laneHeight + laneGap) * 2, laneHeight, 0, 100)}
+              r="5"
+              fill="#fff"
+              stroke="#6366f1"
+              strokeWidth="3"
+            />
+            <text
+              x={point.x}
+              y={graphY(point.lightValue, top + (laneHeight + laneGap) * 2, laneHeight, 0, 100) - 14}
+              textAnchor="middle"
+              className="fill-stone-700 text-[12px]"
             >
-              {item.relativeLabel}
-            </span>
-          </div>
+              {point.lightLabel === "Sun" ? "Sun" : "Moon"}
+            </text>
+          </g>
+        ))}
 
-          <p className="mt-4 text-2xl font-semibold tracking-[-0.08em] text-stone-950">
-            {item.temperatureLabel}
-          </p>
-          <p className="mt-2 text-sm font-semibold text-stone-900">{item.status}</p>
-          <p className="mt-2 text-sm leading-6 text-stone-600">{item.summary}</p>
+        {points.map((point) => (
+          <g key={`labels-${point.x}`}>
+            <text x={point.x} y={314} textAnchor="middle" className="fill-stone-500 text-[12px] uppercase tracking-[0.14em]">
+              {point.timeLabel}
+            </text>
+            <text x={point.x} y={334} textAnchor="middle" className="fill-stone-900 text-[16px] font-semibold">
+              {point.statusShort}
+            </text>
+          </g>
+        ))}
+
+        <text x={centerX - 10} y={44} textAnchor="end" className="fill-emerald-900 text-[11px] uppercase tracking-[0.18em]">
+          Measured
+        </text>
+        <text x={centerX + 10} y={44} className="fill-sky-950 text-[11px] uppercase tracking-[0.18em]">
+          {hasOfficialForecast ? "Forecast" : "Projected"}
+        </text>
+      </svg>
+
+      <div className="grid grid-cols-3 gap-3 border-t border-stone-200/80 bg-white/80 px-4 py-3 text-sm text-stone-600">
+        <div className="flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+          Temperature by hour
         </div>
-
-        <div className="rounded-full bg-white/85 px-3 py-2 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-stone-600">
-          {footerLabel}
+        <div className="flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-sky-500" />
+          Wind by hour
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-indigo-500" />
+          Sun or moon light by hour
         </div>
       </div>
-    </article>
+    </div>
   );
 }
 
@@ -1100,4 +1193,37 @@ function buildRibbonGradient(
           : "rgba(16, 185, 129, 0.88)";
 
   return `linear-gradient(90deg, ${temperatureColor} 0%, ${toneColor} 100%)`;
+}
+
+function isNumber(value: number | null): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function graphY(
+  value: number | null,
+  laneTop: number,
+  laneHeight: number,
+  min: number,
+  max: number,
+) {
+  const safeMin = Number.isFinite(min) ? min : 0;
+  const safeMax = Number.isFinite(max) ? max : safeMin + 1;
+  const span = safeMax - safeMin || 1;
+  const normalized = value === null ? 0.5 : (value - safeMin) / span;
+  return laneTop + laneHeight - normalized * laneHeight;
+}
+
+function buildGraphPath(
+  points: Array<{ x: number; value: number | null }>,
+  laneTop: number,
+  laneHeight: number,
+  min: number,
+  max: number,
+) {
+  return points
+    .map((point, index) => {
+      const y = graphY(point.value, laneTop, laneHeight, min, max);
+      return `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(" ");
 }

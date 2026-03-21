@@ -4,7 +4,11 @@ import type {
   WeatherSeries,
   WeatherSnapshotItem,
 } from "@/lib/weather/types";
-import { formatWeatherClock, formatWeatherDateTime } from "@/lib/weather/time";
+import {
+  formatWeatherClock,
+  formatWeatherDateTime,
+  getWeatherHour,
+} from "@/lib/weather/time";
 
 type StoryTone = "gold" | "sky" | "rain" | "pine";
 type PressureDirection = "rising" | "falling" | "steady";
@@ -40,7 +44,12 @@ export type WeatherStory = {
       timeLabel: string;
       relativeLabel: string;
       temperatureLabel: string;
+      windLabel: string;
+      windValue: number | null;
+      lightLabel: string;
+      lightValue: number | null;
       status: string;
+      statusShort: string;
       summary: string;
       tone: StoryTone;
       kind: "observed" | "now" | "outlook";
@@ -300,6 +309,7 @@ function buildWeatherTimeline(values: {
   const windSeries = findSeries(values.data.series, "wind");
   const pressureSeries = findSeries(values.data.series, "pressure");
   const humiditySeries = findSeries(values.data.series, "humidity");
+  const solarSeries = findSeries(values.data.series, "solar");
   const nowTimestamp =
     temperatureSeries?.points.at(-1)?.timestamp ??
     pressureSeries?.points.at(-1)?.timestamp ??
@@ -319,6 +329,15 @@ function buildWeatherTimeline(values: {
         sampleSeriesAtOrBefore(pressureSeries, targetTimestamp) ?? values.pressure;
       const observedHumidity =
         sampleSeriesAtOrBefore(humiditySeries, targetTimestamp) ?? values.humidity;
+      const observedSolar = sampleSeriesAtOrBefore(solarSeries, targetTimestamp);
+      const observedStatus = timelineStatus({
+        temperature: observedTemperature,
+        wind: observedWind,
+        pressureDirection: values.pressureDirection,
+        rainToday: values.rainToday,
+        humidity: observedHumidity,
+        future: false,
+      });
       const tone = pickTimelineTone({
         temperature: observedTemperature,
         wind: observedWind,
@@ -337,14 +356,12 @@ function buildWeatherTimeline(values: {
         timeLabel: formatWeatherClock(targetTimestamp),
         relativeLabel: hourOffset === 0 ? "Now" : `${Math.abs(hourOffset)}h ago`,
         temperatureLabel: formatTemperature(observedTemperature),
-        status: timelineStatus({
-          temperature: observedTemperature,
-          wind: observedWind,
-          pressureDirection: values.pressureDirection,
-          rainToday: values.rainToday,
-          humidity: observedHumidity,
-          future: false,
-        }),
+        windLabel: numberWithUnit(observedWind, "mph", 0),
+        windValue: observedWind,
+        lightLabel: observedLightLabel(observedSolar, targetTimestamp),
+        lightValue: observedLightValue(observedSolar, targetTimestamp),
+        status: observedStatus,
+        statusShort: conciseStatusLabel(observedStatus),
         summary: timelineSummary({
           temperature: observedTemperature,
           wind: observedWind,
@@ -369,7 +386,12 @@ function buildWeatherTimeline(values: {
         timeLabel: formatWeatherClock(targetTimestamp),
         relativeLabel: `+${hourOffset}h`,
         temperatureLabel: formatForecastTemperature(forecastPeriod),
+        windLabel: forecastPeriod.windSpeed || "No reading",
+        windValue: parseWindSpeedMph(forecastPeriod.windSpeed),
+        lightLabel: forecastPeriod.isDaytime ? "Sun" : "Moon",
+        lightValue: forecastPeriod.isDaytime ? 92 : 16,
         status: forecastPeriod.shortForecast || "Forecast",
+        statusShort: conciseStatusLabel(forecastPeriod.shortForecast || "Forecast"),
         summary: timelineForecastSummary(forecastPeriod),
         tone,
         kind: "outlook" as const,
@@ -392,19 +414,25 @@ function buildWeatherTimeline(values: {
       pressureDirection: projectedPressureDirection,
       rainToday: values.rainToday,
     });
+    const projectedStatus = timelineStatus({
+      temperature: projectedTemperature,
+      wind: projectedWind,
+      pressureDirection: projectedPressureDirection,
+      rainToday: values.rainToday,
+      humidity: projectedHumidity,
+      future: true,
+    });
 
     return {
       timeLabel: formatWeatherClock(targetTimestamp),
       relativeLabel: `+${hourOffset}h`,
       temperatureLabel: formatTemperature(projectedTemperature),
-      status: timelineStatus({
-        temperature: projectedTemperature,
-        wind: projectedWind,
-        pressureDirection: projectedPressureDirection,
-        rainToday: values.rainToday,
-        humidity: projectedHumidity,
-        future: true,
-      }),
+      windLabel: numberWithUnit(projectedWind, "mph", 0),
+      windValue: projectedWind,
+      lightLabel: projectedLightLabel(targetTimestamp),
+      lightValue: projectedLightValue(targetTimestamp),
+      status: projectedStatus,
+      statusShort: conciseStatusLabel(projectedStatus),
       summary: timelineSummary({
         temperature: projectedTemperature,
         wind: projectedWind,
@@ -1321,6 +1349,95 @@ function timelineForecastSummary(period: WeatherForecastPeriod) {
   }
 
   return parts.filter(Boolean).join(". ");
+}
+
+function parseWindSpeedMph(value: string) {
+  const matches = value.match(/\d+/g) ?? [];
+
+  if (!matches.length) {
+    return null;
+  }
+
+  const numbers = matches.map(Number).filter(Number.isFinite);
+
+  if (!numbers.length) {
+    return null;
+  }
+
+  return numbers.reduce((sum, item) => sum + item, 0) / numbers.length;
+}
+
+function observedLightLabel(value: number | null, timestamp: number) {
+  if ((value ?? 0) > 80) {
+    return "Sun";
+  }
+
+  return projectedLightLabel(timestamp);
+}
+
+function observedLightValue(value: number | null, timestamp: number) {
+  if (value !== null) {
+    return clamp((value / 900) * 100, 0, 100);
+  }
+
+  return projectedLightValue(timestamp);
+}
+
+function projectedLightLabel(timestamp: number) {
+  const hour = getWeatherHour(timestamp);
+  return hour >= 6 && hour < 19 ? "Sun" : "Moon";
+}
+
+function projectedLightValue(timestamp: number) {
+  const hour = getWeatherHour(timestamp);
+
+  if (hour >= 6 && hour < 10) {
+    return 58;
+  }
+
+  if (hour >= 10 && hour < 17) {
+    return 92;
+  }
+
+  if (hour >= 17 && hour < 20) {
+    return 42;
+  }
+
+  return 14;
+}
+
+function conciseStatusLabel(value: string) {
+  const lowered = value.toLowerCase();
+
+  if (lowered.includes("rain")) {
+    return "Rain";
+  }
+
+  if (lowered.includes("cloud")) {
+    return "Clouds";
+  }
+
+  if (lowered.includes("clear") || lowered.includes("sun")) {
+    return "Clear";
+  }
+
+  if (lowered.includes("breez") || lowered.includes("wind")) {
+    return "Wind";
+  }
+
+  if (lowered.includes("steady")) {
+    return "Steady";
+  }
+
+  if (lowered.includes("settling")) {
+    return "Settle";
+  }
+
+  if (lowered.includes("unsettled")) {
+    return "Shift";
+  }
+
+  return value.split(" ").slice(0, 2).join(" ");
 }
 
 function projectedPressureDirectionFor(
