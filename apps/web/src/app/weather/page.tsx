@@ -1083,7 +1083,6 @@ function WeatherChartCard({
   const width = 320;
   const height = 124;
   const span = series.max - series.min || 1;
-  const toneClass = toneClasses[tone];
   const points = series.points.map((point, index) => {
     const x = (index / Math.max(series.points.length - 1, 1)) * width;
     const y = height - ((point.value - series.min) / span) * (height - 12) - 6;
@@ -1164,35 +1163,6 @@ function formatCompact(value: number, decimals: number) {
     minimumFractionDigits: 0,
     maximumFractionDigits: decimals,
   });
-}
-
-function buildRibbonGradient(
-  tone: keyof typeof toneClasses,
-  temperatureValue: number | null,
-) {
-  const temperatureColor =
-    temperatureValue === null
-      ? "rgba(148, 163, 184, 0.82)"
-      : temperatureValue < 45
-        ? "rgba(59, 130, 246, 0.88)"
-        : temperatureValue < 58
-          ? "rgba(56, 189, 248, 0.88)"
-          : temperatureValue < 72
-            ? "rgba(16, 185, 129, 0.88)"
-            : temperatureValue < 82
-              ? "rgba(245, 158, 11, 0.9)"
-              : "rgba(239, 68, 68, 0.9)";
-
-  const toneColor =
-    tone === "rain"
-      ? "rgba(59, 130, 246, 0.9)"
-      : tone === "sky"
-        ? "rgba(14, 165, 233, 0.9)"
-        : tone === "gold"
-          ? "rgba(251, 191, 36, 0.92)"
-          : "rgba(16, 185, 129, 0.88)";
-
-  return `linear-gradient(90deg, ${temperatureColor} 0%, ${toneColor} 100%)`;
 }
 
 function isNumber(value: number | null): value is number {
