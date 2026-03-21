@@ -4,6 +4,7 @@
 
 - Repo root: `/Users/scottwaite/monosyth`
 - Web app: `/Users/scottwaite/monosyth/apps/web`
+- Weather app: `/Users/scottwaite/monosyth/apps/weather`
 - Homepage: `/Users/scottwaite/monosyth/apps/web/src/app/page.tsx`
 - App shell: `/Users/scottwaite/monosyth/apps/web/src/app/app/page.tsx`
 - Global layout and metadata: `/Users/scottwaite/monosyth/apps/web/src/app/layout.tsx`
@@ -51,6 +52,20 @@ npm run dev
 Local URL:
 
 - `http://localhost:3000`
+
+Weather app:
+
+```bash
+cd ~/monosyth/apps/weather
+source ~/.nvm/nvm.sh
+nvm use 22
+npm install
+npm run dev
+```
+
+Weather app local URL:
+
+- `http://localhost:8787`
 
 ## Local Environment File
 

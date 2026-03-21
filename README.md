@@ -5,7 +5,7 @@ Monosyth is set up as a multi-app workspace.
 ## Active apps
 
 - `apps/web`: the primary Next.js site for the Monosyth brand
-- `weather`: a standalone Ambient Weather app for station-data experiments
+- `apps/weather`: a standalone Ambient Weather app for station-data experiments
 
 ## Local development
 
@@ -18,8 +18,8 @@ Monosyth is set up as a multi-app workspace.
 ### Weather app
 
 1. Load Node with `nvm use 22`
-2. Run `npm install` in `weather`
-3. Copy `weather/.env.example` to `weather/.env`
+2. Run `npm install` in `apps/weather`
+3. Copy `apps/weather/.env.example` to `apps/weather/.env`
 4. Start it with `npm run dev`
 
 ## Firebase auth setup
