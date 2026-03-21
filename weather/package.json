@@ -1,0 +1,15 @@
+{
+  "name": "weather",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "dev": "node server.mjs",
+    "start": "node server.mjs",
+    "devices": "node src/cli/devices.mjs",
+    "latest": "node src/cli/latest.mjs",
+    "latest:json": "node src/cli/latest.mjs --json"
+  }
+}

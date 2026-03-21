@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Monosyth Weather</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Ambient Weather Station</p>
+          <h1 id="station-name">Loading your sky...</h1>
+          <p class="hero-summary" id="station-summary">
+            Pulling live conditions from your personal station.
+          </p>
+        </div>
+        <div class="hero-actions">
+          <button class="refresh-button" id="refresh-button" type="button">Refresh</button>
+          <p class="last-updated" id="last-updated">Waiting for first update</p>
+        </div>
+      </header>
+
+      <main class="dashboard">
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>Current Conditions</h2>
+            <p>Immediate outdoor reading cards from the latest station payload.</p>
+          </div>
+          <div class="metric-grid" id="metric-grid"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>At a Glance</h2>
+            <p>Useful rollups from the most recent batch of observations.</p>
+          </div>
+          <div class="highlight-grid" id="highlight-grid"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>Recent Motion</h2>
+            <p>Quick visual trends so we can decide what deserves a deeper chart later.</p>
+          </div>
+          <div class="chart-grid" id="chart-grid"></div>
+        </section>
+
+        <section class="panel panel-wide">
+          <div class="panel-heading">
+            <h2>Raw Snapshot</h2>
+            <p>The latest station keys and values, useful for discovering what your hardware exposes.</p>
+          </div>
+          <div class="snapshot-grid" id="snapshot-grid"></div>
+        </section>
+      </main>
+    </div>
+
+    <template id="metric-card-template">
+      <article class="metric-card">
+        <p class="metric-label"></p>
+        <p class="metric-value"></p>
+      </article>
+    </template>
+
+    <template id="highlight-card-template">
+      <article class="highlight-card">
+        <p class="highlight-label"></p>
+        <p class="highlight-value"></p>
+      </article>
+    </template>
+
+    <template id="snapshot-item-template">
+      <article class="snapshot-item">
+        <p class="snapshot-key"></p>
+        <p class="snapshot-value"></p>
+      </article>
+    </template>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+  </html>

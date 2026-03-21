@@ -1,16 +1,26 @@
 # monosyth
 
-The main `monosyth.com` app lives in [`apps/web`](/Users/scottwaite/monosyth/apps/web).
+Monosyth is set up as a multi-app workspace.
 
-This repo is set up to grow into a multi-app workspace:
+## Active apps
 
 - `apps/web`: the primary Next.js site for the Monosyth brand
+- `weather`: a standalone Ambient Weather app for station-data experiments
 
 ## Local development
+
+### Main site
 
 1. Load Node with `nvm use 22`
 2. Run `npm install` in `apps/web`
 3. Start the app with `npm run dev`
+
+### Weather app
+
+1. Load Node with `nvm use 22`
+2. Run `npm install` in `weather`
+3. Copy `weather/.env.example` to `weather/.env`
+4. Start it with `npm run dev`
 
 ## Firebase auth setup
 
@@ -29,3 +39,7 @@ Use Firebase App Hosting with:
 - Firebase project: `monosyth-490705`
 - GitHub repo: `monosyth/monosyth`
 - App root directory: `apps/web`
+
+## Project notes
+
+- Full setup and deployment notes live in [`MONOSYTH_SETUP.md`](/Users/scottwaite/monosyth/MONOSYTH_SETUP.md)
