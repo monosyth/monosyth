@@ -37,12 +37,12 @@ export function AppShell() {
           Private area
         </p>
         <h1 className="mt-4 text-4xl font-semibold tracking-[-0.05em]">
-          The Monosyth app shell is ready for sign-in.
+          The Monosyth studio is ready for sign-in.
         </h1>
         <p className="mt-4 max-w-2xl text-base leading-8 text-stone-700">
-          This route is the first private area for the platform. Once you sign
-          in, it becomes the place to grow product ideas, dashboards, and
-          agent-assisted workflows.
+          This route is your private workspace for Monosyth. Once you sign in,
+          it becomes the place to shape the site, manage internal tools, and
+          build whatever comes next.
         </p>
 
         <div className="mt-6 flex flex-wrap gap-3">
@@ -87,12 +87,12 @@ export function AppShell() {
         <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 className="text-4xl font-semibold tracking-[-0.05em]">
-              Welcome to the Monosyth app shell.
+              Welcome to the Monosyth studio.
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-8 text-stone-700">
-              This is the first protected route in the project. From here, we
-              can grow dashboards, tools, admin panels, and client-facing
-              products without rebuilding the foundation.
+              This is your private admin layer. From here, we can grow
+              dashboards, controls, tools, and internal workflows without
+              turning the site into a multi-user product.
             </p>
           </div>
           <button
@@ -109,14 +109,14 @@ export function AppShell() {
       <section className="grid gap-4 lg:grid-cols-3">
         <article className="glass-panel rounded-[1.75rem] px-5 py-6">
           <p className="font-mono text-xs uppercase tracking-[0.28em] text-stone-500">
-            Identity
+            Access
           </p>
           <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">
-            Signed in as {profile?.displayName ?? user?.displayName ?? user?.email ?? "Monosyth"}
+            Signed in as {profile?.displayName ?? user?.displayName ?? user?.email ?? "monosyth"}
           </h2>
           <p className="mt-3 text-sm leading-7 text-stone-700">
-            Use this identity layer for private notes, admin controls, and
-            internal tools.
+            Use this studio layer for admin controls, internal notes, and the
+            parts of Monosyth that are only for you.
           </p>
         </article>
         <article className="glass-panel rounded-[1.75rem] px-5 py-6">
@@ -124,14 +124,14 @@ export function AppShell() {
             Foundation
           </p>
           <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">
-            Firestore profile
+            Firestore document
           </h2>
           <p className="mt-3 text-sm leading-7 text-stone-700">
             {profileStatus === "ready"
-              ? "A profile document has been created and synced for this user."
+              ? "Your private studio document is connected and syncing."
               : profileStatus === "loading"
-                ? "Signing in worked. Firestore is syncing the profile now."
-                : "The route is ready for Firestore-backed features and profile persistence."}
+                ? "Signing in worked. Firestore is syncing the studio data now."
+                : "The route is ready for Firestore-backed settings, content, and tools."}
           </p>
           <div className="mt-4 rounded-2xl border border-stone-900/10 bg-white/70 px-4 py-3 text-sm text-stone-700">
             Last login: {formatTimestamp(profile?.lastLoginAt ?? null)}
@@ -142,11 +142,11 @@ export function AppShell() {
             Next
           </p>
           <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">
-            First real app
+            First private tools
           </h2>
           <p className="mt-3 text-sm leading-7 text-stone-700">
-            The next coding move can be a dashboard, a profile editor, or a
-            lightweight product idea powered by Firebase data.
+            The next coding move can be an admin dashboard, content controls,
+            or a lightweight internal tool powered by Firebase data.
           </p>
         </article>
       </section>
@@ -157,7 +157,7 @@ export function AppShell() {
 
       <section className="glass-panel rounded-[1.75rem] px-5 py-6">
         <p className="font-mono text-xs uppercase tracking-[0.28em] text-stone-500">
-          Profile document
+          Studio record
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border border-stone-900/10 bg-white/70 px-4 py-3 text-sm text-stone-700">

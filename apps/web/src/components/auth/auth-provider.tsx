@@ -155,7 +155,7 @@ export function AuthProvider({
         const message =
           nextError instanceof Error
             ? nextError.message
-            : "Firestore profile sync failed.";
+            : "Firestore studio sync failed.";
 
         startTransition(() => {
           setProfileStatus("error");
@@ -219,7 +219,7 @@ export function AuthProvider({
   async function saveProfile(input: EditableUserProfile) {
     if (!user) {
       setProfileSaveState("error");
-      setProfileSaveMessage("Sign in first to save your profile.");
+      setProfileSaveMessage("Sign in first to save your settings.");
       return;
     }
 
@@ -235,19 +235,19 @@ export function AuthProvider({
         setProfile(nextProfile);
         setProfileStatus("ready");
         setProfileSaveState("saved");
-        setProfileSaveMessage("Profile saved.");
+        setProfileSaveMessage("Settings saved.");
       });
     } catch (nextError) {
       const message =
         nextError instanceof Error
           ? nextError.message
-          : "Profile save failed.";
+          : "Settings save failed.";
 
       startTransition(() => {
         setProfileStatus("error");
         setProfileError(message);
         setProfileSaveState("error");
-        setProfileSaveMessage("Profile could not be saved.");
+        setProfileSaveMessage("Settings could not be saved.");
       });
     }
   }
