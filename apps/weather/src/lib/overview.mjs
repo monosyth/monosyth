@@ -1,4 +1,5 @@
 import { describeDevice } from "./ambient.mjs";
+import { formatTimestamp, toTimestamp } from "./time.mjs";
 
 const metricDefinitions = [
   { id: "temperature", label: "Outdoor Temp", keys: ["tempf"], unit: "F", decimals: 1 },
@@ -30,6 +31,8 @@ export function buildOverviewPayload(device, observations) {
     fetchedAt: new Date().toISOString(),
     station: describeDevice(device),
     observationCount: chronological.length,
+    observations: chronological,
+    timeRange: buildTimeRange(chronological),
     current: latest,
     metrics: buildMetrics(latest),
     highlights: buildHighlights(chronological),
@@ -42,6 +45,25 @@ function normalizeObservation(observation) {
   const normalized = { ...observation };
   normalized.timestamp = toTimestamp(observation?.dateutc);
   return normalized;
+}
+
+function buildTimeRange(observations) {
+  if (!observations.length) {
+    return {
+      startAt: null,
+      endAt: null,
+      spanMs: 0,
+    };
+  }
+
+  const startAt = observations[0].timestamp;
+  const endAt = observations.at(-1).timestamp;
+
+  return {
+    startAt: new Date(startAt).toISOString(),
+    endAt: new Date(endAt).toISOString(),
+    spanMs: Math.max(endAt - startAt, 0),
+  };
 }
 
 function buildMetrics(latest) {
@@ -85,7 +107,7 @@ function buildHighlights(observations) {
     createHighlight("Peak Gust", describeMax(gustValues, 1, "mph")),
     createHighlight("Average Wind", describeAverage(windValues, 1, "mph")),
     createHighlight("Rain So Far", describeMax(rainValues, 2, "in")),
-  ].filter((item) => item.value);
+  ].filter(Boolean);
 }
 
 function buildSeries(observations) {
@@ -132,7 +154,7 @@ function flattenSnapshot(latest) {
     .filter(([, value]) => value !== null && value !== undefined && value !== "")
     .map(([key, value]) => ({
       key,
-      value: key === "timestamp" ? new Date(value).toLocaleString() : String(value),
+      value: key === "timestamp" ? formatTimestamp(value) : String(value),
     }))
     .sort((left, right) => left.key.localeCompare(right.key));
 }
@@ -198,24 +220,6 @@ function toFiniteNumber(value) {
   }
 
   return null;
-}
-
-function toTimestamp(value) {
-  if (!value) {
-    return 0;
-  }
-
-  if (typeof value === "number") {
-    return value > 1e12 ? value : value * 1000;
-  }
-
-  if (typeof value === "string" && /^\d+$/.test(value)) {
-    const parsed = Number(value);
-    return parsed > 1e12 ? parsed : parsed * 1000;
-  }
-
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function formatValue(value, decimals, unit) {

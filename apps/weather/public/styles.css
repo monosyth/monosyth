@@ -143,6 +143,10 @@ h1 {
   margin-top: 22px;
 }
 
+.filter-panel {
+  padding-bottom: 18px;
+}
+
 .panel {
   padding: 22px;
   border-radius: 28px;
@@ -172,6 +176,56 @@ h1 {
 .snapshot-grid {
   display: grid;
   gap: 16px;
+}
+
+.range-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.range-button-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.range-button {
+  border: 1px solid rgba(23, 49, 63, 0.12);
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.58);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.range-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(23, 49, 63, 0.2);
+}
+
+.range-button.is-active {
+  background: linear-gradient(135deg, var(--text), #29596e);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 12px 26px rgba(23, 49, 63, 0.18);
+}
+
+.range-summary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.4;
 }
 
 .metric-grid {
@@ -337,5 +391,9 @@ h1 {
 
   .last-updated {
     text-align: left;
+  }
+
+  .range-toolbar {
+    align-items: start;
   }
 }

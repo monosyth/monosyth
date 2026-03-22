@@ -1,9 +1,13 @@
 import { buildWeatherOverview } from "@/lib/weather/overview";
 import { getHourlyForecast } from "@/lib/weather/nws";
-import type { WeatherPageData } from "@/lib/weather/types";
+import type { WeatherObservation, WeatherPageData } from "@/lib/weather/types";
 
 const API_BASE_URL = "https://api.ambientweather.net/v1";
 const CACHE_TTL_MS = 60_000;
+const DEFAULT_WEATHER_LIMIT = 48;
+const MAX_WEATHER_LIMIT = 288;
+const DEFAULT_AMBIENT_REQUEST_TIMEOUT_MS = 15_000;
+const MAX_AMBIENT_REQUEST_TIMEOUT_MS = 60_000;
 const SEATTLE_COORDINATES = {
   latitude: 47.6062,
   longitude: -122.3321,
@@ -19,8 +23,6 @@ type WeatherDevice = {
     dateutc?: string | number;
   };
 };
-
-type WeatherObservation = Record<string, string | number | null | undefined>;
 type WeatherCacheEntry = {
   expiresAt: number;
   value: Extract<WeatherPageData, { state: "ready" }>;
@@ -28,18 +30,35 @@ type WeatherCacheEntry = {
 
 let weatherCache: WeatherCacheEntry | null = null;
 
+function parsePositiveInt(value: string, fallback: number, max: number) {
+  const parsed = Number.parseInt(value, 10);
+
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return fallback;
+  }
+
+  return Math.min(parsed, max);
+}
+
 function readEnv() {
   const apiKey = process.env.AMBIENT_API_KEY?.trim() ?? "";
   const applicationKey = process.env.AMBIENT_APPLICATION_KEY?.trim() ?? "";
   const macAddress = process.env.AMBIENT_MAC_ADDRESS?.trim() ?? "";
-  const limitValue = process.env.WEATHER_LIMIT?.trim() ?? "48";
-  const limit = Number.parseInt(limitValue, 10);
+  const limitValue = process.env.WEATHER_LIMIT?.trim() ?? String(DEFAULT_WEATHER_LIMIT);
+  const timeoutValue =
+    process.env.AMBIENT_REQUEST_TIMEOUT_MS?.trim() ??
+    String(DEFAULT_AMBIENT_REQUEST_TIMEOUT_MS);
 
   return {
     apiKey,
     applicationKey,
     macAddress,
-    limit: Number.isFinite(limit) && limit > 0 ? limit : 48,
+    limit: parsePositiveInt(limitValue, DEFAULT_WEATHER_LIMIT, MAX_WEATHER_LIMIT),
+    requestTimeoutMs: parsePositiveInt(
+      timeoutValue,
+      DEFAULT_AMBIENT_REQUEST_TIMEOUT_MS,
+      MAX_AMBIENT_REQUEST_TIMEOUT_MS,
+    ),
   };
 }
 
@@ -69,6 +88,7 @@ function withAuth(params: Record<string, string>) {
 }
 
 async function ambientFetch<T>(pathname: string, params: Record<string, string> = {}) {
+  const { requestTimeoutMs } = readEnv();
   const url = new URL(`${API_BASE_URL}${pathname}`);
   url.search = withAuth(params).toString();
 
@@ -80,8 +100,13 @@ async function ambientFetch<T>(pathname: string, params: Record<string, string> 
       headers: {
         accept: "application/json",
       },
+      signal: AbortSignal.timeout(requestTimeoutMs),
     });
   } catch (error) {
+    if (error instanceof Error && error.name === "TimeoutError") {
+      throw new Error(`Ambient Weather API request timed out after ${requestTimeoutMs}ms.`);
+    }
+
     const detail = error instanceof Error ? error.message : String(error);
     throw new Error(`Ambient Weather network request failed: ${detail}`);
   }

@@ -8,7 +8,7 @@ import { getAmbientConfig, getOptionalEnv } from "./src/lib/env.mjs";
 import { buildOverviewPayload } from "./src/lib/overview.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const publicDir = path.join(__dirname, "public");
+const publicDir = path.resolve(__dirname, "public");
 const host = "127.0.0.1";
 const port = Number.parseInt(getOptionalEnv("WEATHER_PORT", "8787"), 10) || 8787;
 
@@ -20,20 +20,55 @@ const contentTypes = {
   ".svg": "image/svg+xml",
 };
 
-function sendJson(response, statusCode, payload) {
+function sendJson(request, response, statusCode, payload) {
   response.writeHead(statusCode, {
     "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store",
+    "x-content-type-options": "nosniff",
   });
-  response.end(JSON.stringify(payload));
+  response.end(request.method === "HEAD" ? undefined : JSON.stringify(payload));
 }
 
-async function serveStatic(response, pathname) {
-  const resolvedPath = pathname === "/" ? "/index.html" : pathname;
-  const filePath = path.join(publicDir, resolvedPath);
+function sendMethodNotAllowed(request, response) {
+  response.writeHead(405, {
+    allow: "GET, HEAD",
+    "cache-control": "no-store",
+    "content-type": "application/json; charset=utf-8",
+    "x-content-type-options": "nosniff",
+  });
+  response.end(request.method === "HEAD" ? undefined : JSON.stringify({ error: "method-not-allowed" }));
+}
 
-  if (!filePath.startsWith(publicDir)) {
-    sendJson(response, 403, { error: "forbidden" });
+function normalizePathname(pathname) {
+  let decodedPathname;
+
+  try {
+    decodedPathname = decodeURIComponent(pathname);
+  } catch {
+    return null;
+  }
+
+  if (decodedPathname.includes("\0")) {
+    return null;
+  }
+
+  const normalized = path.posix.normalize(decodedPathname);
+  return normalized.startsWith("/") ? normalized : `/${normalized}`;
+}
+
+async function serveStatic(request, response, pathname) {
+  const normalizedPathname = normalizePathname(pathname);
+
+  if (!normalizedPathname) {
+    sendJson(request, response, 400, { error: "bad-request" });
+    return;
+  }
+
+  const resolvedPath = normalizedPathname === "/" ? "/index.html" : normalizedPathname;
+  const filePath = path.resolve(publicDir, `.${resolvedPath}`);
+
+  if (filePath !== publicDir && !filePath.startsWith(`${publicDir}${path.sep}`)) {
+    sendJson(request, response, 403, { error: "forbidden" });
     return;
   }
 
@@ -43,21 +78,24 @@ async function serveStatic(response, pathname) {
     response.writeHead(200, {
       "content-type": contentTypes[extension] ?? "application/octet-stream",
       "cache-control": extension === ".html" ? "no-store" : "public, max-age=300",
+      "x-content-type-options": "nosniff",
     });
-    response.end(body);
+    response.end(request.method === "HEAD" ? undefined : body);
   } catch {
-    sendJson(response, 404, { error: "not-found" });
+    sendJson(request, response, 404, { error: "not-found" });
   }
 }
 
-async function handleOverview(response) {
+async function handleOverview(request, response) {
   try {
     const config = getAmbientConfig();
     const devices = await listDevices();
     const device = pickDevice(devices, config.macAddress);
 
     if (!device) {
-      sendJson(response, 404, { error: "No Ambient Weather device was found for this account." });
+      sendJson(request, response, 404, {
+        error: "No Ambient Weather device was found for this account.",
+      });
       return;
     }
 
@@ -65,27 +103,39 @@ async function handleOverview(response) {
       limit: config.limit,
     });
 
-    sendJson(response, 200, buildOverviewPayload(device, observations));
+    sendJson(request, response, 200, buildOverviewPayload(device, observations));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    sendJson(response, 500, { error: message });
+    sendJson(request, response, 500, { error: message });
   }
 }
 
 const server = createServer(async (request, response) => {
-  const requestUrl = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
+  if (!["GET", "HEAD"].includes(request.method ?? "GET")) {
+    sendMethodNotAllowed(request, response);
+    return;
+  }
+
+  let requestUrl;
+
+  try {
+    requestUrl = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
+  } catch {
+    sendJson(request, response, 400, { error: "bad-request" });
+    return;
+  }
 
   if (requestUrl.pathname === "/api/health") {
-    sendJson(response, 200, { ok: true });
+    sendJson(request, response, 200, { ok: true });
     return;
   }
 
   if (requestUrl.pathname === "/api/overview") {
-    await handleOverview(response);
+    await handleOverview(request, response);
     return;
   }
 
-  await serveStatic(response, requestUrl.pathname);
+  await serveStatic(request, response, requestUrl.pathname);
 });
 
 server.listen(port, host, () => {

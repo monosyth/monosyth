@@ -2,6 +2,7 @@ import type { WeatherForecastPeriod } from "@/lib/weather/types";
 
 const NWS_API_BASE_URL = "https://api.weather.gov";
 const NWS_USER_AGENT = "(monosyth.com/weather, weather@monosyth.com)";
+const NWS_REQUEST_TIMEOUT_MS = 12_000;
 
 type NwsPointsResponse = {
   properties?: {
@@ -35,8 +36,13 @@ async function nwsFetch<T>(url: string) {
         accept: "application/geo+json",
         "user-agent": NWS_USER_AGENT,
       },
+      signal: AbortSignal.timeout(NWS_REQUEST_TIMEOUT_MS),
     });
   } catch (error) {
+    if (error instanceof Error && error.name === "TimeoutError") {
+      throw new Error(`NWS forecast request timed out after ${NWS_REQUEST_TIMEOUT_MS}ms.`);
+    }
+
     const detail = error instanceof Error ? error.message : String(error);
     throw new Error(`NWS forecast request failed: ${detail}`);
   }

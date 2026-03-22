@@ -1,4 +1,5 @@
 import { getAmbientConfig } from "./env.mjs";
+import { formatTimestamp } from "./time.mjs";
 
 const API_BASE_URL = "https://api.ambientweather.net/v1";
 
@@ -13,6 +14,7 @@ function withAuth(params = {}) {
 }
 
 async function ambientFetch(pathname, params = {}) {
+  const { requestTimeoutMs } = getAmbientConfig();
   const url = new URL(`${API_BASE_URL}${pathname}`);
   url.search = withAuth(params).toString();
 
@@ -23,8 +25,13 @@ async function ambientFetch(pathname, params = {}) {
       headers: {
         accept: "application/json",
       },
+      signal: AbortSignal.timeout(requestTimeoutMs),
     });
   } catch (error) {
+    if (isTimeoutError(error)) {
+      throw new Error(`Ambient Weather API request timed out after ${requestTimeoutMs}ms.`);
+    }
+
     const detail = error instanceof Error ? error.message : String(error);
     throw new Error(`Ambient Weather network request failed: ${detail}`);
   }
@@ -96,7 +103,7 @@ export function describeDevice(device, index = 0) {
     name: device?.info?.name ?? `Station ${index + 1}`,
     location: device?.info?.location ?? "",
     macAddress: device?.macAddress ?? "",
-    lastObservationAt: formatDate(device?.lastData?.dateutc),
+    lastObservationAt: formatTimestamp(device?.lastData?.dateutc),
   };
 }
 
@@ -129,22 +136,10 @@ export function summarizeObservation(observation) {
     .filter(([key]) => observation[key] !== undefined && observation[key] !== null)
     .map(([key, label]) => ({
       label,
-      value: key === "dateutc" ? formatDate(observation[key]) : observation[key],
+      value: key === "dateutc" ? formatTimestamp(observation[key]) : observation[key],
     }));
 }
 
-function formatDate(value) {
-  if (!value) {
-    return "";
-  }
-
-  const normalizedValue =
-    typeof value === "string" && /^\d+$/.test(value) ? Number(value) : value;
-  const date = new Date(normalizedValue);
-
-  if (Number.isNaN(date.getTime())) {
-    return String(value);
-  }
-
-  return date.toLocaleString();
+function isTimeoutError(error) {
+  return error instanceof Error && error.name === "TimeoutError";
 }

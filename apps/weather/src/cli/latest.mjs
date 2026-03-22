@@ -6,6 +6,7 @@ import {
   summarizeObservation,
 } from "../lib/ambient.mjs";
 import { getAmbientConfig } from "../lib/env.mjs";
+import { pickLatestObservation } from "../lib/time.mjs";
 
 const wantsJson = process.argv.includes("--json");
 
@@ -19,7 +20,7 @@ try {
   }
 
   const history = await getDeviceHistory(device.macAddress, { limit: config.limit });
-  const latestObservation = history[0] ?? null;
+  const latestObservation = pickLatestObservation(history);
 
   if (wantsJson) {
     console.log(

@@ -1,5 +1,23 @@
 const WEATHER_TIME_ZONE = "America/Los_Angeles";
 
+export function toWeatherTimestamp(value: unknown) {
+  if (typeof value === "number") {
+    return value > 1e12 ? value : value * 1000;
+  }
+
+  if (typeof value === "string" && /^\d+$/.test(value)) {
+    const parsed = Number(value);
+    return parsed > 1e12 ? parsed : parsed * 1000;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  return 0;
+}
+
 export function formatWeatherDateTime(value: string | number | Date) {
   return new Intl.DateTimeFormat("en-US", {
     timeZone: WEATHER_TIME_ZONE,

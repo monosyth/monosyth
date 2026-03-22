@@ -3,6 +3,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const DEFAULT_WEATHER_LIMIT = 48;
+const MAX_WEATHER_LIMIT = 288;
+const DEFAULT_AMBIENT_REQUEST_TIMEOUT_MS = 15_000;
+const MAX_AMBIENT_REQUEST_TIMEOUT_MS = 60_000;
 
 function parseEnvFile(filePath) {
   const entries = {};
@@ -75,11 +79,37 @@ export function getOptionalEnv(name, fallback = "") {
   return value || fallback;
 }
 
+function parseWeatherLimit(value) {
+  const parsed = Number.parseInt(value, 10);
+
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return DEFAULT_WEATHER_LIMIT;
+  }
+
+  return Math.min(parsed, MAX_WEATHER_LIMIT);
+}
+
+function parseAmbientRequestTimeout(value) {
+  const parsed = Number.parseInt(value, 10);
+
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return DEFAULT_AMBIENT_REQUEST_TIMEOUT_MS;
+  }
+
+  return Math.min(parsed, MAX_AMBIENT_REQUEST_TIMEOUT_MS);
+}
+
 export function getAmbientConfig() {
   return {
     apiKey: getRequiredEnv("AMBIENT_API_KEY"),
     applicationKey: getRequiredEnv("AMBIENT_APPLICATION_KEY"),
     macAddress: getOptionalEnv("AMBIENT_MAC_ADDRESS"),
-    limit: Number.parseInt(getOptionalEnv("WEATHER_LIMIT", "1"), 10) || 1,
+    limit: parseWeatherLimit(getOptionalEnv("WEATHER_LIMIT", String(DEFAULT_WEATHER_LIMIT))),
+    requestTimeoutMs: parseAmbientRequestTimeout(
+      getOptionalEnv(
+        "AMBIENT_REQUEST_TIMEOUT_MS",
+        String(DEFAULT_AMBIENT_REQUEST_TIMEOUT_MS),
+      ),
+    ),
   };
 }

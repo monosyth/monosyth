@@ -17,8 +17,9 @@ This folder is a safe place to explore your Ambient Weather station data without
 3. Fill in `AMBIENT_API_KEY` and `AMBIENT_APPLICATION_KEY`.
 4. Run `npm run devices` inside this folder to see your stations.
 5. Copy your station `macAddress` into `AMBIENT_MAC_ADDRESS`.
-6. Start the dashboard with `npm run dev`.
-7. Open `http://localhost:8787`.
+6. Leave `WEATHER_LIMIT=48` unless you want a smaller or larger recent window.
+7. Start the dashboard with `npm run dev`.
+8. Open `http://localhost:8787`.
 
 ## Commands
 
@@ -62,4 +63,5 @@ This starter uses those two credentials for every request and keeps them on the 
 
 - Do not ship these keys to a browser app or public repo.
 - If `AMBIENT_MAC_ADDRESS` is blank, the `latest` command will fall back to your first device.
+- `WEATHER_LIMIT` defaults to `48` recent observations and is capped at `288`.
 - The dashboard route is `/api/overview`, which the browser calls through the local server.

@@ -10,6 +10,7 @@
     "start": "node server.mjs",
     "devices": "node src/cli/devices.mjs",
     "latest": "node src/cli/latest.mjs",
-    "latest:json": "node src/cli/latest.mjs --json"
+    "latest:json": "node src/cli/latest.mjs --json",
+    "test": "node --test"
   }
 }

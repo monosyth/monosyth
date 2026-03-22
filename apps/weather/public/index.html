@@ -23,6 +23,17 @@
       </header>
 
       <main class="dashboard">
+        <section class="panel filter-panel">
+          <div class="panel-heading">
+            <h2>View Window</h2>
+            <p>Flip between short-term changes and the full loaded history without waiting for another fetch.</p>
+          </div>
+          <div class="range-toolbar">
+            <div class="range-button-group" id="range-button-group" role="group" aria-label="Observation window"></div>
+            <p class="range-summary" id="range-summary">Loading recent range...</p>
+          </div>
+        </section>
+
         <section class="panel">
           <div class="panel-heading">
             <h2>Current Conditions</h2>
@@ -76,6 +87,10 @@
         <p class="snapshot-key"></p>
         <p class="snapshot-value"></p>
       </article>
+    </template>
+
+    <template id="range-button-template">
+      <button class="range-button" type="button"></button>
     </template>
 
     <script type="module" src="/app.js"></script>

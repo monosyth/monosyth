@@ -7,6 +7,10 @@ export type WeatherStationSummary = {
   longitude: number | null;
 };
 
+export type WeatherObservation = Record<string, string | number | null | undefined> & {
+  timestamp?: number;
+};
+
 export type WeatherMetric = {
   id: string;
   label: string;
@@ -41,6 +45,12 @@ export type WeatherSnapshotItem = {
   value: string;
 };
 
+export type WeatherTimeRange = {
+  startAt: string | null;
+  endAt: string | null;
+  spanMs: number;
+};
+
 export type WeatherForecastPeriod = {
   startTime: string;
   endTime: string;
@@ -57,6 +67,8 @@ export type WeatherOverview = {
   fetchedAt: string;
   observationCount: number;
   station: WeatherStationSummary;
+  observations: WeatherObservation[];
+  timeRange: WeatherTimeRange;
   metrics: WeatherMetric[];
   highlights: WeatherHighlight[];
   series: WeatherSeries[];
