@@ -1,26 +1,63 @@
 import Link from "next/link";
 
 import { RefreshButton } from "@/components/weather/refresh-button";
-import { StationExplorer } from "@/components/weather/station-explorer";
 import { getWeatherPageData } from "@/lib/weather/ambient";
-import { formatWeatherDateTime } from "@/lib/weather/time";
+import {
+  formatWeatherClock,
+  formatWeatherDateTime,
+  formatWeatherLong,
+} from "@/lib/weather/time";
 import type {
   WeatherForecastPeriod,
-  WeatherMetric,
   WeatherObservation,
+  WeatherOverview,
   WeatherPageData,
+  WeatherSeries,
 } from "@/lib/weather/types";
 
 export const dynamic = "force-dynamic";
 
-const metricCardClasses = {
-  temperature: "border-amber-200/80 bg-amber-50/85 text-amber-950",
-  humidity: "border-cyan-200/80 bg-cyan-50/85 text-cyan-950",
-  wind: "border-sky-200/80 bg-sky-50/85 text-sky-950",
-  pressure: "border-emerald-200/80 bg-emerald-50/85 text-emerald-950",
-  rainToday: "border-blue-200/80 bg-blue-50/85 text-blue-950",
-  fallback: "border-stone-200/80 bg-stone-50/85 text-stone-950",
-} as const;
+type FactRow = {
+  label: string;
+  value: string;
+};
+
+type SummaryRow = {
+  label: string;
+  value: string;
+  detail: string;
+};
+
+const currentConditionDefinitions = [
+  { label: "Outside Temperature", keys: ["tempf"], decimals: 1, unit: "F" },
+  { label: "Feels Like", keys: ["feelsLike", "feelslikef"], decimals: 1, unit: "F" },
+  { label: "Dewpoint", keys: ["dewPoint", "dewpointf"], decimals: 1, unit: "F" },
+  { label: "Humidity", keys: ["humidity"], decimals: 0, unit: "%" },
+  { label: "Barometer", keys: ["baromrelin", "baromabsin"], decimals: 3, unit: "inHg" },
+  {
+    label: "Wind",
+    render: (observation: WeatherObservation) =>
+      formatWind(observation, "windspeedmph", "winddir"),
+  },
+  {
+    label: "Wind Gust",
+    render: (observation: WeatherObservation) =>
+      formatWind(observation, "windgustmph", "winddir"),
+  },
+  { label: "Hourly Rain", keys: ["hourlyrainin"], decimals: 2, unit: "in" },
+  { label: "Daily Rain", keys: ["dailyrainin"], decimals: 2, unit: "in" },
+  { label: "UV Index", keys: ["uv"], decimals: 1, unit: "" },
+  { label: "Solar Radiation", keys: ["solarradiation"], decimals: 0, unit: "W/m2" },
+] as const;
+
+const navItems = [
+  { id: "current-section", label: "Current" },
+  { id: "today-section", label: "Today" },
+  { id: "recent-section", label: "Recent" },
+  { id: "graphs-section", label: "Graphs" },
+  { id: "station-section", label: "Station" },
+  { id: "raw-section", label: "Raw" },
+] as const;
 
 export default async function WeatherPage() {
   const result = await getWeatherPageData();
@@ -30,241 +67,187 @@ export default async function WeatherPage() {
   }
 
   const { data, notice } = result;
-  const latest = data.observations.at(-1) ?? null;
-  const headline = buildHeadline(data.metrics, latest);
-  const primaryMetrics = pickPrimaryMetrics(data.metrics);
-  const highlights = data.highlights.slice(0, 5);
-  const supportingFacts = buildSupportingFacts(data, latest);
-  const forecastPeriods = data.forecast.slice(0, 6);
-  const contextCards = buildContextCards(data);
+  const currentRows = buildCurrentConditionRows(data.observations);
+  const todayRows = buildDaySummaryRows(data.observations);
+  const recentRows = buildRecentSummaryRows(data);
+  const mastheadRows = buildMastheadRows(data, notice);
+  const stationRows = buildStationDetailRows(data, notice);
+  const rawRows = data.snapshot.slice(0, 22).map((item) => ({
+    label: item.key,
+    value: item.value,
+  }));
+  const graphSeries = data.series.slice(0, 8);
+  const mapUrl = buildMapUrl(data);
 
   return (
-    <main className="relative min-h-screen overflow-hidden px-5 py-6 text-stone-950 sm:px-8 lg:px-12">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(244,201,93,0.18),transparent_22%),radial-gradient(circle_at_88%_12%,rgba(11,110,105,0.18),transparent_20%),linear-gradient(180deg,rgba(255,255,255,0.42),transparent_65%)]" />
-      <div className="weather-drift pointer-events-none absolute left-[-8rem] top-10 h-72 w-72 rounded-full bg-amber-300/15 blur-3xl" />
-      <div className="weather-drift pointer-events-none absolute right-[-6rem] top-20 h-80 w-80 rounded-full bg-sky-300/15 blur-3xl" />
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <section className="glass-panel relative overflow-hidden rounded-[2rem] bg-white/84 p-6 sm:p-8 lg:p-10">
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-gradient-to-br from-white/80 via-white/10 to-transparent" />
-          <div className="relative grid gap-6 xl:grid-cols-[1.15fr_0.85fr] xl:items-stretch">
-            <div className="space-y-6">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="rounded-full bg-stone-950 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white">
-                  Live weather dashboard
-                </span>
-                <span className="rounded-full border border-stone-200/80 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-stone-600">
-                  Updated {formatWeatherDateTime(data.fetchedAt)}
-                </span>
-              </div>
-
-              <div className="space-y-4">
-                <p className="text-sm font-medium uppercase tracking-[0.24em] text-stone-500">
-                  {data.station.name}
-                </p>
-                <h1 className="max-w-4xl text-4xl font-semibold leading-none tracking-[-0.07em] text-balance sm:text-5xl lg:text-6xl">
-                  {headline.title}
-                </h1>
-                <p className="max-w-3xl text-base leading-7 text-stone-600 sm:text-lg">
-                  {headline.subtitle}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-3">
-                {data.station.location ? (
-                  <InfoPill label="Location" value={data.station.location} />
+    <main className="min-h-screen bg-[#ececec] text-stone-800">
+      <header className="bg-[#1eb7ce] text-white shadow-[0_10px_28px_rgba(0,0,0,0.12)]">
+        <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8 lg:px-10">
+          <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
+            <div>
+              <p className="text-sm uppercase tracking-[0.18em] text-white/78">
+                Monosyth Personal Weather
+              </p>
+              <h1 className="mt-3 text-4xl font-light tracking-[-0.04em] sm:text-5xl">
+                {data.station.name}
+              </h1>
+              <p className="mt-3 text-xl font-light text-white/92 sm:text-2xl">
+                {buildHeaderMeta(data)}
+                {mapUrl ? (
+                  <>
+                    {" "}
+                    <a
+                      className="underline decoration-white/55 underline-offset-4 hover:decoration-white"
+                      href={mapUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Show on map
+                    </a>
+                  </>
                 ) : null}
-                <InfoPill
-                  label="Coverage"
-                  value={describeCoverage(data.timeRange.startAt, data.timeRange.endAt)}
-                />
-                <InfoPill
-                  label="Samples"
-                  value={`${data.observationCount} recent observations`}
-                />
-              </div>
+              </p>
 
-              {notice ? (
-                <div className="rounded-[1.4rem] border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-sm leading-6 text-amber-950">
-                  {notice}
-                </div>
-              ) : null}
-
-              <div className="flex flex-wrap items-center gap-3">
-                <RefreshButton />
-                <Link
-                  href="/"
-                  className="rounded-full border border-stone-300/80 bg-white/80 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-950 hover:text-stone-950"
-                >
-                  Back Home
-                </Link>
-              </div>
-            </div>
-
-            <div className="rounded-[2rem] border border-stone-900/90 bg-stone-950 p-6 text-white shadow-[0_20px_80px_rgba(15,23,42,0.25)] sm:p-7">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-white/65">
-                    Right now
-                  </p>
-                  <p className="mt-3 text-6xl font-semibold tracking-[-0.1em] text-white sm:text-7xl">
-                    {headline.temperature}
-                  </p>
-                </div>
-                <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/75">
-                  Ambient station
-                </span>
-              </div>
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                {supportingFacts.slice(0, 4).map((fact) => (
-                  <article
-                    key={fact.label}
-                    className="rounded-[1.3rem] border border-white/12 bg-white/8 p-4"
-                  >
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-white/55">
-                      {fact.label}
-                    </p>
-                    <p className="mt-2 text-lg font-semibold tracking-[-0.04em] text-white">
-                      {fact.value}
-                    </p>
-                  </article>
-                ))}
-              </div>
-
-              <div className="mt-5 rounded-[1.4rem] border border-white/10 bg-white/6 p-4">
-                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-white/55">
-                  Station note
-                </p>
-                <p className="mt-3 text-sm leading-6 text-white/75">
-                  {buildStationNote(latest)}
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-          <div className="glass-panel rounded-[2rem] bg-white/82 p-6 sm:p-7">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-                  Current conditions
-                </p>
-                <h2 className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-stone-950">
-                  The numbers you actually care about
-                </h2>
-              </div>
-              <p className="text-sm text-stone-500">
-                Last station report {data.station.lastObservationAt || "not available"}
+              <h2 className="mt-8 text-3xl font-light tracking-[-0.03em] sm:text-4xl">
+                Current Weather Conditions
+              </h2>
+              <p className="mt-3 text-lg text-white/88">
+                {data.station.lastObservationAt || formatWeatherLong(data.fetchedAt)}
               </p>
             </div>
 
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-              {primaryMetrics.map((metric) => (
-                <article
-                  key={metric.id}
-                  className={`rounded-[1.6rem] border p-5 ${pickMetricCardClass(metric.id)}`}
-                >
-                  <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] opacity-70">
-                    {metric.label}
-                  </p>
-                  <p className="mt-4 text-4xl font-semibold tracking-[-0.08em]">
-                    {metric.displayValue}
-                  </p>
-                </article>
-              ))}
+            <div className="lg:justify-self-end lg:text-right">
+              <table className="w-full border-collapse text-left text-lg lg:max-w-md lg:text-right">
+                <tbody>
+                  {mastheadRows.map((row) => (
+                    <tr key={row.label} className="border-b border-white/18 last:border-b-0">
+                      <th className="px-0 py-2 pr-4 font-semibold text-white/90 lg:text-right">
+                        {row.label}:
+                      </th>
+                      <td className="px-0 py-2 text-white/80">{row.value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
 
-          <aside className="glass-panel rounded-[2rem] bg-white/82 p-6 sm:p-7">
-            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-              What stands out
-            </p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-stone-950">
-              A fast read on the loaded window
-            </h2>
-
-            <div className="mt-6 space-y-3">
-              {highlights.map((highlight) => (
-                <article
-                  key={highlight.label}
-                  className="rounded-[1.3rem] border border-stone-200/80 bg-stone-50/85 p-4"
-                >
-                  <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-                    {highlight.label}
-                  </p>
-                  <p className="mt-2 text-lg font-semibold tracking-[-0.04em] text-stone-950">
-                    {highlight.value}
-                  </p>
-                </article>
-              ))}
+          <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4 border-t border-white/18 pt-6 text-2xl font-light">
+            {navItems.map((item, index) => (
+              <a
+                key={item.id}
+                href={`#${item.id}`}
+                className={`border-b-4 pb-2 transition hover:text-white ${index === 0 ? "border-[#f4d24f] text-white" : "border-transparent text-white/85 hover:border-white/40"}`}
+              >
+                {item.label}
+              </a>
+            ))}
+            <div className="ml-auto flex flex-wrap items-center gap-3 text-base font-medium">
+              <RefreshButton />
+              <Link
+                href="/"
+                className="rounded-full border border-white/35 bg-white/12 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/22"
+              >
+                Back Home
+              </Link>
             </div>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {supportingFacts.slice(4).map((fact) => (
-                <article
-                  key={fact.label}
-                  className="rounded-[1.3rem] border border-stone-200/80 bg-white/85 p-4"
-                >
-                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                    {fact.label}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-stone-700">{fact.value}</p>
-                </article>
-              ))}
-            </div>
-          </aside>
-        </section>
-
-        <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-          <div className="glass-panel rounded-[2rem] bg-white/82 p-6 sm:p-7">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-                  Short-range forecast
-                </p>
-                <h2 className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-stone-950">
-                  What the next several hours look like
-                </h2>
-              </div>
-              <p className="text-sm text-stone-500">
-                {forecastPeriods.length
-                  ? "Powered by NOAA hourly forecast"
-                  : "Forecast unavailable right now"}
-              </p>
-            </div>
-
-            {forecastPeriods.length ? (
-              <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {forecastPeriods.map((period) => (
-                  <ForecastCard key={period.startTime} period={period} />
-                ))}
-              </div>
-            ) : (
-              <div className="mt-6 rounded-[1.5rem] border border-dashed border-stone-300/80 bg-stone-50/75 p-5 text-sm leading-6 text-stone-600">
-                NOAA did not return an hourly forecast for this station location on this
-                fetch, so the live station data above is the most reliable source for now.
-              </div>
-            )}
           </div>
+        </div>
+      </header>
 
-          <section className="glass-panel rounded-[2rem] bg-white/82 p-6 sm:p-7">
-            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-              Source details
-            </p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-stone-950">
-              Where this data comes from
-            </h2>
+      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-10">
+        {notice ? (
+          <div className="mb-6 rounded-sm border border-[#e9c65a] bg-[#fff8de] px-5 py-4 text-sm leading-6 text-[#7d5b00]">
+            {notice}
+          </div>
+        ) : null}
 
-            <div className="mt-6 space-y-3">
-              {contextCards.map((card) => (
-                <ContextCard key={card.label} label={card.label} value={card.value} />
+        <div className="grid gap-6 xl:grid-cols-2">
+          <TablePanel
+            id="current-section"
+            title="Current Conditions"
+            subtitle="Live station readings in the same table-first style as the reference dashboard."
+          >
+            <TwoColumnTable
+              rows={currentRows}
+              emptyMessage="Current conditions will appear after the next successful station fetch."
+            />
+          </TablePanel>
+
+          <TablePanel
+            id="forecast-section"
+            title="Forecast Outlook"
+            subtitle="Short-range hourly forecast pulled alongside the station feed."
+          >
+            <ForecastTable periods={data.forecast.slice(0, 6)} />
+          </TablePanel>
+        </div>
+
+        <div className="mt-6 grid gap-6 xl:grid-cols-2">
+          <TablePanel
+            id="today-section"
+            title="Since Midnight"
+            subtitle="Today's highs, lows, and peaks from the loaded station observations."
+          >
+            <ThreeColumnTable
+              rows={todayRows}
+              emptyMessage="Today's highs and lows will populate once observations are available for the current day."
+            />
+          </TablePanel>
+
+          <TablePanel
+            id="recent-section"
+            title="Recent Range"
+            subtitle="A quick summary of the loaded weather window and where the readings moved."
+          >
+            <ThreeColumnTable
+              rows={recentRows}
+              emptyMessage="Recent range details will appear once enough observations are available."
+            />
+          </TablePanel>
+        </div>
+
+        <TablePanel
+          id="graphs-section"
+          title="Graphs"
+          subtitle="Instrument-style trend panels modeled after a classic weather station dashboard."
+          className="mt-6"
+        >
+          {graphSeries.length ? (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {graphSeries.map((series) => (
+                <TrendPanel key={series.id} series={series} />
               ))}
             </div>
-          </section>
-        </section>
+          ) : (
+            <PanelState message="Trend charts need at least two recent observations with matching fields." />
+          )}
+        </TablePanel>
 
-        <StationExplorer data={data} />
+        <div className="mt-6 grid gap-6 xl:grid-cols-2">
+          <TablePanel
+            id="station-section"
+            title="Station Details"
+            subtitle="Quick context about the feed, refresh cadence, and currently loaded history."
+          >
+            <TwoColumnTable
+              rows={stationRows}
+              emptyMessage="Station details will appear after the first successful station fetch."
+            />
+          </TablePanel>
+
+          <TablePanel
+            id="raw-section"
+            title="Raw Snapshot"
+            subtitle="Latest key and value pairs from the newest Ambient Weather sample."
+          >
+            <TwoColumnTable
+              rows={rawRows}
+              emptyMessage="The newest raw payload will appear here after a successful fetch."
+              monoLabels
+            />
+          </TablePanel>
+        </div>
       </div>
     </main>
   );
@@ -281,258 +264,680 @@ function WeatherState({ result }: { result: Exclude<WeatherPageData, { state: "r
       : result.message;
 
   return (
-    <main className="relative min-h-screen overflow-hidden px-5 py-10 text-stone-950 sm:px-8 lg:px-12">
-      <div className="mx-auto max-w-3xl">
-        <section className="glass-panel rounded-[2rem] bg-white/84 p-8 sm:p-10">
-          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-            Ambient Weather on Monosyth
+    <main className="min-h-screen bg-[#ececec] px-5 py-10 text-stone-800 sm:px-8 lg:px-10">
+      <div className="mx-auto max-w-4xl overflow-hidden rounded-sm bg-white shadow-[0_8px_24px_rgba(0,0,0,0.08)]">
+        <div className="bg-[#1eb7ce] px-8 py-10 text-white">
+          <p className="text-sm uppercase tracking-[0.18em] text-white/78">
+            Monosyth Personal Weather
           </p>
-          <h1 className="mt-4 text-4xl font-semibold tracking-[-0.07em] text-stone-950 sm:text-5xl">
-            {title}
-          </h1>
-          <p className="mt-4 text-base leading-7 text-stone-600">{detail}</p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link
-              href="/"
-              className="rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold text-white"
-            >
-              Back Home
-            </Link>
+          <h1 className="mt-4 text-4xl font-light tracking-[-0.04em]">{title}</h1>
+          <p className="mt-4 max-w-3xl text-lg leading-8 text-white/88">{detail}</p>
+          <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/weather"
-              className="rounded-full border border-stone-300/80 bg-white/80 px-4 py-2 text-sm font-semibold text-stone-700"
+              className="rounded-full border border-white/35 bg-white/12 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/22"
             >
               Reload Weather
             </Link>
+            <Link
+              href="/"
+              className="rounded-full border border-white/35 bg-white/12 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/22"
+            >
+              Back Home
+            </Link>
           </div>
-        </section>
+        </div>
       </div>
     </main>
   );
 }
 
-function ForecastCard({ period }: { period: WeatherForecastPeriod }) {
+function TablePanel({
+  id,
+  title,
+  subtitle,
+  children,
+  className = "",
+}: {
+  id: string;
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <article className="rounded-[1.5rem] border border-stone-200/80 bg-stone-50/82 p-5">
-      <div className="flex items-start justify-between gap-4">
+    <section
+      id={id}
+      className={`overflow-hidden rounded-sm border border-stone-200 bg-white shadow-[0_8px_20px_rgba(0,0,0,0.06)] ${className}`.trim()}
+    >
+      <div className="border-b border-stone-200 px-6 py-5">
+        <h2 className="text-3xl font-light tracking-[-0.03em] text-stone-700">{title}</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-500">{subtitle}</p>
+      </div>
+      <div className="px-6 py-5">{children}</div>
+    </section>
+  );
+}
+
+function TwoColumnTable({
+  rows,
+  emptyMessage,
+  monoLabels = false,
+}: {
+  rows: FactRow[];
+  emptyMessage: string;
+  monoLabels?: boolean;
+}) {
+  if (!rows.length) {
+    return <PanelState message={emptyMessage} />;
+  }
+
+  return (
+    <table className="w-full border-collapse">
+      <tbody>
+        {rows.map((row) => (
+          <tr key={row.label} className="border-b border-stone-200 last:border-b-0">
+            <th
+              className={`w-[44%] px-2 py-3 text-left align-top text-base font-normal text-stone-700 ${monoLabels ? "font-mono text-sm uppercase tracking-[0.14em] text-stone-500" : ""}`}
+            >
+              {row.label}
+            </th>
+            <td className="px-2 py-3 text-left text-base text-stone-800">{row.value}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function ThreeColumnTable({
+  rows,
+  emptyMessage,
+}: {
+  rows: SummaryRow[];
+  emptyMessage: string;
+}) {
+  if (!rows.length) {
+    return <PanelState message={emptyMessage} />;
+  }
+
+  return (
+    <table className="w-full border-collapse">
+      <thead>
+        <tr className="border-b border-stone-300 text-left text-sm uppercase tracking-[0.14em] text-stone-500">
+          <th className="px-2 py-3 font-medium">Reading</th>
+          <th className="px-2 py-3 font-medium">Value</th>
+          <th className="px-2 py-3 font-medium">Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={row.label} className="border-b border-stone-200 last:border-b-0">
+            <th className="px-2 py-3 text-left font-normal text-stone-700">{row.label}</th>
+            <td className="px-2 py-3 text-stone-800">{row.value}</td>
+            <td className="px-2 py-3 text-stone-500">{row.detail}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function ForecastTable({ periods }: { periods: WeatherForecastPeriod[] }) {
+  if (!periods.length) {
+    return (
+      <PanelState message="NOAA did not return an hourly forecast for this fetch, so the live station data on this page is the most reliable read for now." />
+    );
+  }
+
+  return (
+    <table className="w-full border-collapse">
+      <thead>
+        <tr className="border-b border-stone-300 text-left text-sm uppercase tracking-[0.14em] text-stone-500">
+          <th className="px-2 py-3 font-medium">Period</th>
+          <th className="px-2 py-3 font-medium">Temp</th>
+          <th className="px-2 py-3 font-medium">Conditions</th>
+          <th className="px-2 py-3 font-medium">Wind</th>
+        </tr>
+      </thead>
+      <tbody>
+        {periods.map((period) => (
+          <tr key={period.startTime} className="border-b border-stone-200 last:border-b-0">
+            <td className="px-2 py-3 text-stone-700">
+              {formatWeatherDateTime(period.startTime)}
+            </td>
+            <td className="px-2 py-3 text-stone-800">
+              {period.temperature === null
+                ? "Not reported"
+                : `${period.temperature} ${period.temperatureUnit}`}
+            </td>
+            <td className="px-2 py-3 text-stone-800">{period.shortForecast}</td>
+            <td className="px-2 py-3 text-stone-500">
+              {period.windSpeed} {period.windDirection}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function TrendPanel({ series }: { series: WeatherSeries }) {
+  const width = 420;
+  const height = 168;
+  const left = 18;
+  const right = 14;
+  const top = 10;
+  const bottom = 22;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+  const span = series.max - series.min || 1;
+  const latestPoint = series.points.at(-1) ?? null;
+  const accent = pickSeriesAccent(series.id);
+  const fill = `${accent}22`;
+  const points = series.points.map((point, index) => {
+    const x = left + (index / Math.max(series.points.length - 1, 1)) * plotWidth;
+    const y = top + (1 - (point.value - series.min) / span) * plotHeight;
+    return { x, y };
+  });
+  const linePath = points
+    .map((point, index) =>
+      `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`,
+    )
+    .join(" ");
+  const fillPath = `${linePath} L ${(left + plotWidth).toFixed(2)} ${(top + plotHeight).toFixed(2)} L ${left} ${(top + plotHeight).toFixed(2)} Z`;
+
+  return (
+    <article className="rounded-sm border border-stone-200 bg-[#fafafa] p-4 shadow-[0_4px_14px_rgba(0,0,0,0.04)]">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-            {formatWeatherDateTime(period.startTime)}
+          <p className="text-xl font-light tracking-[-0.02em] text-stone-700">
+            {series.label}
           </p>
-          <p className="mt-2 text-3xl font-semibold tracking-[-0.08em] text-stone-950">
-            {period.temperature === null
-              ? "?"
-              : `${period.temperature}\u00b0${period.temperatureUnit}`}
+          <p className="mt-1 text-sm text-stone-500">
+            {formatSeriesRange(series)}
           </p>
         </div>
-        <span className="rounded-full border border-stone-200/80 bg-white/85 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-stone-600">
-          {period.isDaytime ? "Day" : "Night"}
-        </span>
+        <div className="text-right">
+          <p className="text-xs uppercase tracking-[0.16em] text-stone-500">Now</p>
+          <p className="mt-1 text-2xl font-light text-stone-800">
+            {formatSeriesValue(latestPoint?.value ?? null, series.decimals, series.unit)}
+          </p>
+        </div>
       </div>
 
-      <p className="mt-4 text-lg font-semibold tracking-[-0.04em] text-stone-950">
-        {period.shortForecast}
-      </p>
-      <p className="mt-2 text-sm leading-6 text-stone-600">{period.detailedForecast}</p>
-      <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">
-        Wind {period.windSpeed} {period.windDirection}
-      </p>
+      <div className="mt-4 rounded-sm border border-stone-200 bg-white p-3">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          role="img"
+          aria-label={`${series.label} trend`}
+          className="h-44 w-full"
+        >
+          {[0, 0.5, 1].map((ratio) => {
+            const y = top + plotHeight * ratio;
+            return (
+              <line
+                key={ratio}
+                x1={left}
+                y1={y}
+                x2={left + plotWidth}
+                y2={y}
+                stroke="#dadada"
+                strokeWidth="1"
+              />
+            );
+          })}
+          <path d={fillPath} fill={fill} />
+          <path
+            d={linePath}
+            fill="none"
+            stroke={accent}
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {latestPoint ? (
+            <circle
+              cx={points.at(-1)?.x ?? left}
+              cy={points.at(-1)?.y ?? top}
+              r="4"
+              fill={accent}
+            />
+          ) : null}
+          <text x="6" y={top + 4} fill="#7a7a7a" fontSize="12">
+            {formatCompact(series.max, series.decimals)}
+          </text>
+          <text x="6" y={top + plotHeight / 2 + 4} fill="#7a7a7a" fontSize="12">
+            {formatCompact(series.min + span / 2, series.decimals)}
+          </text>
+          <text x="6" y={top + plotHeight + 4} fill="#7a7a7a" fontSize="12">
+            {formatCompact(series.min, series.decimals)}
+          </text>
+        </svg>
+      </div>
+
+      <div className="mt-3 flex items-center justify-between text-sm text-stone-500">
+        <span>{series.points[0]?.label}</span>
+        <span>
+          Low {formatCompact(series.min, series.decimals)} / High{" "}
+          {formatCompact(series.max, series.decimals)}
+        </span>
+        <span>{series.points.at(-1)?.label}</span>
+      </div>
     </article>
   );
 }
 
-function ContextCard({ label, value }: { label: string; value: string }) {
+function PanelState({ message }: { message: string }) {
   return (
-    <article className="rounded-[1.3rem] border border-stone-200/80 bg-stone-50/82 p-4">
-      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-stone-500">
-        {label}
-      </p>
-      <p className="mt-2 text-sm leading-6 text-stone-700">{value}</p>
-    </article>
+    <div className="rounded-sm border border-dashed border-stone-300 bg-stone-50 px-4 py-5 text-sm leading-6 text-stone-500">
+      {message}
+    </div>
   );
 }
 
-function InfoPill({ label, value }: { label: string; value: string }) {
-  return (
-    <span className="rounded-full border border-stone-200/80 bg-white/80 px-4 py-2 text-sm font-medium text-stone-700">
-      <span className="text-stone-500">{label}:</span> {value}
-    </span>
-  );
+function buildHeaderMeta(data: WeatherOverview) {
+  const parts = [];
+
+  if (data.station.location) {
+    parts.push(data.station.location);
+  }
+
+  if (data.station.latitude !== null && data.station.longitude !== null) {
+    parts.push(
+      `${formatCoordinate(data.station.latitude, "N", "S")} | ${formatCoordinate(data.station.longitude, "E", "W")}`,
+    );
+  }
+
+  return parts.join(" | ");
 }
 
-function buildHeadline(metrics: WeatherMetric[], latest: WeatherObservation | null) {
-  const temperature = pickMetric(metrics, "temperature")?.displayValue ?? "--";
-  const humidity = pickMetric(metrics, "humidity")?.displayValue ?? "unknown humidity";
-  const wind = pickMetric(metrics, "wind")?.displayValue ?? "calm wind";
-  const rainToday = pickMetric(metrics, "rainToday")?.value ?? 0;
-  const condition = describeCondition(metrics, latest);
-
-  return {
-    title: `${condition.title}, ${temperature.toLowerCase()} outside`,
-    subtitle: `${condition.summary} Humidity is ${humidity.toLowerCase()} and wind is running ${wind.toLowerCase()}. ${rainToday > 0 ? "Rain is already on the board today." : "No measurable rain has shown up in today's station total yet."}`,
-    temperature,
-  };
-}
-
-function buildSupportingFacts(data: Extract<WeatherPageData, { state: "ready" }>["data"], latest: WeatherObservation | null) {
+function buildMastheadRows(data: WeatherOverview, notice?: string): FactRow[] {
   return [
+    { label: "Station", value: data.station.name || "Unknown station" },
+    { label: "Software", value: "Ambient Weather + NOAA" },
     {
-      label: "Feels like",
-      value: formatObservationValue(latest, ["feelsLike", "feelslikef"], "F", 1),
+      label: "Last report",
+      value: data.station.lastObservationAt || formatWeatherLong(data.fetchedAt),
     },
-    {
-      label: "Dew point",
-      value: formatObservationValue(latest, ["dewPoint", "dewpointf"], "F", 1),
-    },
-    {
-      label: "Wind direction",
-      value: formatObservationText(latest, ["winddir", "winddirection", "windDirection"]),
-    },
-    {
-      label: "UV and solar",
-      value: buildUvSolarSummary(latest),
-    },
-    {
-      label: "Latest sample",
-      value: data.station.lastObservationAt || "Not reported",
-    },
-    {
-      label: "Loaded history",
-      value: `${data.observationCount} samples across ${describeCoverage(data.timeRange.startAt, data.timeRange.endAt)}`,
-    },
+    { label: "Loaded", value: `${data.observationCount} observations` },
+    { label: "History", value: formatSpan(data.timeRange.spanMs) },
+    { label: "Status", value: notice ? "Cached snapshot" : "Live fetch" },
   ];
 }
 
-function pickPrimaryMetrics(metrics: WeatherMetric[]) {
-  const orderedIds = ["temperature", "humidity", "wind", "pressure", "rainToday"];
-
-  return orderedIds
-    .map((id) => pickMetric(metrics, id))
-    .filter((metric): metric is WeatherMetric => metric !== null);
+function buildStationDetailRows(data: WeatherOverview, notice?: string): FactRow[] {
+  return [
+    { label: "Station", value: data.station.name || "Unknown station" },
+    { label: "Location", value: data.station.location || "Location not provided" },
+    {
+      label: "Coordinates",
+      value:
+        data.station.latitude !== null && data.station.longitude !== null
+          ? `${data.station.latitude.toFixed(4)}, ${data.station.longitude.toFixed(4)}`
+          : "Not reported",
+    },
+    { label: "MAC Address", value: data.station.macAddress || "Not reported" },
+    {
+      label: "Last Station Report",
+      value: data.station.lastObservationAt || formatWeatherLong(data.fetchedAt),
+    },
+    { label: "Local Refresh", value: formatWeatherLong(data.fetchedAt) },
+    { label: "Loaded Observations", value: String(data.observationCount) },
+    { label: "Loaded History", value: formatSpan(data.timeRange.spanMs) },
+    { label: "Forecast Source", value: data.forecast.length ? "NOAA hourly forecast" : "Unavailable on this fetch" },
+    { label: "Feed Status", value: notice ? "Serving recent cache" : "Serving latest fetch" },
+  ];
 }
 
-function pickMetric(metrics: WeatherMetric[], id: string) {
-  return metrics.find((metric) => metric.id === id) ?? null;
+function buildCurrentConditionRows(observations: WeatherObservation[]): FactRow[] {
+  const latest = observations.at(-1) ?? null;
+
+  if (!latest) {
+    return [];
+  }
+
+  const rows: FactRow[] = [];
+
+  for (const definition of currentConditionDefinitions) {
+    const value =
+      "render" in definition
+        ? definition.render(latest)
+        : formatObservationValue(latest, definition.keys, definition.decimals, definition.unit);
+
+    if (!value) {
+      continue;
+    }
+
+    rows.push({
+      label: definition.label,
+      value,
+    });
+
+    if (definition.label === "Barometer") {
+      const trend = buildTrendValue(observations, ["baromrelin", "baromabsin"], 3 * 60 * 60 * 1000, 3, "inHg");
+
+      if (trend) {
+        rows.push({
+          label: "Barometer Trend (3 Hours)",
+          value: trend,
+        });
+      }
+    }
+  }
+
+  return rows;
 }
 
-function pickMetricCardClass(metricId: string) {
-  return (
-    metricCardClasses[metricId as keyof typeof metricCardClasses] ??
-    metricCardClasses.fallback
+function buildDaySummaryRows(observations: WeatherObservation[]): SummaryRow[] {
+  if (!observations.length) {
+    return [];
+  }
+
+  const latestTimestamp = observations.at(-1)?.timestamp ?? 0;
+  const todayObservations = observations.filter(
+    (observation) =>
+      formatDayKey(observation.timestamp ?? 0) === formatDayKey(latestTimestamp),
   );
+
+  if (!todayObservations.length) {
+    return [];
+  }
+
+  return [
+    createExtremeRow(todayObservations, "High Temperature", ["tempf"], "max", 1, "F"),
+    createExtremeRow(todayObservations, "Low Temperature", ["tempf"], "min", 1, "F"),
+    createExtremeRow(todayObservations, "High Dewpoint", ["dewPoint", "dewpointf"], "max", 1, "F"),
+    createExtremeRow(todayObservations, "Low Dewpoint", ["dewPoint", "dewpointf"], "min", 1, "F"),
+    createExtremeRow(todayObservations, "High Humidity", ["humidity"], "max", 0, "%"),
+    createExtremeRow(todayObservations, "Low Humidity", ["humidity"], "min", 0, "%"),
+    createExtremeRow(todayObservations, "High Barometer", ["baromrelin", "baromabsin"], "max", 3, "inHg"),
+    createExtremeRow(todayObservations, "Low Barometer", ["baromrelin", "baromabsin"], "min", 3, "inHg"),
+    createLatestValueRow(todayObservations, "Today's Rain", ["dailyrainin"], 2, "in"),
+    createExtremeRow(todayObservations, "High Wind", ["windspeedmph"], "max", 1, "mph"),
+    createAverageRow(todayObservations, "Average Wind", ["windspeedmph"], 1, "mph"),
+    createExtremeRow(todayObservations, "Peak Gust", ["windgustmph"], "max", 1, "mph"),
+    createExtremeRow(todayObservations, "High UV", ["uv"], "max", 1, ""),
+    createExtremeRow(todayObservations, "High Solar", ["solarradiation"], "max", 0, "W/m2"),
+  ].filter((row): row is SummaryRow => row !== null);
 }
 
-function describeCondition(metrics: WeatherMetric[], latest: WeatherObservation | null) {
-  const temp = pickMetric(metrics, "temperature")?.value ?? null;
-  const wind = pickMetric(metrics, "wind")?.value ?? 0;
-  const humidity = pickMetric(metrics, "humidity")?.value ?? null;
-  const rain = pickMetric(metrics, "rainToday")?.value ?? 0;
-  const pressure = pickMetric(metrics, "pressure")?.value ?? null;
-  const solar = pickObservationNumber(latest, ["solarradiation"]) ?? 0;
+function buildRecentSummaryRows(data: WeatherOverview): SummaryRow[] {
+  const { observations } = data;
 
-  if (rain >= 0.1 || (humidity !== null && humidity >= 92 && wind >= 8)) {
-    return {
-      title: "Wet and unsettled",
-      summary: "The station is reading like a damp, active stretch rather than a quiet dry window.",
-    };
+  if (!observations.length) {
+    return [];
   }
 
-  if (wind >= 15) {
-    return {
-      title: "Wind is the main story",
-      summary: "Temperatures may be workable, but the breeze is what will shape how it feels outside.",
-    };
+  return [
+    {
+      label: "Loaded Window",
+      value: `${formatWeatherDateTime(data.timeRange.startAt || data.fetchedAt)} to ${formatWeatherDateTime(data.timeRange.endAt || data.fetchedAt)}`,
+      detail: formatSpan(data.timeRange.spanMs),
+    },
+    {
+      label: "Observations Loaded",
+      value: String(data.observationCount),
+      detail: "Most recent local history",
+    },
+    createRangeRow(observations, "Temperature Range", ["tempf"], 1, "F"),
+    createRangeRow(observations, "Humidity Range", ["humidity"], 0, "%"),
+    createRangeRow(observations, "Pressure Range", ["baromrelin", "baromabsin"], 3, "inHg"),
+    createExtremeRow(observations, "Peak Gust", ["windgustmph"], "max", 1, "mph"),
+    createAverageRow(observations, "Average Wind", ["windspeedmph"], 1, "mph"),
+    createLatestValueRow(observations, "Rain So Far", ["dailyrainin"], 2, "in"),
+    createExtremeRow(observations, "High UV", ["uv"], "max", 1, ""),
+    createExtremeRow(observations, "High Solar", ["solarradiation"], "max", 0, "W/m2"),
+  ].filter((row): row is SummaryRow => row !== null);
+}
+
+function createExtremeRow(
+  observations: WeatherObservation[],
+  label: string,
+  keys: string[],
+  mode: "min" | "max",
+  decimals: number,
+  unit: string,
+) {
+  const matches = observations
+    .map((observation) => {
+      const value = pickNumber(observation, keys);
+
+      if (value === null) {
+        return null;
+      }
+
+      return {
+        value,
+        timestamp: observation.timestamp ?? 0,
+      };
+    })
+    .filter((entry): entry is { value: number; timestamp: number } => entry !== null);
+
+  if (!matches.length) {
+    return null;
   }
 
-  if (temp !== null && temp >= 78) {
-    return {
-      title: "Warm and bright",
-      summary: solar > 250 ? "Sun and warmth are doing most of the work right now." : "It is warm even without a strong solar push.",
-    };
-  }
+  const winner = matches.reduce((current, entry) => {
+    if (mode === "max") {
+      return entry.value > current.value ? entry : current;
+    }
 
-  if (temp !== null && temp <= 40) {
-    return {
-      title: "Cold air in place",
-      summary: "This reads like a bundle-up window more than a casual quick step outside.",
-    };
-  }
-
-  if (pressure !== null && pressure >= 30) {
-    return {
-      title: "Pretty steady outside",
-      summary: "Pressure and wind both lean calm, so this looks like a relatively settled stretch.",
-    };
-  }
+    return entry.value < current.value ? entry : current;
+  });
 
   return {
-    title: "Quiet neighborhood weather",
-    summary: "Nothing extreme is jumping off the station right now, which makes this a good general-purpose snapshot.",
+    label,
+    value: formatSeriesValue(winner.value, decimals, unit),
+    detail: winner.timestamp ? formatWeatherClock(winner.timestamp) : "--",
   };
 }
 
-function buildStationNote(latest: WeatherObservation | null) {
-  const feelsLike = formatObservationValue(latest, ["feelsLike", "feelslikef"], "F", 1);
-  const gust = formatObservationValue(latest, ["windgustmph"], "mph", 1);
-  const uv = formatObservationValue(latest, ["uv"], "", 1);
+function createAverageRow(
+  observations: WeatherObservation[],
+  label: string,
+  keys: string[],
+  decimals: number,
+  unit: string,
+) {
+  const values = observations
+    .map((observation) => pickNumber(observation, keys))
+    .filter((value): value is number => value !== null);
 
-  return `Feels like ${feelsLike.toLowerCase()}, gusts are ${gust.toLowerCase()}, and UV is ${uv.toLowerCase()}. Use the history explorer below to see whether that is stable or changing quickly.`;
+  if (!values.length) {
+    return null;
+  }
+
+  const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+
+  return {
+    label,
+    value: formatSeriesValue(average, decimals, unit),
+    detail: `${values.length} samples`,
+  };
 }
 
-function buildUvSolarSummary(latest: WeatherObservation | null) {
-  const uv = formatObservationValue(latest, ["uv"], "", 1);
-  const solar = formatObservationValue(latest, ["solarradiation"], "W/m2", 0);
-  return `UV ${uv}, solar ${solar.toLowerCase()}`;
+function createLatestValueRow(
+  observations: WeatherObservation[],
+  label: string,
+  keys: string[],
+  decimals: number,
+  unit: string,
+) {
+  const latest = [...observations].reverse().find((observation) => pickNumber(observation, keys) !== null);
+
+  if (!latest) {
+    return null;
+  }
+
+  const value = pickNumber(latest, keys);
+
+  if (value === null) {
+    return null;
+  }
+
+  return {
+    label,
+    value: formatSeriesValue(value, decimals, unit),
+    detail: latest.timestamp ? formatWeatherClock(latest.timestamp) : "--",
+  };
+}
+
+function createRangeRow(
+  observations: WeatherObservation[],
+  label: string,
+  keys: string[],
+  decimals: number,
+  unit: string,
+) {
+  const matches = observations
+    .map((observation) => {
+      const value = pickNumber(observation, keys);
+
+      if (value === null) {
+        return null;
+      }
+
+      return {
+        value,
+        timestamp: observation.timestamp ?? 0,
+      };
+    })
+    .filter((entry): entry is { value: number; timestamp: number } => entry !== null);
+
+  if (matches.length < 2) {
+    return null;
+  }
+
+  const min = matches.reduce((current, entry) =>
+    entry.value < current.value ? entry : current,
+  );
+  const max = matches.reduce((current, entry) =>
+    entry.value > current.value ? entry : current,
+  );
+
+  return {
+    label,
+    value: `${formatSeriesValue(min.value, decimals, unit)} to ${formatSeriesValue(max.value, decimals, unit)}`,
+    detail: `${formatWeatherClock(min.timestamp)} / ${formatWeatherClock(max.timestamp)}`,
+  };
+}
+
+function buildTrendValue(
+  observations: WeatherObservation[],
+  keys: string[],
+  lookbackMs: number,
+  decimals: number,
+  unit: string,
+) {
+  if (observations.length < 2) {
+    return null;
+  }
+
+  const latest = observations.at(-1) ?? null;
+  const latestValue = latest ? pickNumber(latest, keys) : null;
+  const latestTimestamp = latest?.timestamp ?? 0;
+
+  if (latestValue === null || latestTimestamp === 0) {
+    return null;
+  }
+
+  const cutoff = latestTimestamp - lookbackMs;
+  const prior = [...observations]
+    .reverse()
+    .find(
+      (observation) =>
+        (observation.timestamp ?? 0) <= cutoff && pickNumber(observation, keys) !== null,
+    );
+
+  if (!prior) {
+    return null;
+  }
+
+  const priorValue = pickNumber(prior, keys);
+
+  if (priorValue === null) {
+    return null;
+  }
+
+  const delta = latestValue - priorValue;
+  const sign = delta > 0 ? "+" : "";
+
+  return `${sign}${formatCompact(delta, decimals)} ${unit}`.trim();
+}
+
+function buildMapUrl(data: WeatherOverview) {
+  if (data.station.latitude === null || data.station.longitude === null) {
+    return "";
+  }
+
+  return `https://maps.google.com/?q=${data.station.latitude},${data.station.longitude}`;
 }
 
 function formatObservationValue(
-  observation: WeatherObservation | null,
-  keys: string[],
-  unit: string,
+  observation: WeatherObservation,
+  keys: readonly string[],
   decimals: number,
+  unit: string,
 ) {
-  const value = pickObservationNumber(observation, keys);
+  const value = pickNumber(observation, keys);
 
+  if (value === null) {
+    return null;
+  }
+
+  return formatSeriesValue(value, decimals, unit);
+}
+
+function formatSeriesValue(value: number | null, decimals: number, unit: string) {
   if (value === null) {
     return "Not reported";
   }
 
   const suffix = unit ? ` ${unit}` : "";
-  return `${value.toLocaleString(undefined, {
+
+  return `${formatCompact(value, decimals)}${suffix}`;
+}
+
+function formatSeriesRange(series: WeatherSeries) {
+  return `${formatCompact(series.min, series.decimals)} to ${formatCompact(series.max, series.decimals)} ${series.unit}`.trim();
+}
+
+function formatCompact(value: number, decimals: number) {
+  return value.toLocaleString(undefined, {
     minimumFractionDigits: 0,
     maximumFractionDigits: decimals,
-  })}${suffix}`;
+  });
 }
 
-function formatObservationText(observation: WeatherObservation | null, keys: string[]) {
-  for (const key of keys) {
-    const value = observation?.[key];
-
-    if (typeof value === "string" && value.trim() !== "") {
-      return value;
-    }
-  }
-
-  return "Not reported";
-}
-
-function pickObservationNumber(
-  observation: WeatherObservation | null,
-  keys: string[],
+function formatWind(
+  observation: WeatherObservation,
+  speedKey: string,
+  directionKey: string,
 ) {
-  if (!observation) {
+  const speed = pickNumber(observation, [speedKey]);
+  const direction = pickNumber(observation, [directionKey]);
+
+  if (speed === null) {
     return null;
   }
 
-  for (const key of keys) {
-    const value = observation[key];
+  const directionLabel =
+    direction === null ? "" : ` ${degreesToCompass(direction)} (${Math.round(direction)} degrees)`;
 
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return value;
+  return `${formatCompact(speed, 1)} mph${directionLabel}`;
+}
+
+function pickNumber(source: WeatherObservation, keys: readonly string[]) {
+  for (const key of keys) {
+    const raw = source[key];
+
+    if (typeof raw === "number" && Number.isFinite(raw)) {
+      return raw;
     }
 
-    if (typeof value === "string" && value.trim() !== "") {
-      const parsed = Number(value);
+    if (typeof raw === "string" && raw.trim() !== "") {
+      const parsed = Number(raw);
 
       if (Number.isFinite(parsed)) {
         return parsed;
@@ -543,58 +948,77 @@ function pickObservationNumber(
   return null;
 }
 
-function describeCoverage(startAt: string | null, endAt: string | null) {
-  if (!startAt || !endAt) {
-    return "unknown time span";
-  }
-
-  return `${formatWeatherDateTime(startAt)} to ${formatWeatherDateTime(endAt)}`;
+function degreesToCompass(degrees: number) {
+  const points = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  const normalized = ((degrees % 360) + 360) % 360;
+  const index = Math.round(normalized / 45) % points.length;
+  return points[index];
 }
 
-function formatCoordinates(latitude: number | null, longitude: number | null) {
-  if (latitude === null || longitude === null) {
-    return null;
-  }
-
-  return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+function formatDayKey(value: string | number | Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(value));
 }
 
-function maskStationId(macAddress: string) {
-  if (!macAddress) {
-    return "Unavailable";
-  }
-
-  return macAddress.length <= 8
-    ? macAddress
-    : `${macAddress.slice(0, 4)}...${macAddress.slice(-4)}`;
+function formatCoordinate(value: number, positive: string, negative: string) {
+  const suffix = value >= 0 ? positive : negative;
+  return `${Math.abs(value).toFixed(4)} ${suffix}`;
 }
 
-function buildContextCards(data: Extract<WeatherPageData, { state: "ready" }>["data"]) {
-  const cards = [
-    { label: "Station name", value: data.station.name },
-    { label: "Last station report", value: data.station.lastObservationAt || "Not reported" },
-    {
-      label: "Loaded time span",
-      value: describeCoverage(data.timeRange.startAt, data.timeRange.endAt),
-    },
-    { label: "Loaded samples", value: `${data.observationCount} recent observations` },
-    { label: "Station identifier", value: maskStationId(data.station.macAddress) },
-  ];
-  const coordinates = formatCoordinates(data.station.latitude, data.station.longitude);
-
-  if (data.station.location) {
-    cards.splice(1, 0, {
-      label: "Station location",
-      value: data.station.location,
-    });
+function formatSpan(spanMs: number) {
+  if (spanMs <= 0) {
+    return "No history loaded";
   }
 
-  if (coordinates) {
-    cards.splice(data.station.location ? 2 : 1, 0, {
-      label: "Coordinates",
-      value: coordinates,
-    });
+  const totalMinutes = Math.round(spanMs / 60_000);
+  const days = Math.floor(totalMinutes / (24 * 60));
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const minutes = totalMinutes % 60;
+  const parts = [];
+
+  if (days) {
+    parts.push(`${days}d`);
   }
 
-  return cards;
+  if (hours) {
+    parts.push(`${hours}h`);
+  }
+
+  if (minutes && parts.length < 2) {
+    parts.push(`${minutes}m`);
+  }
+
+  return parts.join(" ") || "Less than 1m";
+}
+
+function pickSeriesAccent(seriesId: string) {
+  if (seriesId === "temperature") {
+    return "#d97b23";
+  }
+
+  if (seriesId === "dewpoint") {
+    return "#8d6fd1";
+  }
+
+  if (seriesId === "humidity") {
+    return "#16a1b7";
+  }
+
+  if (seriesId === "wind" || seriesId === "gust") {
+    return "#3b82f6";
+  }
+
+  if (seriesId === "pressure") {
+    return "#159957";
+  }
+
+  if (seriesId === "uv" || seriesId === "solar") {
+    return "#e6a400";
+  }
+
+  return "#0f92a7";
 }
