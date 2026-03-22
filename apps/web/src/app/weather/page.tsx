@@ -122,22 +122,36 @@ const nearbyCameraLinks = [
   {
     label: "I-5 at NE 145th Street",
     href: "https://www.seattle.gov/trafficcams/i5_145th.htm",
-    note: "Closest freeway camera toward Shoreline.",
+    imageUrl: "https://images.wsdot.wa.gov/nw/005vc17461.jpg",
+    note: "Closest freeway camera toward Shoreline. WSDOT refreshes roughly every 4 minutes.",
   },
   {
-    label: "Northgate Way and 1st Ave NE",
-    href: "https://www.seattle.gov/trafficcams/northgate_1st.htm",
-    note: "North Seattle arterial conditions.",
+    label: "Aurora Ave @ Northgate Way",
+    href: "https://www.weatherbug.com/traffic-cam/shoreline-wa-98133/415049",
+    imageUrl:
+      "https://camerasapi-trffc.weatherbug.net/media/trffc/v2/img/small?system=weatherbug-web&id=415049&key=a18310a1e4649fdf8f18eb2a1456a7084c00324fed3188366b99971d514b6b23&rate=10000",
+    note: "Closest Aurora corridor view south of the station. WeatherBug refreshes about every 10 seconds.",
   },
   {
-    label: "Northgate Way and 5th Ave NE",
-    href: "https://www.seattle.gov/trafficcams/northgate_5tha.htm",
-    note: "Nearby local interchange view.",
+    label: "5th Ave @ Northgate Way",
+    href: "https://www.weatherbug.com/traffic-cam/shoreline-wa-98133/415052",
+    imageUrl:
+      "https://camerasapi-trffc.weatherbug.net/media/trffc/v2/img/small?system=weatherbug-web&id=415052&key=7e658ad67033b2b6469941587685fc89d41e3a101978ce0b233de81ab84bd6fb&rate=10000",
+    note: "Working replacement for the broken city-page link. WeatherBug refreshes about every 10 seconds.",
   },
   {
-    label: "Lake City Way and NE 145th",
-    href: "https://www.seattle.gov/trafficcams/lakecity_145th.htm",
-    note: "East-side traffic picture near the station area.",
+    label: "WA-522 @ Ballinger Way (WA-104)",
+    href: "https://www.weatherbug.com/traffic-cam/shoreline-wa-98133/5730",
+    imageUrl:
+      "https://camerasapi-trffc.weatherbug.net/media/trffc/v2/img/small?system=weatherbug-web&id=5730&key=c158f36c1bb08d1d401034842b74fdae9911575b3088aa622f68e2f1fba985a8&rate=90000",
+    note: "Useful east-side Shoreline and Lake Forest Park approach. WeatherBug refreshes about every 90 seconds.",
+  },
+  {
+    label: "I-5 @ 220th St",
+    href: "https://www.weatherbug.com/traffic-cam/shoreline-wa-98133/5640",
+    imageUrl:
+      "https://camerasapi-trffc.weatherbug.net/media/trffc/v2/img/small?system=weatherbug-web&id=5640&key=6953ba7dc2eda0dd494f6388a6912c7f367461a94347588954c259d43c40bae1&rate=90000",
+    note: "Northbound regional freeway view toward Mountlake Terrace. WeatherBug refreshes about every 90 seconds.",
   },
 ] as const;
 
@@ -409,12 +423,12 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
             <TablePanel
               id="cameras-section"
               title="Local Cameras"
-              subtitle="Nearby traffic and regional reference links."
+              subtitle="Nearby live traffic views and regional reference links."
               compact
             >
               <div className="grid gap-4 xl:grid-cols-2">
-                <LinkList
-                  title="Nearby Cameras"
+                <CameraGrid
+                  title="Nearby Camera Views"
                   items={nearbyCameraLinks}
                 />
                 <LinkList
@@ -938,6 +952,47 @@ function LinkList({
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+function CameraGrid({
+  title,
+  items,
+}: {
+  title: string;
+  items: ReadonlyArray<{ label: string; href: string; imageUrl: string; note: string }>;
+}) {
+  return (
+    <div>
+      <h3 className="text-xl font-light text-stone-700">{title}</h3>
+      <div className="mt-2 grid gap-3">
+        {items.map((item) => (
+          <a
+            key={item.href}
+            href={item.href}
+            target="_blank"
+            rel="noreferrer"
+            className="block overflow-hidden border border-stone-200 bg-white transition hover:border-stone-400"
+          >
+            <div className="aspect-[4/3] overflow-hidden bg-stone-100">
+              {/* Live traffic snapshots come from external camera feeds, so a plain img avoids optimizer rewrites. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={item.imageUrl}
+                alt={`${item.label} current traffic camera view`}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                className="h-full w-full object-cover"
+              />
+            </div>
+            <div className="px-3 py-2.5">
+              <p className="text-sm font-medium text-stone-800">{item.label}</p>
+              <p className="mt-1 text-xs leading-5 text-stone-500">{item.note}</p>
+            </div>
+          </a>
+        ))}
+      </div>
     </div>
   );
 }
