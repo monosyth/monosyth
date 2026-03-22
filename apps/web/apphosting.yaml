@@ -53,6 +53,14 @@ env:
     secret: AMBIENT_MAC_ADDRESS
     availability:
       - RUNTIME
+  - variable: WEATHER_STATION_NAME
+    value: Monosyth's Weather Station
+    availability:
+      - RUNTIME
+  - variable: WEATHER_STATION_LOCATION
+    value: Shoreline, WA
+    availability:
+      - RUNTIME
   - variable: WEATHER_LOG_SECRET
     secret: WEATHER_LOG_SECRET
     availability:

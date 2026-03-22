@@ -104,6 +104,8 @@ export function getAmbientConfig() {
     apiKey: getRequiredEnv("AMBIENT_API_KEY"),
     applicationKey: getRequiredEnv("AMBIENT_APPLICATION_KEY"),
     macAddress: getOptionalEnv("AMBIENT_MAC_ADDRESS"),
+    stationName: getOptionalEnv("WEATHER_STATION_NAME"),
+    stationLocation: getOptionalEnv("WEATHER_STATION_LOCATION"),
     limit: parseWeatherLimit(getOptionalEnv("WEATHER_LIMIT", String(DEFAULT_WEATHER_LIMIT))),
     requestTimeoutMs: parseAmbientRequestTimeout(
       getOptionalEnv(

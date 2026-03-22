@@ -4,90 +4,150 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Monosyth Weather</title>
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <div class="shell">
-      <header class="hero">
-        <div class="hero-copy">
-          <p class="eyebrow">Ambient Weather Station</p>
-          <h1 id="station-name">Loading your sky...</h1>
-          <p class="hero-summary" id="station-summary">
-            Pulling live conditions from your personal station.
-          </p>
+    <div class="site-shell">
+      <header class="site-header" id="top">
+        <div class="site-header__copy">
+          <p class="site-kicker">Monosyth Personal Weather</p>
+          <h1 id="station-name">Loading your weather station...</h1>
+          <p class="site-meta" id="station-meta">Pulling live conditions from your Ambient Weather feed.</p>
+          <h2 class="site-header__title">Current Weather Conditions</h2>
+          <p class="site-header__time" id="last-updated">Waiting for first update</p>
         </div>
-        <div class="hero-actions">
+        <div class="site-header__actions">
           <button class="refresh-button" id="refresh-button" type="button">Refresh</button>
-          <p class="last-updated" id="last-updated">Waiting for first update</p>
+          <p class="site-header__summary" id="station-summary">
+            Loading the latest conditions and recent station history.
+          </p>
+          <div class="masthead-table-shell">
+            <table class="masthead-table">
+              <tbody id="masthead-details-body"></tbody>
+            </table>
+          </div>
         </div>
       </header>
 
-      <main class="dashboard">
-        <section class="panel filter-panel">
-          <div class="panel-heading">
-            <h2>View Window</h2>
-            <p>Flip between short-term changes and the full loaded history without waiting for another fetch.</p>
-          </div>
-          <div class="range-toolbar">
-            <div class="range-button-group" id="range-button-group" role="group" aria-label="Observation window"></div>
-            <p class="range-summary" id="range-summary">Loading recent range...</p>
-          </div>
-        </section>
+      <nav class="section-nav" aria-label="Weather sections">
+        <button
+          class="section-nav__toggle"
+          id="nav-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="nav-menu"
+        >
+          Sections
+        </button>
+        <div class="section-nav__menu" id="nav-menu">
+          <a class="section-nav__link" href="#current-section">Current</a>
+          <a class="section-nav__link" href="#today-section">Today</a>
+          <a class="section-nav__link" href="#recent-section">Recent</a>
+          <a class="section-nav__link" href="#graphs-section">Graphs</a>
+          <a class="section-nav__link" href="#station-section">Station</a>
+          <a class="section-nav__link" href="#raw-section">Raw</a>
+        </div>
+        <div
+          class="range-button-group"
+          id="range-button-group"
+          role="group"
+          aria-label="Observation window"
+        ></div>
+      </nav>
 
-        <section class="panel">
-          <div class="panel-heading">
-            <h2>Current Conditions</h2>
-            <p>Immediate outdoor reading cards from the latest station payload.</p>
-          </div>
-          <div class="metric-grid" id="metric-grid"></div>
-        </section>
+      <main class="content-layout">
+        <div class="primary-column">
+          <section class="weather-section" id="current-section">
+            <div class="section-heading">
+              <h2>Current Conditions</h2>
+              <p>The latest station reading shown in the same table-first style as the reference dashboard.</p>
+            </div>
+            <div class="table-shell">
+              <table class="weather-table weather-table--current">
+                <tbody id="current-conditions-body"></tbody>
+              </table>
+            </div>
+          </section>
 
-        <section class="panel">
-          <div class="panel-heading">
-            <h2>At a Glance</h2>
-            <p>Useful rollups from the most recent batch of observations.</p>
-          </div>
-          <div class="highlight-grid" id="highlight-grid"></div>
-        </section>
+          <section class="weather-section" id="today-section">
+            <div class="section-heading">
+              <h2>Since Midnight</h2>
+              <p>Today&rsquo;s highs, lows, and peaks from the loaded observations.</p>
+            </div>
+            <div class="table-shell">
+              <table class="weather-table weather-table--summary">
+                <thead>
+                  <tr>
+                    <th scope="col">Reading</th>
+                    <th scope="col">Value</th>
+                    <th scope="col">Time</th>
+                  </tr>
+                </thead>
+                <tbody id="day-summary-body"></tbody>
+              </table>
+            </div>
+          </section>
 
-        <section class="panel">
-          <div class="panel-heading">
-            <h2>Recent Motion</h2>
-            <p>Quick visual trends so we can decide what deserves a deeper chart later.</p>
-          </div>
-          <div class="chart-grid" id="chart-grid"></div>
-        </section>
+          <section class="weather-section" id="recent-section">
+            <div class="section-heading">
+              <h2>Recent Range</h2>
+              <p id="range-summary">Loading recent range...</p>
+            </div>
+            <div class="table-shell">
+              <table class="weather-table weather-table--summary">
+                <thead>
+                  <tr>
+                    <th scope="col">Reading</th>
+                    <th scope="col">Value</th>
+                    <th scope="col">Time</th>
+                  </tr>
+                </thead>
+                <tbody id="recent-summary-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
 
-        <section class="panel panel-wide">
-          <div class="panel-heading">
-            <h2>Raw Snapshot</h2>
-            <p>The latest station keys and values, useful for discovering what your hardware exposes.</p>
-          </div>
-          <div class="snapshot-grid" id="snapshot-grid"></div>
-        </section>
+        <aside class="sidebar-column">
+          <section class="weather-section weather-section--sidebar" id="graphs-section">
+            <div class="section-heading">
+              <h2>Graphs</h2>
+              <p>Instrument-style trend panels inspired by the stacked graph area on the reference site.</p>
+            </div>
+            <div class="chart-grid" id="chart-grid"></div>
+          </section>
+
+          <section class="weather-section weather-section--sidebar" id="station-section">
+            <div class="section-heading">
+              <h2>Station Details</h2>
+              <p>Quick context about the feed, refresh cadence, and currently loaded history.</p>
+            </div>
+            <div class="table-shell">
+              <table class="weather-table weather-table--detail">
+                <tbody id="station-details-body"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="weather-section weather-section--sidebar" id="raw-section">
+            <div class="section-heading">
+              <h2>Raw Snapshot</h2>
+              <p>The latest keys and values from your station payload for debugging and discovery.</p>
+            </div>
+            <div class="table-shell">
+              <table class="weather-table weather-table--detail">
+                <tbody id="raw-snapshot-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </aside>
       </main>
+
+      <footer class="site-footer">
+        <p>Powered by your local Ambient Weather data feed and refreshed every minute.</p>
+      </footer>
     </div>
-
-    <template id="metric-card-template">
-      <article class="metric-card">
-        <p class="metric-label"></p>
-        <p class="metric-value"></p>
-      </article>
-    </template>
-
-    <template id="highlight-card-template">
-      <article class="highlight-card">
-        <p class="highlight-label"></p>
-        <p class="highlight-value"></p>
-      </article>
-    </template>
-
-    <template id="snapshot-item-template">
-      <article class="snapshot-item">
-        <p class="snapshot-key"></p>
-        <p class="snapshot-value"></p>
-      </article>
-    </template>
 
     <template id="range-button-template">
       <button class="range-button" type="button"></button>

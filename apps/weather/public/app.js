@@ -1,18 +1,20 @@
-const metricGrid = document.querySelector("#metric-grid");
-const highlightGrid = document.querySelector("#highlight-grid");
+const currentConditionsBody = document.querySelector("#current-conditions-body");
+const daySummaryBody = document.querySelector("#day-summary-body");
+const recentSummaryBody = document.querySelector("#recent-summary-body");
+const stationDetailsBody = document.querySelector("#station-details-body");
+const rawSnapshotBody = document.querySelector("#raw-snapshot-body");
+const mastheadDetailsBody = document.querySelector("#masthead-details-body");
 const chartGrid = document.querySelector("#chart-grid");
-const snapshotGrid = document.querySelector("#snapshot-grid");
 const stationName = document.querySelector("#station-name");
+const stationMeta = document.querySelector("#station-meta");
 const stationSummary = document.querySelector("#station-summary");
 const lastUpdated = document.querySelector("#last-updated");
 const refreshButton = document.querySelector("#refresh-button");
 const rangeButtonGroup = document.querySelector("#range-button-group");
 const rangeSummary = document.querySelector("#range-summary");
-
-const metricTemplate = document.querySelector("#metric-card-template");
-const highlightTemplate = document.querySelector("#highlight-card-template");
-const snapshotTemplate = document.querySelector("#snapshot-item-template");
 const rangeButtonTemplate = document.querySelector("#range-button-template");
+const navToggle = document.querySelector("#nav-toggle");
+const navMenu = document.querySelector("#nav-menu");
 
 let refreshTimer = null;
 let currentRequestId = 0;
@@ -20,22 +22,34 @@ let currentController = null;
 let latestPayload = null;
 let activeRangeId = "6h";
 let hasInitializedRange = false;
+const defaultRefreshIntervalMs = 60_000;
+const rateLimitRefreshIntervalMs = 15 * 60_000;
 
-const metricDefinitions = [
-  { id: "temperature", label: "Outdoor Temp", keys: ["tempf"], unit: "F", decimals: 1 },
-  { id: "humidity", label: "Humidity", keys: ["humidity"], unit: "%", decimals: 0 },
-  { id: "wind", label: "Wind Speed", keys: ["windspeedmph"], unit: "mph", decimals: 1 },
-  { id: "gust", label: "Wind Gust", keys: ["windgustmph"], unit: "mph", decimals: 1 },
-  { id: "pressure", label: "Pressure", keys: ["baromrelin", "baromabsin"], unit: "inHg", decimals: 2 },
-  { id: "rainToday", label: "Rain Today", keys: ["dailyrainin"], unit: "in", decimals: 2 },
-  { id: "uv", label: "UV Index", keys: ["uv"], unit: "", decimals: 1 },
-  { id: "solar", label: "Solar", keys: ["solarradiation"], unit: "W/m2", decimals: 0 },
+const currentConditionDefinitions = [
+  { label: "Outside Temperature", keys: ["tempf"], decimals: 1, unit: "F" },
+  { label: "Feels Like", keys: ["feelsLike"], decimals: 1, unit: "F" },
+  { label: "Dewpoint", keys: ["dewPoint", "dewpoint"], decimals: 1, unit: "F" },
+  { label: "Humidity", keys: ["humidity"], decimals: 0, unit: "%" },
+  { label: "Barometer", keys: ["baromrelin", "baromabsin"], decimals: 3, unit: "inHg" },
+  { label: "Wind", render: (observation) => formatWind(observation, "windspeedmph", "winddir") },
+  { label: "Wind Gust", render: (observation) => formatWind(observation, "windgustmph", "winddir") },
+  { label: "Hourly Rain", keys: ["hourlyrainin"], decimals: 2, unit: "in" },
+  { label: "Daily Rain", keys: ["dailyrainin"], decimals: 2, unit: "in" },
+  { label: "UV Index", keys: ["uv"], decimals: 1, unit: "" },
+  { label: "Solar Radiation", keys: ["solarradiation"], decimals: 0, unit: "W/m2" },
+  { label: "Brightness", keys: ["brightness", "lux"], decimals: 0, unit: "lx" },
+  { label: "Lightning Strikes", keys: ["lightning_day", "lightning"], decimals: 0, unit: "" },
 ];
 
 const seriesDefinitions = [
   { id: "temperature", label: "Temperature", keys: ["tempf"], unit: "F", decimals: 1 },
+  { id: "dewpoint", label: "Dewpoint", keys: ["dewPoint", "dewpoint"], unit: "F", decimals: 1 },
   { id: "humidity", label: "Humidity", keys: ["humidity"], unit: "%", decimals: 0 },
+  { id: "pressure", label: "Barometer", keys: ["baromrelin", "baromabsin"], unit: "inHg", decimals: 3 },
   { id: "wind", label: "Wind Speed", keys: ["windspeedmph"], unit: "mph", decimals: 1 },
+  { id: "gust", label: "Wind Gust", keys: ["windgustmph"], unit: "mph", decimals: 1 },
+  { id: "solar", label: "Solar Radiation", keys: ["solarradiation"], unit: "W/m2", decimals: 0 },
+  { id: "uv", label: "UV Index", keys: ["uv"], unit: "", decimals: 1 },
   { id: "rain", label: "Daily Rain", keys: ["dailyrainin"], unit: "in", decimals: 2 },
 ];
 
@@ -47,12 +61,21 @@ const rangeOptions = [
 ];
 
 refreshButton.addEventListener("click", () => {
+  scheduleNextRefresh(0);
   loadDashboard();
 });
 
+navToggle?.addEventListener("click", () => {
+  const isOpen = navMenu.classList.toggle("is-open");
+  navToggle.setAttribute("aria-expanded", String(isOpen));
+});
+
+for (const link of navMenu?.querySelectorAll(".section-nav__link") ?? []) {
+  link.addEventListener("click", () => closeNavMenu());
+}
+
 renderRangeButtons();
 loadDashboard();
-refreshTimer = window.setInterval(loadDashboard, 60_000);
 window.addEventListener("beforeunload", stopDashboardPolling);
 
 async function loadDashboard() {
@@ -62,6 +85,7 @@ async function loadDashboard() {
   const controller = new AbortController();
   currentController = controller;
   refreshButton.disabled = true;
+  let nextRefreshMs = defaultRefreshIntervalMs;
 
   try {
     const response = await fetch("/api/overview", {
@@ -75,12 +99,15 @@ async function loadDashboard() {
     }
 
     if (!response.ok) {
-      throw new Error(payload.error || "Failed to load the weather dashboard.");
+      const error = new Error(payload.error || "Failed to load the weather dashboard.");
+      error.retryAfterSec = payload.retryAfterSec ?? null;
+      throw error;
     }
 
     latestPayload = payload;
     syncActiveRange(payload);
     renderDashboard(payload);
+    nextRefreshMs = getRecommendedRefreshMs(payload.responseMeta);
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       return;
@@ -90,10 +117,12 @@ async function loadDashboard() {
       return;
     }
 
-    renderError(error instanceof Error ? error.message : String(error));
+    renderError(error);
+    nextRefreshMs = getRetryDelayMs(error);
   } finally {
     if (requestId === currentRequestId) {
       refreshButton.disabled = false;
+      scheduleNextRefresh(nextRefreshMs);
     }
 
     if (currentController === controller) {
@@ -113,55 +142,232 @@ function stopDashboardPolling() {
 }
 
 function renderDashboard(payload) {
+  const observations = Array.isArray(payload.observations) ? payload.observations : [];
   const derived = buildDerivedView(payload, activeRangeId);
   const station = payload.station || {};
-  const location = station.location ? `${station.location}. ` : "";
-  const selectedRange = getRangeOption(activeRangeId);
-  const selectedLabel = selectedRange ? selectedRange.label : "All";
-  const totalCount = Array.isArray(payload.observations) ? payload.observations.length : payload.observationCount || 0;
+  const totalCount = observations.length || payload.observationCount || 0;
+  const activeRange = getRangeOption(activeRangeId);
+  const activeRangeLabel = activeRange ? activeRange.label : "All";
+  const responseMeta = payload.responseMeta || {};
 
-  stationName.textContent = station.name || "Your Weather Station";
-  stationSummary.textContent = `${location}${derived.observationCount} observations in the ${selectedLabel.toLowerCase()} view, out of ${totalCount} loaded locally.`;
-  lastUpdated.textContent = `Updated ${formatDate(payload.fetchedAt)}`;
-  rangeSummary.textContent = describeRangeSummary(payload, derived);
-  updateRangeButtons();
+  stationName.textContent = station.name || station.location || "Your Weather Station";
+  stationMeta.textContent = buildHeaderMeta(station, totalCount, activeRangeLabel);
+  stationSummary.textContent = buildHeaderSummary(payload, derived, responseMeta);
+  lastUpdated.textContent = formatHeaderTimestamp(payload.fetchedAt);
+  rangeSummary.textContent = describeRangeSummary(payload, derived, responseMeta);
 
-  renderMetricGrid(derived.metrics);
-  renderHighlightGrid(derived.highlights);
+  renderTwoColumnTable(
+    mastheadDetailsBody,
+    buildMastheadRows(payload, derived, responseMeta),
+    "Station facts will appear after the first successful station fetch.",
+  );
+  renderTwoColumnTable(
+    currentConditionsBody,
+    buildCurrentConditionRows(payload.current),
+    "Current conditions will appear after the next successful station fetch.",
+  );
+  renderThreeColumnTable(
+    daySummaryBody,
+    buildDaySummaryRows(observations),
+    "Today’s highs and lows will populate once observations are available for the current day.",
+  );
+  renderThreeColumnTable(
+    recentSummaryBody,
+    buildRecentSummaryRows(payload, derived),
+    "Recent view details will appear once the selected range includes enough observations.",
+  );
+  renderTwoColumnTable(
+    stationDetailsBody,
+    buildStationDetailRows(payload, derived),
+    "Station details will appear after the first successful load.",
+  );
+  renderTwoColumnTable(
+    rawSnapshotBody,
+    derived.snapshot,
+    "The latest raw payload will show up here after a successful fetch.",
+  );
   renderChartGrid(derived.series);
-  renderSnapshotGrid(derived.snapshot);
+  updateRangeButtons();
 }
 
-function renderMetricGrid(metrics) {
-  metricGrid.replaceChildren();
+function renderError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  latestPayload = null;
+  stationName.textContent = "Weather dashboard waiting on station data";
+  stationMeta.textContent = "The local page is available, but the server could not reach your Ambient Weather feed.";
+  stationSummary.textContent = describeErrorSummary(error);
+  lastUpdated.textContent = "Needs attention";
+  rangeSummary.textContent = describeErrorRangeSummary(error);
 
-  if (!metrics.length) {
-    metricGrid.appendChild(createState("No metric cards yet. Add keys and station data to populate this panel."));
-    return;
-  }
-
-  for (const metric of metrics) {
-    const node = metricTemplate.content.firstElementChild.cloneNode(true);
-    node.querySelector(".metric-label").textContent = metric.label;
-    node.querySelector(".metric-value").textContent = metric.displayValue;
-    metricGrid.appendChild(node);
-  }
+  renderTwoColumnTable(currentConditionsBody, [], message);
+  renderThreeColumnTable(
+    daySummaryBody,
+    [],
+    "Once the API call succeeds, the daily summary table will appear here.",
+  );
+  renderThreeColumnTable(
+    recentSummaryBody,
+    [],
+    "Range-based summary rows will appear here after a successful fetch.",
+  );
+  renderTwoColumnTable(
+    stationDetailsBody,
+    [],
+    "Station metadata will appear here after the first successful load.",
+  );
+  renderTwoColumnTable(
+    rawSnapshotBody,
+    [],
+    "The raw station payload will appear here after a successful fetch.",
+  );
+  renderChartGrid([]);
+  updateRangeButtons();
 }
 
-function renderHighlightGrid(highlights) {
-  highlightGrid.replaceChildren();
+function buildHeaderMeta(station, totalCount, activeRangeLabel) {
+  const parts = [];
 
-  if (!highlights.length) {
-    highlightGrid.appendChild(createState("Highlights will appear once enough recent observations are available."));
-    return;
+  if (station.location) {
+    parts.push(station.location);
   }
 
-  for (const highlight of highlights) {
-    const node = highlightTemplate.content.firstElementChild.cloneNode(true);
-    node.querySelector(".highlight-label").textContent = highlight.label;
-    node.querySelector(".highlight-value").textContent = highlight.value;
-    highlightGrid.appendChild(node);
+  if (station.name) {
+    parts.push(station.name);
   }
+
+  parts.push(`${totalCount} readings loaded`);
+  parts.push(`${activeRangeLabel} view`);
+
+  return parts.join(" | ");
+}
+
+function buildHeaderSummary(payload, derived, responseMeta = {}) {
+  const totalCount = Array.isArray(payload.observations) ? payload.observations.length : 0;
+  const loadedSpan = formatSpan(payload.timeRange?.spanMs ?? 0);
+  let summary = `${derived.observationCount} observations are active in the current window out of ${totalCount} loaded locally across ${loadedSpan}.`;
+
+  if (responseMeta.warning) {
+    summary = `${summary} ${responseMeta.warning}`;
+  } else if (responseMeta.servedFromCache) {
+    summary = `${summary} Served from the local cache to reduce Ambient API traffic.`;
+  }
+
+  return summary;
+}
+
+function buildCurrentConditionRows(latest) {
+  if (!latest) {
+    return [];
+  }
+
+  return currentConditionDefinitions
+    .map((definition) => {
+      const value = definition.render
+        ? definition.render(latest)
+        : formatDefinitionValue(latest, definition.keys, definition.decimals, definition.unit);
+
+      if (!value) {
+        return null;
+      }
+
+      return {
+        label: definition.label,
+        value,
+      };
+    })
+    .filter(Boolean);
+}
+
+function buildMastheadRows(payload, derived, responseMeta = {}) {
+  const station = payload.station || {};
+  const activeRange = getRangeOption(activeRangeId);
+
+  return [
+    { label: "Station", value: station.name || "Unknown station" },
+    { label: "Observed", value: formatHeaderTimestamp(payload.timeRange?.endAt || payload.fetchedAt) },
+    { label: "Window", value: activeRange ? activeRange.label : "All" },
+    { label: "History", value: formatSpan(payload.timeRange?.spanMs ?? 0) },
+    { label: "Cached", value: responseMeta.servedFromCache ? "Yes" : "No" },
+    { label: "Visible", value: String(derived.observationCount) },
+  ];
+}
+
+function buildDaySummaryRows(observations) {
+  const todayObservations = filterObservationsForCurrentDay(observations);
+
+  if (!todayObservations.length) {
+    return [];
+  }
+
+  const rows = [
+    createExtremeRow(todayObservations, "High Temperature", ["tempf"], "max", 1, "F"),
+    createExtremeRow(todayObservations, "Low Temperature", ["tempf"], "min", 1, "F"),
+    createExtremeRow(todayObservations, "High Dewpoint", ["dewPoint", "dewpoint"], "max", 1, "F"),
+    createExtremeRow(todayObservations, "Low Dewpoint", ["dewPoint", "dewpoint"], "min", 1, "F"),
+    createExtremeRow(todayObservations, "High Humidity", ["humidity"], "max", 0, "%"),
+    createExtremeRow(todayObservations, "Low Humidity", ["humidity"], "min", 0, "%"),
+    createExtremeRow(todayObservations, "High Barometer", ["baromrelin", "baromabsin"], "max", 3, "inHg"),
+    createExtremeRow(todayObservations, "Low Barometer", ["baromrelin", "baromabsin"], "min", 3, "inHg"),
+    createLatestValueRow(todayObservations, "Today's Rain", ["dailyrainin"], 2, "in"),
+    createExtremeRow(todayObservations, "High Wind", ["windspeedmph"], "max", 1, "mph"),
+    createAverageRow(todayObservations, "Average Wind", ["windspeedmph"], 1, "mph"),
+    createExtremeRow(todayObservations, "Peak Gust", ["windgustmph"], "max", 1, "mph"),
+    createExtremeRow(todayObservations, "High UV", ["uv"], "max", 1, ""),
+    createExtremeRow(todayObservations, "High Radiation", ["solarradiation"], "max", 0, "W/m2"),
+  ];
+
+  return rows.filter(Boolean);
+}
+
+function buildRecentSummaryRows(payload, derived) {
+  if (!derived.observationCount) {
+    return [];
+  }
+
+  const filteredObservations = filterObservationsByRange(payload.observations || [], activeRangeId);
+  const activeRange = getRangeOption(activeRangeId);
+  const firstTimestamp = filteredObservations[0]?.timestamp ?? null;
+  const lastTimestamp = filteredObservations.at(-1)?.timestamp ?? null;
+  const rows = [
+    {
+      label: "View Window",
+      value: activeRange ? activeRange.label : "All",
+      detail: firstTimestamp && lastTimestamp ? `${formatClock(firstTimestamp)} to ${formatClock(lastTimestamp)}` : "Current range",
+    },
+    {
+      label: "Observations in View",
+      value: String(derived.observationCount),
+      detail: `${formatSpan(spanBetween(firstTimestamp, lastTimestamp))} loaded`,
+    },
+    createRangeRow(filteredObservations, "Temperature Range", ["tempf"], 1, "F"),
+    createRangeRow(filteredObservations, "Humidity Range", ["humidity"], 0, "%"),
+    createRangeRow(filteredObservations, "Pressure Range", ["baromrelin", "baromabsin"], 3, "inHg"),
+    createExtremeRow(filteredObservations, "Peak Gust", ["windgustmph"], "max", 1, "mph"),
+    createAverageRow(filteredObservations, "Average Wind", ["windspeedmph"], 1, "mph"),
+    createLatestValueRow(filteredObservations, "Rain So Far", ["dailyrainin"], 2, "in"),
+    createExtremeRow(filteredObservations, "High UV", ["uv"], "max", 1, ""),
+    createExtremeRow(filteredObservations, "High Radiation", ["solarradiation"], "max", 0, "W/m2"),
+  ];
+
+  return rows.filter(Boolean);
+}
+
+function buildStationDetailRows(payload, derived) {
+  const station = payload.station || {};
+  const activeRange = getRangeOption(activeRangeId);
+  const totalCount = Array.isArray(payload.observations) ? payload.observations.length : 0;
+
+  return [
+    { label: "Station", value: station.name || "Unknown station" },
+    { label: "Location", value: station.location || "Location not provided" },
+    { label: "Last Station Report", value: station.lastObservationAt || formatHeaderTimestamp(payload.timeRange?.endAt) },
+    { label: "Data Source", value: "Ambient Weather REST" },
+    { label: "Loaded Observations", value: String(totalCount) },
+    { label: "Loaded History", value: formatSpan(payload.timeRange?.spanMs ?? 0) },
+    { label: "Active View", value: activeRange ? activeRange.label : "All" },
+    { label: "Visible Observations", value: String(derived.observationCount) },
+    { label: "Refresh Cadence", value: "60 seconds" },
+  ];
 }
 
 function renderChartGrid(seriesList) {
@@ -177,36 +383,62 @@ function renderChartGrid(seriesList) {
   }
 }
 
-function renderSnapshotGrid(snapshot) {
-  snapshotGrid.replaceChildren();
+function renderTwoColumnTable(tbody, rows, emptyMessage) {
+  tbody.replaceChildren();
 
-  if (!snapshot.length) {
-    snapshotGrid.appendChild(createState("The latest raw payload will show up here."));
+  if (!rows.length) {
+    tbody.appendChild(createTableStateRow(emptyMessage, 2));
     return;
   }
 
-  for (const entry of snapshot) {
-    const node = snapshotTemplate.content.firstElementChild.cloneNode(true);
-    node.querySelector(".snapshot-key").textContent = entry.key;
-    node.querySelector(".snapshot-value").textContent = entry.value;
-    snapshotGrid.appendChild(node);
+  for (const row of rows) {
+    const tableRow = document.createElement("tr");
+    tableRow.append(
+      createCell(row.label),
+      createCell(row.value, "weather-table__value"),
+    );
+    tbody.appendChild(tableRow);
   }
 }
 
-function renderError(message) {
-  latestPayload = null;
-  stationName.textContent = "Dashboard waiting on station data";
-  stationSummary.textContent = "The local UI is up, but the server could not load Ambient Weather data yet.";
-  lastUpdated.textContent = "Needs attention";
-  rangeSummary.textContent = "Waiting on the first successful data load.";
-  updateRangeButtons();
+function renderThreeColumnTable(tbody, rows, emptyMessage) {
+  tbody.replaceChildren();
 
-  const errorState = createState(message, true);
+  if (!rows.length) {
+    tbody.appendChild(createTableStateRow(emptyMessage, 3));
+    return;
+  }
 
-  metricGrid.replaceChildren(errorState.cloneNode(true));
-  highlightGrid.replaceChildren(createState("Once the API call succeeds, rollup stats will appear here.", true));
-  chartGrid.replaceChildren(createState("Trend charts will load automatically after the first successful fetch.", true));
-  snapshotGrid.replaceChildren(createState("The raw station payload will appear here after a successful fetch.", true));
+  for (const row of rows) {
+    const tableRow = document.createElement("tr");
+    tableRow.append(
+      createCell(row.label),
+      createCell(row.value, "weather-table__value"),
+      createCell(row.detail || "—", "weather-table__detail"),
+    );
+    tbody.appendChild(tableRow);
+  }
+}
+
+function createCell(value, className = "") {
+  const cell = document.createElement("td");
+  cell.textContent = value;
+
+  if (className) {
+    cell.className = className;
+  }
+
+  return cell;
+}
+
+function createTableStateRow(message, colSpan) {
+  const row = document.createElement("tr");
+  const cell = document.createElement("td");
+  cell.colSpan = colSpan;
+  cell.textContent = message;
+  cell.className = "weather-table__detail";
+  row.appendChild(cell);
+  return row;
 }
 
 function createState(message, isError = false) {
@@ -219,34 +451,63 @@ function createState(message, isError = false) {
 function createChartCard(series) {
   const card = document.createElement("article");
   card.className = "chart-card";
+  card.style.setProperty("--chart-color", getSeriesColor(series.id));
 
-  const rangeText = `${formatNumber(series.min, series.decimals)} to ${formatNumber(series.max, series.decimals)} ${series.unit}`.trim();
+  const header = document.createElement("div");
+  header.className = "chart-header";
 
-  card.innerHTML = `
-    <div class="chart-header">
-      <p class="chart-title">${series.label}</p>
-      <p class="chart-range">${rangeText}</p>
-    </div>
-    ${createChartSvg(series)}
-    <div class="chart-footer">
-      <span>${series.points[0].label}</span>
-      <span>${series.points.at(-1).label}</span>
-    </div>
-  `;
+  const title = document.createElement("p");
+  title.className = "chart-title";
+  title.textContent = series.label;
+
+  const range = document.createElement("p");
+  range.className = "chart-range";
+  range.textContent = `${formatNumber(series.min, series.decimals)} to ${formatNumber(series.max, series.decimals)} ${series.unit}`.trim();
+
+  header.append(title, range);
+
+  const stats = document.createElement("div");
+  stats.className = "chart-stats";
+  stats.append(
+    createChartStat("Low", formatValue(series.min, series.decimals, series.unit)),
+    createChartStat("High", formatValue(series.max, series.decimals, series.unit)),
+    createChartStat("Now", formatValue(series.points.at(-1)?.value ?? null, series.decimals, series.unit)),
+  );
+
+  const chartSvg = document.createElement("div");
+  chartSvg.innerHTML = createChartSvg(series);
+
+  const footer = document.createElement("div");
+  footer.className = "chart-footer";
+
+  const start = document.createElement("span");
+  start.textContent = series.points[0].label;
+
+  const end = document.createElement("span");
+  end.textContent = series.points.at(-1).label;
+
+  footer.append(start, end);
+  card.append(header, stats, chartSvg.firstElementChild, footer);
 
   return card;
 }
 
 function createChartSvg(series) {
   const width = 320;
-  const height = 116;
+  const height = 164;
   const min = series.min;
   const max = series.max;
   const span = max - min || 1;
+  const leftPadding = 14;
+  const rightPadding = 12;
+  const topPadding = 10;
+  const bottomPadding = 18;
+  const plotWidth = width - leftPadding - rightPadding;
+  const plotHeight = height - topPadding - bottomPadding;
 
   const points = series.points.map((point, index) => {
-    const x = (index / Math.max(series.points.length - 1, 1)) * width;
-    const y = height - ((point.value - min) / span) * (height - 10) - 5;
+    const x = leftPadding + (index / Math.max(series.points.length - 1, 1)) * plotWidth;
+    const y = topPadding + (1 - (point.value - min) / span) * plotHeight;
     return { x, y };
   });
 
@@ -254,15 +515,38 @@ function createChartSvg(series) {
     .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
     .join(" ");
 
-  const fillPath = `${linePath} L ${width} ${height} L 0 ${height} Z`;
+  const fillPath = `${linePath} L ${leftPadding + plotWidth} ${topPadding + plotHeight} L ${leftPadding} ${topPadding + plotHeight} Z`;
+  const gridlines = [0, 0.5, 1].map((ratio) => {
+    const y = topPadding + plotHeight * ratio;
+    return `<line class="chart-gridline" x1="${leftPadding}" y1="${y.toFixed(2)}" x2="${(leftPadding + plotWidth).toFixed(2)}" y2="${y.toFixed(2)}"></line>`;
+  }).join("");
+  const latest = points.at(-1);
+  const minLabel = formatCompactNumber(min, series.decimals);
+  const maxLabel = formatCompactNumber(max, series.decimals);
+  const midLabel = formatCompactNumber(min + span / 2, series.decimals);
 
   return `
     <svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${series.label} trend">
-      <line class="chart-axis" x1="0" y1="${height}" x2="${width}" y2="${height}"></line>
+      ${gridlines}
+      <line class="chart-axis" x1="${leftPadding}" y1="${topPadding + plotHeight}" x2="${leftPadding + plotWidth}" y2="${topPadding + plotHeight}"></line>
       <path class="chart-fill" d="${fillPath}"></path>
       <path class="chart-path" d="${linePath}"></path>
+      <circle class="chart-point" cx="${latest?.x.toFixed(2) ?? leftPadding}" cy="${latest?.y.toFixed(2) ?? topPadding}" r="4"></circle>
+      <text class="chart-label" x="8" y="${(topPadding + 4).toFixed(2)}">${maxLabel}</text>
+      <text class="chart-label" x="8" y="${(topPadding + plotHeight / 2 + 4).toFixed(2)}">${midLabel}</text>
+      <text class="chart-label" x="8" y="${(topPadding + plotHeight + 2).toFixed(2)}">${minLabel}</text>
     </svg>
   `;
+}
+
+function createChartStat(label, value) {
+  const stat = document.createElement("div");
+  stat.className = "chart-stat";
+  stat.innerHTML = `
+    <p class="chart-stat__label">${label}</p>
+    <p class="chart-stat__value">${value || "—"}</p>
+  `;
+  return stat;
 }
 
 function renderRangeButtons() {
@@ -329,8 +613,6 @@ function buildDerivedView(payload, rangeId) {
 
   return {
     observationCount: filteredObservations.length,
-    metrics: buildMetrics(latest),
-    highlights: buildHighlights(filteredObservations),
     series: buildSeries(filteredObservations),
     snapshot: latest ? flattenSnapshot(latest) : [],
   };
@@ -354,15 +636,34 @@ function filterObservationsByRange(observations, rangeId) {
   return filtered.length ? filtered : observations.slice(-1);
 }
 
+function filterObservationsForCurrentDay(observations) {
+  if (!observations.length) {
+    return [];
+  }
+
+  const latestTimestamp = observations.at(-1)?.timestamp ?? 0;
+  const latestDate = new Date(latestTimestamp);
+
+  return observations.filter((observation) => {
+    const timestamp = observation.timestamp ?? 0;
+    const date = new Date(timestamp);
+    return (
+      date.getFullYear() === latestDate.getFullYear() &&
+      date.getMonth() === latestDate.getMonth() &&
+      date.getDate() === latestDate.getDate()
+    );
+  });
+}
+
 function getRangeOption(rangeId) {
   return rangeOptions.find((option) => option.id === rangeId) ?? null;
 }
 
-function describeRangeSummary(payload, derived) {
+function describeRangeSummary(payload, derived, responseMeta = {}) {
   const option = getRangeOption(activeRangeId);
   const timeRange = payload.timeRange || {};
-  const startAt = timeRange.startAt ? formatDate(timeRange.startAt) : "unknown";
-  const endAt = timeRange.endAt ? formatDate(timeRange.endAt) : "unknown";
+  const startAt = timeRange.startAt ? formatHeaderTimestamp(timeRange.startAt) : "unknown";
+  const endAt = timeRange.endAt ? formatHeaderTimestamp(timeRange.endAt) : "unknown";
   const loadedSpan = formatSpan(timeRange.spanMs ?? 0);
 
   if (!derived.observationCount) {
@@ -370,54 +671,16 @@ function describeRangeSummary(payload, derived) {
   }
 
   if (!option || option.durationMs === null) {
-    return `Showing the full loaded span from ${startAt} to ${endAt} across ${loadedSpan}.`;
+    return appendRangeMeta(
+      `Showing the full loaded span from ${startAt} to ${endAt} across ${loadedSpan}.`,
+      responseMeta,
+    );
   }
 
-  return `Showing the last ${option.label.toLowerCase()} ending at ${endAt}. Loaded history spans ${loadedSpan} starting ${startAt}.`;
-}
-
-function buildMetrics(latest) {
-  if (!latest) {
-    return [];
-  }
-
-  return metricDefinitions
-    .map((definition) => {
-      const value = pickNumber(latest, definition.keys);
-
-      if (value === null) {
-        return null;
-      }
-
-      return {
-        id: definition.id,
-        label: definition.label,
-        value,
-        unit: definition.unit,
-        displayValue: formatValue(value, definition.decimals, definition.unit),
-      };
-    })
-    .filter(Boolean);
-}
-
-function buildHighlights(observations) {
-  if (!observations.length) {
-    return [];
-  }
-
-  const tempValues = collectNumbers(observations, ["tempf"]);
-  const humidityValues = collectNumbers(observations, ["humidity"]);
-  const gustValues = collectNumbers(observations, ["windgustmph"]);
-  const windValues = collectNumbers(observations, ["windspeedmph"]);
-  const rainValues = collectNumbers(observations, ["dailyrainin"]);
-
-  return [
-    createHighlight("Temperature Range", describeNumberRange(tempValues, 1, "F")),
-    createHighlight("Humidity Range", describeNumberRange(humidityValues, 0, "%")),
-    createHighlight("Peak Gust", describeMax(gustValues, 1, "mph")),
-    createHighlight("Average Wind", describeAverage(windValues, 1, "mph")),
-    createHighlight("Rain So Far", describeMax(rainValues, 2, "in")),
-  ].filter(Boolean);
+  return appendRangeMeta(
+    `Showing the last ${option.label.toLowerCase()} ending at ${endAt}. Loaded history spans ${loadedSpan} starting ${startAt}.`,
+    responseMeta,
+  );
 }
 
 function buildSeries(observations) {
@@ -434,10 +697,7 @@ function buildSeries(observations) {
           return {
             timestamp: observation.timestamp,
             value,
-            label: new Date(observation.timestamp).toLocaleTimeString([], {
-              hour: "numeric",
-              minute: "2-digit",
-            }),
+            label: formatClock(observation.timestamp),
           };
         })
         .filter(Boolean);
@@ -453,6 +713,7 @@ function buildSeries(observations) {
         decimals: definition.decimals,
         min: Math.min(...points.map((point) => point.value)),
         max: Math.max(...points.map((point) => point.value)),
+        current: points.at(-1)?.value ?? null,
         points,
       };
     })
@@ -463,45 +724,131 @@ function flattenSnapshot(latest) {
   return Object.entries(latest)
     .filter(([, value]) => value !== null && value !== undefined && value !== "")
     .map(([key, value]) => ({
-      key,
-      value: key === "timestamp" ? new Date(value).toLocaleString() : String(value),
+      label: key,
+      value: key === "timestamp" ? formatHeaderTimestamp(value) : String(value),
     }))
-    .sort((left, right) => left.key.localeCompare(right.key));
+    .sort((left, right) => left.label.localeCompare(right.label));
 }
 
-function createHighlight(label, value) {
-  return value ? { label, value } : null;
+function createExtremeRow(observations, label, keys, mode, decimals, unit) {
+  const result = pickExtremeObservation(observations, keys, mode);
+
+  if (!result) {
+    return null;
+  }
+
+  return {
+    label,
+    value: formatValue(result.value, decimals, unit),
+    detail: formatClock(result.timestamp),
+  };
 }
 
-function describeNumberRange(values, decimals, unit) {
+function createRangeRow(observations, label, keys, decimals, unit) {
+  const values = observations
+    .map((observation) => ({
+      value: pickNumber(observation, keys),
+      timestamp: observation.timestamp ?? null,
+    }))
+    .filter((entry) => entry.value !== null);
+
   if (values.length < 2) {
-    return "";
+    return null;
   }
 
-  return `${formatNumber(Math.min(...values), decimals)}${unit} to ${formatNumber(Math.max(...values), decimals)}${unit}`;
+  return {
+    label,
+    value: `${formatNumber(Math.min(...values.map((entry) => entry.value)), decimals)}${unit} to ${formatNumber(Math.max(...values.map((entry) => entry.value)), decimals)}${unit}`,
+    detail: `${formatClock(values[0].timestamp)} to ${formatClock(values.at(-1).timestamp)}`,
+  };
 }
 
-function describeMax(values, decimals, unit) {
-  if (!values.length) {
-    return "";
+function createLatestValueRow(observations, label, keys, decimals, unit) {
+  const latest = observations.at(-1) ?? null;
+
+  if (!latest) {
+    return null;
   }
 
-  return `${formatNumber(Math.max(...values), decimals)}${unit}`;
+  const value = pickNumber(latest, keys);
+
+  if (value === null) {
+    return null;
+  }
+
+  return {
+    label,
+    value: formatValue(value, decimals, unit),
+    detail: "Current total",
+  };
 }
 
-function describeAverage(values, decimals, unit) {
+function createAverageRow(observations, label, keys, decimals, unit) {
+  const values = observations
+    .map((observation) => pickNumber(observation, keys))
+    .filter((value) => value !== null);
+
   if (!values.length) {
-    return "";
+    return null;
   }
 
   const average = values.reduce((sum, value) => sum + value, 0) / values.length;
-  return `${formatNumber(average, decimals)}${unit}`;
+
+  return {
+    label,
+    value: formatValue(average, decimals, unit),
+    detail: "Average",
+  };
 }
 
-function collectNumbers(observations, keys) {
-  return observations
-    .map((observation) => pickNumber(observation, keys))
-    .filter((value) => value !== null);
+function pickExtremeObservation(observations, keys, mode) {
+  let match = null;
+
+  for (const observation of observations) {
+    const value = pickNumber(observation, keys);
+
+    if (value === null || !observation.timestamp) {
+      continue;
+    }
+
+    if (!match) {
+      match = { value, timestamp: observation.timestamp };
+      continue;
+    }
+
+    if (mode === "min" ? value < match.value : value > match.value) {
+      match = { value, timestamp: observation.timestamp };
+    }
+  }
+
+  return match;
+}
+
+function formatDefinitionValue(source, keys, decimals, unit) {
+  const value = pickNumber(source, keys);
+  return value === null ? "" : formatValue(value, decimals, unit);
+}
+
+function formatWind(source, speedKey, directionKey) {
+  const speed = pickNumber(source, [speedKey]);
+
+  if (speed === null) {
+    return "";
+  }
+
+  const direction = pickNumber(source, [directionKey]);
+
+  if (direction === null) {
+    return `${formatNumber(speed, 1)} mph`;
+  }
+
+  return `${formatNumber(speed, 1)} mph ${degreesToCompass(direction)} (${Math.round(direction)} deg)`;
+}
+
+function degreesToCompass(degrees) {
+  const points = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+  const index = Math.round((degrees % 360) / 22.5) % 16;
+  return points[index];
 }
 
 function pickNumber(source, keys) {
@@ -533,20 +880,18 @@ function toFiniteNumber(value) {
 }
 
 function formatValue(value, decimals, unit) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
   const suffix = unit ? ` ${unit}` : "";
   return `${formatNumber(value, decimals)}${suffix}`;
 }
 
-function formatDate(value) {
-  if (!value) {
-    return "just now";
-  }
-
-  return new Date(value).toLocaleString([], {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
+function formatCompactNumber(value, decimals) {
+  return Number(value).toLocaleString([], {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: decimals,
   });
 }
 
@@ -554,6 +899,33 @@ function formatNumber(value, decimals) {
   return Number(value).toLocaleString([], {
     minimumFractionDigits: 0,
     maximumFractionDigits: decimals,
+  });
+}
+
+function formatHeaderTimestamp(value) {
+  if (!value) {
+    return "Waiting for station time";
+  }
+
+  return new Date(value).toLocaleString([], {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZoneName: "short",
+  });
+}
+
+function formatClock(value) {
+  if (!value) {
+    return "—";
+  }
+
+  return new Date(value).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
   });
 }
 
@@ -573,4 +945,105 @@ function formatSpan(spanMs) {
   }
 
   return `${Number((totalHours / 24).toFixed(1))} days`;
+}
+
+function spanBetween(startTimestamp, endTimestamp) {
+  if (!startTimestamp || !endTimestamp) {
+    return 0;
+  }
+
+  return Math.max(endTimestamp - startTimestamp, 0);
+}
+
+function closeNavMenu() {
+  navMenu?.classList.remove("is-open");
+  navToggle?.setAttribute("aria-expanded", "false");
+}
+
+function scheduleNextRefresh(delayMs = defaultRefreshIntervalMs) {
+  if (refreshTimer !== null) {
+    window.clearTimeout(refreshTimer);
+    refreshTimer = null;
+  }
+
+  if (delayMs <= 0) {
+    return;
+  }
+
+  refreshTimer = window.setTimeout(() => {
+    refreshTimer = null;
+    loadDashboard();
+  }, delayMs);
+}
+
+function getRecommendedRefreshMs(responseMeta = {}) {
+  const recommended = Number(responseMeta.recommendedPollMs);
+
+  if (Number.isFinite(recommended) && recommended > 0) {
+    return recommended;
+  }
+
+  return defaultRefreshIntervalMs;
+}
+
+function getRetryDelayMs(error) {
+  const retryAfterSec =
+    error && typeof error === "object" && "retryAfterSec" in error
+      ? Number(error.retryAfterSec)
+      : NaN;
+
+  if (Number.isFinite(retryAfterSec) && retryAfterSec > 0) {
+    return retryAfterSec * 1000;
+  }
+
+  return rateLimitRefreshIntervalMs;
+}
+
+function describeErrorSummary(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  const retryDelayMs = getRetryDelayMs(error);
+
+  if (message.toLowerCase().includes("rate-limit")) {
+    return `Ambient is rate-limiting this station right now. The dashboard will back off and retry in about ${formatSpan(retryDelayMs)}.`;
+  }
+
+  return "Check your Ambient credentials, selected station, and local network reachability.";
+}
+
+function describeErrorRangeSummary(error) {
+  const message = error instanceof Error ? error.message : String(error);
+
+  if (message.toLowerCase().includes("rate-limit")) {
+    return `Pausing automatic retries to avoid making the Ambient API throttle worse.`;
+  }
+
+  return "Waiting on the first successful data load.";
+}
+
+function appendRangeMeta(text, responseMeta = {}) {
+  if (responseMeta.isStale) {
+    return `${text} Cached data is being shown while Ambient recovers.`;
+  }
+
+  if (responseMeta.servedFromCache) {
+    return `${text} Freshening is being throttled through the local cache.`;
+  }
+
+  return text;
+}
+
+function getSeriesColor(seriesId) {
+  const palette = {
+    temperature: "#df7a22",
+    dewpoint: "#5aa5cc",
+    humidity: "#4689a7",
+    pressure: "#7f6cc4",
+    wind: "#2e8b57",
+    gust: "#188b5a",
+    solar: "#d5a229",
+    uv: "#b36ad8",
+    rain: "#3c8fca",
+  };
+
+  return palette[seriesId] || "#18b8cf";
 }

@@ -11,6 +11,18 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(__dirname, "public");
 const host = "127.0.0.1";
 const port = Number.parseInt(getOptionalEnv("WEATHER_PORT", "8787"), 10) || 8787;
+const overviewCacheMs = parseDurationMs(
+  getOptionalEnv("WEATHER_CACHE_MS", String(5 * 60 * 1000)),
+  5 * 60 * 1000,
+);
+const rateLimitCooldownMs = parseDurationMs(
+  getOptionalEnv("AMBIENT_RATE_LIMIT_COOLDOWN_MS", String(15 * 60 * 1000)),
+  15 * 60 * 1000,
+);
+const deviceCacheMs = parseDurationMs(
+  getOptionalEnv("AMBIENT_DEVICE_CACHE_MS", String(60 * 60 * 1000)),
+  60 * 60 * 1000,
+);
 
 const contentTypes = {
   ".css": "text/css; charset=utf-8",
@@ -18,6 +30,18 @@ const contentTypes = {
   ".js": "application/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
+};
+
+const overviewCache = {
+  payload: null,
+  fetchedAtMs: 0,
+  expiresAtMs: 0,
+  rateLimitedUntilMs: 0,
+};
+
+const deviceCache = {
+  device: null,
+  fetchedAtMs: 0,
 };
 
 function sendJson(request, response, statusCode, payload) {
@@ -37,6 +61,112 @@ function sendMethodNotAllowed(request, response) {
     "x-content-type-options": "nosniff",
   });
   response.end(request.method === "HEAD" ? undefined : JSON.stringify({ error: "method-not-allowed" }));
+}
+
+function parseDurationMs(value, fallback) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function isRateLimitError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("above-user-rate-limit");
+}
+
+function withResponseMeta(payload, meta = {}) {
+  return {
+    ...payload,
+    responseMeta: {
+      servedFromCache: false,
+      isStale: false,
+      warning: "",
+      recommendedPollMs: 60_000,
+      ...payload?.responseMeta,
+      ...meta,
+    },
+  };
+}
+
+function createFallbackDevice(macAddress, cachedDevice = null) {
+  if (cachedDevice?.macAddress?.toLowerCase() === macAddress.toLowerCase()) {
+    return cachedDevice;
+  }
+
+  return {
+    macAddress,
+    info: {
+      name: `Ambient Station ${macAddress.slice(-5)}`,
+      location: "",
+    },
+  };
+}
+
+function applyStationOverrides(payload, config) {
+  return {
+    ...payload,
+    station: {
+      ...payload.station,
+      name: config.stationName || payload.station?.name || "",
+      location: config.stationLocation || payload.station?.location || "",
+    },
+  };
+}
+
+async function resolveDevice(config) {
+  const now = Date.now();
+  const cachedDevice = deviceCache.device;
+
+  if (config.macAddress) {
+    return createFallbackDevice(config.macAddress, cachedDevice);
+  }
+
+  if (cachedDevice && now - deviceCache.fetchedAtMs < deviceCacheMs) {
+    return cachedDevice;
+  }
+
+  const devices = await listDevices();
+  const device = pickDevice(devices, config.macAddress);
+
+  if (!device) {
+    return null;
+  }
+
+  deviceCache.device = device;
+  deviceCache.fetchedAtMs = now;
+  return device;
+}
+
+async function fetchOverviewPayload() {
+  const config = getAmbientConfig();
+  const device = await resolveDevice(config);
+
+  if (!device) {
+    return {
+      statusCode: 404,
+      payload: { error: "No Ambient Weather device was found for this account." },
+    };
+  }
+
+  const observations = await getDeviceHistory(device.macAddress, {
+    limit: config.limit,
+  });
+
+  const payload = applyStationOverrides(buildOverviewPayload(device, observations), config);
+  const now = Date.now();
+  overviewCache.payload = payload;
+  overviewCache.fetchedAtMs = now;
+  overviewCache.expiresAtMs = now + overviewCacheMs;
+  overviewCache.rateLimitedUntilMs = 0;
+
+  return {
+    statusCode: 200,
+    payload: withResponseMeta(payload, {
+      servedFromCache: false,
+      isStale: false,
+      recommendedPollMs: Math.max(Math.min(overviewCacheMs, 60_000), 15_000),
+      cacheExpiresAt: new Date(overviewCache.expiresAtMs).toISOString(),
+    }),
+  };
 }
 
 function normalizePathname(pathname) {
@@ -87,25 +217,99 @@ async function serveStatic(request, response, pathname) {
 }
 
 async function handleOverview(request, response) {
-  try {
-    const config = getAmbientConfig();
-    const devices = await listDevices();
-    const device = pickDevice(devices, config.macAddress);
+  const now = Date.now();
 
-    if (!device) {
-      sendJson(request, response, 404, {
-        error: "No Ambient Weather device was found for this account.",
+  if (overviewCache.payload && now < overviewCache.expiresAtMs) {
+    sendJson(
+      request,
+      response,
+      200,
+      withResponseMeta(overviewCache.payload, {
+        servedFromCache: true,
+        isStale: false,
+        recommendedPollMs: Math.max(Math.min(overviewCacheMs, 60_000), 15_000),
+        cacheExpiresAt: new Date(overviewCache.expiresAtMs).toISOString(),
+      }),
+    );
+    return;
+  }
+
+  if (overviewCache.payload && now < overviewCache.rateLimitedUntilMs) {
+    sendJson(
+      request,
+      response,
+      200,
+      withResponseMeta(overviewCache.payload, {
+        servedFromCache: true,
+        isStale: true,
+        warning: `Ambient Weather is rate-limiting requests. Showing cached data until ${new Date(
+          overviewCache.rateLimitedUntilMs,
+        ).toLocaleTimeString([], {
+          hour: "numeric",
+          minute: "2-digit",
+        })}.`,
+        recommendedPollMs: Math.max(overviewCache.rateLimitedUntilMs - now, 60_000),
+        cacheExpiresAt: new Date(overviewCache.expiresAtMs).toISOString(),
+        nextRetryAt: new Date(overviewCache.rateLimitedUntilMs).toISOString(),
+      }),
+    );
+    return;
+  }
+
+  try {
+    const result = await fetchOverviewPayload();
+    sendJson(request, response, result.statusCode, result.payload);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (isRateLimitError(error)) {
+      overviewCache.rateLimitedUntilMs = Date.now() + rateLimitCooldownMs;
+
+      if (overviewCache.payload) {
+        sendJson(
+          request,
+          response,
+          200,
+          withResponseMeta(overviewCache.payload, {
+            servedFromCache: true,
+            isStale: true,
+            warning: `Ambient Weather is rate-limiting requests. Showing cached data until ${new Date(
+              overviewCache.rateLimitedUntilMs,
+            ).toLocaleTimeString([], {
+              hour: "numeric",
+              minute: "2-digit",
+            })}.`,
+            recommendedPollMs: rateLimitCooldownMs,
+            cacheExpiresAt: new Date(overviewCache.expiresAtMs).toISOString(),
+            nextRetryAt: new Date(overviewCache.rateLimitedUntilMs).toISOString(),
+          }),
+        );
+        return;
+      }
+
+      sendJson(request, response, 429, {
+        error: "Ambient Weather is rate-limiting requests right now. Please try again in a few minutes.",
+        retryAfterSec: Math.ceil(rateLimitCooldownMs / 1000),
       });
       return;
     }
 
-    const observations = await getDeviceHistory(device.macAddress, {
-      limit: config.limit,
-    });
+    if (overviewCache.payload) {
+      sendJson(
+        request,
+        response,
+        200,
+        withResponseMeta(overviewCache.payload, {
+          servedFromCache: true,
+          isStale: true,
+          warning: `Ambient Weather could not be reached. Showing cached data while the connection recovers.`,
+          recommendedPollMs: 2 * 60_000,
+          cacheExpiresAt: new Date(overviewCache.expiresAtMs).toISOString(),
+        }),
+      );
+      return;
+    }
 
-    sendJson(request, response, 200, buildOverviewPayload(device, observations));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
     sendJson(request, response, 500, { error: message });
   }
 }

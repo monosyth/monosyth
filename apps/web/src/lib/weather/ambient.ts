@@ -49,6 +49,8 @@ function readEnv() {
   const apiKey = process.env.AMBIENT_API_KEY?.trim() ?? "";
   const applicationKey = process.env.AMBIENT_APPLICATION_KEY?.trim() ?? "";
   const macAddress = process.env.AMBIENT_MAC_ADDRESS?.trim() ?? "";
+  const stationName = process.env.WEATHER_STATION_NAME?.trim() ?? "";
+  const stationLocation = process.env.WEATHER_STATION_LOCATION?.trim() ?? "";
   const limitValue = process.env.WEATHER_LIMIT?.trim() ?? String(DEFAULT_WEATHER_LIMIT);
   const timeoutValue =
     process.env.AMBIENT_REQUEST_TIMEOUT_MS?.trim() ??
@@ -58,6 +60,8 @@ function readEnv() {
     apiKey,
     applicationKey,
     macAddress,
+    stationName,
+    stationLocation,
     limit: parsePositiveInt(limitValue, DEFAULT_WEATHER_LIMIT, MAX_WEATHER_LIMIT),
     requestTimeoutMs: parsePositiveInt(
       timeoutValue,
@@ -215,6 +219,21 @@ function readCachedWeatherPageData() {
   return weatherCache.value;
 }
 
+function applyStationOverrides(
+  data: Extract<WeatherPageData, { state: "ready" }>["data"],
+) {
+  const env = readEnv();
+
+  return {
+    ...data,
+    station: {
+      ...data.station,
+      name: env.stationName || data.station.name,
+      location: env.stationLocation || data.station.location,
+    },
+  };
+}
+
 function writeCachedWeatherPageData(
   value: Extract<WeatherPageData, { state: "ready" }>,
 ) {
@@ -295,7 +314,7 @@ export async function getWeatherPageData(): Promise<WeatherPageData> {
     ).catch(() => []);
     const readyResult: Extract<WeatherPageData, { state: "ready" }> = {
       state: "ready",
-      data: buildWeatherOverview(device, observations, forecast),
+      data: applyStationOverrides(buildWeatherOverview(device, observations, forecast)),
     };
 
     writeCachedWeatherPageData(readyResult);
