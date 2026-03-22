@@ -57,6 +57,12 @@ type SummaryCard = {
   note: string;
 };
 
+type RecordCard = {
+  label: string;
+  value: string;
+  note: string;
+};
+
 type WeatherPageProps = {
   searchParams?: Promise<{
     view?: string;
@@ -102,6 +108,7 @@ const summaryTabs = [
 
 const sectionTabs = [
   { label: "Summaries", href: "#summary-section" },
+  { label: "Records", href: "#records-section" },
   { label: "Radar", href: "#radar-section" },
   { label: "Cameras", href: "#cameras-section" },
   { label: "Almanac", href: "#almanac-section" },
@@ -187,6 +194,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const comparisonPanels = await getHistoricalComparisonPanels(data, activeView);
   const graphDeck = buildGraphDeck(graphSeries);
   const summaryCards = buildSummaryCards(data);
+  const recordCards = buildRecordCards(data, activeView);
 
   return (
     <main className="min-h-screen bg-[#ececec] text-stone-800">
@@ -345,20 +353,20 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           ))}
         </div>
 
+        <div id="records-section" className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          {recordCards.map((card) => (
+            <RecordCardPanel key={card.label} card={card} />
+          ))}
+        </div>
+
         {comparisonPanels.length ? (
-          <div className="mt-6 grid gap-6 xl:grid-cols-3">
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {comparisonPanels.map((panel) => (
-              <TablePanel
+              <ArchivePanel
                 key={panel.title}
                 id={`comparison-${panel.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
-                title={panel.title}
-                subtitle={panel.subtitle}
-              >
-                <ThreeColumnTable
-                  rows={panel.rows}
-                  emptyMessage="Historical comparison rows unavailable."
-                />
-              </TablePanel>
+                panel={panel}
+              />
             ))}
           </div>
         ) : null}
@@ -918,6 +926,45 @@ function SummaryCardPanel({ card }: { card: SummaryCard }) {
   );
 }
 
+function RecordCardPanel({ card }: { card: RecordCard }) {
+  return (
+    <section className="border border-stone-200 bg-white px-4 py-3">
+      <p className="text-xs uppercase tracking-[0.18em] text-stone-500">{card.label}</p>
+      <p className="mt-2 text-2xl font-light tracking-[-0.03em] text-stone-800">{card.value}</p>
+      <p className="mt-1 text-xs leading-5 text-stone-500">{card.note}</p>
+    </section>
+  );
+}
+
+function ArchivePanel({
+  id,
+  panel,
+}: {
+  id: string;
+  panel: ComparisonPanel;
+}) {
+  return (
+    <section id={id} className="border border-stone-200 bg-white px-4 py-3">
+      <p className="text-base font-light tracking-[-0.02em] text-stone-700">{panel.title}</p>
+      <p className="mt-1 text-xs leading-5 text-stone-500">{panel.subtitle}</p>
+      <div className="mt-3 space-y-2">
+        {panel.rows.map((row) => (
+          <div
+            key={row.label}
+            className="grid grid-cols-[1.1fr_0.9fr] gap-3 border-t border-stone-200 pt-2 first:border-t-0 first:pt-0"
+          >
+            <div>
+              <p className="text-sm text-stone-700">{row.label}</p>
+              <p className="text-xs text-stone-500">{row.detail}</p>
+            </div>
+            <p className="text-right text-sm font-medium text-stone-800">{row.value}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function buildCurrentConditionRows(observations: WeatherObservation[]): FactRow[] {
   const latest = observations.at(-1) ?? null;
 
@@ -1141,6 +1188,49 @@ function buildSummaryCards(data: WeatherOverview): SummaryCard[] {
   ];
 }
 
+function buildRecordCards(data: WeatherOverview, view: WeatherDashboardView): RecordCard[] {
+  const observations =
+    view === "current" ? filterObservationsForLatestDay(data.observations) : data.observations;
+
+  const warmest = createExtremeRow(observations, "Warmest", ["tempf"], "max", 1, "F");
+  const coolest = createExtremeRow(observations, "Coolest", ["tempf"], "min", 1, "F");
+  const strongestGust = createExtremeRow(
+    observations,
+    "Strongest Gust",
+    ["windgustmph"],
+    "max",
+    1,
+    "mph",
+  );
+  const highestUv = createExtremeRow(observations, "Highest UV", ["uv"], "max", 1, "");
+  const highestPressure = createExtremeRow(
+    observations,
+    "Highest Pressure",
+    ["baromrelin", "baromabsin"],
+    "max",
+    3,
+    "inHg",
+  );
+
+  return [
+    warmest
+      ? { label: "Warmest", value: warmest.value, note: `Reached ${warmest.detail}` }
+      : null,
+    coolest
+      ? { label: "Coolest", value: coolest.value, note: `Reached ${coolest.detail}` }
+      : null,
+    strongestGust
+      ? { label: "Strongest Gust", value: strongestGust.value, note: `Observed ${strongestGust.detail}` }
+      : null,
+    highestUv
+      ? { label: "Highest UV", value: highestUv.value, note: `Observed ${highestUv.detail}` }
+      : null,
+    highestPressure
+      ? { label: "Highest Pressure", value: highestPressure.value, note: `Observed ${highestPressure.detail}` }
+      : null,
+  ].filter((card): card is RecordCard => card !== null);
+}
+
 async function getHistoricalComparisonPanels(
   data: WeatherOverview,
   view: WeatherDashboardView,
@@ -1272,12 +1362,9 @@ function buildComparisonRowsFromObservations(observations: WeatherObservation[])
   return [
     createExtremeRow(observations, "High Temperature", ["tempf"], "max", 1, "F"),
     createExtremeRow(observations, "Low Temperature", ["tempf"], "min", 1, "F"),
-    createExtremeRow(observations, "High Humidity", ["humidity"], "max", 0, "%"),
-    createExtremeRow(observations, "Low Humidity", ["humidity"], "min", 0, "%"),
-    createExtremeRow(observations, "High Barometer", ["baromrelin", "baromabsin"], "max", 3, "inHg"),
-    createLatestValueRow(observations, "Rain", ["dailyrainin"], 2, "in"),
     createExtremeRow(observations, "Peak Gust", ["windgustmph"], "max", 1, "mph"),
-    createExtremeRow(observations, "High UV", ["uv"], "max", 1, ""),
+    createLatestValueRow(observations, "Rain", ["dailyrainin"], 2, "in"),
+    createExtremeRow(observations, "High Pressure", ["baromrelin", "baromabsin"], "max", 3, "inHg"),
   ].filter((row): row is SummaryRow => row !== null);
 }
 
