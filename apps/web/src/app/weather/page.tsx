@@ -1,7 +1,13 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { RefreshButton } from "@/components/weather/refresh-button";
-import { getWeatherPageData } from "@/lib/weather/ambient";
+import {
+  getWeatherPageData,
+  normalizeWeatherDashboardView,
+  type WeatherDashboardView,
+} from "@/lib/weather/ambient";
+import { buildWeatherAlmanac } from "@/lib/weather/almanac";
 import {
   formatWeatherClock,
   formatWeatherDateTime,
@@ -28,9 +34,21 @@ type SummaryRow = {
   detail: string;
 };
 
+type WeatherPageProps = {
+  searchParams?: Promise<{
+    view?: string;
+  }>;
+};
+
+const DISPLAY_COORDINATES = {
+  latitude: 47.7565,
+  longitude: -122.345,
+};
+
 const currentConditionDefinitions = [
   { label: "Outside Temperature", keys: ["tempf"], decimals: 1, unit: "F" },
-  { label: "Feels Like", keys: ["feelsLike", "feelslikef"], decimals: 1, unit: "F" },
+  { label: "Wind Chill", keys: ["windchillf"], decimals: 1, unit: "F" },
+  { label: "Heat Index", keys: ["heatindexf"], decimals: 1, unit: "F" },
   { label: "Dewpoint", keys: ["dewPoint", "dewpointf"], decimals: 1, unit: "F" },
   { label: "Humidity", keys: ["humidity"], decimals: 0, unit: "%" },
   { label: "Barometer", keys: ["baromrelin", "baromabsin"], decimals: 3, unit: "inHg" },
@@ -44,40 +62,56 @@ const currentConditionDefinitions = [
     render: (observation: WeatherObservation) =>
       formatWind(observation, "windgustmph", "winddir"),
   },
-  { label: "Hourly Rain", keys: ["hourlyrainin"], decimals: 2, unit: "in" },
+  { label: "Rain Rate", keys: ["hourlyrainin"], decimals: 2, unit: "in/h" },
   { label: "Daily Rain", keys: ["dailyrainin"], decimals: 2, unit: "in" },
   { label: "UV Index", keys: ["uv"], decimals: 1, unit: "" },
   { label: "Solar Radiation", keys: ["solarradiation"], decimals: 0, unit: "W/m2" },
+  { label: "Brightness", keys: ["brightness", "lux"], decimals: 0, unit: "lx" },
+  { label: "Lightning Strikes", keys: ["lightning_day", "lightning"], decimals: 0, unit: "" },
 ] as const;
 
-const navItems = [
-  { id: "current-section", label: "Current" },
-  { id: "today-section", label: "Today" },
-  { id: "recent-section", label: "Recent" },
-  { id: "graphs-section", label: "Graphs" },
-  { id: "station-section", label: "Station" },
-  { id: "raw-section", label: "Raw" },
+const summaryTabs = [
+  { label: "Current", view: "current" },
+  { label: "Week", view: "week" },
+  { label: "Month", view: "month" },
+  { label: "Year", view: "year" },
+] as const satisfies ReadonlyArray<{ label: string; view: WeatherDashboardView }>;
+
+const sectionTabs = [
+  { label: "Summaries", href: "#summary-section" },
+  { label: "Almanac", href: "#almanac-section" },
+  { label: "Graphs", href: "#graphs-section" },
+  { label: "About", href: "#about-section" },
 ] as const;
 
-export default async function WeatherPage() {
-  const result = await getWeatherPageData();
+export default async function WeatherPage({ searchParams }: WeatherPageProps) {
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const activeView = normalizeWeatherDashboardView(resolvedSearchParams.view);
+  const result = await getWeatherPageData(activeView);
 
   if (result.state !== "ready") {
     return <WeatherState result={result} />;
   }
 
-  const { data, notice } = result;
+  const { data } = result;
   const currentRows = buildCurrentConditionRows(data.observations);
-  const todayRows = buildDaySummaryRows(data.observations);
-  const recentRows = buildRecentSummaryRows(data);
-  const mastheadRows = buildMastheadRows(data, notice);
-  const stationRows = buildStationDetailRows(data, notice);
-  const rawRows = data.snapshot.slice(0, 22).map((item) => ({
+  const periodRows = buildPeriodSummaryRows(data, activeView);
+  const rangeRows = buildRecentSummaryRows(data);
+  const mastheadRows = buildMastheadRows(data, activeView);
+  const stationRows = buildStationDetailRows(data, result.notice);
+  const rawRows = data.snapshot.slice(0, 24).map((item) => ({
     label: item.key,
     value: item.value,
   }));
-  const graphSeries = data.series.slice(0, 8);
-  const mapUrl = buildMapUrl(data);
+  const graphSeries = prepareGraphSeries(data.series).slice(0, 12);
+  const coordinates = resolveDisplayCoordinates(data);
+  const almanac = buildWeatherAlmanac({
+    date: new Date(data.fetchedAt),
+    latitude: coordinates.latitude,
+    longitude: coordinates.longitude,
+  });
+  const mapUrl = buildMapUrl(coordinates.latitude, coordinates.longitude);
+  const viewMeta = getViewMeta(activeView);
 
   return (
     <main className="min-h-screen bg-[#ececec] text-stone-800">
@@ -92,25 +126,24 @@ export default async function WeatherPage() {
                 {data.station.name}
               </h1>
               <p className="mt-3 text-xl font-light text-white/92 sm:text-2xl">
-                {buildHeaderMeta(data)}
-                {mapUrl ? (
-                  <>
-                    {" "}
-                    <a
-                      className="underline decoration-white/55 underline-offset-4 hover:decoration-white"
-                      href={mapUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Show on map
-                    </a>
-                  </>
-                ) : null}
+                {buildHeaderMeta(data, coordinates)}
+                {" "}
+                <a
+                  className="underline decoration-white/55 underline-offset-4 hover:decoration-white"
+                  href={mapUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Show on map
+                </a>
               </p>
 
               <h2 className="mt-8 text-3xl font-light tracking-[-0.03em] sm:text-4xl">
-                Current Weather Conditions
+                {viewMeta.heading}
               </h2>
+              <p className="mt-3 max-w-3xl text-lg leading-8 text-white/88">
+                {viewMeta.subtitle}
+              </p>
               <p className="mt-3 text-lg text-white/88">
                 {data.station.lastObservationAt || formatWeatherLong(data.fetchedAt)}
               </p>
@@ -131,34 +164,58 @@ export default async function WeatherPage() {
               </table>
             </div>
           </div>
-
-          <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4 border-t border-white/18 pt-6 text-2xl font-light">
-            {navItems.map((item, index) => (
-              <a
-                key={item.id}
-                href={`#${item.id}`}
-                className={`border-b-4 pb-2 transition hover:text-white ${index === 0 ? "border-[#f4d24f] text-white" : "border-transparent text-white/85 hover:border-white/40"}`}
-              >
-                {item.label}
-              </a>
-            ))}
-            <div className="ml-auto flex flex-wrap items-center gap-3 text-base font-medium">
-              <RefreshButton />
-              <Link
-                href="/"
-                className="rounded-full border border-white/35 bg-white/12 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/22"
-              >
-                Back Home
-              </Link>
-            </div>
-          </div>
         </div>
       </header>
 
+      <div className="sticky top-0 z-20 border-b border-stone-300 bg-[#f5f5f5] shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
+        <div className="mx-auto flex max-w-7xl items-center gap-4 overflow-x-auto px-5 py-3 sm:px-8 lg:px-10">
+          <div className="flex min-w-max items-center gap-2 pr-3">
+            {summaryTabs.map((tab) => {
+              const isActive = tab.view === activeView;
+              const href = tab.view === "current" ? "/weather" : `/weather?view=${tab.view}`;
+
+              return (
+                <Link
+                  key={tab.view}
+                  href={href}
+                  className={`border-b-4 px-2 py-1 text-2xl font-light transition ${isActive ? "border-[#f4d24f] text-stone-800" : "border-transparent text-stone-600 hover:border-stone-300 hover:text-stone-800"}`}
+                >
+                  {tab.label}
+                </Link>
+              );
+            })}
+          </div>
+
+          <div className="h-8 w-px shrink-0 bg-stone-300" />
+
+          <div className="flex min-w-max items-center gap-2">
+            {sectionTabs.map((tab) => (
+              <a
+                key={tab.href}
+                href={tab.href}
+                className="border-b-4 border-transparent px-2 py-1 text-2xl font-light text-stone-600 transition hover:border-stone-300 hover:text-stone-800"
+              >
+                {tab.label}
+              </a>
+            ))}
+          </div>
+
+          <div className="ml-auto flex min-w-max items-center gap-3">
+            <RefreshButton />
+            <Link
+              href="/"
+              className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-950 hover:text-stone-950"
+            >
+              Back Home
+            </Link>
+          </div>
+        </div>
+      </div>
+
       <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-10">
-        {notice ? (
+        {result.notice ? (
           <div className="mb-6 rounded-sm border border-[#e9c65a] bg-[#fff8de] px-5 py-4 text-sm leading-6 text-[#7d5b00]">
-            {notice}
+            {result.notice}
           </div>
         ) : null}
 
@@ -166,7 +223,7 @@ export default async function WeatherPage() {
           <TablePanel
             id="current-section"
             title="Current Conditions"
-            subtitle="Live station readings in the same table-first style as the reference dashboard."
+            subtitle={`The latest station reading in the active ${viewMeta.label.toLowerCase()} tab.`}
           >
             <TwoColumnTable
               rows={currentRows}
@@ -175,34 +232,48 @@ export default async function WeatherPage() {
           </TablePanel>
 
           <TablePanel
-            id="forecast-section"
-            title="Forecast Outlook"
-            subtitle="Short-range hourly forecast pulled alongside the station feed."
+            id="almanac-section"
+            title="Almanac"
+            subtitle="Sun and moon timing computed for the station area, similar to the reference weather station page."
           >
-            <ForecastTable periods={data.forecast.slice(0, 6)} />
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <h3 className="text-2xl font-light text-stone-700">Sun</h3>
+                <div className="mt-3">
+                  <TwoColumnTable rows={almanac.sun} emptyMessage="Sun details unavailable." />
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-2xl font-light text-stone-700">Moon</h3>
+                <div className="mt-3">
+                  <TwoColumnTable rows={almanac.moon} emptyMessage="Moon details unavailable." />
+                </div>
+              </div>
+            </div>
           </TablePanel>
         </div>
 
-        <div className="mt-6 grid gap-6 xl:grid-cols-2">
+        <div id="summary-section" className="mt-6 grid gap-6 xl:grid-cols-2">
           <TablePanel
             id="today-section"
-            title="Since Midnight"
-            subtitle="Today's highs, lows, and peaks from the loaded station observations."
+            title={viewMeta.periodTitle}
+            subtitle={viewMeta.periodSubtitle}
           >
             <ThreeColumnTable
-              rows={todayRows}
-              emptyMessage="Today's highs and lows will populate once observations are available for the current day."
+              rows={periodRows}
+              emptyMessage="Period highs and lows will populate once enough observations are available."
             />
           </TablePanel>
 
           <TablePanel
             id="recent-section"
             title="Recent Range"
-            subtitle="A quick summary of the loaded weather window and where the readings moved."
+            subtitle="A compact summary of the active tab window and where the readings moved."
           >
             <ThreeColumnTable
-              rows={recentRows}
-              emptyMessage="Recent range details will appear once enough observations are available."
+              rows={rangeRows}
+              emptyMessage="Range details will appear once enough observations are available."
             />
           </TablePanel>
         </div>
@@ -210,11 +281,11 @@ export default async function WeatherPage() {
         <TablePanel
           id="graphs-section"
           title="Graphs"
-          subtitle="Instrument-style trend panels modeled after a classic weather station dashboard."
+          subtitle="A wider set of classic station graphs, tuned to feel closer to Century Farm's graph catalog."
           className="mt-6"
         >
           {graphSeries.length ? (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-4 xl:grid-cols-2">
               {graphSeries.map((series) => (
                 <TrendPanel key={series.id} series={series} />
               ))}
@@ -226,26 +297,34 @@ export default async function WeatherPage() {
 
         <div className="mt-6 grid gap-6 xl:grid-cols-2">
           <TablePanel
-            id="station-section"
-            title="Station Details"
-            subtitle="Quick context about the feed, refresh cadence, and currently loaded history."
+            id="forecast-section"
+            title="Forecast Outlook"
+            subtitle="Short-range hourly forecast pulled alongside the station feed."
           >
-            <TwoColumnTable
-              rows={stationRows}
-              emptyMessage="Station details will appear after the first successful station fetch."
-            />
+            <ForecastTable periods={data.forecast.slice(0, 8)} />
           </TablePanel>
 
           <TablePanel
-            id="raw-section"
-            title="Raw Snapshot"
-            subtitle="Latest key and value pairs from the newest Ambient Weather sample."
+            id="about-section"
+            title="About This Station"
+            subtitle="Station metadata, source details, and the newest raw payload values."
           >
-            <TwoColumnTable
-              rows={rawRows}
-              emptyMessage="The newest raw payload will appear here after a successful fetch."
-              monoLabels
-            />
+            <div className="grid gap-6">
+              <TwoColumnTable
+                rows={stationRows}
+                emptyMessage="Station details will appear after the first successful station fetch."
+              />
+              <div className="border-t border-stone-200 pt-5">
+                <h3 className="text-2xl font-light text-stone-700">Raw Snapshot</h3>
+                <div className="mt-3">
+                  <TwoColumnTable
+                    rows={rawRows}
+                    emptyMessage="The newest raw payload will appear here after a successful fetch."
+                    monoLabels
+                  />
+                </div>
+              </div>
+            </div>
           </TablePanel>
         </div>
       </div>
@@ -302,7 +381,7 @@ function TablePanel({
   id: string;
   title: string;
   subtitle: string;
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }) {
   return (
@@ -338,7 +417,7 @@ function TwoColumnTable({
         {rows.map((row) => (
           <tr key={row.label} className="border-b border-stone-200 last:border-b-0">
             <th
-              className={`w-[44%] px-2 py-3 text-left align-top text-base font-normal text-stone-700 ${monoLabels ? "font-mono text-sm uppercase tracking-[0.14em] text-stone-500" : ""}`}
+              className={`w-[46%] px-2 py-3 text-left align-top text-base font-normal text-stone-700 ${monoLabels ? "font-mono text-sm uppercase tracking-[0.14em] text-stone-500" : ""}`}
             >
               {row.label}
             </th>
@@ -454,9 +533,7 @@ function TrendPanel({ series }: { series: WeatherSeries }) {
           <p className="text-xl font-light tracking-[-0.02em] text-stone-700">
             {series.label}
           </p>
-          <p className="mt-1 text-sm text-stone-500">
-            {formatSeriesRange(series)}
-          </p>
+          <p className="mt-1 text-sm text-stone-500">{formatSeriesRange(series)}</p>
         </div>
         <div className="text-right">
           <p className="text-xs uppercase tracking-[0.16em] text-stone-500">Now</p>
@@ -475,6 +552,7 @@ function TrendPanel({ series }: { series: WeatherSeries }) {
         >
           {[0, 0.5, 1].map((ratio) => {
             const y = top + plotHeight * ratio;
+
             return (
               <line
                 key={ratio}
@@ -536,60 +614,6 @@ function PanelState({ message }: { message: string }) {
   );
 }
 
-function buildHeaderMeta(data: WeatherOverview) {
-  const parts = [];
-
-  if (data.station.location) {
-    parts.push(data.station.location);
-  }
-
-  if (data.station.latitude !== null && data.station.longitude !== null) {
-    parts.push(
-      `${formatCoordinate(data.station.latitude, "N", "S")} | ${formatCoordinate(data.station.longitude, "E", "W")}`,
-    );
-  }
-
-  return parts.join(" | ");
-}
-
-function buildMastheadRows(data: WeatherOverview, notice?: string): FactRow[] {
-  return [
-    { label: "Station", value: data.station.name || "Unknown station" },
-    { label: "Software", value: "Ambient Weather + NOAA" },
-    {
-      label: "Last report",
-      value: data.station.lastObservationAt || formatWeatherLong(data.fetchedAt),
-    },
-    { label: "Loaded", value: `${data.observationCount} observations` },
-    { label: "History", value: formatSpan(data.timeRange.spanMs) },
-    { label: "Status", value: notice ? "Cached snapshot" : "Live fetch" },
-  ];
-}
-
-function buildStationDetailRows(data: WeatherOverview, notice?: string): FactRow[] {
-  return [
-    { label: "Station", value: data.station.name || "Unknown station" },
-    { label: "Location", value: data.station.location || "Location not provided" },
-    {
-      label: "Coordinates",
-      value:
-        data.station.latitude !== null && data.station.longitude !== null
-          ? `${data.station.latitude.toFixed(4)}, ${data.station.longitude.toFixed(4)}`
-          : "Not reported",
-    },
-    { label: "MAC Address", value: data.station.macAddress || "Not reported" },
-    {
-      label: "Last Station Report",
-      value: data.station.lastObservationAt || formatWeatherLong(data.fetchedAt),
-    },
-    { label: "Local Refresh", value: formatWeatherLong(data.fetchedAt) },
-    { label: "Loaded Observations", value: String(data.observationCount) },
-    { label: "Loaded History", value: formatSpan(data.timeRange.spanMs) },
-    { label: "Forecast Source", value: data.forecast.length ? "NOAA hourly forecast" : "Unavailable on this fetch" },
-    { label: "Feed Status", value: notice ? "Serving recent cache" : "Serving latest fetch" },
-  ];
-}
-
 function buildCurrentConditionRows(observations: WeatherObservation[]): FactRow[] {
   const latest = observations.at(-1) ?? null;
 
@@ -615,7 +639,13 @@ function buildCurrentConditionRows(observations: WeatherObservation[]): FactRow[
     });
 
     if (definition.label === "Barometer") {
-      const trend = buildTrendValue(observations, ["baromrelin", "baromabsin"], 3 * 60 * 60 * 1000, 3, "inHg");
+      const trend = buildTrendValue(
+        observations,
+        ["baromrelin", "baromabsin"],
+        3 * 60 * 60 * 1000,
+        3,
+        "inHg",
+      );
 
       if (trend) {
         rows.push({
@@ -629,36 +659,38 @@ function buildCurrentConditionRows(observations: WeatherObservation[]): FactRow[
   return rows;
 }
 
-function buildDaySummaryRows(observations: WeatherObservation[]): SummaryRow[] {
+function buildPeriodSummaryRows(
+  data: WeatherOverview,
+  view: WeatherDashboardView,
+): SummaryRow[] {
+  const observations = view === "current"
+    ? filterObservationsForLatestDay(data.observations)
+    : data.observations;
+
   if (!observations.length) {
     return [];
   }
 
-  const latestTimestamp = observations.at(-1)?.timestamp ?? 0;
-  const todayObservations = observations.filter(
-    (observation) =>
-      formatDayKey(observation.timestamp ?? 0) === formatDayKey(latestTimestamp),
-  );
-
-  if (!todayObservations.length) {
-    return [];
-  }
-
   return [
-    createExtremeRow(todayObservations, "High Temperature", ["tempf"], "max", 1, "F"),
-    createExtremeRow(todayObservations, "Low Temperature", ["tempf"], "min", 1, "F"),
-    createExtremeRow(todayObservations, "High Dewpoint", ["dewPoint", "dewpointf"], "max", 1, "F"),
-    createExtremeRow(todayObservations, "Low Dewpoint", ["dewPoint", "dewpointf"], "min", 1, "F"),
-    createExtremeRow(todayObservations, "High Humidity", ["humidity"], "max", 0, "%"),
-    createExtremeRow(todayObservations, "Low Humidity", ["humidity"], "min", 0, "%"),
-    createExtremeRow(todayObservations, "High Barometer", ["baromrelin", "baromabsin"], "max", 3, "inHg"),
-    createExtremeRow(todayObservations, "Low Barometer", ["baromrelin", "baromabsin"], "min", 3, "inHg"),
-    createLatestValueRow(todayObservations, "Today's Rain", ["dailyrainin"], 2, "in"),
-    createExtremeRow(todayObservations, "High Wind", ["windspeedmph"], "max", 1, "mph"),
-    createAverageRow(todayObservations, "Average Wind", ["windspeedmph"], 1, "mph"),
-    createExtremeRow(todayObservations, "Peak Gust", ["windgustmph"], "max", 1, "mph"),
-    createExtremeRow(todayObservations, "High UV", ["uv"], "max", 1, ""),
-    createExtremeRow(todayObservations, "High Solar", ["solarradiation"], "max", 0, "W/m2"),
+    createExtremeRow(observations, "High Temperature", ["tempf"], "max", 1, "F"),
+    createExtremeRow(observations, "Low Temperature", ["tempf"], "min", 1, "F"),
+    createExtremeRow(observations, "High Heat Index", ["heatindexf"], "max", 1, "F"),
+    createExtremeRow(observations, "Low Wind Chill", ["windchillf"], "min", 1, "F"),
+    createExtremeRow(observations, "High Dewpoint", ["dewPoint", "dewpointf"], "max", 1, "F"),
+    createExtremeRow(observations, "Low Dewpoint", ["dewPoint", "dewpointf"], "min", 1, "F"),
+    createExtremeRow(observations, "High Humidity", ["humidity"], "max", 0, "%"),
+    createExtremeRow(observations, "Low Humidity", ["humidity"], "min", 0, "%"),
+    createExtremeRow(observations, "High Barometer", ["baromrelin", "baromabsin"], "max", 3, "inHg"),
+    createExtremeRow(observations, "Low Barometer", ["baromrelin", "baromabsin"], "min", 3, "inHg"),
+    createLatestValueRow(observations, "Rain", ["dailyrainin"], 2, "in"),
+    createExtremeRow(observations, "High Rain Rate", ["hourlyrainin"], "max", 2, "in/h"),
+    createExtremeRow(observations, "High Wind", ["windspeedmph"], "max", 1, "mph"),
+    createAverageRow(observations, "Average Wind", ["windspeedmph"], 1, "mph"),
+    createExtremeRow(observations, "Peak Gust", ["windgustmph"], "max", 1, "mph"),
+    createExtremeRow(observations, "High UV", ["uv"], "max", 1, ""),
+    createExtremeRow(observations, "High Radiation", ["solarradiation"], "max", 0, "W/m2"),
+    createExtremeRow(observations, "High Brightness", ["brightness", "lux"], "max", 0, "lx"),
+    createLatestValueRow(observations, "Lightning Strikes", ["lightning_day", "lightning"], 0, ""),
   ].filter((row): row is SummaryRow => row !== null);
 }
 
@@ -689,6 +721,111 @@ function buildRecentSummaryRows(data: WeatherOverview): SummaryRow[] {
     createExtremeRow(observations, "High UV", ["uv"], "max", 1, ""),
     createExtremeRow(observations, "High Solar", ["solarradiation"], "max", 0, "W/m2"),
   ].filter((row): row is SummaryRow => row !== null);
+}
+
+function buildMastheadRows(data: WeatherOverview, view: WeatherDashboardView): FactRow[] {
+  return [
+    { label: "Station", value: data.station.name || "Unknown station" },
+    { label: "View", value: getViewMeta(view).label },
+    { label: "Software", value: "Ambient Weather + Firestore + NOAA" },
+    {
+      label: "Last report",
+      value: data.station.lastObservationAt || formatWeatherLong(data.fetchedAt),
+    },
+    { label: "Loaded", value: `${data.observationCount} observations` },
+    { label: "History", value: formatSpan(data.timeRange.spanMs) },
+  ];
+}
+
+function buildStationDetailRows(data: WeatherOverview, notice?: string): FactRow[] {
+  const coordinates = resolveDisplayCoordinates(data);
+
+  return [
+    { label: "Station", value: data.station.name || "Unknown station" },
+    { label: "Location", value: data.station.location || "Location not provided" },
+    {
+      label: "Coordinates",
+      value: `${coordinates.latitude.toFixed(4)}, ${coordinates.longitude.toFixed(4)}`,
+    },
+    { label: "MAC Address", value: data.station.macAddress || "Not reported" },
+    {
+      label: "Last Station Report",
+      value: data.station.lastObservationAt || formatWeatherLong(data.fetchedAt),
+    },
+    { label: "Local Refresh", value: formatWeatherLong(data.fetchedAt) },
+    { label: "Loaded Observations", value: String(data.observationCount) },
+    { label: "Loaded History", value: formatSpan(data.timeRange.spanMs) },
+    { label: "Forecast Source", value: data.forecast.length ? "NOAA hourly forecast" : "Unavailable on this fetch" },
+    { label: "Feed Status", value: notice ? "Serving cached or persisted data" : "Serving latest fetch" },
+  ];
+}
+
+function getViewMeta(view: WeatherDashboardView) {
+  if (view === "year") {
+    return {
+      label: "Year",
+      heading: "Yearly Weather History",
+      subtitle: "A longer station view built from persisted observations, keeping the top tabs closer to the reference site's page behavior.",
+      periodTitle: "This Year",
+      periodSubtitle: "Highs, lows, and peaks across the stored yearly view.",
+    };
+  }
+
+  if (view === "month") {
+    return {
+      label: "Month",
+      heading: "Monthly Weather History",
+      subtitle: "A month-scale summary view from the station archive, tuned to feel more like a dedicated weather page than a dashboard card set.",
+      periodTitle: "This Month",
+      periodSubtitle: "Highs, lows, and peaks across the stored monthly view.",
+    };
+  }
+
+  if (view === "week") {
+    return {
+      label: "Week",
+      heading: "Weekly Weather History",
+      subtitle: "A seven-day station view using persisted observations so the tabs behave more like real page tabs.",
+      periodTitle: "This Week",
+      periodSubtitle: "Highs, lows, and peaks across the stored weekly view.",
+    };
+  }
+
+  return {
+    label: "Current",
+    heading: "Current Weather Conditions",
+    subtitle: "Live station conditions with dense tables, almanac timing, and a wider graph stack inspired by Century Farm Weather.",
+    periodTitle: "Since Midnight",
+    periodSubtitle: "Today's highs, lows, and peaks from the loaded station observations.",
+  };
+}
+
+function buildHeaderMeta(
+  data: WeatherOverview,
+  coordinates: { latitude: number; longitude: number },
+) {
+  const parts = [];
+
+  if (data.station.location) {
+    parts.push(data.station.location);
+  }
+
+  parts.push(
+    `${formatCoordinate(coordinates.latitude, "N", "S")} | ${formatCoordinate(coordinates.longitude, "E", "W")}`,
+  );
+
+  return parts.join(" | ");
+}
+
+function resolveDisplayCoordinates(data: WeatherOverview) {
+  return {
+    latitude: data.station.latitude ?? DISPLAY_COORDINATES.latitude,
+    longitude: data.station.longitude ?? DISPLAY_COORDINATES.longitude,
+  };
+}
+
+function buildMapUrl(latitude: number, longitude: number) {
+  return `https://maps.google.com/?q=${latitude},${longitude}`;
 }
 
 function createExtremeRow(
@@ -764,7 +901,9 @@ function createLatestValueRow(
   decimals: number,
   unit: string,
 ) {
-  const latest = [...observations].reverse().find((observation) => pickNumber(observation, keys) !== null);
+  const latest = [...observations]
+    .reverse()
+    .find((observation) => pickNumber(observation, keys) !== null);
 
   if (!latest) {
     return null;
@@ -866,12 +1005,13 @@ function buildTrendValue(
   return `${sign}${formatCompact(delta, decimals)} ${unit}`.trim();
 }
 
-function buildMapUrl(data: WeatherOverview) {
-  if (data.station.latitude === null || data.station.longitude === null) {
-    return "";
-  }
+function filterObservationsForLatestDay(observations: WeatherObservation[]) {
+  const latestTimestamp = observations.at(-1)?.timestamp ?? 0;
+  const latestDayKey = formatDayKey(latestTimestamp);
 
-  return `https://maps.google.com/?q=${data.station.latitude},${data.station.longitude}`;
+  return observations.filter(
+    (observation) => formatDayKey(observation.timestamp ?? 0) === latestDayKey,
+  );
 }
 
 function formatObservationValue(
@@ -995,8 +1135,33 @@ function formatSpan(spanMs: number) {
   return parts.join(" ") || "Less than 1m";
 }
 
+function prepareGraphSeries(seriesList: WeatherSeries[]) {
+  return seriesList
+    .map((series) => ({
+      ...series,
+      points: condenseSeriesPoints(series.points, 240),
+    }))
+    .filter((series) => series.points.length > 1);
+}
+
+function condenseSeriesPoints(points: WeatherSeries["points"], maxPoints: number) {
+  if (points.length <= maxPoints) {
+    return points;
+  }
+
+  const step = Math.ceil(points.length / maxPoints);
+  const condensed = points.filter((_, index) => index % step === 0);
+  const last = points.at(-1);
+
+  if (last && condensed.at(-1)?.timestamp !== last.timestamp) {
+    condensed.push(last);
+  }
+
+  return condensed;
+}
+
 function pickSeriesAccent(seriesId: string) {
-  if (seriesId === "temperature") {
+  if (seriesId === "temperature" || seriesId === "indoorTemperature") {
     return "#d97b23";
   }
 
@@ -1004,7 +1169,7 @@ function pickSeriesAccent(seriesId: string) {
     return "#8d6fd1";
   }
 
-  if (seriesId === "humidity") {
+  if (seriesId === "humidity" || seriesId === "indoorHumidity") {
     return "#16a1b7";
   }
 
@@ -1016,8 +1181,12 @@ function pickSeriesAccent(seriesId: string) {
     return "#159957";
   }
 
-  if (seriesId === "uv" || seriesId === "solar") {
+  if (seriesId === "uv" || seriesId === "solar" || seriesId === "brightness") {
     return "#e6a400";
+  }
+
+  if (seriesId === "rain" || seriesId === "rainRate") {
+    return "#2563eb";
   }
 
   return "#0f92a7";

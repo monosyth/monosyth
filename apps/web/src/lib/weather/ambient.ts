@@ -1,5 +1,5 @@
 import { buildWeatherOverview } from "@/lib/weather/overview";
-import { persistWeatherHistory } from "@/lib/weather/history";
+import { persistWeatherHistory, readStoredWeatherObservations } from "@/lib/weather/history";
 import { getHourlyForecast } from "@/lib/weather/nws";
 import type { WeatherObservation, WeatherPageData } from "@/lib/weather/types";
 
@@ -32,6 +32,8 @@ type LiveWeatherSnapshot = {
   device: WeatherDevice;
   observations: WeatherObservation[];
 };
+
+export type WeatherDashboardView = "current" | "week" | "month" | "year";
 
 let weatherCache: WeatherCacheEntry | null = null;
 
@@ -278,7 +280,17 @@ function resolveForecastCoordinates(observations: WeatherObservation[]) {
   };
 }
 
-export async function getWeatherPageData(): Promise<WeatherPageData> {
+export function normalizeWeatherDashboardView(
+  value?: string,
+): WeatherDashboardView {
+  if (value === "week" || value === "month" || value === "year") {
+    return value;
+  }
+
+  return "current";
+}
+
+async function getCurrentWeatherPageData(): Promise<WeatherPageData> {
   const missing = getMissingVars();
 
   if (missing.length > 0) {
@@ -336,6 +348,74 @@ export async function getWeatherPageData(): Promise<WeatherPageData> {
       state: "error",
       message,
     };
+  }
+}
+
+function buildFallbackDevice(observations: WeatherObservation[]): WeatherDevice {
+  const env = readEnv();
+
+  return {
+    macAddress: env.macAddress,
+    info: {
+      name: env.stationName || "Ambient Station",
+      location: env.stationLocation || "",
+    },
+    lastData: {
+      dateutc: observations.at(-1)?.timestamp ?? observations.at(-1)?.dateutc ?? Date.now(),
+    },
+  };
+}
+
+function buildViewNotice(view: WeatherDashboardView, count: number) {
+  const label = view === "week" ? "week" : view === "month" ? "month" : "year";
+
+  if (count === 0) {
+    return `No persisted ${label} history is available yet, so this view is falling back to the most recent station window.`;
+  }
+
+  return `Showing stored ${label} history collected from the station logger instead of just the latest Ambient Weather snapshot.`;
+}
+
+export async function getWeatherPageData(
+  view: WeatherDashboardView = "current",
+): Promise<WeatherPageData> {
+  if (view === "current") {
+    return getCurrentWeatherPageData();
+  }
+
+  const currentResult = await getCurrentWeatherPageData();
+
+  if (currentResult.state !== "ready") {
+    return currentResult;
+  }
+
+  try {
+    const env = readEnv();
+    const historicalObservations = await readStoredWeatherObservations({
+      macAddress: env.macAddress,
+      range: view,
+    });
+    const observations = historicalObservations.length
+      ? historicalObservations
+      : currentResult.data.observations;
+    const coordinates = resolveForecastCoordinates(
+      observations.length ? observations : currentResult.data.observations,
+    );
+    const forecast =
+      currentResult.data.forecast.length
+        ? currentResult.data.forecast
+        : await getHourlyForecast(coordinates.latitude, coordinates.longitude).catch(() => []);
+    const readyResult: Extract<WeatherPageData, { state: "ready" }> = {
+      state: "ready",
+      data: applyStationOverrides(
+        buildWeatherOverview(buildFallbackDevice(observations), observations, forecast),
+      ),
+      notice: buildViewNotice(view, historicalObservations.length),
+    };
+
+    return readyResult;
+  } catch {
+    return currentResult;
   }
 }
 

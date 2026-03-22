@@ -24,6 +24,8 @@ export type PersistWeatherHistoryResult = {
   latestObservationAt: string | null;
 };
 
+export type WeatherHistoryRange = "week" | "month" | "year";
+
 export async function persistWeatherHistory(
   input: PersistWeatherHistoryInput,
 ): Promise<PersistWeatherHistoryResult> {
@@ -98,9 +100,63 @@ export async function persistWeatherHistory(
   };
 }
 
-function buildStationId(macAddress?: string) {
+export async function readStoredWeatherObservations(input: {
+  macAddress?: string;
+  range: WeatherHistoryRange;
+}): Promise<WeatherObservation[]> {
+  const stationId = buildStationId(input.macAddress);
+  const db = getFirebaseAdminDb();
+  const sinceMs = Date.now() - pickRangeDurationMs(input.range);
+  const snapshot = await db
+    .collection("weatherStations")
+    .doc(stationId)
+    .collection("observations")
+    .where("observedAt", ">=", Timestamp.fromMillis(sinceMs))
+    .orderBy("observedAt", "asc")
+    .limit(4000)
+    .get();
+
+  const observations: WeatherObservation[] = snapshot.docs
+    .map((doc) => {
+      const data = doc.data();
+      const observedAt = data.observedAt instanceof Timestamp ? data.observedAt.toMillis() : 0;
+      const observation =
+        data.observation && typeof data.observation === "object"
+          ? (data.observation as WeatherObservation)
+          : null;
+
+      if (!observation || observedAt === 0) {
+        return null;
+      }
+
+      return {
+        ...observation,
+        dateutc:
+          observation.dateutc ??
+          observedAt,
+        timestamp: observedAt,
+      } as WeatherObservation;
+    })
+    .filter((observation): observation is NonNullable<typeof observation> => observation !== null);
+
+  return observations;
+}
+
+export function buildStationId(macAddress?: string) {
   const base = (macAddress ?? "default-station").trim().toLowerCase();
   return base.replace(/[^a-z0-9_-]/g, "_");
+}
+
+function pickRangeDurationMs(range: WeatherHistoryRange) {
+  if (range === "year") {
+    return 365 * 24 * 60 * 60 * 1000;
+  }
+
+  if (range === "month") {
+    return 31 * 24 * 60 * 60 * 1000;
+  }
+
+  return 7 * 24 * 60 * 60 * 1000;
 }
 
 function pickNumber(

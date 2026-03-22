@@ -27,11 +27,16 @@ const seriesDefinitions = [
   { id: "temperature", label: "Temperature", keys: ["tempf"], unit: "F", decimals: 1 },
   { id: "dewpoint", label: "Dew Point", keys: ["dewPoint", "dewpointf"], unit: "F", decimals: 1 },
   { id: "humidity", label: "Humidity", keys: ["humidity"], unit: "%", decimals: 0 },
+  { id: "indoorHumidity", label: "Indoor Humidity", keys: ["humidityin"], unit: "%", decimals: 0 },
+  { id: "indoorTemperature", label: "Indoor Temperature", keys: ["tempinf"], unit: "F", decimals: 1 },
   { id: "wind", label: "Wind Speed", keys: ["windspeedmph"], unit: "mph", decimals: 1 },
   { id: "gust", label: "Wind Gust", keys: ["windgustmph"], unit: "mph", decimals: 1 },
+  { id: "rainRate", label: "Rain Rate", keys: ["hourlyrainin"], unit: "in/h", decimals: 2 },
   { id: "pressure", label: "Pressure", keys: ["baromrelin", "baromabsin"], unit: "inHg", decimals: 2 },
   { id: "uv", label: "UV Index", keys: ["uv"], unit: "", decimals: 1 },
   { id: "solar", label: "Solar", keys: ["solarradiation"], unit: "W/m2", decimals: 0 },
+  { id: "brightness", label: "Brightness", keys: ["brightness", "lux"], unit: "lx", decimals: 0 },
+  { id: "lightning", label: "Lightning", keys: ["lightning_day", "lightning"], unit: "", decimals: 0 },
   { id: "rain", label: "Daily Rain", keys: ["dailyrainin"], unit: "in", decimals: 2 },
 ] as const;
 
