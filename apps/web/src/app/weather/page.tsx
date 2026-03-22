@@ -8,6 +8,7 @@ import {
   type WeatherDashboardView,
 } from "@/lib/weather/ambient";
 import { buildWeatherAlmanac } from "@/lib/weather/almanac";
+import { readStoredWeatherObservationsForDay } from "@/lib/weather/history";
 import {
   formatWeatherClock,
   formatWeatherDateTime,
@@ -32,6 +33,12 @@ type SummaryRow = {
   label: string;
   value: string;
   detail: string;
+};
+
+type GraphGroup = {
+  title: string;
+  subtitle: string;
+  series: WeatherSeries[];
 };
 
 type WeatherPageProps = {
@@ -79,6 +86,7 @@ const summaryTabs = [
 
 const sectionTabs = [
   { label: "Summaries", href: "#summary-section" },
+  { label: "Radar", href: "#radar-section" },
   { label: "Almanac", href: "#almanac-section" },
   { label: "Graphs", href: "#graphs-section" },
   { label: "About", href: "#about-section" },
@@ -111,7 +119,10 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
     longitude: coordinates.longitude,
   });
   const mapUrl = buildMapUrl(coordinates.latitude, coordinates.longitude);
+  const radarUrl = buildRadarEmbedUrl(coordinates.latitude, coordinates.longitude);
   const viewMeta = getViewMeta(activeView);
+  const historicalComparison = await getHistoricalComparison(data, activeView);
+  const graphDeck = buildGraphDeck(graphSeries);
 
   return (
     <main className="min-h-screen bg-[#ececec] text-stone-800">
@@ -268,15 +279,34 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
 
           <TablePanel
             id="recent-section"
-            title="Recent Range"
-            subtitle="A compact summary of the active tab window and where the readings moved."
+            title={historicalComparison.title}
+            subtitle={historicalComparison.subtitle}
           >
             <ThreeColumnTable
-              rows={rangeRows}
-              emptyMessage="Range details will appear once enough observations are available."
+              rows={historicalComparison.rows.length ? historicalComparison.rows : rangeRows}
+              emptyMessage={historicalComparison.rows.length ? "Historical comparison rows unavailable." : "Range details will appear once enough observations are available."}
             />
           </TablePanel>
         </div>
+
+        <TablePanel
+          id="radar-section"
+          title="Radar"
+          subtitle="Regional radar centered on the station area, using an external live weather map embed."
+          className="mt-6"
+        >
+          <div className="overflow-hidden rounded-sm border border-stone-200 bg-white">
+            <iframe
+              title="Weather radar"
+              src={radarUrl}
+              className="h-[520px] w-full"
+              loading="lazy"
+            />
+          </div>
+          <p className="mt-3 text-sm text-stone-500">
+            The radar panel uses a live external map embed so we can get closer to the reference site&apos;s regional weather context without needing a separate radar API key.
+          </p>
+        </TablePanel>
 
         <TablePanel
           id="graphs-section"
@@ -285,10 +315,24 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           className="mt-6"
         >
           {graphSeries.length ? (
-            <div className="grid gap-4 xl:grid-cols-2">
-              {graphSeries.map((series) => (
+            <div className="space-y-4">
+              {graphDeck.featured.length ? (
+                <div className="grid gap-4 xl:grid-cols-3">
+                  {graphDeck.featured.map((group) => (
+                    <CombinedTrendPanel
+                      key={group.title}
+                      title={group.title}
+                      subtitle={group.subtitle}
+                      seriesList={group.series}
+                    />
+                  ))}
+                </div>
+              ) : null}
+              <div className="grid gap-4 xl:grid-cols-2">
+                {graphDeck.singles.map((series) => (
                 <TrendPanel key={series.id} series={series} />
-              ))}
+                ))}
+              </div>
             </div>
           ) : (
             <PanelState message="Trend charts need at least two recent observations with matching fields." />
@@ -501,6 +545,131 @@ function ForecastTable({ periods }: { periods: WeatherForecastPeriod[] }) {
   );
 }
 
+function CombinedTrendPanel({
+  title,
+  subtitle,
+  seriesList,
+}: {
+  title: string;
+  subtitle: string;
+  seriesList: WeatherSeries[];
+}) {
+  const width = 420;
+  const height = 180;
+  const left = 18;
+  const right = 14;
+  const top = 10;
+  const bottom = 22;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+  const values = seriesList.flatMap((series) => series.points.map((point) => point.value));
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const labelSeries = seriesList[0]!;
+
+  return (
+    <article className="rounded-sm border border-stone-200 bg-[#fafafa] p-4 shadow-[0_4px_14px_rgba(0,0,0,0.04)]">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xl font-light tracking-[-0.02em] text-stone-700">{title}</p>
+          <p className="mt-1 text-sm text-stone-500">{subtitle}</p>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-3">
+        {seriesList.map((series) => (
+          <div
+            key={series.id}
+            className="rounded-full border border-stone-200 bg-white px-3 py-1.5 text-sm text-stone-700"
+          >
+            <span
+              className="mr-2 inline-block h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: pickSeriesAccent(series.id) }}
+            />
+            {series.label}:{" "}
+            {formatSeriesValue(series.points.at(-1)?.value ?? null, series.decimals, series.unit)}
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 rounded-sm border border-stone-200 bg-white p-3">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          role="img"
+          aria-label={`${title} trend`}
+          className="h-44 w-full"
+        >
+          {[0, 0.5, 1].map((ratio) => {
+            const y = top + plotHeight * ratio;
+
+            return (
+              <line
+                key={ratio}
+                x1={left}
+                y1={y}
+                x2={left + plotWidth}
+                y2={y}
+                stroke="#dadada"
+                strokeWidth="1"
+              />
+            );
+          })}
+          {seriesList.map((series) => {
+            const points = series.points.map((point, index) => {
+              const x = left + (index / Math.max(series.points.length - 1, 1)) * plotWidth;
+              const y = top + (1 - (point.value - min) / span) * plotHeight;
+              return { x, y };
+            });
+            const linePath = points
+              .map((point, index) =>
+                `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`,
+              )
+              .join(" ");
+            const accent = pickSeriesAccent(series.id);
+
+            return (
+              <g key={series.id}>
+                <path
+                  d={linePath}
+                  fill="none"
+                  stroke={accent}
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                {points.at(-1) ? (
+                  <circle
+                    cx={points.at(-1)?.x ?? left}
+                    cy={points.at(-1)?.y ?? top}
+                    r="4"
+                    fill={accent}
+                  />
+                ) : null}
+              </g>
+            );
+          })}
+          <text x="6" y={top + 4} fill="#7a7a7a" fontSize="12">
+            {formatCompact(max, labelSeries.decimals)}
+          </text>
+          <text x="6" y={top + plotHeight / 2 + 4} fill="#7a7a7a" fontSize="12">
+            {formatCompact(min + span / 2, labelSeries.decimals)}
+          </text>
+          <text x="6" y={top + plotHeight + 4} fill="#7a7a7a" fontSize="12">
+            {formatCompact(min, labelSeries.decimals)}
+          </text>
+        </svg>
+      </div>
+
+      <div className="mt-3 flex items-center justify-between text-sm text-stone-500">
+        <span>{labelSeries.points[0]?.label}</span>
+        <span>{labelSeries.unit || "Multi-series"}</span>
+        <span>{labelSeries.points.at(-1)?.label}</span>
+      </div>
+    </article>
+  );
+}
+
 function TrendPanel({ series }: { series: WeatherSeries }) {
   const width = 420;
   const height = 168;
@@ -671,27 +840,7 @@ function buildPeriodSummaryRows(
     return [];
   }
 
-  return [
-    createExtremeRow(observations, "High Temperature", ["tempf"], "max", 1, "F"),
-    createExtremeRow(observations, "Low Temperature", ["tempf"], "min", 1, "F"),
-    createExtremeRow(observations, "High Heat Index", ["heatindexf"], "max", 1, "F"),
-    createExtremeRow(observations, "Low Wind Chill", ["windchillf"], "min", 1, "F"),
-    createExtremeRow(observations, "High Dewpoint", ["dewPoint", "dewpointf"], "max", 1, "F"),
-    createExtremeRow(observations, "Low Dewpoint", ["dewPoint", "dewpointf"], "min", 1, "F"),
-    createExtremeRow(observations, "High Humidity", ["humidity"], "max", 0, "%"),
-    createExtremeRow(observations, "Low Humidity", ["humidity"], "min", 0, "%"),
-    createExtremeRow(observations, "High Barometer", ["baromrelin", "baromabsin"], "max", 3, "inHg"),
-    createExtremeRow(observations, "Low Barometer", ["baromrelin", "baromabsin"], "min", 3, "inHg"),
-    createLatestValueRow(observations, "Rain", ["dailyrainin"], 2, "in"),
-    createExtremeRow(observations, "High Rain Rate", ["hourlyrainin"], "max", 2, "in/h"),
-    createExtremeRow(observations, "High Wind", ["windspeedmph"], "max", 1, "mph"),
-    createAverageRow(observations, "Average Wind", ["windspeedmph"], 1, "mph"),
-    createExtremeRow(observations, "Peak Gust", ["windgustmph"], "max", 1, "mph"),
-    createExtremeRow(observations, "High UV", ["uv"], "max", 1, ""),
-    createExtremeRow(observations, "High Radiation", ["solarradiation"], "max", 0, "W/m2"),
-    createExtremeRow(observations, "High Brightness", ["brightness", "lux"], "max", 0, "lx"),
-    createLatestValueRow(observations, "Lightning Strikes", ["lightning_day", "lightning"], 0, ""),
-  ].filter((row): row is SummaryRow => row !== null);
+  return buildPeriodSummaryRowsFromObservations(observations);
 }
 
 function buildRecentSummaryRows(data: WeatherOverview): SummaryRow[] {
@@ -800,6 +949,39 @@ function getViewMeta(view: WeatherDashboardView) {
   };
 }
 
+async function getHistoricalComparison(
+  data: WeatherOverview,
+  view: WeatherDashboardView,
+) {
+  if (view !== "current" || !data.station.macAddress) {
+    return {
+      title: "Recent Range",
+      subtitle: "A compact summary of the active tab window and where the readings moved.",
+      rows: [] as SummaryRow[],
+    };
+  }
+
+  const latestDate = new Date(data.fetchedAt);
+  const parts = getWeatherCalendarParts(latestDate);
+  const priorYear = parts.year - 1;
+  const observations = await readStoredWeatherObservationsForDay({
+    macAddress: data.station.macAddress,
+    year: priorYear,
+    month: parts.month,
+    day: parts.day,
+  }).catch(() => []);
+
+  return {
+    title: `Last ${formatWeatherDayLabel(parts.month, parts.day)} (${priorYear})`,
+    subtitle: observations.length
+      ? "A same-day historical comparison from the stored station archive."
+      : "No same-day historical archive is available yet, so this panel falls back to the current range summary.",
+    rows: observations.length
+      ? buildPeriodSummaryRowsFromObservations(observations)
+      : [],
+  };
+}
+
 function buildHeaderMeta(
   data: WeatherOverview,
   coordinates: { latitude: number; longitude: number },
@@ -826,6 +1008,33 @@ function resolveDisplayCoordinates(data: WeatherOverview) {
 
 function buildMapUrl(latitude: number, longitude: number) {
   return `https://maps.google.com/?q=${latitude},${longitude}`;
+}
+
+function buildRadarEmbedUrl(latitude: number, longitude: number) {
+  const params = new URLSearchParams({
+    lat: latitude.toFixed(4),
+    lon: longitude.toFixed(4),
+    detailLat: latitude.toFixed(4),
+    detailLon: longitude.toFixed(4),
+    width: "650",
+    height: "520",
+    zoom: "7",
+    level: "surface",
+    overlay: "radar",
+    product: "radar",
+    menu: "",
+    message: "true",
+    marker: "true",
+    calendar: "now",
+    pressure: "true",
+    type: "map",
+    location: "coordinates",
+    detail: "true",
+    metricWind: "mph",
+    metricTemp: "°F",
+  });
+
+  return `https://embed.windy.com/embed2.html?${params.toString()}`;
 }
 
 function createExtremeRow(
@@ -868,6 +1077,30 @@ function createExtremeRow(
     value: formatSeriesValue(winner.value, decimals, unit),
     detail: winner.timestamp ? formatWeatherClock(winner.timestamp) : "--",
   };
+}
+
+function buildPeriodSummaryRowsFromObservations(observations: WeatherObservation[]) {
+  return [
+    createExtremeRow(observations, "High Temperature", ["tempf"], "max", 1, "F"),
+    createExtremeRow(observations, "Low Temperature", ["tempf"], "min", 1, "F"),
+    createExtremeRow(observations, "High Heat Index", ["heatindexf"], "max", 1, "F"),
+    createExtremeRow(observations, "Low Wind Chill", ["windchillf"], "min", 1, "F"),
+    createExtremeRow(observations, "High Dewpoint", ["dewPoint", "dewpointf"], "max", 1, "F"),
+    createExtremeRow(observations, "Low Dewpoint", ["dewPoint", "dewpointf"], "min", 1, "F"),
+    createExtremeRow(observations, "High Humidity", ["humidity"], "max", 0, "%"),
+    createExtremeRow(observations, "Low Humidity", ["humidity"], "min", 0, "%"),
+    createExtremeRow(observations, "High Barometer", ["baromrelin", "baromabsin"], "max", 3, "inHg"),
+    createExtremeRow(observations, "Low Barometer", ["baromrelin", "baromabsin"], "min", 3, "inHg"),
+    createLatestValueRow(observations, "Rain", ["dailyrainin"], 2, "in"),
+    createExtremeRow(observations, "High Rain Rate", ["hourlyrainin"], "max", 2, "in/h"),
+    createExtremeRow(observations, "High Wind", ["windspeedmph"], "max", 1, "mph"),
+    createAverageRow(observations, "Average Wind", ["windspeedmph"], 1, "mph"),
+    createExtremeRow(observations, "Peak Gust", ["windgustmph"], "max", 1, "mph"),
+    createExtremeRow(observations, "High UV", ["uv"], "max", 1, ""),
+    createExtremeRow(observations, "High Radiation", ["solarradiation"], "max", 0, "W/m2"),
+    createExtremeRow(observations, "High Brightness", ["brightness", "lux"], "max", 0, "lx"),
+    createLatestValueRow(observations, "Lightning Strikes", ["lightning_day", "lightning"], 0, ""),
+  ].filter((row): row is SummaryRow => row !== null);
 }
 
 function createAverageRow(
@@ -1144,6 +1377,54 @@ function prepareGraphSeries(seriesList: WeatherSeries[]) {
     .filter((series) => series.points.length > 1);
 }
 
+function buildGraphDeck(seriesList: WeatherSeries[]) {
+  const byId = new Map(seriesList.map((series) => [series.id, series] as const));
+  const usedIds = new Set<string>();
+  const featured: GraphGroup[] = [];
+  const combinations = [
+    {
+      title: "Temperature Family",
+      subtitle: "Outdoor temperature, dew point, and indoor temperature",
+      ids: ["temperature", "dewpoint", "indoorTemperature"],
+    },
+    {
+      title: "Inside/Outside Humidity",
+      subtitle: "Outdoor humidity compared with the indoor sensor",
+      ids: ["humidity", "indoorHumidity"],
+    },
+    {
+      title: "Wind and Gust",
+      subtitle: "Wind speed and gusts on the same chart",
+      ids: ["wind", "gust"],
+    },
+  ];
+
+  for (const combo of combinations) {
+    const series = combo.ids
+      .map((id) => byId.get(id))
+      .filter((item): item is WeatherSeries => Boolean(item));
+
+    if (series.length < 2) {
+      continue;
+    }
+
+    for (const item of series) {
+      usedIds.add(item.id);
+    }
+
+    featured.push({
+      title: combo.title,
+      subtitle: combo.subtitle,
+      series,
+    });
+  }
+
+  return {
+    featured,
+    singles: seriesList.filter((series) => !usedIds.has(series.id)),
+  };
+}
+
 function condenseSeriesPoints(points: WeatherSeries["points"], maxPoints: number) {
   if (points.length <= maxPoints) {
     return points;
@@ -1190,4 +1471,26 @@ function pickSeriesAccent(seriesId: string) {
   }
 
   return "#0f92a7";
+}
+
+function getWeatherCalendarParts(value: Date) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = formatter.formatToParts(value);
+  const year = Number(parts.find((part) => part.type === "year")?.value ?? "0");
+  const month = Number(parts.find((part) => part.type === "month")?.value ?? "0");
+  const day = Number(parts.find((part) => part.type === "day")?.value ?? "0");
+
+  return { year, month, day };
+}
+
+function formatWeatherDayLabel(month: number, day: number) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(new Date(2026, month - 1, day, 12, 0, 0, 0));
 }
