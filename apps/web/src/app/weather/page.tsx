@@ -237,7 +237,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           <TablePanel
             id="current-section"
             title="Current Conditions"
-            subtitle={`The latest station reading in the active ${viewMeta.label.toLowerCase()} tab.`}
+            subtitle={`Latest station reading for the ${viewMeta.label.toLowerCase()} view.`}
           >
             <TwoColumnTable
               rows={currentRows}
@@ -248,7 +248,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           <TablePanel
             id="almanac-section"
             title="Almanac"
-            subtitle="Sun and moon timing computed for the station area, similar to the reference weather station page."
+            subtitle="Sun and moon timing for the station area."
           >
             <div className="grid gap-6 md:grid-cols-2">
               <div>
@@ -283,7 +283,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           <TablePanel
             id="recent-section"
             title="Recent Range"
-            subtitle="A compact summary of the active tab window and where the readings moved."
+            subtitle="Active window summary."
           >
             <ThreeColumnTable
               rows={rangeRows}
@@ -320,7 +320,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           <TablePanel
             id="radar-section"
             title="Radar"
-            subtitle="Regional radar centered on the station area, using an external live weather map embed."
+            subtitle="Regional radar centered on the station area."
           >
             <div className="overflow-hidden rounded-sm border border-stone-200 bg-white">
               <iframe
@@ -330,16 +330,13 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
                 loading="lazy"
               />
             </div>
-            <p className="mt-3 text-sm text-stone-500">
-              The radar panel uses a live external map embed so we can get closer to the reference site&apos;s regional weather context without needing a separate radar API key.
-            </p>
           </TablePanel>
 
           <div className="grid gap-6">
             <TablePanel
               id="forecast-section"
               title="Forecast Outlook"
-              subtitle="Short-range hourly forecast pulled alongside the station feed."
+              subtitle="Hourly outlook."
             >
               <ForecastTable periods={data.forecast.slice(0, 8)} />
             </TablePanel>
@@ -347,7 +344,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
             <TablePanel
               id="about-section"
               title="About This Station"
-              subtitle="Station metadata, source details, and the newest raw payload values."
+              subtitle="Station details and newest raw payload values."
             >
               <div className="grid gap-6">
                 <TwoColumnTable
@@ -372,34 +369,31 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
         <TablePanel
           id="graphs-section"
           title="Graphs"
-          subtitle="A wider set of classic station graphs, tuned to feel closer to Century Farm's graph catalog."
+          subtitle="Station graph gallery."
           className="mt-6"
         >
           {graphSeries.length ? (
-            <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {graphDeck.hero ? (
                 <CombinedTrendPanel
                   title={graphDeck.hero.title}
                   subtitle={graphDeck.hero.subtitle}
                   seriesList={graphDeck.hero.series}
-                  size="hero"
+                  compact
                 />
               ) : null}
-              {graphDeck.featured.length ? (
-                <div className="grid gap-4 xl:grid-cols-2">
-                  {graphDeck.featured.map((group) => (
-                    <CombinedTrendPanel
-                      key={group.title}
-                      title={group.title}
-                      subtitle={group.subtitle}
-                      seriesList={group.series}
-                    />
-                  ))}
-                </div>
-              ) : null}
-              <div className="grid gap-4 xl:grid-cols-3">
+              {graphDeck.featured.map((group) => (
+                <CombinedTrendPanel
+                  key={group.title}
+                  title={group.title}
+                  subtitle={group.subtitle}
+                  seriesList={group.series}
+                  compact
+                />
+              ))}
+              <div className="contents">
                 {graphDeck.singles.map((series) => (
-                  <TrendPanel key={series.id} series={series} />
+                  <TrendPanel key={series.id} series={series} compact />
                 ))}
               </div>
             </div>
@@ -586,14 +580,16 @@ function CombinedTrendPanel({
   subtitle,
   seriesList,
   size = "standard",
+  compact = false,
 }: {
   title: string;
   subtitle: string;
   seriesList: WeatherSeries[];
   size?: "hero" | "standard";
+  compact?: boolean;
 }) {
   const width = 420;
-  const height = size === "hero" ? 240 : 180;
+  const height = compact ? 156 : size === "hero" ? 240 : 180;
   const left = 18;
   const right = 14;
   const top = 10;
@@ -611,34 +607,29 @@ function CombinedTrendPanel({
     <article className="border border-stone-200 bg-white p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Station Graph</p>
-          <p className="text-xl font-light tracking-[-0.02em] text-stone-700">{title}</p>
-          <p className="mt-1 text-sm text-stone-500">{subtitle}</p>
+          <p className="text-lg font-light tracking-[-0.02em] text-stone-700">{title}</p>
+          <p className={`mt-1 text-stone-500 ${compact ? "text-xs" : "text-sm"}`}>{subtitle}</p>
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-3">
+      <div className={`mt-2 flex flex-wrap gap-x-4 gap-y-1 text-stone-600 ${compact ? "text-xs" : "text-sm"}`}>
         {seriesList.map((series) => (
-          <div
-            key={series.id}
-            className="border border-stone-200 bg-[#fafafa] px-3 py-1.5 text-sm text-stone-700"
-          >
+          <span key={series.id}>
             <span
-              className="mr-2 inline-block h-2.5 w-2.5 rounded-full"
+              className="mr-2 inline-block h-2.5 w-2.5 rounded-full align-middle"
               style={{ backgroundColor: pickSeriesAccent(series.id) }}
             />
-            {series.label}:{" "}
-            {formatSeriesValue(series.points.at(-1)?.value ?? null, series.decimals, series.unit)}
-          </div>
+            {series.label}: {formatSeriesValue(series.points.at(-1)?.value ?? null, series.decimals, series.unit)}
+          </span>
         ))}
       </div>
 
-      <div className="mt-4 rounded-sm border border-stone-200 bg-white p-3">
+      <div className="mt-3 border border-stone-200 bg-white p-3">
         <svg
           viewBox={`0 0 ${width} ${height}`}
           role="img"
           aria-label={`${title} trend`}
-          className={`${size === "hero" ? "h-64" : "h-44"} w-full`}
+          className={`${compact ? "h-36" : size === "hero" ? "h-64" : "h-44"} w-full`}
         >
           {gridLines.map((ratio) => {
             const y = top + plotHeight * ratio;
@@ -701,7 +692,7 @@ function CombinedTrendPanel({
         </svg>
       </div>
 
-      <div className="mt-3 flex items-center justify-between text-sm text-stone-500">
+      <div className={`mt-2 flex items-center justify-between text-stone-500 ${compact ? "text-xs" : "text-sm"}`}>
         <span>{labelSeries.points[0]?.label}</span>
         <span>{labelSeries.unit || "Multi-series"}</span>
         <span>{labelSeries.points.at(-1)?.label}</span>
@@ -710,9 +701,9 @@ function CombinedTrendPanel({
   );
 }
 
-function TrendPanel({ series }: { series: WeatherSeries }) {
+function TrendPanel({ series, compact = false }: { series: WeatherSeries; compact?: boolean }) {
   const width = 420;
-  const height = 168;
+  const height = compact ? 146 : 168;
   const left = 18;
   const right = 14;
   const top = 10;
@@ -740,26 +731,25 @@ function TrendPanel({ series }: { series: WeatherSeries }) {
     <article className="border border-stone-200 bg-white p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Station Graph</p>
-          <p className="text-xl font-light tracking-[-0.02em] text-stone-700">
+          <p className="text-lg font-light tracking-[-0.02em] text-stone-700">
             {series.label}
           </p>
-          <p className="mt-1 text-sm text-stone-500">{formatSeriesRange(series)}</p>
+          <p className={`mt-1 text-stone-500 ${compact ? "text-xs" : "text-sm"}`}>{formatSeriesRange(series)}</p>
         </div>
         <div className="text-right">
           <p className="text-xs uppercase tracking-[0.16em] text-stone-500">Now</p>
-          <p className="mt-1 text-2xl font-light text-stone-800">
+          <p className={`mt-1 font-light text-stone-800 ${compact ? "text-xl" : "text-2xl"}`}>
             {formatSeriesValue(latestPoint?.value ?? null, series.decimals, series.unit)}
           </p>
         </div>
       </div>
 
-      <div className="mt-4 rounded-sm border border-stone-200 bg-white p-3">
+      <div className="mt-3 border border-stone-200 bg-white p-3">
         <svg
           viewBox={`0 0 ${width} ${height}`}
           role="img"
           aria-label={`${series.label} trend`}
-          className="h-40 w-full"
+          className={`${compact ? "h-36" : "h-40"} w-full`}
         >
           {gridLines.map((ratio) => {
             const y = top + plotHeight * ratio;
@@ -805,7 +795,7 @@ function TrendPanel({ series }: { series: WeatherSeries }) {
         </svg>
       </div>
 
-      <div className="mt-3 flex items-center justify-between text-sm text-stone-500">
+      <div className={`mt-2 flex items-center justify-between text-stone-500 ${compact ? "text-xs" : "text-sm"}`}>
         <span>{series.points[0]?.label}</span>
         <span>
           Low {formatCompact(series.min, series.decimals)} / High{" "}
