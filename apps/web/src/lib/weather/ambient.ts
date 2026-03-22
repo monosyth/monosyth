@@ -1,5 +1,9 @@
 import { buildWeatherOverview } from "@/lib/weather/overview";
-import { persistWeatherHistory, readStoredWeatherObservations } from "@/lib/weather/history";
+import {
+  persistWeatherHistory,
+  readStoredWeatherObservations,
+  readStoredWeatherStationMeta,
+} from "@/lib/weather/history";
 import { getHourlyForecast } from "@/lib/weather/nws";
 import type { WeatherObservation, WeatherPageData } from "@/lib/weather/types";
 
@@ -366,6 +370,25 @@ function buildFallbackDevice(observations: WeatherObservation[]): WeatherDevice 
   };
 }
 
+function buildStoredDevice(
+  observations: WeatherObservation[],
+  storedMeta: Awaited<ReturnType<typeof readStoredWeatherStationMeta>>,
+): WeatherDevice {
+  const env = readEnv();
+  const lastObservationAt = observations.at(-1)?.timestamp ?? observations.at(-1)?.dateutc ?? Date.now();
+
+  return {
+    macAddress: env.macAddress,
+    info: {
+      name: storedMeta?.name || env.stationName || "Ambient Station",
+      location: storedMeta?.location || env.stationLocation || "",
+    },
+    lastData: {
+      dateutc: lastObservationAt,
+    },
+  };
+}
+
 function buildViewNotice(view: WeatherDashboardView, count: number) {
   const label = view === "week" ? "week" : view === "month" ? "month" : "year";
 
@@ -381,6 +404,36 @@ export async function getWeatherPageData(
 ): Promise<WeatherPageData> {
   if (view === "current") {
     return getCurrentWeatherPageData();
+  }
+
+  try {
+    const env = readEnv();
+    const [historicalObservations, storedMeta] = await Promise.all([
+      readStoredWeatherObservations({
+        macAddress: env.macAddress,
+        range: view,
+      }),
+      readStoredWeatherStationMeta({
+        macAddress: env.macAddress,
+      }),
+    ]);
+    if (historicalObservations.length) {
+      const readyResult: Extract<WeatherPageData, { state: "ready" }> = {
+        state: "ready",
+        data: applyStationOverrides(
+          buildWeatherOverview(
+            buildStoredDevice(historicalObservations, storedMeta),
+            historicalObservations,
+            [],
+          ),
+        ),
+        notice: buildViewNotice(view, historicalObservations.length),
+      };
+
+      return readyResult;
+    }
+  } catch {
+    // Fall through to the current snapshot path.
   }
 
   const currentResult = await getCurrentWeatherPageData();

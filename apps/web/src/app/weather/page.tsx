@@ -189,6 +189,8 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
                 <Link
                   key={tab.view}
                   href={href}
+                  prefetch
+                  scroll={false}
                   className={`border-b-4 px-2 py-1 text-2xl font-light transition ${isActive ? "border-[#f4d24f] text-stone-800" : "border-transparent text-stone-600 hover:border-stone-300 hover:text-stone-800"}`}
                 >
                   {tab.label}
@@ -293,7 +295,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           id="radar-section"
           title="Radar"
           subtitle="Regional radar centered on the station area, using an external live weather map embed."
-          className="mt-6"
+          className="mt-6 xl:max-w-4xl"
         >
           <div className="overflow-hidden rounded-sm border border-stone-200 bg-white">
             <iframe

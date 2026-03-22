@@ -26,6 +26,12 @@ export type PersistWeatherHistoryResult = {
 
 export type WeatherHistoryRange = "week" | "month" | "year";
 
+export type StoredWeatherStationMeta = {
+  name: string;
+  location: string;
+  lastObservationAt: string | null;
+};
+
 export async function persistWeatherHistory(
   input: PersistWeatherHistoryInput,
 ): Promise<PersistWeatherHistoryResult> {
@@ -140,6 +146,33 @@ export async function readStoredWeatherObservationsForDay(input: {
     .get();
 
   return mapStoredObservations(snapshot.docs.map((doc) => doc.data()));
+}
+
+export async function readStoredWeatherStationMeta(input: {
+  macAddress?: string;
+}): Promise<StoredWeatherStationMeta | null> {
+  const stationId = buildStationId(input.macAddress);
+  const db = getFirebaseAdminDb();
+  const snapshot = await db.collection("weatherStations").doc(stationId).get();
+
+  if (!snapshot.exists) {
+    return null;
+  }
+
+  const data = snapshot.data();
+
+  if (!data) {
+    return null;
+  }
+
+  return {
+    name: typeof data.name === "string" ? data.name : "Ambient Station",
+    location: typeof data.location === "string" ? data.location : "",
+    lastObservationAt:
+      data.lastObservationAt instanceof Timestamp
+        ? data.lastObservationAt.toDate().toISOString()
+        : null,
+  };
 }
 
 export function buildStationId(macAddress?: string) {
