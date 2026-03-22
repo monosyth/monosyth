@@ -118,6 +118,8 @@ const sectionTabs = [
   { label: "About", href: "#about-section" },
 ] as const;
 
+const trafficMapUrl = "https://web.seattle.gov/travelers/";
+
 const nearbyCameraLinks = [
   {
     label: "I-5 at NE 145th Street",
@@ -165,11 +167,6 @@ const regionalWeatherLinks = [
     label: "Windy Regional Radar",
     href: "https://www.windy.com/47.7565/-122.3450",
     note: "Interactive radar and satellite view.",
-  },
-  {
-    label: "Seattle Traffic Map",
-    href: "https://web.seattle.gov/travelers/",
-    note: "SDOT traveler information map.",
   },
   {
     label: "WSDOT Cameras",
@@ -423,14 +420,21 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
             <TablePanel
               id="cameras-section"
               title="Local Cameras"
-              subtitle="Nearby live traffic views and regional reference links."
+              subtitle="Nearby live traffic views, map context, and regional reference links."
               compact
             >
-              <div className="grid gap-4 xl:grid-cols-2">
-                <CameraGrid
-                  title="Nearby Camera Views"
-                  items={nearbyCameraLinks}
-                />
+              <div className="grid gap-4">
+                <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+                  <CameraGrid
+                    title="Nearby Camera Views"
+                    items={nearbyCameraLinks}
+                  />
+                  <TrafficMapPanel
+                    title="Seattle Traffic Map"
+                    src={trafficMapUrl}
+                    href={trafficMapUrl}
+                  />
+                </div>
                 <LinkList
                   title="Regional Weather Links"
                   items={regionalWeatherLinks}
@@ -993,6 +997,43 @@ function CameraGrid({
           </a>
         ))}
       </div>
+    </div>
+  );
+}
+
+function TrafficMapPanel({
+  title,
+  src,
+  href,
+}: {
+  title: string;
+  src: string;
+  href: string;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-xl font-light text-stone-700">{title}</h3>
+        <a
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className="text-xs font-medium uppercase tracking-[0.16em] text-stone-500 underline decoration-stone-300 underline-offset-4 hover:text-stone-700"
+        >
+          Open Full Map
+        </a>
+      </div>
+      <div className="mt-2 overflow-hidden border border-stone-200 bg-white">
+        <iframe
+          title={title}
+          src={src}
+          loading="lazy"
+          className="h-[640px] w-full"
+        />
+      </div>
+      <p className="mt-2 text-xs leading-5 text-stone-500">
+        Live SDOT traveler map for incidents, congestion, and camera context around Seattle and the north-end station area.
+      </p>
     </div>
   );
 }
