@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { RefreshButton } from "@/components/weather/refresh-button";
+import { WeatherSectionNav } from "@/components/weather/section-nav";
 import {
   getWeatherPageData,
   normalizeWeatherDashboardView,
@@ -142,14 +143,12 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
 
   return (
     <main className="min-h-screen bg-[#ececec] text-stone-800">
-      <header className="bg-[#1eb7ce] text-white shadow-[0_10px_28px_rgba(0,0,0,0.12)]">
-        <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8 lg:px-10">
+      <header className="bg-[#1eb7ce] text-white">
+        <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-10">
           <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
             <div>
-              <p className="text-sm uppercase tracking-[0.18em] text-white/78">
-                Monosyth Personal Weather
-              </p>
-              <h1 className="mt-3 text-4xl font-light tracking-[-0.04em] sm:text-5xl">
+              <p className="text-sm uppercase tracking-[0.18em] text-white/80">Monosyth Personal Weather</p>
+              <h1 className="mt-2 text-4xl font-light tracking-[-0.04em] sm:text-5xl">
                 {data.station.name}
               </h1>
               <p className="mt-3 text-xl font-light text-white/92 sm:text-2xl">
@@ -165,12 +164,9 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
                 </a>
               </p>
 
-              <h2 className="mt-8 text-3xl font-light tracking-[-0.03em] sm:text-4xl">
+              <h2 className="mt-7 text-3xl font-light tracking-[-0.03em] sm:text-4xl">
                 {viewMeta.heading}
               </h2>
-              <p className="mt-3 max-w-3xl text-lg leading-8 text-white/88">
-                {viewMeta.subtitle}
-              </p>
               <p className="mt-3 text-lg text-white/88">
                 {data.station.lastObservationAt || formatWeatherLong(data.fetchedAt)}
               </p>
@@ -192,11 +188,9 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
             </div>
           </div>
         </div>
-      </header>
-
-      <div className="sticky top-0 z-20 border-b border-stone-300 bg-[#f5f5f5] shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
-        <div className="mx-auto flex max-w-7xl items-center gap-4 overflow-x-auto px-5 py-3 sm:px-8 lg:px-10">
-          <div className="flex min-w-max items-center gap-2 pr-3">
+        <div className="border-t border-white/18">
+          <div className="mx-auto flex max-w-7xl items-end gap-6 overflow-x-auto px-5 pt-4 sm:px-8 lg:px-10">
+            <div className="flex min-w-max items-end gap-9 pr-3">
             {summaryTabs.map((tab) => {
               const isActive = tab.view === activeView;
               const href = tab.view === "current" ? "/weather" : `/weather?view=${tab.view}`;
@@ -207,7 +201,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
                   href={href}
                   prefetch
                   scroll={false}
-                  className={`rounded-full border px-4 py-2 text-lg font-medium transition ${isActive ? "border-[#d5b237] bg-white text-stone-900 shadow-[inset_0_-3px_0_0_#f4d24f]" : "border-transparent bg-transparent text-stone-600 hover:border-stone-300 hover:bg-white hover:text-stone-800"}`}
+                  className={`border-b-4 pb-3 text-[2rem] font-light leading-none transition ${isActive ? "border-[#f4d24f] text-white" : "border-transparent text-white/82 hover:text-white"}`}
                 >
                   {tab.label}
                 </Link>
@@ -215,35 +209,26 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
             })}
           </div>
 
-          <div className="h-8 w-px shrink-0 bg-stone-300" />
+            <div className="h-8 w-px shrink-0 bg-white/24" />
 
-          <div className="flex min-w-max items-center gap-2">
-            {sectionTabs.map((tab) => (
-              <a
-                key={tab.href}
-                href={tab.href}
-                className="rounded-full border border-transparent px-4 py-2 text-base font-medium text-stone-600 transition hover:border-stone-300 hover:bg-white hover:text-stone-800"
+            <WeatherSectionNav tabs={sectionTabs} />
+
+            <div className="ml-auto flex min-w-max items-center gap-3 pb-3">
+              <RefreshButton />
+              <Link
+                href="/"
+                className="border border-white/30 px-4 py-2 text-sm font-medium uppercase tracking-[0.16em] text-white transition hover:bg-white/10"
               >
-                {tab.label}
-              </a>
-            ))}
-          </div>
-
-          <div className="ml-auto flex min-w-max items-center gap-3">
-            <RefreshButton />
-            <Link
-              href="/"
-              className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-950 hover:text-stone-950"
-            >
-              Back Home
-            </Link>
+                Back Home
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
+      </header>
 
       <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-10">
         {result.notice ? (
-          <div className="mb-6 rounded-sm border border-[#e9c65a] bg-[#fff8de] px-5 py-4 text-sm leading-6 text-[#7d5b00]">
+          <div className="mb-5 border border-[#e9c65a] bg-[#fff8de] px-5 py-3 text-sm leading-6 text-[#7d5b00]">
             {result.notice}
           </div>
         ) : null}
@@ -307,7 +292,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           </TablePanel>
         </div>
 
-        <div className="mt-6 grid gap-4 xl:grid-cols-4">
+        <div className="mt-5 grid gap-3 xl:grid-cols-4">
           {summaryCards.map((card) => (
             <SummaryCardPanel key={card.label} card={card} />
           ))}
@@ -482,13 +467,13 @@ function TablePanel({
   return (
     <section
       id={id}
-      className={`overflow-hidden rounded-sm border border-stone-200 bg-white shadow-[0_8px_20px_rgba(0,0,0,0.06)] ${className}`.trim()}
+      className={`overflow-hidden border border-stone-200 bg-white ${className}`.trim()}
     >
-      <div className="border-b border-stone-200 px-6 py-5">
-        <h2 className="text-3xl font-light tracking-[-0.03em] text-stone-700">{title}</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-500">{subtitle}</p>
+      <div className="border-b border-stone-200 px-5 py-4">
+        <h2 className="text-[2rem] font-light tracking-[-0.03em] text-stone-700">{title}</h2>
+        <p className="mt-1 max-w-3xl text-sm leading-6 text-stone-500">{subtitle}</p>
       </div>
-      <div className="px-6 py-5">{children}</div>
+      <div className="px-5 py-4">{children}</div>
     </section>
   );
 }
@@ -623,7 +608,7 @@ function CombinedTrendPanel({
   const gridLines = [0, 0.25, 0.5, 0.75, 1];
 
   return (
-    <article className="rounded-sm border border-stone-200 bg-white p-4 shadow-[0_4px_14px_rgba(0,0,0,0.04)]">
+    <article className="border border-stone-200 bg-white p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Station Graph</p>
@@ -636,7 +621,7 @@ function CombinedTrendPanel({
         {seriesList.map((series) => (
           <div
             key={series.id}
-            className="rounded-full border border-stone-200 bg-white px-3 py-1.5 text-sm text-stone-700"
+            className="border border-stone-200 bg-[#fafafa] px-3 py-1.5 text-sm text-stone-700"
           >
             <span
               className="mr-2 inline-block h-2.5 w-2.5 rounded-full"
@@ -752,7 +737,7 @@ function TrendPanel({ series }: { series: WeatherSeries }) {
   const fillPath = `${linePath} L ${(left + plotWidth).toFixed(2)} ${(top + plotHeight).toFixed(2)} L ${left} ${(top + plotHeight).toFixed(2)} Z`;
 
   return (
-    <article className="rounded-sm border border-stone-200 bg-white p-4 shadow-[0_4px_14px_rgba(0,0,0,0.04)]">
+    <article className="border border-stone-200 bg-white p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Station Graph</p>
@@ -842,10 +827,10 @@ function PanelState({ message }: { message: string }) {
 
 function SummaryCardPanel({ card }: { card: SummaryCard }) {
   return (
-    <section className="rounded-sm border border-stone-200 bg-white px-5 py-4 shadow-[0_6px_18px_rgba(0,0,0,0.05)]">
+    <section className="border border-stone-200 bg-[#fafafa] px-4 py-3">
       <p className="text-xs uppercase tracking-[0.18em] text-stone-500">{card.label}</p>
-      <p className="mt-3 text-3xl font-light tracking-[-0.03em] text-stone-800">{card.value}</p>
-      <p className="mt-2 text-sm leading-6 text-stone-500">{card.note}</p>
+      <p className="mt-2 text-[1.7rem] font-light tracking-[-0.03em] text-stone-800">{card.value}</p>
+      <p className="mt-1 text-sm leading-6 text-stone-500">{card.note}</p>
     </section>
   );
 }
