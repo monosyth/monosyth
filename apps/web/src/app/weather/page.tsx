@@ -191,7 +191,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
                   href={href}
                   prefetch
                   scroll={false}
-                  className={`border-b-4 px-2 py-1 text-2xl font-light transition ${isActive ? "border-[#f4d24f] text-stone-800" : "border-transparent text-stone-600 hover:border-stone-300 hover:text-stone-800"}`}
+                  className={`rounded-full border px-4 py-2 text-lg font-medium transition ${isActive ? "border-[#d5b237] bg-white text-stone-900 shadow-[inset_0_-3px_0_0_#f4d24f]" : "border-transparent bg-transparent text-stone-600 hover:border-stone-300 hover:bg-white hover:text-stone-800"}`}
                 >
                   {tab.label}
                 </Link>
@@ -206,7 +206,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
               <a
                 key={tab.href}
                 href={tab.href}
-                className="border-b-4 border-transparent px-2 py-1 text-2xl font-light text-stone-600 transition hover:border-stone-300 hover:text-stone-800"
+                className="rounded-full border border-transparent px-4 py-2 text-base font-medium text-stone-600 transition hover:border-stone-300 hover:bg-white hover:text-stone-800"
               >
                 {tab.label}
               </a>
@@ -291,24 +291,58 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           </TablePanel>
         </div>
 
-        <TablePanel
-          id="radar-section"
-          title="Radar"
-          subtitle="Regional radar centered on the station area, using an external live weather map embed."
-          className="mt-6 xl:max-w-4xl"
-        >
-          <div className="overflow-hidden rounded-sm border border-stone-200 bg-white">
-            <iframe
-              title="Weather radar"
-              src={radarUrl}
-              className="h-[520px] w-full"
-              loading="lazy"
-            />
+        <div className="mt-6 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+          <TablePanel
+            id="radar-section"
+            title="Radar"
+            subtitle="Regional radar centered on the station area, using an external live weather map embed."
+          >
+            <div className="overflow-hidden rounded-sm border border-stone-200 bg-white">
+              <iframe
+                title="Weather radar"
+                src={radarUrl}
+                className="h-[520px] w-full"
+                loading="lazy"
+              />
+            </div>
+            <p className="mt-3 text-sm text-stone-500">
+              The radar panel uses a live external map embed so we can get closer to the reference site&apos;s regional weather context without needing a separate radar API key.
+            </p>
+          </TablePanel>
+
+          <div className="grid gap-6">
+            <TablePanel
+              id="forecast-section"
+              title="Forecast Outlook"
+              subtitle="Short-range hourly forecast pulled alongside the station feed."
+            >
+              <ForecastTable periods={data.forecast.slice(0, 8)} />
+            </TablePanel>
+
+            <TablePanel
+              id="about-section"
+              title="About This Station"
+              subtitle="Station metadata, source details, and the newest raw payload values."
+            >
+              <div className="grid gap-6">
+                <TwoColumnTable
+                  rows={stationRows}
+                  emptyMessage="Station details will appear after the first successful station fetch."
+                />
+                <div className="border-t border-stone-200 pt-5">
+                  <h3 className="text-2xl font-light text-stone-700">Raw Snapshot</h3>
+                  <div className="mt-3">
+                    <TwoColumnTable
+                      rows={rawRows}
+                      emptyMessage="The newest raw payload will appear here after a successful fetch."
+                      monoLabels
+                    />
+                  </div>
+                </div>
+              </div>
+            </TablePanel>
           </div>
-          <p className="mt-3 text-sm text-stone-500">
-            The radar panel uses a live external map embed so we can get closer to the reference site&apos;s regional weather context without needing a separate radar API key.
-          </p>
-        </TablePanel>
+        </div>
 
         <TablePanel
           id="graphs-section"
@@ -318,8 +352,16 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
         >
           {graphSeries.length ? (
             <div className="space-y-4">
+              {graphDeck.hero ? (
+                <CombinedTrendPanel
+                  title={graphDeck.hero.title}
+                  subtitle={graphDeck.hero.subtitle}
+                  seriesList={graphDeck.hero.series}
+                  size="hero"
+                />
+              ) : null}
               {graphDeck.featured.length ? (
-                <div className="grid gap-4 xl:grid-cols-3">
+                <div className="grid gap-4 xl:grid-cols-2">
                   {graphDeck.featured.map((group) => (
                     <CombinedTrendPanel
                       key={group.title}
@@ -330,9 +372,9 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
                   ))}
                 </div>
               ) : null}
-              <div className="grid gap-4 xl:grid-cols-2">
+              <div className="grid gap-4 xl:grid-cols-3">
                 {graphDeck.singles.map((series) => (
-                <TrendPanel key={series.id} series={series} />
+                  <TrendPanel key={series.id} series={series} />
                 ))}
               </div>
             </div>
@@ -340,39 +382,6 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
             <PanelState message="Trend charts need at least two recent observations with matching fields." />
           )}
         </TablePanel>
-
-        <div className="mt-6 grid gap-6 xl:grid-cols-2">
-          <TablePanel
-            id="forecast-section"
-            title="Forecast Outlook"
-            subtitle="Short-range hourly forecast pulled alongside the station feed."
-          >
-            <ForecastTable periods={data.forecast.slice(0, 8)} />
-          </TablePanel>
-
-          <TablePanel
-            id="about-section"
-            title="About This Station"
-            subtitle="Station metadata, source details, and the newest raw payload values."
-          >
-            <div className="grid gap-6">
-              <TwoColumnTable
-                rows={stationRows}
-                emptyMessage="Station details will appear after the first successful station fetch."
-              />
-              <div className="border-t border-stone-200 pt-5">
-                <h3 className="text-2xl font-light text-stone-700">Raw Snapshot</h3>
-                <div className="mt-3">
-                  <TwoColumnTable
-                    rows={rawRows}
-                    emptyMessage="The newest raw payload will appear here after a successful fetch."
-                    monoLabels
-                  />
-                </div>
-              </div>
-            </div>
-          </TablePanel>
-        </div>
       </div>
     </main>
   );
@@ -551,13 +560,15 @@ function CombinedTrendPanel({
   title,
   subtitle,
   seriesList,
+  size = "standard",
 }: {
   title: string;
   subtitle: string;
   seriesList: WeatherSeries[];
+  size?: "hero" | "standard";
 }) {
   const width = 420;
-  const height = 180;
+  const height = size === "hero" ? 240 : 180;
   const left = 18;
   const right = 14;
   const top = 10;
@@ -600,7 +611,7 @@ function CombinedTrendPanel({
           viewBox={`0 0 ${width} ${height}`}
           role="img"
           aria-label={`${title} trend`}
-          className="h-44 w-full"
+          className={`${size === "hero" ? "h-64" : "h-44"} w-full`}
         >
           {[0, 0.5, 1].map((ratio) => {
             const y = top + plotHeight * ratio;
@@ -719,7 +730,7 @@ function TrendPanel({ series }: { series: WeatherSeries }) {
           viewBox={`0 0 ${width} ${height}`}
           role="img"
           aria-label={`${series.label} trend`}
-          className="h-44 w-full"
+          className="h-40 w-full"
         >
           {[0, 0.5, 1].map((ratio) => {
             const y = top + plotHeight * ratio;
@@ -1421,7 +1432,10 @@ function buildGraphDeck(seriesList: WeatherSeries[]) {
     });
   }
 
+  const hero = featured.shift() ?? null;
+
   return {
+    hero,
     featured,
     singles: seriesList.filter((series) => !usedIds.has(series.id)),
   };
