@@ -16,7 +16,7 @@ export function RefreshButton() {
         });
       }}
       disabled={isPending}
-      className="border border-white/30 px-4 py-2 text-sm font-medium uppercase tracking-[0.16em] text-white transition hover:bg-white/10 disabled:cursor-wait disabled:opacity-70"
+      className="border border-white/30 px-3 py-1.5 text-xs font-medium uppercase tracking-[0.16em] text-white transition hover:bg-white/10 disabled:cursor-wait disabled:opacity-70"
     >
       {isPending ? "Refreshing..." : "Refresh"}
     </button>

@@ -107,6 +107,8 @@ const summaryTabs = [
 ] as const satisfies ReadonlyArray<{ label: string; view: WeatherDashboardView }>;
 
 const sectionTabs = [
+  { label: "Current", href: "#current-section" },
+  { label: "Forecast", href: "#forecast-section" },
   { label: "Summaries", href: "#summary-section" },
   { label: "Records", href: "#records-section" },
   { label: "Radar", href: "#radar-section" },
@@ -195,18 +197,19 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const graphDeck = buildGraphDeck(graphSeries);
   const summaryCards = buildSummaryCards(data);
   const recordCards = buildRecordCards(data, activeView);
+  const quickStats = buildQuickStats(data, activeView);
 
   return (
     <main className="min-h-screen bg-[#ececec] text-stone-800">
       <header className="bg-[#1eb7ce] text-white">
-        <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-10">
-          <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
+        <div className="mx-auto max-w-7xl px-5 py-6 sm:px-8 lg:px-10">
+          <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
             <div>
-              <p className="text-sm uppercase tracking-[0.18em] text-white/80">Monosyth Personal Weather</p>
-              <h1 className="mt-2 text-4xl font-light tracking-[-0.04em] sm:text-5xl">
+              <p className="text-xs uppercase tracking-[0.24em] text-white/80">Monosyth Personal Weather</p>
+              <h1 className="mt-2 text-4xl font-light tracking-[-0.04em] sm:text-[3.65rem]">
                 {data.station.name}
               </h1>
-              <p className="mt-3 text-xl font-light text-white/92 sm:text-2xl">
+              <p className="mt-2 text-lg font-light text-white/92 sm:text-[1.85rem]">
                 {buildHeaderMeta(data, coordinates)}
                 {" "}
                 <a
@@ -219,23 +222,33 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
                 </a>
               </p>
 
-              <h2 className="mt-7 text-3xl font-light tracking-[-0.03em] sm:text-4xl">
+              <h2 className="mt-6 text-[2.2rem] font-light tracking-[-0.03em] sm:text-[3rem]">
                 {viewMeta.heading}
               </h2>
-              <p className="mt-3 text-lg text-white/88">
+              <p className="mt-2 text-base text-white/88 sm:text-lg">
                 {data.station.lastObservationAt || formatWeatherLong(data.fetchedAt)}
               </p>
+              <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                {quickStats.map((stat) => (
+                  <div key={stat.label} className="border border-white/20 bg-[#18adc3] px-3 py-2">
+                    <p className="text-[0.68rem] uppercase tracking-[0.18em] text-white/72">
+                      {stat.label}
+                    </p>
+                    <p className="mt-1 text-sm text-white">{stat.value}</p>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="lg:justify-self-end lg:text-right">
-              <table className="w-full border-collapse text-left text-lg lg:max-w-md lg:text-right">
+              <table className="w-full border-collapse border border-white/18 bg-[#18adc3] text-left text-base lg:max-w-md lg:text-right">
                 <tbody>
                   {mastheadRows.map((row) => (
                     <tr key={row.label} className="border-b border-white/18 last:border-b-0">
-                      <th className="px-0 py-2 pr-4 font-semibold text-white/90 lg:text-right">
+                      <th className="px-4 py-2 pr-4 font-semibold text-white/92 lg:text-right">
                         {row.label}:
                       </th>
-                      <td className="px-0 py-2 text-white/80">{row.value}</td>
+                      <td className="px-4 py-2 text-white/84">{row.value}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -243,9 +256,9 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
             </div>
           </div>
         </div>
-        <div className="border-t border-white/18">
-          <div className="mx-auto flex max-w-7xl items-end gap-6 overflow-x-auto px-5 pt-4 sm:px-8 lg:px-10">
-            <div className="flex min-w-max items-end gap-9 pr-3">
+        <div className="sticky top-0 z-20 border-y border-white/18 bg-[#1eb7ce] shadow-[0_2px_0_rgba(0,0,0,0.05)]">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-3 overflow-x-auto px-5 py-2 sm:px-8 lg:px-10">
+            <div className="flex min-w-max items-end gap-7 pr-1">
             {summaryTabs.map((tab) => {
               const isActive = tab.view === activeView;
               const href = tab.view === "current" ? "/weather" : `/weather?view=${tab.view}`;
@@ -256,7 +269,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
                   href={href}
                   prefetch
                   scroll={false}
-                  className={`border-b-4 pb-3 text-[2rem] font-light leading-none transition ${isActive ? "border-[#f4d24f] text-white" : "border-transparent text-white/82 hover:text-white"}`}
+                  className={`border-b-[3px] pb-2 text-[1.75rem] font-light leading-none transition sm:text-[2rem] ${isActive ? "border-[#f4d24f] text-white" : "border-transparent text-white/82 hover:text-white"}`}
                 >
                   {tab.label}
                 </Link>
@@ -264,15 +277,15 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
             })}
           </div>
 
-            <div className="h-8 w-px shrink-0 bg-white/24" />
+            <div className="hidden h-7 w-px shrink-0 bg-white/24 lg:block" />
 
             <WeatherSectionNav tabs={sectionTabs} />
 
-            <div className="ml-auto flex min-w-max items-center gap-3 pb-3">
+            <div className="ml-auto flex min-w-max items-center gap-2">
               <RefreshButton />
               <Link
                 href="/"
-                className="border border-white/30 px-4 py-2 text-sm font-medium uppercase tracking-[0.16em] text-white transition hover:bg-white/10"
+                className="border border-white/30 px-3 py-1.5 text-xs font-medium uppercase tracking-[0.16em] text-white transition hover:bg-white/10"
               >
                 Back Home
               </Link>
@@ -281,18 +294,19 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-10">
+      <div className="mx-auto max-w-7xl px-5 py-6 sm:px-8 lg:px-10">
         {result.notice ? (
-          <div className="mb-5 border border-[#e9c65a] bg-[#fff8de] px-5 py-3 text-sm leading-6 text-[#7d5b00]">
+          <div className="mb-4 border border-[#e9c65a] bg-[#fff8de] px-4 py-2 text-sm leading-6 text-[#7d5b00]">
             {result.notice}
           </div>
         ) : null}
 
-        <div className="grid gap-6 xl:grid-cols-2">
+        <div className="grid gap-4 xl:grid-cols-[1.12fr_0.88fr]">
           <TablePanel
             id="current-section"
             title="Current Conditions"
             subtitle={`Latest station reading for the ${viewMeta.label.toLowerCase()} view.`}
+            compact
           >
             <TwoColumnTable
               rows={currentRows}
@@ -304,18 +318,19 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
             id="almanac-section"
             title="Almanac"
             subtitle="Sun and moon timing for the station area."
+            compact
           >
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <h3 className="text-2xl font-light text-stone-700">Sun</h3>
-                <div className="mt-3">
+                <h3 className="text-lg font-medium uppercase tracking-[0.14em] text-stone-600">Sun</h3>
+                <div className="mt-2">
                   <TwoColumnTable rows={almanac.sun} emptyMessage="Sun details unavailable." />
                 </div>
               </div>
 
               <div>
-                <h3 className="text-2xl font-light text-stone-700">Moon</h3>
-                <div className="mt-3">
+                <h3 className="text-lg font-medium uppercase tracking-[0.14em] text-stone-600">Moon</h3>
+                <div className="mt-2">
                   <TwoColumnTable rows={almanac.moon} emptyMessage="Moon details unavailable." />
                 </div>
               </div>
@@ -323,11 +338,12 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           </TablePanel>
         </div>
 
-        <div id="summary-section" className="mt-6 grid gap-6 xl:grid-cols-2">
+        <div id="summary-section" className="mt-4 grid gap-4 xl:grid-cols-2">
           <TablePanel
             id="today-section"
             title={viewMeta.periodTitle}
             subtitle={viewMeta.periodSubtitle}
+            compact
           >
             <ThreeColumnTable
               rows={periodRows}
@@ -339,6 +355,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
             id="recent-section"
             title="Recent Range"
             subtitle="Active window summary."
+            compact
           >
             <ThreeColumnTable
               rows={rangeRows}
@@ -347,20 +364,20 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           </TablePanel>
         </div>
 
-        <div className="mt-5 grid gap-3 xl:grid-cols-4">
+        <div className="mt-4 grid gap-px border border-stone-200 bg-stone-200 xl:grid-cols-4">
           {summaryCards.map((card) => (
             <SummaryCardPanel key={card.label} card={card} />
           ))}
         </div>
 
-        <div id="records-section" className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <div id="records-section" className="mt-4 grid gap-px border border-stone-200 bg-stone-200 md:grid-cols-2 xl:grid-cols-5">
           {recordCards.map((card) => (
             <RecordCardPanel key={card.label} card={card} />
           ))}
         </div>
 
         {comparisonPanels.length ? (
-          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-4 grid gap-px border border-stone-200 bg-stone-200 md:grid-cols-2 xl:grid-cols-3">
             {comparisonPanels.map((panel) => (
               <ArchivePanel
                 key={panel.title}
@@ -371,29 +388,31 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           </div>
         ) : null}
 
-        <div className="mt-6 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="mt-4 grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
           <TablePanel
             id="radar-section"
             title="Radar"
             subtitle="Regional radar centered on the station area."
+            compact
           >
-            <div className="overflow-hidden rounded-sm border border-stone-200 bg-white">
+            <div className="overflow-hidden border border-stone-200 bg-white">
               <iframe
                 title="Weather radar"
                 src={radarUrl}
-                className="h-[520px] w-full"
+                className="h-[500px] w-full"
                 loading="lazy"
               />
             </div>
           </TablePanel>
 
-          <div className="grid gap-6">
+          <div className="grid gap-4">
             <TablePanel
               id="cameras-section"
               title="Local Cameras"
               subtitle="Nearby traffic and regional reference links."
+              compact
             >
-              <div className="grid gap-6 xl:grid-cols-2">
+              <div className="grid gap-4 xl:grid-cols-2">
                 <LinkList
                   title="Nearby Cameras"
                   items={nearbyCameraLinks}
@@ -409,6 +428,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
               id="forecast-section"
               title="Forecast Outlook"
               subtitle="Hourly outlook."
+              compact
             >
               <ForecastTable periods={data.forecast.slice(0, 8)} />
             </TablePanel>
@@ -417,15 +437,16 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
               id="about-section"
               title="About This Station"
               subtitle="Station details and newest raw payload values."
+              compact
             >
-              <div className="grid gap-6">
+              <div className="grid gap-4">
                 <TwoColumnTable
                   rows={stationRows}
                   emptyMessage="Station details will appear after the first successful station fetch."
                 />
-                <div className="border-t border-stone-200 pt-5">
-                  <h3 className="text-2xl font-light text-stone-700">Raw Snapshot</h3>
-                  <div className="mt-3">
+                <div className="border-t border-stone-200 pt-4">
+                  <h3 className="text-lg font-medium uppercase tracking-[0.14em] text-stone-600">Raw Snapshot</h3>
+                  <div className="mt-2">
                     <TwoColumnTable
                       rows={rawRows}
                       emptyMessage="The newest raw payload will appear here after a successful fetch."
@@ -442,7 +463,8 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           id="graphs-section"
           title="Graphs"
           subtitle="Station graph gallery."
-          className="mt-6"
+          className="mt-4"
+          compact
         >
           {graphSeries.length ? (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -523,23 +545,27 @@ function TablePanel({
   subtitle,
   children,
   className = "",
+  compact = false,
 }: {
   id: string;
   title: string;
   subtitle: string;
   children: ReactNode;
   className?: string;
+  compact?: boolean;
 }) {
   return (
     <section
       id={id}
       className={`overflow-hidden border border-stone-200 bg-white ${className}`.trim()}
     >
-      <div className="border-b border-stone-200 px-5 py-4">
-        <h2 className="text-[2rem] font-light tracking-[-0.03em] text-stone-700">{title}</h2>
-        <p className="mt-1 max-w-3xl text-sm leading-6 text-stone-500">{subtitle}</p>
+      <div className={`border-b border-stone-200 ${compact ? "px-4 py-3" : "px-5 py-4"}`}>
+        <h2 className={`${compact ? "text-[1.65rem]" : "text-[2rem]"} font-light tracking-[-0.03em] text-stone-700`}>
+          {title}
+        </h2>
+        <p className="mt-1 max-w-3xl text-xs uppercase tracking-[0.16em] text-stone-500">{subtitle}</p>
       </div>
-      <div className="px-5 py-4">{children}</div>
+      <div className={compact ? "px-4 py-3" : "px-5 py-4"}>{children}</div>
     </section>
   );
 }
@@ -563,11 +589,11 @@ function TwoColumnTable({
         {rows.map((row) => (
           <tr key={row.label} className="border-b border-stone-200 last:border-b-0">
             <th
-              className={`w-[46%] px-2 py-3 text-left align-top text-base font-normal text-stone-700 ${monoLabels ? "font-mono text-sm uppercase tracking-[0.14em] text-stone-500" : ""}`}
+              className={`w-[46%] px-2 py-2.5 text-left align-top text-[0.98rem] font-normal text-stone-700 ${monoLabels ? "font-mono text-sm uppercase tracking-[0.14em] text-stone-500" : ""}`}
             >
               {row.label}
             </th>
-            <td className="px-2 py-3 text-left text-base text-stone-800">{row.value}</td>
+            <td className="px-2 py-2.5 text-left text-[0.98rem] text-stone-800">{row.value}</td>
           </tr>
         ))}
       </tbody>
@@ -589,18 +615,18 @@ function ThreeColumnTable({
   return (
     <table className="w-full border-collapse">
       <thead>
-        <tr className="border-b border-stone-300 text-left text-sm uppercase tracking-[0.14em] text-stone-500">
-          <th className="px-2 py-3 font-medium">Reading</th>
-          <th className="px-2 py-3 font-medium">Value</th>
-          <th className="px-2 py-3 font-medium">Time</th>
+        <tr className="border-b border-stone-300 text-left text-[0.68rem] uppercase tracking-[0.16em] text-stone-500">
+          <th className="px-2 py-2.5 font-medium">Reading</th>
+          <th className="px-2 py-2.5 font-medium">Value</th>
+          <th className="px-2 py-2.5 font-medium">Time</th>
         </tr>
       </thead>
       <tbody>
         {rows.map((row) => (
           <tr key={row.label} className="border-b border-stone-200 last:border-b-0">
-            <th className="px-2 py-3 text-left font-normal text-stone-700">{row.label}</th>
-            <td className="px-2 py-3 text-stone-800">{row.value}</td>
-            <td className="px-2 py-3 text-stone-500">{row.detail}</td>
+            <th className="px-2 py-2.5 text-left font-normal text-stone-700">{row.label}</th>
+            <td className="px-2 py-2.5 text-stone-800">{row.value}</td>
+            <td className="px-2 py-2.5 text-stone-500">{row.detail}</td>
           </tr>
         ))}
       </tbody>
@@ -618,26 +644,26 @@ function ForecastTable({ periods }: { periods: WeatherForecastPeriod[] }) {
   return (
     <table className="w-full border-collapse">
       <thead>
-        <tr className="border-b border-stone-300 text-left text-sm uppercase tracking-[0.14em] text-stone-500">
-          <th className="px-2 py-3 font-medium">Period</th>
-          <th className="px-2 py-3 font-medium">Temp</th>
-          <th className="px-2 py-3 font-medium">Conditions</th>
-          <th className="px-2 py-3 font-medium">Wind</th>
+        <tr className="border-b border-stone-300 text-left text-[0.68rem] uppercase tracking-[0.16em] text-stone-500">
+          <th className="px-2 py-2.5 font-medium">Period</th>
+          <th className="px-2 py-2.5 font-medium">Temp</th>
+          <th className="px-2 py-2.5 font-medium">Conditions</th>
+          <th className="px-2 py-2.5 font-medium">Wind</th>
         </tr>
       </thead>
       <tbody>
         {periods.map((period) => (
           <tr key={period.startTime} className="border-b border-stone-200 last:border-b-0">
-            <td className="px-2 py-3 text-stone-700">
+            <td className="px-2 py-2.5 text-stone-700">
               {formatWeatherDateTime(period.startTime)}
             </td>
-            <td className="px-2 py-3 text-stone-800">
+            <td className="px-2 py-2.5 text-stone-800">
               {period.temperature === null
                 ? "Not reported"
                 : `${period.temperature} ${period.temperatureUnit}`}
             </td>
-            <td className="px-2 py-3 text-stone-800">{period.shortForecast}</td>
-            <td className="px-2 py-3 text-stone-500">
+            <td className="px-2 py-2.5 text-stone-800">{period.shortForecast}</td>
+            <td className="px-2 py-2.5 text-stone-500">
               {period.windSpeed} {period.windDirection}
             </td>
           </tr>
@@ -676,15 +702,16 @@ function CombinedTrendPanel({
   const gridLines = [0, 0.25, 0.5, 0.75, 1];
 
   return (
-    <article className="border border-stone-200 bg-white p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <article className="border border-stone-200 bg-[#fcfcfb] p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-lg font-light tracking-[-0.02em] text-stone-700">{title}</p>
-          <p className={`mt-1 text-stone-500 ${compact ? "text-xs" : "text-sm"}`}>{subtitle}</p>
+          <p className="text-[0.68rem] uppercase tracking-[0.18em] text-stone-500">Combined Graph</p>
+          <p className="mt-1 text-lg font-light tracking-[-0.02em] text-stone-700">{title}</p>
+          <p className={`mt-1 text-stone-500 ${compact ? "text-[11px]" : "text-sm"}`}>{subtitle}</p>
         </div>
       </div>
 
-      <div className={`mt-2 flex flex-wrap gap-x-4 gap-y-1 text-stone-600 ${compact ? "text-xs" : "text-sm"}`}>
+      <div className={`mt-2 flex flex-wrap gap-x-4 gap-y-1 border-t border-stone-200 pt-2 text-stone-600 ${compact ? "text-xs" : "text-sm"}`}>
         {seriesList.map((series) => (
           <span key={series.id}>
             <span
@@ -696,7 +723,7 @@ function CombinedTrendPanel({
         ))}
       </div>
 
-      <div className="mt-3 border border-stone-200 bg-white p-3">
+      <div className="mt-2 border border-stone-200 bg-[#fffef8] p-2">
         <svg
           viewBox={`0 0 ${width} ${height}`}
           role="img"
@@ -764,7 +791,7 @@ function CombinedTrendPanel({
         </svg>
       </div>
 
-      <div className={`mt-2 flex items-center justify-between text-stone-500 ${compact ? "text-xs" : "text-sm"}`}>
+      <div className={`mt-2 flex items-center justify-between border-t border-stone-200 pt-2 text-stone-500 ${compact ? "text-xs" : "text-sm"}`}>
         <span>{labelSeries.points[0]?.label}</span>
         <span>{labelSeries.unit || "Multi-series"}</span>
         <span>{labelSeries.points.at(-1)?.label}</span>
@@ -800,13 +827,12 @@ function TrendPanel({ series, compact = false }: { series: WeatherSeries; compac
   const fillPath = `${linePath} L ${(left + plotWidth).toFixed(2)} ${(top + plotHeight).toFixed(2)} L ${left} ${(top + plotHeight).toFixed(2)} Z`;
 
   return (
-    <article className="border border-stone-200 bg-white p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <article className="border border-stone-200 bg-[#fcfcfb] p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-lg font-light tracking-[-0.02em] text-stone-700">
-            {series.label}
-          </p>
-          <p className={`mt-1 text-stone-500 ${compact ? "text-xs" : "text-sm"}`}>{formatSeriesRange(series)}</p>
+          <p className="text-[0.68rem] uppercase tracking-[0.18em] text-stone-500">Instrument Graph</p>
+          <p className="mt-1 text-lg font-light tracking-[-0.02em] text-stone-700">{series.label}</p>
+          <p className={`mt-1 text-stone-500 ${compact ? "text-[11px]" : "text-sm"}`}>{formatSeriesRange(series)}</p>
         </div>
         <div className="text-right">
           <p className="text-xs uppercase tracking-[0.16em] text-stone-500">Now</p>
@@ -816,7 +842,7 @@ function TrendPanel({ series, compact = false }: { series: WeatherSeries; compac
         </div>
       </div>
 
-      <div className="mt-3 border border-stone-200 bg-white p-3">
+      <div className="mt-2 border border-stone-200 bg-[#fffef8] p-2">
         <svg
           viewBox={`0 0 ${width} ${height}`}
           role="img"
@@ -867,7 +893,7 @@ function TrendPanel({ series, compact = false }: { series: WeatherSeries; compac
         </svg>
       </div>
 
-      <div className={`mt-2 flex items-center justify-between text-stone-500 ${compact ? "text-xs" : "text-sm"}`}>
+      <div className={`mt-2 flex items-center justify-between border-t border-stone-200 pt-2 text-stone-500 ${compact ? "text-xs" : "text-sm"}`}>
         <span>{series.points[0]?.label}</span>
         <span>
           Low {formatCompact(series.min, series.decimals)} / High{" "}
@@ -897,9 +923,9 @@ function LinkList({
   return (
     <div>
       <h3 className="text-xl font-light text-stone-700">{title}</h3>
-      <ul className="mt-3 divide-y divide-stone-200 border border-stone-200">
+      <ul className="mt-2 divide-y divide-stone-200 border border-stone-200">
         {items.map((item) => (
-          <li key={item.href} className="bg-white px-4 py-3">
+          <li key={item.href} className="bg-white px-3 py-2.5">
             <a
               href={item.href}
               target="_blank"
@@ -918,19 +944,19 @@ function LinkList({
 
 function SummaryCardPanel({ card }: { card: SummaryCard }) {
   return (
-    <section className="border border-stone-200 bg-[#fafafa] px-4 py-3">
-      <p className="text-xs uppercase tracking-[0.18em] text-stone-500">{card.label}</p>
-      <p className="mt-2 text-[1.7rem] font-light tracking-[-0.03em] text-stone-800">{card.value}</p>
-      <p className="mt-1 text-sm leading-6 text-stone-500">{card.note}</p>
+    <section className="bg-white px-4 py-3">
+      <p className="text-[0.68rem] uppercase tracking-[0.18em] text-stone-500">{card.label}</p>
+      <p className="mt-1 text-[1.45rem] font-light tracking-[-0.03em] text-stone-800">{card.value}</p>
+      <p className="mt-1 text-xs leading-5 text-stone-500">{card.note}</p>
     </section>
   );
 }
 
 function RecordCardPanel({ card }: { card: RecordCard }) {
   return (
-    <section className="border border-stone-200 bg-white px-4 py-3">
-      <p className="text-xs uppercase tracking-[0.18em] text-stone-500">{card.label}</p>
-      <p className="mt-2 text-2xl font-light tracking-[-0.03em] text-stone-800">{card.value}</p>
+    <section className="bg-white px-4 py-3">
+      <p className="text-[0.68rem] uppercase tracking-[0.18em] text-stone-500">{card.label}</p>
+      <p className="mt-1 text-[1.35rem] font-light tracking-[-0.03em] text-stone-800">{card.value}</p>
       <p className="mt-1 text-xs leading-5 text-stone-500">{card.note}</p>
     </section>
   );
@@ -944,8 +970,9 @@ function ArchivePanel({
   panel: ComparisonPanel;
 }) {
   return (
-    <section id={id} className="border border-stone-200 bg-white px-4 py-3">
-      <p className="text-base font-light tracking-[-0.02em] text-stone-700">{panel.title}</p>
+    <section id={id} className="bg-white px-4 py-3">
+      <p className="text-[0.68rem] uppercase tracking-[0.18em] text-stone-500">Archive Window</p>
+      <p className="mt-1 text-base font-light tracking-[-0.02em] text-stone-700">{panel.title}</p>
       <p className="mt-1 text-xs leading-5 text-stone-500">{panel.subtitle}</p>
       <div className="mt-3 space-y-2">
         {panel.rows.map((row) => (
@@ -1093,20 +1120,20 @@ function buildStationDetailRows(data: WeatherOverview, notice?: string): FactRow
 
 function getViewMeta(view: WeatherDashboardView) {
   if (view === "year") {
-    return {
-      label: "Year",
-      heading: "Yearly Weather History",
-      subtitle: "A longer station view built from persisted observations, keeping the top tabs closer to the reference site's page behavior.",
-      periodTitle: "This Year",
-      periodSubtitle: "Highs, lows, and peaks across the stored yearly view.",
-    };
+  return {
+    label: "Year",
+    heading: "Yearly Weather History",
+    subtitle: "Persisted yearly station history.",
+    periodTitle: "This Year",
+    periodSubtitle: "Highs, lows, and peaks across the stored yearly view.",
+  };
   }
 
   if (view === "month") {
     return {
       label: "Month",
       heading: "Monthly Weather History",
-      subtitle: "A month-scale summary view from the station archive, tuned to feel more like a dedicated weather page than a dashboard card set.",
+      subtitle: "Month-scale station archive.",
       periodTitle: "This Month",
       periodSubtitle: "Highs, lows, and peaks across the stored monthly view.",
     };
@@ -1116,7 +1143,7 @@ function getViewMeta(view: WeatherDashboardView) {
     return {
       label: "Week",
       heading: "Weekly Weather History",
-      subtitle: "A seven-day station view using persisted observations so the tabs behave more like real page tabs.",
+      subtitle: "Seven-day station archive.",
       periodTitle: "This Week",
       periodSubtitle: "Highs, lows, and peaks across the stored weekly view.",
     };
@@ -1125,10 +1152,28 @@ function getViewMeta(view: WeatherDashboardView) {
   return {
     label: "Current",
     heading: "Current Weather Conditions",
-    subtitle: "Live station conditions with dense tables, almanac timing, and a wider graph stack inspired by Century Farm Weather.",
+    subtitle: "Latest live station conditions.",
     periodTitle: "Since Midnight",
     periodSubtitle: "Today's highs, lows, and peaks from the loaded station observations.",
   };
+}
+
+function buildQuickStats(data: WeatherOverview, view: WeatherDashboardView): FactRow[] {
+  const latestTemperature = createLatestValueRow(data.observations, "Temperature", ["tempf"], 1, "F");
+  const latestHumidity = createLatestValueRow(data.observations, "Humidity", ["humidity"], 0, "%");
+  const latestWind = createLatestValueRow(data.observations, "Wind", ["windspeedmph"], 1, "mph");
+
+  return [
+    { label: "Location", value: data.station.location || "Shoreline, WA" },
+    { label: "Loaded", value: `${data.observationCount} observations` },
+    { label: "View", value: getViewMeta(view).label },
+    {
+      label: "Now",
+      value: [latestTemperature?.value, latestHumidity ? `${latestHumidity.value} RH` : null, latestWind ? `${latestWind.value} wind` : null]
+        .filter((part): part is string => Boolean(part))
+        .join(" / "),
+    },
+  ];
 }
 
 function buildSummaryCards(data: WeatherOverview): SummaryCard[] {
@@ -1158,12 +1203,12 @@ function buildSummaryCards(data: WeatherOverview): SummaryCard[] {
     {
       label: "Temperature Trend",
       value: tempTrend ?? "Not enough history",
-      note: "Three-hour temperature change in the active tab window.",
+      note: "3-hour change.",
     },
     {
       label: "Pressure Trend",
       value: pressureTrend ?? "Not enough history",
-      note: "Three-hour barometer swing, useful for spotting a shift before it is obvious.",
+      note: "3-hour barometer swing.",
     },
     {
       label: "Wind Window",
@@ -1171,7 +1216,7 @@ function buildSummaryCards(data: WeatherOverview): SummaryCard[] {
         avgWindRow && gustRow
           ? `${avgWindRow.value} avg / ${gustRow.value} gust`
           : avgWindRow?.value ?? gustRow?.value ?? "Not reported",
-      note: "Average wind paired with the strongest gust in the loaded observations.",
+      note: "Average and strongest gust.",
     },
     {
       label: "Moisture Snapshot",
@@ -1183,7 +1228,7 @@ function buildSummaryCards(data: WeatherOverview): SummaryCard[] {
           .filter((part): part is string => Boolean(part))
           .join(" / ") ||
         "Not reported",
-      note: "Humidity and rainfall at a glance, with UV and solar as a fallback when moisture sensors are quiet.",
+      note: "Humidity, rainfall, UV, solar.",
     },
   ];
 }
