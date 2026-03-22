@@ -8,7 +8,10 @@ import {
   type WeatherDashboardView,
 } from "@/lib/weather/ambient";
 import { buildWeatherAlmanac } from "@/lib/weather/almanac";
-import { readStoredWeatherObservationsForDay } from "@/lib/weather/history";
+import {
+  readStoredWeatherObservationsBetween,
+  readStoredWeatherObservationsForDay,
+} from "@/lib/weather/history";
 import {
   formatWeatherClock,
   formatWeatherDateTime,
@@ -39,6 +42,18 @@ type GraphGroup = {
   title: string;
   subtitle: string;
   series: WeatherSeries[];
+};
+
+type ComparisonPanel = {
+  title: string;
+  subtitle: string;
+  rows: SummaryRow[];
+};
+
+type SummaryCard = {
+  label: string;
+  value: string;
+  note: string;
 };
 
 type WeatherPageProps = {
@@ -121,8 +136,9 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const mapUrl = buildMapUrl(coordinates.latitude, coordinates.longitude);
   const radarUrl = buildRadarEmbedUrl(coordinates.latitude, coordinates.longitude);
   const viewMeta = getViewMeta(activeView);
-  const historicalComparison = await getHistoricalComparison(data, activeView);
+  const comparisonPanels = await getHistoricalComparisonPanels(data, activeView);
   const graphDeck = buildGraphDeck(graphSeries);
+  const summaryCards = buildSummaryCards(data);
 
   return (
     <main className="min-h-screen bg-[#ececec] text-stone-800">
@@ -281,15 +297,39 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
 
           <TablePanel
             id="recent-section"
-            title={historicalComparison.title}
-            subtitle={historicalComparison.subtitle}
+            title="Recent Range"
+            subtitle="A compact summary of the active tab window and where the readings moved."
           >
             <ThreeColumnTable
-              rows={historicalComparison.rows.length ? historicalComparison.rows : rangeRows}
-              emptyMessage={historicalComparison.rows.length ? "Historical comparison rows unavailable." : "Range details will appear once enough observations are available."}
+              rows={rangeRows}
+              emptyMessage="Range details will appear once enough observations are available."
             />
           </TablePanel>
         </div>
+
+        <div className="mt-6 grid gap-4 xl:grid-cols-4">
+          {summaryCards.map((card) => (
+            <SummaryCardPanel key={card.label} card={card} />
+          ))}
+        </div>
+
+        {comparisonPanels.length ? (
+          <div className="mt-6 grid gap-6 xl:grid-cols-3">
+            {comparisonPanels.map((panel) => (
+              <TablePanel
+                key={panel.title}
+                id={`comparison-${panel.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+                title={panel.title}
+                subtitle={panel.subtitle}
+              >
+                <ThreeColumnTable
+                  rows={panel.rows}
+                  emptyMessage="Historical comparison rows unavailable."
+                />
+              </TablePanel>
+            ))}
+          </div>
+        ) : null}
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
           <TablePanel
@@ -580,11 +620,13 @@ function CombinedTrendPanel({
   const max = Math.max(...values);
   const span = max - min || 1;
   const labelSeries = seriesList[0]!;
+  const gridLines = [0, 0.25, 0.5, 0.75, 1];
 
   return (
-    <article className="rounded-sm border border-stone-200 bg-[#fafafa] p-4 shadow-[0_4px_14px_rgba(0,0,0,0.04)]">
+    <article className="rounded-sm border border-stone-200 bg-white p-4 shadow-[0_4px_14px_rgba(0,0,0,0.04)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
+          <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Station Graph</p>
           <p className="text-xl font-light tracking-[-0.02em] text-stone-700">{title}</p>
           <p className="mt-1 text-sm text-stone-500">{subtitle}</p>
         </div>
@@ -613,7 +655,7 @@ function CombinedTrendPanel({
           aria-label={`${title} trend`}
           className={`${size === "hero" ? "h-64" : "h-44"} w-full`}
         >
-          {[0, 0.5, 1].map((ratio) => {
+          {gridLines.map((ratio) => {
             const y = top + plotHeight * ratio;
 
             return (
@@ -623,7 +665,7 @@ function CombinedTrendPanel({
                 y1={y}
                 x2={left + plotWidth}
                 y2={y}
-                stroke="#dadada"
+                stroke={ratio === 0 || ratio === 1 ? "#cfcfcf" : "#e7e7e7"}
                 strokeWidth="1"
               />
             );
@@ -696,6 +738,7 @@ function TrendPanel({ series }: { series: WeatherSeries }) {
   const latestPoint = series.points.at(-1) ?? null;
   const accent = pickSeriesAccent(series.id);
   const fill = `${accent}22`;
+  const gridLines = [0, 0.25, 0.5, 0.75, 1];
   const points = series.points.map((point, index) => {
     const x = left + (index / Math.max(series.points.length - 1, 1)) * plotWidth;
     const y = top + (1 - (point.value - series.min) / span) * plotHeight;
@@ -709,9 +752,10 @@ function TrendPanel({ series }: { series: WeatherSeries }) {
   const fillPath = `${linePath} L ${(left + plotWidth).toFixed(2)} ${(top + plotHeight).toFixed(2)} L ${left} ${(top + plotHeight).toFixed(2)} Z`;
 
   return (
-    <article className="rounded-sm border border-stone-200 bg-[#fafafa] p-4 shadow-[0_4px_14px_rgba(0,0,0,0.04)]">
+    <article className="rounded-sm border border-stone-200 bg-white p-4 shadow-[0_4px_14px_rgba(0,0,0,0.04)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
+          <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Station Graph</p>
           <p className="text-xl font-light tracking-[-0.02em] text-stone-700">
             {series.label}
           </p>
@@ -732,7 +776,7 @@ function TrendPanel({ series }: { series: WeatherSeries }) {
           aria-label={`${series.label} trend`}
           className="h-40 w-full"
         >
-          {[0, 0.5, 1].map((ratio) => {
+          {gridLines.map((ratio) => {
             const y = top + plotHeight * ratio;
 
             return (
@@ -742,7 +786,7 @@ function TrendPanel({ series }: { series: WeatherSeries }) {
                 y1={y}
                 x2={left + plotWidth}
                 y2={y}
-                stroke="#dadada"
+                stroke={ratio === 0 || ratio === 1 ? "#cfcfcf" : "#e7e7e7"}
                 strokeWidth="1"
               />
             );
@@ -793,6 +837,16 @@ function PanelState({ message }: { message: string }) {
     <div className="rounded-sm border border-dashed border-stone-300 bg-stone-50 px-4 py-5 text-sm leading-6 text-stone-500">
       {message}
     </div>
+  );
+}
+
+function SummaryCardPanel({ card }: { card: SummaryCard }) {
+  return (
+    <section className="rounded-sm border border-stone-200 bg-white px-5 py-4 shadow-[0_6px_18px_rgba(0,0,0,0.05)]">
+      <p className="text-xs uppercase tracking-[0.18em] text-stone-500">{card.label}</p>
+      <p className="mt-3 text-3xl font-light tracking-[-0.03em] text-stone-800">{card.value}</p>
+      <p className="mt-2 text-sm leading-6 text-stone-500">{card.note}</p>
+    </section>
   );
 }
 
@@ -962,37 +1016,221 @@ function getViewMeta(view: WeatherDashboardView) {
   };
 }
 
-async function getHistoricalComparison(
+function buildSummaryCards(data: WeatherOverview): SummaryCard[] {
+  const humidityRow = createLatestValueRow(data.observations, "Humidity", ["humidity"], 0, "%");
+  const rainRow = createLatestValueRow(data.observations, "Rain", ["dailyrainin"], 2, "in");
+  const avgWindRow = createAverageRow(data.observations, "Average Wind", ["windspeedmph"], 1, "mph");
+  const gustRow = createExtremeRow(data.observations, "Peak Gust", ["windgustmph"], "max", 1, "mph");
+  const uvRow = createExtremeRow(data.observations, "High UV", ["uv"], "max", 1, "");
+  const solarRow = createExtremeRow(
+    data.observations,
+    "High Solar",
+    ["solarradiation"],
+    "max",
+    0,
+    "W/m2",
+  );
+  const tempTrend = buildTrendValue(data.observations, ["tempf"], 3 * 60 * 60 * 1000, 1, "F");
+  const pressureTrend = buildTrendValue(
+    data.observations,
+    ["baromrelin", "baromabsin"],
+    3 * 60 * 60 * 1000,
+    3,
+    "inHg",
+  );
+
+  return [
+    {
+      label: "Temperature Trend",
+      value: tempTrend ?? "Not enough history",
+      note: "Three-hour temperature change in the active tab window.",
+    },
+    {
+      label: "Pressure Trend",
+      value: pressureTrend ?? "Not enough history",
+      note: "Three-hour barometer swing, useful for spotting a shift before it is obvious.",
+    },
+    {
+      label: "Wind Window",
+      value:
+        avgWindRow && gustRow
+          ? `${avgWindRow.value} avg / ${gustRow.value} gust`
+          : avgWindRow?.value ?? gustRow?.value ?? "Not reported",
+      note: "Average wind paired with the strongest gust in the loaded observations.",
+    },
+    {
+      label: "Moisture Snapshot",
+      value:
+        [humidityRow ? `${humidityRow.value} RH` : null, rainRow ? `${rainRow.value} rain` : null]
+          .filter((part): part is string => Boolean(part))
+          .join(" / ") ||
+        [uvRow ? `${uvRow.value} UV` : null, solarRow ? `${solarRow.value} solar` : null]
+          .filter((part): part is string => Boolean(part))
+          .join(" / ") ||
+        "Not reported",
+      note: "Humidity and rainfall at a glance, with UV and solar as a fallback when moisture sensors are quiet.",
+    },
+  ];
+}
+
+async function getHistoricalComparisonPanels(
   data: WeatherOverview,
   view: WeatherDashboardView,
 ) {
-  if (view !== "current" || !data.station.macAddress) {
-    return {
-      title: "Recent Range",
-      subtitle: "A compact summary of the active tab window and where the readings moved.",
-      rows: [] as SummaryRow[],
-    };
+  const window = resolveComparisonWindow(data, view);
+
+  if (!window || !data.station.macAddress) {
+    return [];
   }
 
-  const latestDate = new Date(data.fetchedAt);
-  const parts = getWeatherCalendarParts(latestDate);
-  const priorYear = parts.year - 1;
-  const observations = await readStoredWeatherObservationsForDay({
-    macAddress: data.station.macAddress,
-    year: priorYear,
-    month: parts.month,
-    day: parts.day,
-  }).catch(() => []);
+  if (view === "current") {
+    const latestDate = new Date(window.endMs);
+    const parts = getWeatherCalendarParts(latestDate);
+    const priorYear = parts.year - 1;
+    const [yesterday, weekEarlier, priorYearDay] = await Promise.all([
+      readStoredWeatherObservationsBetween({
+        macAddress: data.station.macAddress,
+        startMs: window.startMs - 24 * 60 * 60 * 1000,
+        endMs: window.endMs - 24 * 60 * 60 * 1000,
+      }).catch(() => []),
+      readStoredWeatherObservationsBetween({
+        macAddress: data.station.macAddress,
+        startMs: window.startMs - 7 * 24 * 60 * 60 * 1000,
+        endMs: window.endMs - 7 * 24 * 60 * 60 * 1000,
+      }).catch(() => []),
+      readStoredWeatherObservationsForDay({
+        macAddress: data.station.macAddress,
+        year: priorYear,
+        month: parts.month,
+        day: parts.day,
+      }).catch(() => []),
+    ]);
+
+    return [
+      buildComparisonPanel(
+        "Yesterday",
+        "The previous day in the same local station window.",
+        yesterday,
+      ),
+      buildComparisonPanel(
+        "One Week Earlier",
+        "A same-window comparison from seven days earlier in the archive.",
+        weekEarlier,
+      ),
+      buildComparisonPanel(
+        `Last ${formatWeatherDayLabel(parts.month, parts.day)} (${priorYear})`,
+        "A same-day comparison from the stored station archive one year back.",
+        priorYearDay,
+      ),
+    ].filter((panel): panel is ComparisonPanel => panel !== null);
+  }
+
+  const spanMs = Math.max(window.endMs - window.startMs, 60 * 60 * 1000);
+  const priorWindowTitle =
+    view === "week" ? "Previous Week" : view === "month" ? "Previous Month" : "Previous Year";
+  const earlierWindowTitle =
+    view === "week" ? "Two Weeks Earlier" : view === "month" ? "Two Months Earlier" : "Two Years Earlier";
+
+  const queries = [
+    {
+      title: priorWindowTitle,
+      subtitle: "The immediately preceding stored window for this same station view.",
+      startMs: window.startMs - spanMs,
+      endMs: window.startMs,
+    },
+    {
+      title: earlierWindowTitle,
+      subtitle: "An older archive window so the page feels more like a classic station summary stack.",
+      startMs: window.startMs - spanMs * 2,
+      endMs: window.startMs - spanMs,
+    },
+  ];
+
+  if (view === "year") {
+    queries.push({
+      title: "Three Years Earlier",
+      subtitle: "A deeper annual archive comparison when enough stored history exists.",
+      startMs: window.startMs - spanMs * 3,
+      endMs: window.startMs - spanMs * 2,
+    });
+  } else {
+    queries.push({
+      title: `Same ${getViewMeta(view).label} Last Year`,
+      subtitle: "The matching window shifted back one year to show seasonality.",
+      startMs: shiftTimestampByYears(window.startMs, -1),
+      endMs: shiftTimestampByYears(window.endMs, -1),
+    });
+  }
+
+  const results = await Promise.all(
+    queries.map(async (query) => ({
+      ...query,
+      observations: await readStoredWeatherObservationsBetween({
+        macAddress: data.station.macAddress,
+        startMs: query.startMs,
+        endMs: query.endMs,
+      }).catch(() => []),
+    })),
+  );
+
+  return results
+    .map((result) => buildComparisonPanel(result.title, result.subtitle, result.observations))
+    .filter((panel): panel is ComparisonPanel => panel !== null);
+}
+
+function buildComparisonPanel(
+  title: string,
+  subtitle: string,
+  observations: WeatherObservation[],
+) {
+  if (!observations.length) {
+    return null;
+  }
+
+  const rows = buildComparisonRowsFromObservations(observations);
+
+  if (!rows.length) {
+    return null;
+  }
 
   return {
-    title: `Last ${formatWeatherDayLabel(parts.month, parts.day)} (${priorYear})`,
-    subtitle: observations.length
-      ? "A same-day historical comparison from the stored station archive."
-      : "No same-day historical archive is available yet, so this panel falls back to the current range summary.",
-    rows: observations.length
-      ? buildPeriodSummaryRowsFromObservations(observations)
-      : [],
+    title,
+    subtitle,
+    rows,
   };
+}
+
+function buildComparisonRowsFromObservations(observations: WeatherObservation[]) {
+  return [
+    createExtremeRow(observations, "High Temperature", ["tempf"], "max", 1, "F"),
+    createExtremeRow(observations, "Low Temperature", ["tempf"], "min", 1, "F"),
+    createExtremeRow(observations, "High Humidity", ["humidity"], "max", 0, "%"),
+    createExtremeRow(observations, "Low Humidity", ["humidity"], "min", 0, "%"),
+    createExtremeRow(observations, "High Barometer", ["baromrelin", "baromabsin"], "max", 3, "inHg"),
+    createLatestValueRow(observations, "Rain", ["dailyrainin"], 2, "in"),
+    createExtremeRow(observations, "Peak Gust", ["windgustmph"], "max", 1, "mph"),
+    createExtremeRow(observations, "High UV", ["uv"], "max", 1, ""),
+  ].filter((row): row is SummaryRow => row !== null);
+}
+
+function resolveComparisonWindow(data: WeatherOverview, view: WeatherDashboardView) {
+  const observations =
+    view === "current" ? filterObservationsForLatestDay(data.observations) : data.observations;
+
+  const startMs = observations[0]?.timestamp ?? 0;
+  const endMs = observations.at(-1)?.timestamp ?? 0;
+
+  if (!startMs || !endMs) {
+    return null;
+  }
+
+  return { startMs, endMs };
+}
+
+function shiftTimestampByYears(timestamp: number, years: number) {
+  const value = new Date(timestamp);
+  value.setUTCFullYear(value.getUTCFullYear() + years);
+  return value.getTime();
 }
 
 function buildHeaderMeta(

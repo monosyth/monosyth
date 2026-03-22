@@ -148,6 +148,27 @@ export async function readStoredWeatherObservationsForDay(input: {
   return mapStoredObservations(snapshot.docs.map((doc) => doc.data()));
 }
 
+export async function readStoredWeatherObservationsBetween(input: {
+  macAddress?: string;
+  startMs: number;
+  endMs: number;
+  limit?: number;
+}): Promise<WeatherObservation[]> {
+  const stationId = buildStationId(input.macAddress);
+  const db = getFirebaseAdminDb();
+  const snapshot = await db
+    .collection("weatherStations")
+    .doc(stationId)
+    .collection("observations")
+    .where("observedAt", ">=", Timestamp.fromMillis(input.startMs))
+    .where("observedAt", "<", Timestamp.fromMillis(input.endMs))
+    .orderBy("observedAt", "asc")
+    .limit(input.limit ?? 4000)
+    .get();
+
+  return mapStoredObservations(snapshot.docs.map((doc) => doc.data()));
+}
+
 export async function readStoredWeatherStationMeta(input: {
   macAddress?: string;
 }): Promise<StoredWeatherStationMeta | null> {
