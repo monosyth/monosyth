@@ -53,6 +53,10 @@ env:
     secret: AMBIENT_MAC_ADDRESS
     availability:
       - RUNTIME
+  - variable: WEATHER_LOG_SECRET
+    secret: WEATHER_LOG_SECRET
+    availability:
+      - RUNTIME
   - variable: WEATHER_LIMIT
     value: "48"
     availability:
