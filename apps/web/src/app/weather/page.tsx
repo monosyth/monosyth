@@ -36,6 +36,7 @@ export default async function WeatherPage() {
   const highlights = data.highlights.slice(0, 5);
   const supportingFacts = buildSupportingFacts(data, latest);
   const forecastPeriods = data.forecast.slice(0, 6);
+  const contextCards = buildContextCards(data);
 
   return (
     <main className="relative min-h-screen overflow-hidden px-5 py-6 text-stone-950 sm:px-8 lg:px-12">
@@ -69,7 +70,9 @@ export default async function WeatherPage() {
               </div>
 
               <div className="flex flex-wrap gap-3">
-                <InfoPill label="Location" value={data.station.location || "Station location not labeled"} />
+                {data.station.location ? (
+                  <InfoPill label="Location" value={data.station.location} />
+                ) : null}
                 <InfoPill
                   label="Coverage"
                   value={describeCoverage(data.timeRange.startAt, data.timeRange.endAt)}
@@ -247,30 +250,16 @@ export default async function WeatherPage() {
 
           <section className="glass-panel rounded-[2rem] bg-white/82 p-6 sm:p-7">
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-              Station context
+              Source details
             </p>
             <h2 className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-stone-950">
               Where this data comes from
             </h2>
 
             <div className="mt-6 space-y-3">
-              <ContextCard label="Station name" value={data.station.name} />
-              <ContextCard
-                label="Station location"
-                value={data.station.location || "No location label from Ambient Weather"}
-              />
-              <ContextCard
-                label="Coordinates"
-                value={formatCoordinates(data.station.latitude, data.station.longitude)}
-              />
-              <ContextCard
-                label="Loaded time span"
-                value={describeCoverage(data.timeRange.startAt, data.timeRange.endAt)}
-              />
-              <ContextCard
-                label="Station identifier"
-                value={maskStationId(data.station.macAddress)}
-              />
+              {contextCards.map((card) => (
+                <ContextCard key={card.label} label={card.label} value={card.value} />
+              ))}
             </div>
           </section>
         </section>
@@ -564,7 +553,7 @@ function describeCoverage(startAt: string | null, endAt: string | null) {
 
 function formatCoordinates(latitude: number | null, longitude: number | null) {
   if (latitude === null || longitude === null) {
-    return "Coordinates not available from the latest station sample";
+    return null;
   }
 
   return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
@@ -578,4 +567,34 @@ function maskStationId(macAddress: string) {
   return macAddress.length <= 8
     ? macAddress
     : `${macAddress.slice(0, 4)}...${macAddress.slice(-4)}`;
+}
+
+function buildContextCards(data: Extract<WeatherPageData, { state: "ready" }>["data"]) {
+  const cards = [
+    { label: "Station name", value: data.station.name },
+    { label: "Last station report", value: data.station.lastObservationAt || "Not reported" },
+    {
+      label: "Loaded time span",
+      value: describeCoverage(data.timeRange.startAt, data.timeRange.endAt),
+    },
+    { label: "Loaded samples", value: `${data.observationCount} recent observations` },
+    { label: "Station identifier", value: maskStationId(data.station.macAddress) },
+  ];
+  const coordinates = formatCoordinates(data.station.latitude, data.station.longitude);
+
+  if (data.station.location) {
+    cards.splice(1, 0, {
+      label: "Station location",
+      value: data.station.location,
+    });
+  }
+
+  if (coordinates) {
+    cards.splice(data.station.location ? 2 : 1, 0, {
+      label: "Coordinates",
+      value: coordinates,
+    });
+  }
+
+  return cards;
 }
