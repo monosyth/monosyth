@@ -103,9 +103,56 @@ const summaryTabs = [
 const sectionTabs = [
   { label: "Summaries", href: "#summary-section" },
   { label: "Radar", href: "#radar-section" },
+  { label: "Cameras", href: "#cameras-section" },
   { label: "Almanac", href: "#almanac-section" },
   { label: "Graphs", href: "#graphs-section" },
   { label: "About", href: "#about-section" },
+] as const;
+
+const nearbyCameraLinks = [
+  {
+    label: "I-5 at NE 145th Street",
+    href: "https://www.seattle.gov/trafficcams/i5_145th.htm",
+    note: "Closest freeway camera toward Shoreline.",
+  },
+  {
+    label: "Northgate Way and 1st Ave NE",
+    href: "https://www.seattle.gov/trafficcams/northgate_1st.htm",
+    note: "North Seattle arterial conditions.",
+  },
+  {
+    label: "Northgate Way and 5th Ave NE",
+    href: "https://www.seattle.gov/trafficcams/northgate_5tha.htm",
+    note: "Nearby local interchange view.",
+  },
+  {
+    label: "Lake City Way and NE 145th",
+    href: "https://www.seattle.gov/trafficcams/lakecity_145th.htm",
+    note: "East-side traffic picture near the station area.",
+  },
+] as const;
+
+const regionalWeatherLinks = [
+  {
+    label: "NOAA Point Forecast",
+    href: "https://forecast.weather.gov/MapClick.php?lat=47.7565&lon=-122.3450",
+    note: "Official NWS point forecast for the station area.",
+  },
+  {
+    label: "Windy Regional Radar",
+    href: "https://www.windy.com/47.7565/-122.3450",
+    note: "Interactive radar and satellite view.",
+  },
+  {
+    label: "Seattle Traffic Map",
+    href: "https://web5.seattle.gov/travelers/",
+    note: "SDOT traveler information map.",
+  },
+  {
+    label: "WSDOT Cameras",
+    href: "https://wsdot.com/travel/real-time/cameras",
+    note: "Broader freeway camera coverage across the region.",
+  },
 ] as const;
 
 export default async function WeatherPage({ searchParams }: WeatherPageProps) {
@@ -333,6 +380,23 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           </TablePanel>
 
           <div className="grid gap-6">
+            <TablePanel
+              id="cameras-section"
+              title="Local Cameras"
+              subtitle="Nearby traffic and regional reference links."
+            >
+              <div className="grid gap-6 xl:grid-cols-2">
+                <LinkList
+                  title="Nearby Cameras"
+                  items={nearbyCameraLinks}
+                />
+                <LinkList
+                  title="Regional Weather Links"
+                  items={regionalWeatherLinks}
+                />
+              </div>
+            </TablePanel>
+
             <TablePanel
               id="forecast-section"
               title="Forecast Outlook"
@@ -811,6 +875,35 @@ function PanelState({ message }: { message: string }) {
   return (
     <div className="rounded-sm border border-dashed border-stone-300 bg-stone-50 px-4 py-5 text-sm leading-6 text-stone-500">
       {message}
+    </div>
+  );
+}
+
+function LinkList({
+  title,
+  items,
+}: {
+  title: string;
+  items: ReadonlyArray<{ label: string; href: string; note: string }>;
+}) {
+  return (
+    <div>
+      <h3 className="text-xl font-light text-stone-700">{title}</h3>
+      <ul className="mt-3 divide-y divide-stone-200 border border-stone-200">
+        {items.map((item) => (
+          <li key={item.href} className="bg-white px-4 py-3">
+            <a
+              href={item.href}
+              target="_blank"
+              rel="noreferrer"
+              className="text-base text-stone-800 underline decoration-stone-300 underline-offset-4 hover:decoration-stone-700"
+            >
+              {item.label}
+            </a>
+            <p className="mt-1 text-sm leading-6 text-stone-500">{item.note}</p>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
