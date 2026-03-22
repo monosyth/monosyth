@@ -168,7 +168,7 @@ const regionalWeatherLinks = [
   },
   {
     label: "Seattle Traffic Map",
-    href: "https://web5.seattle.gov/travelers/",
+    href: "https://web.seattle.gov/travelers/",
     note: "SDOT traveler information map.",
   },
   {
