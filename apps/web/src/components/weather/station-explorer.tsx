@@ -13,10 +13,10 @@ import { formatWeatherDateTime } from "@/lib/weather/time";
 import type { WeatherObservation, WeatherOverview } from "@/lib/weather/types";
 
 const rangeOptions = [
-  { id: "1h", label: "1H", durationMs: 60 * 60 * 1000 },
-  { id: "6h", label: "6H", durationMs: 6 * 60 * 60 * 1000 },
-  { id: "24h", label: "24H", durationMs: 24 * 60 * 60 * 1000 },
-  { id: "all", label: "All", durationMs: null },
+  { id: "1h", label: "1 hour", durationMs: 60 * 60 * 1000 },
+  { id: "6h", label: "6 hours", durationMs: 6 * 60 * 60 * 1000 },
+  { id: "24h", label: "24 hours", durationMs: 24 * 60 * 60 * 1000 },
+  { id: "all", label: "All loaded", durationMs: null },
 ] as const;
 
 type RangeId = (typeof rangeOptions)[number]["id"];
@@ -31,24 +31,25 @@ export function StationExplorer({ data }: { data: WeatherOverview }) {
     activeRangeId,
   );
   const latest = filteredObservations.at(-1) ?? null;
-  const metrics = buildWeatherMetrics(latest);
-  const highlights = buildWeatherHighlights(filteredObservations);
+  const metrics = buildWeatherMetrics(latest).slice(0, 4);
+  const highlights = buildWeatherHighlights(filteredObservations).slice(0, 4);
   const series = buildWeatherSeries(filteredObservations);
-  const snapshot = latest ? flattenWeatherSnapshot(latest).slice(0, 6) : [];
+  const snapshot = latest ? flattenWeatherSnapshot(latest).slice(0, 8) : [];
 
   return (
     <section className="glass-panel rounded-[2rem] bg-white/82 p-6 sm:p-7">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-            Station explorer
+            History explorer
           </p>
           <h2 className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-stone-950">
-            Filter the live readings by time window
+            See how the station changed across the loaded window
           </h2>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-stone-600 sm:text-base">
-            Compare the immediate pulse of the station against the full set of loaded
-            observations without waiting for another server refresh.
+            Switch time windows to compare the current reading against the short-term
+            trend, then scan the charts for movement in temperature, wind, pressure,
+            rain, and solar.
           </p>
         </div>
 
@@ -73,66 +74,80 @@ export function StationExplorer({ data }: { data: WeatherOverview }) {
         </div>
       </div>
 
-      <div className="mt-5 rounded-[1.5rem] border border-stone-200/80 bg-stone-50/70 p-4">
-        <p className="text-sm leading-6 text-stone-700">
-          {describeRangeSummary(data, activeRangeId, filteredObservations.length)}
-        </p>
-      </div>
+      <div className="mt-6 grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
+        <div className="rounded-[1.7rem] border border-stone-200/80 bg-stone-50/80 p-5">
+          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
+            Window summary
+          </p>
+          <p className="mt-3 text-base leading-7 text-stone-700">
+            {describeRangeSummary(data, activeRangeId, filteredObservations.length)}
+          </p>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-4">
-        {metrics.map((metric) => (
-          <article
-            key={metric.id}
-            className="rounded-[1.5rem] border border-stone-200/80 bg-stone-50/75 p-4"
-          >
-            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-              {metric.label}
-            </p>
-            <p className="mt-3 text-3xl font-semibold tracking-[-0.08em] text-stone-950">
-              {metric.displayValue}
-            </p>
-          </article>
-        ))}
-      </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            {metrics.map((metric) => (
+              <article
+                key={metric.id}
+                className="rounded-[1.3rem] border border-white/85 bg-white/90 p-4"
+              >
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                  {metric.label}
+                </p>
+                <p className="mt-2 text-2xl font-semibold tracking-[-0.06em] text-stone-950">
+                  {metric.displayValue}
+                </p>
+              </article>
+            ))}
+          </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-5">
-        {highlights.map((highlight) => (
-          <article
-            key={highlight.label}
-            className="rounded-[1.5rem] border border-stone-200/80 bg-white/72 p-4"
-          >
-            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-              {highlight.label}
-            </p>
-            <p className="mt-3 text-lg font-semibold tracking-[-0.04em] text-stone-950">
-              {highlight.value}
-            </p>
-          </article>
-        ))}
-      </div>
+          <div className="mt-5 space-y-3">
+            {highlights.map((highlight) => (
+              <article
+                key={highlight.label}
+                className="rounded-[1.3rem] border border-stone-200/80 bg-white/85 p-4"
+              >
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                  {highlight.label}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-stone-700">{highlight.value}</p>
+              </article>
+            ))}
+          </div>
+        </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {series.map((item) => (
-          <WeatherChartCard
-            key={`${activeRangeId}-${item.id}`}
-            series={item}
-            tone={pickSeriesTone(item.id)}
-          />
-        ))}
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {series.map((item) => (
+            <WeatherChartCard
+              key={`${activeRangeId}-${item.id}`}
+              series={item}
+              tone={pickSeriesTone(item.id)}
+            />
+          ))}
+        </div>
       </div>
 
       {snapshot.length ? (
-        <div className="mt-6">
-          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
-            Latest sample in this view
-          </p>
-          <div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-6 rounded-[1.7rem] border border-stone-200/80 bg-stone-50/78 p-5">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-stone-500">
+                Latest sample in this window
+              </p>
+              <h3 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-stone-950">
+                Raw fields from the newest observation
+              </h3>
+            </div>
+            <p className="text-sm text-stone-500">
+              {latest?.timestamp ? formatWeatherDateTime(latest.timestamp) : "Time unknown"}
+            </p>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {snapshot.map((item) => (
               <article
                 key={`${activeRangeId}-${item.key}`}
-                className="rounded-[1.4rem] border border-stone-200/80 bg-white/70 p-4"
+                className="rounded-[1.3rem] border border-white/80 bg-white/90 p-4"
               >
-                <p className="font-mono text-[0.7rem] uppercase tracking-[0.22em] text-stone-500">
+                <p className="font-mono text-[0.68rem] uppercase tracking-[0.2em] text-stone-500">
                   {item.key}
                 </p>
                 <p className="mt-2 break-words text-sm leading-6 text-stone-700">
@@ -203,7 +218,7 @@ function describeRangeSummary(
     return `Showing all ${count} loaded observations from ${loadedStart} through ${loadedEnd}.`;
   }
 
-  return `Showing ${count} observations from the last ${option.label.toLowerCase()}, ending ${loadedEnd}. Loaded history starts ${loadedStart}.`;
+  return `Showing ${count} observations from the last ${option.label.toLowerCase()}, ending ${loadedEnd}. The loaded record begins at ${loadedStart}.`;
 }
 
 function pickSeriesTone(seriesId: string): "gold" | "sky" | "rain" | "pine" {
