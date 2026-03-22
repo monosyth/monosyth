@@ -25,6 +25,8 @@ type WeatherDevice = {
   };
 };
 
+const DEFAULT_STATION_LOCATION = "Shoreline, WA";
+
 export function buildWeatherOverview(
   device: WeatherDevice,
   observations: WeatherObservation[],
@@ -51,13 +53,16 @@ function describeDevice(
   device: WeatherDevice,
   latest: WeatherObservation | null,
 ): WeatherStationSummary {
+  const latitude = pickNumber(latest ?? {}, ["lat", "latitude"]);
+  const longitude = pickNumber(latest ?? {}, ["lon", "long", "longitude"]);
+
   return {
     name: device.info?.name ?? "Ambient Station",
-    location: device.info?.location ?? "",
+    location: device.info?.location?.trim() || DEFAULT_STATION_LOCATION,
     macAddress: device.macAddress ?? "",
     lastObservationAt: formatTimestamp(device.lastData?.dateutc),
-    latitude: pickNumber(latest ?? {}, ["lat", "latitude"]),
-    longitude: pickNumber(latest ?? {}, ["lon", "long", "longitude"]),
+    latitude,
+    longitude,
   };
 }
 
