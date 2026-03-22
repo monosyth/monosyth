@@ -1,4 +1,5 @@
 import { buildWeatherOverview } from "@/lib/weather/overview";
+import { persistWeatherHistory } from "@/lib/weather/history";
 import { getHourlyForecast } from "@/lib/weather/nws";
 import type { WeatherObservation, WeatherPageData } from "@/lib/weather/types";
 
@@ -26,6 +27,10 @@ type WeatherDevice = {
 type WeatherCacheEntry = {
   expiresAt: number;
   value: Extract<WeatherPageData, { state: "ready" }>;
+};
+type LiveWeatherSnapshot = {
+  device: WeatherDevice;
+  observations: WeatherObservation[];
 };
 
 let weatherCache: WeatherCacheEntry | null = null;
@@ -152,6 +157,34 @@ async function getDeviceHistory(macAddress: string, limit: number) {
   return Array.isArray(observations) ? observations : [];
 }
 
+async function fetchLiveWeatherSnapshot(): Promise<LiveWeatherSnapshot> {
+  const env = readEnv();
+
+  let device: WeatherDevice | null = null;
+
+  if (env.macAddress) {
+    device = {
+      macAddress: env.macAddress,
+    };
+  } else {
+    const devices = await listDevices();
+    device = pickDevice(devices, env.macAddress);
+  }
+
+  if (!device || !device.macAddress) {
+    throw new Error(
+      "No Ambient Weather station was returned for this account. Try running the local devices script to confirm the station and macAddress.",
+    );
+  }
+
+  const observations = await getDeviceHistory(device.macAddress, env.limit);
+
+  return {
+    device,
+    observations,
+  };
+}
+
 function pickDevice(devices: WeatherDevice[], preferredMacAddress: string) {
   if (!devices.length) {
     return null;
@@ -239,7 +272,6 @@ export async function getWeatherPageData(): Promise<WeatherPageData> {
   }
 
   try {
-    const env = readEnv();
     const cached = readCachedWeatherPageData();
 
     if (cached) {
@@ -250,26 +282,12 @@ export async function getWeatherPageData(): Promise<WeatherPageData> {
       };
     }
 
-    let device: WeatherDevice | null = null;
-
-    if (env.macAddress) {
-      device = {
-        macAddress: env.macAddress,
-      };
-    } else {
-      const devices = await listDevices();
-      device = pickDevice(devices, env.macAddress);
-    }
-
-    if (!device || !device.macAddress) {
-      return {
-        state: "error",
-        message:
-          "No Ambient Weather station was returned for this account. Try running the local devices script to confirm the station and macAddress.",
-      };
-    }
-
-    const observations = await getDeviceHistory(device.macAddress, env.limit);
+    const { device, observations } = await fetchLiveWeatherSnapshot();
+    await persistWeatherHistory({
+      device,
+      observations,
+      source: "page",
+    }).catch(() => null);
     const coordinates = resolveForecastCoordinates(observations);
     const forecast = await getHourlyForecast(
       coordinates.latitude,
@@ -300,4 +318,24 @@ export async function getWeatherPageData(): Promise<WeatherPageData> {
       message,
     };
   }
+}
+
+export async function captureWeatherHistorySnapshot() {
+  const missing = getMissingVars();
+
+  if (missing.length > 0) {
+    throw new Error(`Missing required weather config: ${missing.join(", ")}`);
+  }
+
+  const { device, observations } = await fetchLiveWeatherSnapshot();
+  const persisted = await persistWeatherHistory({
+    device,
+    observations,
+    source: "scheduler",
+  });
+
+  return {
+    ...persisted,
+    observationCount: observations.length,
+  };
 }

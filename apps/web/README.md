@@ -35,6 +35,8 @@ Optional values:
 - `AMBIENT_APPLICATION_KEY`
 - `AMBIENT_MAC_ADDRESS`
 - `WEATHER_LIMIT`
+- `AMBIENT_REQUEST_TIMEOUT_MS`
+- `WEATHER_LOG_SECRET`
 
 Then enable the Google provider in Firebase Authentication.
 
@@ -60,3 +62,4 @@ committing it to source control.
 - The app uses the Firebase Web SDK on the client.
 - If Firebase keys are missing, the UI shows setup guidance instead of crashing.
 - The weather route reads Ambient keys only on the server.
+- `POST /api/weather/log` is available for a scheduler to persist readings into Firestore when `WEATHER_LOG_SECRET` is configured.
