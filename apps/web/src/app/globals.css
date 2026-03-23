@@ -3,17 +3,39 @@
 :root {
   --background: #f6f3eb;
   --foreground: #131313;
-  --card: rgba(255, 255, 255, 0.72);
-  --line: rgba(19, 19, 19, 0.12);
+  --card: #ffffffb8;
+  --line: #1313131f;
   --ember: #d46d31;
   --gold: #f4c95d;
-  --teal: #0b6e69;
+  --teal: #3b6f5f;
+  --teal-50: #edf8f4;
+  --teal-100: #d6efe2;
+  --teal-200: #b6dfcb;
+  --teal-300: #95d0b3;
+  --teal-400: #74c09a;
+  --teal-500: #4db183;
+  --teal-600: #3b9a70;
+  --teal-700: #2c775a;
+  --teal-800: #235c46;
+  --teal-900: #1a4533;
+  --teal-950: #112f23;
   --pine: #15322f;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-teal-50: var(--teal-50);
+  --color-teal-100: var(--teal-100);
+  --color-teal-200: var(--teal-200);
+  --color-teal-300: var(--teal-300);
+  --color-teal-400: var(--teal-400);
+  --color-teal-500: var(--teal-500);
+  --color-teal-600: var(--teal-600);
+  --color-teal-700: var(--teal-700);
+  --color-teal-800: var(--teal-800);
+  --color-teal-900: var(--teal-900);
+  --color-teal-950: var(--teal-950);
   --font-sans: var(--font-space-grotesk);
   --font-mono: var(--font-ibm-plex-mono);
 }
@@ -25,7 +47,7 @@
 html {
   background:
     radial-gradient(circle at top left, rgba(212, 109, 49, 0.22), transparent 28%),
-    radial-gradient(circle at 85% 12%, rgba(11, 110, 105, 0.24), transparent 22%),
+    radial-gradient(circle at 85% 12%, rgba(76, 166, 127, 0.26), transparent 22%),
     linear-gradient(180deg, #f8f4ed 0%, #efe7db 100%);
 }
 
