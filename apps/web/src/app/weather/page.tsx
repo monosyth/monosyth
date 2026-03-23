@@ -14,6 +14,14 @@ import {
   readStoredWeatherObservationsForDay,
 } from "@/lib/weather/history";
 import {
+  buildWeatherSummaryArchive,
+  WEATHER_SUMMARY_MONTH_LABELS,
+  type WeatherMonthlyMatrix,
+  type WeatherMonthlyReportRow,
+  type WeatherSummaryArchive,
+  type WeatherSummarySection,
+} from "@/lib/weather/summary";
+import {
   formatWeatherClock,
   formatWeatherDateTime,
   formatWeatherLong,
@@ -82,7 +90,7 @@ type WeatherPageProps = {
   }>;
 };
 
-type WeatherDocumentTab = "summaries" | "radar" | "cameras" | "graphs" | "about";
+type WeatherDocumentTab = "dashboard" | "summaries" | "radar" | "cameras" | "graphs" | "about";
 
 const DISPLAY_COORDINATES = {
   latitude: 47.7565,
@@ -122,6 +130,7 @@ const summaryTabs = [
 ] as const satisfies ReadonlyArray<{ label: string; view: WeatherDashboardView }>;
 
 const documentTabs = [
+  { label: "Dashboard", tab: "dashboard" },
   { label: "Summaries", tab: "summaries" },
   { label: "Radar", tab: "radar" },
   { label: "Cameras", tab: "cameras" },
@@ -151,6 +160,8 @@ const regionalWeatherLinks = [
 
 function normalizeWeatherDocumentTab(value?: string): WeatherDocumentTab {
   if (
+    value === "dashboard" ||
+    value === "summaries" ||
     value === "radar" ||
     value === "cameras" ||
     value === "graphs" ||
@@ -159,17 +170,17 @@ function normalizeWeatherDocumentTab(value?: string): WeatherDocumentTab {
     return value;
   }
 
-  return "summaries";
+  return "dashboard";
 }
 
-function buildWeatherHref(view: WeatherDashboardView, tab: WeatherDocumentTab = "summaries") {
+function buildWeatherHref(view: WeatherDashboardView, tab: WeatherDocumentTab = "dashboard") {
   const params = new URLSearchParams();
 
   if (view !== "current") {
     params.set("view", view);
   }
 
-  if (tab !== "summaries") {
+  if (tab !== "dashboard") {
     params.set("tab", tab);
   }
 
@@ -212,7 +223,18 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const summaryCards = buildSummaryCards(data);
   const recordCards = buildRecordCards(data, activeView);
   const quickStats = buildQuickStats(data, activeView);
+  const summaryArchive = activeDocumentTab === "summaries"
+    ? await loadWeatherSummaryArchive(data.station.macAddress)
+    : null;
+  const pageMeta = getPageMeta(
+    activeView,
+    activeDocumentTab,
+    viewMeta,
+    summaryArchive,
+    data.station.lastObservationAt || formatWeatherLong(data.fetchedAt),
+  );
   const isCurrentView = activeView === "current";
+  const isDashboardTab = activeDocumentTab === "dashboard";
   const isSummariesTab = activeDocumentTab === "summaries";
   const isRadarTab = activeDocumentTab === "radar";
   const isCamerasTab = activeDocumentTab === "cameras";
@@ -249,10 +271,10 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
               </p>
 
               <h2 className="mt-6 text-[2.2rem] font-light tracking-[-0.03em] sm:text-[3rem]">
-                {viewMeta.heading}
+                {pageMeta.heading}
               </h2>
               <p className="mt-2 text-base text-white/88 sm:text-lg">
-                {data.station.lastObservationAt || formatWeatherLong(data.fetchedAt)}
+                {pageMeta.timestampLabel}
               </p>
               <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 {quickStats.map((stat) => (
@@ -328,6 +350,8 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
         ) : null}
 
         {isSummariesTab ? (
+          <SummaryArchiveTabContent summaryArchive={summaryArchive} />
+        ) : isDashboardTab ? (
           <SummariesTabContent
             almanac={almanac}
             currentRows={currentRows}
@@ -777,6 +801,150 @@ function AboutTabContent({
         </TablePanel>
       </div>
     </div>
+  );
+}
+
+function SummaryArchiveTabContent({
+  summaryArchive,
+}: {
+  summaryArchive: WeatherSummaryArchive | null;
+}) {
+  if (!summaryArchive) {
+    return (
+      <PanelState message="Summary tables will appear after enough archived station history has been collected." />
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <TablePanel
+        id="summary-records-section"
+        title={`All Time Records (Since ${summaryArchive.stationStartLabel})`}
+        subtitle="Archive-wide station records built from stored observations."
+        compact
+      >
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {summaryArchive.recordSections.map((section) => (
+            <SummarySectionCard key={section.title} section={section} />
+          ))}
+        </div>
+      </TablePanel>
+
+      <TablePanel
+        id="monthly-reports-section"
+        title="Monthly Reports"
+        subtitle="Months with stored station archive data."
+        compact
+      >
+        <MonthlyReportAvailabilityTable rows={summaryArchive.monthlyReportRows} />
+      </TablePanel>
+
+      <div className="grid gap-4">
+        {summaryArchive.monthlyMatrices.map((matrix) => (
+          <MonthlyClimateTable key={matrix.title} matrix={matrix} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SummarySectionCard({ section }: { section: WeatherSummarySection }) {
+  return (
+    <section className="border border-stone-200 bg-white">
+      <div className="border-b border-stone-200 px-4 py-3">
+        <h3 className="text-[1.1rem] font-light text-stone-800">{section.title}</h3>
+      </div>
+      <div className="px-4 py-3">
+        <table className="w-full border-collapse">
+          <tbody>
+            {section.rows.map((row) => (
+              <tr key={`${section.title}-${row.label}`} className="border-b border-stone-200 last:border-b-0">
+                <th className="w-[42%] px-2 py-2 text-left font-normal text-stone-700">{row.label}</th>
+                <td className="px-2 py-2 text-stone-800">{row.value}</td>
+                <td className="px-2 py-2 text-stone-500">{row.detail}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function MonthlyReportAvailabilityTable({
+  rows,
+}: {
+  rows: WeatherMonthlyReportRow[];
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-full border-collapse">
+        <thead>
+          <tr className="border-b border-stone-300 text-left text-[0.68rem] uppercase tracking-[0.16em] text-stone-500">
+            <th className="px-2 py-2.5 font-medium">Year</th>
+            {WEATHER_SUMMARY_MONTH_LABELS.map((month) => (
+              <th key={month} className="px-2 py-2.5 text-center font-medium">{month}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.year} className="border-b border-stone-200 last:border-b-0">
+              <th className="px-2 py-2.5 text-left font-normal text-stone-700">{row.year}</th>
+              {row.months.map((hasData, index) => (
+                <td key={`${row.year}-${index + 1}`} className="px-2 py-2.5 text-center text-stone-700">
+                  {hasData ? (
+                    <span className="inline-flex min-w-[3.4rem] justify-center border border-stone-300 bg-stone-50 px-2 py-1 text-xs">
+                      {String(index + 1).padStart(2, "0")}-{String(row.year).slice(-2)}
+                    </span>
+                  ) : (
+                    <span className="text-stone-400">-</span>
+                  )}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function MonthlyClimateTable({ matrix }: { matrix: WeatherMonthlyMatrix }) {
+  return (
+    <TablePanel
+      id={`matrix-${matrix.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+      title={matrix.title}
+      subtitle={matrix.unitLabel}
+      compact
+    >
+      <div className="overflow-x-auto">
+        <table className="min-w-full border-collapse">
+          <thead>
+            <tr className="border-b border-stone-300 text-left text-[0.68rem] uppercase tracking-[0.16em] text-stone-500">
+              <th className="px-2 py-2.5 font-medium">{matrix.unitLabel}</th>
+              {WEATHER_SUMMARY_MONTH_LABELS.map((month) => (
+                <th key={month} className="px-2 py-2.5 text-right font-medium">{month}</th>
+              ))}
+              <th className="px-2 py-2.5 text-right font-medium">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {matrix.rows.map((row) => (
+              <tr key={`${matrix.title}-${row.year}`} className="border-b border-stone-200 last:border-b-0">
+                <th className="px-2 py-2.5 text-left font-normal text-stone-700">{row.year}</th>
+                {row.months.map((value, index) => (
+                  <td key={`${row.year}-${index + 1}`} className="px-2 py-2.5 text-right text-stone-800">
+                    {value}
+                  </td>
+                ))}
+                <td className="px-2 py-2.5 text-right font-medium text-stone-800">{row.total}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </TablePanel>
   );
 }
 
@@ -2252,6 +2420,73 @@ function buildTrendValue(
   const sign = delta > 0 ? "+" : "";
 
   return `${sign}${formatCompact(delta, decimals)} ${unit}`.trim();
+}
+
+async function loadWeatherSummaryArchive(macAddress: string) {
+  if (!macAddress) {
+    return null;
+  }
+
+  try {
+    const observations = await readStoredWeatherObservationsBetween({
+      macAddress,
+      startMs: 0,
+      endMs: Date.now() + 24 * 60 * 60 * 1000,
+      limit: 100_000,
+    });
+
+    return buildWeatherSummaryArchive(observations);
+  } catch {
+    return null;
+  }
+}
+
+function getPageMeta(
+  activeView: WeatherDashboardView,
+  activeDocumentTab: WeatherDocumentTab,
+  viewMeta: ReturnType<typeof getViewMeta>,
+  summaryArchive: WeatherSummaryArchive | null,
+  defaultTimestampLabel: string,
+) {
+  if (activeDocumentTab === "summaries") {
+    return {
+      heading: "Summaries and Records",
+      timestampLabel: summaryArchive?.lastUpdatedLabel ?? "Archive update unavailable",
+    };
+  }
+
+  if (activeDocumentTab === "radar") {
+    return {
+      heading: "Regional Radar",
+      timestampLabel: defaultTimestampLabel,
+    };
+  }
+
+  if (activeDocumentTab === "cameras") {
+    return {
+      heading: "Local Cameras",
+      timestampLabel: defaultTimestampLabel,
+    };
+  }
+
+  if (activeDocumentTab === "graphs") {
+    return {
+      heading: `${viewMeta.label === "Current" ? "Daily" : viewMeta.label} Weather Graphs`,
+      timestampLabel: defaultTimestampLabel,
+    };
+  }
+
+  if (activeDocumentTab === "about") {
+    return {
+      heading: "About This Station",
+      timestampLabel: defaultTimestampLabel,
+    };
+  }
+
+  return {
+    heading: viewMeta.heading,
+    timestampLabel: defaultTimestampLabel,
+  };
 }
 
 function filterObservationsForLatestDay(observations: WeatherObservation[]) {
