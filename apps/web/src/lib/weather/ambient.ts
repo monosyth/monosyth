@@ -366,6 +366,16 @@ async function getCurrentWeatherPageData(): Promise<WeatherPageData> {
       };
     }
 
+    if (message.includes("above-user-rate-limit")) {
+      const storedResult = await getStoredCurrentWeatherPageData(
+        "Ambient Weather rate-limited the live fetch, so this page is temporarily showing persisted logger history from Firestore.",
+      );
+
+      if (storedResult) {
+        return storedResult;
+      }
+    }
+
     return {
       state: "error",
       message,
@@ -405,6 +415,51 @@ function buildStoredDevice(
       dateutc: lastObservationAt,
     },
   };
+}
+
+async function getStoredCurrentWeatherPageData(
+  notice: string,
+): Promise<Extract<WeatherPageData, { state: "ready" }> | null> {
+  const env = readEnv();
+  const endMs = Date.now() + 60_000;
+  const startMs = endMs - 27 * 60 * 60 * 1000;
+
+  try {
+    const [historicalObservations, storedMeta] = await Promise.all([
+      readStoredWeatherObservationsBetween({
+        macAddress: env.macAddress,
+        startMs,
+        endMs,
+      }),
+      readStoredWeatherStationMeta({
+        macAddress: env.macAddress,
+      }),
+    ]);
+
+    if (!historicalObservations.length) {
+      return null;
+    }
+
+    const coordinates = resolveForecastCoordinates(historicalObservations);
+    const forecast = await getHourlyForecast(
+      coordinates.latitude,
+      coordinates.longitude,
+    ).catch(() => []);
+
+    return {
+      state: "ready",
+      data: applyStationOverrides(
+        buildWeatherOverview(
+          buildStoredDevice(historicalObservations, storedMeta),
+          historicalObservations,
+          forecast,
+        ),
+      ),
+      notice,
+    };
+  } catch {
+    return null;
+  }
 }
 
 function buildViewNotice(view: WeatherDashboardView, count: number) {
