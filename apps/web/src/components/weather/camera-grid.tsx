@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import type { WeatherCamera } from "@/lib/weather/cameras";
+import styles from "@/components/weather/camera-grid.module.css";
 
 export function WeatherCameraGrid({
   items,
@@ -12,7 +13,7 @@ export function WeatherCameraGrid({
   const [failedIds, setFailedIds] = useState<Record<string, boolean>>({});
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className={styles.grid}>
       {items.map((item) => {
         const hasFailed = failedIds[item.id] ?? false;
 
@@ -22,17 +23,17 @@ export function WeatherCameraGrid({
             href={item.href}
             target="_blank"
             rel="noreferrer"
-            className="block overflow-hidden border border-stone-200 bg-white transition hover:border-stone-400"
+            className={styles.card}
           >
             {!hasFailed ? (
-              <div className="aspect-[16/10] overflow-hidden bg-stone-100">
+              <div className={styles.preview}>
                 {/* Live traffic snapshots come from external camera feeds, so a plain img avoids optimizer rewrites. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={item.imageUrl}
                   alt={`${item.label} current traffic camera view`}
                   loading="lazy"
-                  className="h-full w-full object-cover"
+                  className={styles.image}
                   onError={() =>
                     setFailedIds((current) => ({
                       ...current,
@@ -42,23 +43,23 @@ export function WeatherCameraGrid({
                 />
               </div>
             ) : (
-              <div className="flex min-h-[7.5rem] items-center justify-between gap-4 border-b border-stone-200 bg-stone-50 px-4 py-4">
+              <div className={styles.fallback}>
                 <div>
-                  <p className="text-[0.68rem] uppercase tracking-[0.16em] text-stone-500">
+                  <p className={styles.fallbackEyebrow}>
                     Live preview unavailable
                   </p>
-                  <p className="mt-1 text-sm text-stone-600">
+                  <p className={styles.fallbackText}>
                     Open the camera page for the current image.
                   </p>
                 </div>
-                <span className="shrink-0 border border-stone-300 bg-white px-3 py-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-stone-700">
+                <span className={styles.fallbackCta}>
                   Open camera
                 </span>
               </div>
             )}
-            <div className="px-3 py-2.5">
-              <p className="text-sm font-medium text-stone-800">{item.label}</p>
-              <p className="mt-1 text-xs leading-5 text-stone-500">{item.note}</p>
+            <div className={styles.body}>
+              <p className={styles.label}>{item.label}</p>
+              <p className={styles.note}>{item.note}</p>
             </div>
           </a>
         );

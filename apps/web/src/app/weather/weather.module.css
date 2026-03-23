@@ -1,0 +1,414 @@
+.page {
+  min-height: 100vh;
+  background: #ececec;
+  color: rgb(41 37 36);
+}
+
+.header {
+  background: #1eb7ce;
+  color: #fff;
+}
+
+.headerInner {
+  margin: 0 auto;
+  max-width: 80rem;
+  padding: 1.25rem 1.25rem;
+}
+
+.heroGrid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.heroEyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.78);
+}
+
+.heroTitle {
+  margin-top: 0.5rem;
+  max-width: 56rem;
+  font-size: 2.25rem;
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.heroMeta {
+  margin-top: 0.75rem;
+  max-width: 56rem;
+  font-size: 0.94rem;
+  font-weight: 300;
+  line-height: 1.5;
+  color: rgb(255 255 255 / 0.9);
+}
+
+.mapLink {
+  text-decoration-line: underline;
+  text-decoration-color: rgb(255 255 255 / 0.55);
+  text-underline-offset: 0.25rem;
+}
+
+.mapLink:hover {
+  text-decoration-color: #fff;
+}
+
+.heroSectionTitle {
+  margin-top: 1.75rem;
+  font-size: 2rem;
+  font-weight: 300;
+  letter-spacing: -0.03em;
+}
+
+.heroTimestamp {
+  margin-top: 0.375rem;
+  font-size: 0.875rem;
+  color: rgb(255 255 255 / 0.84);
+}
+
+.quickStatsGrid {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.quickStatCard {
+  border: 1px solid rgb(255 255 255 / 0.18);
+  background: #18adc3;
+  padding: 0.5rem 0.75rem;
+}
+
+.quickStatLabel {
+  font-size: 0.64rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.68);
+}
+
+.quickStatValue {
+  margin-top: 0.25rem;
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.heroSidebar {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.mastheadTable {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  background: #18adc3;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.mastheadRow {
+  border-bottom: 1px solid rgb(255 255 255 / 0.18);
+}
+
+.mastheadRow:last-child {
+  border-bottom: 0;
+}
+
+.mastheadHeaderCell {
+  width: 38%;
+  padding: 0.5rem 1rem;
+  padding-right: 1rem;
+  font-weight: 600;
+  color: rgb(255 255 255 / 0.92);
+}
+
+.mastheadValueCell {
+  padding: 0.5rem 1rem;
+  color: rgb(255 255 255 / 0.84);
+}
+
+.webcamCard {
+  display: block;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  background: #18adc3;
+  transition: border-color 160ms ease;
+}
+
+.webcamCard:hover {
+  border-color: rgb(255 255 255 / 0.3);
+}
+
+.webcamFrame {
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #17a8bd;
+}
+
+.webcamImage {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+}
+
+.webcamCardBody {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.webcamCardEyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.7);
+}
+
+.webcamCardNote {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: rgb(255 255 255 / 0.92);
+}
+
+.tabShell {
+  border-top: 1px solid rgb(255 255 255 / 0.18);
+  background: #1eb7ce;
+}
+
+.tabInner {
+  margin: 0 auto;
+  max-width: 80rem;
+  padding: 0.75rem 1.25rem;
+}
+
+.primaryTabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem 1.5rem;
+  border-bottom: 1px solid rgb(255 255 255 / 0.18);
+  padding-bottom: 0.5rem;
+}
+
+.primaryTab {
+  border-bottom: 3px solid transparent;
+  padding-bottom: 0.375rem;
+  font-size: 1.2rem;
+  font-weight: 300;
+  line-height: 1;
+  transition: color 160ms ease, border-color 160ms ease;
+}
+
+.primaryTabActive {
+  border-bottom-color: #f4d24f;
+  color: #fff;
+}
+
+.primaryTabInactive {
+  color: rgb(255 255 255 / 0.88);
+}
+
+.primaryTabInactive:hover {
+  color: #fff;
+}
+
+.secondaryTabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem 1.25rem;
+  padding-top: 0.5rem;
+}
+
+.secondaryTab {
+  border-bottom: 3px solid transparent;
+  padding-bottom: 0.375rem;
+  font-size: 0.92rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: color 160ms ease, border-color 160ms ease;
+}
+
+.secondaryTabActive {
+  border-bottom-color: #f4d24f;
+  color: #fff;
+}
+
+.secondaryTabInactive {
+  color: rgb(255 255 255 / 0.8);
+}
+
+.secondaryTabInactive:hover {
+  color: #fff;
+}
+
+.contentShell {
+  margin: 0 auto;
+  max-width: 80rem;
+  padding: 1.5rem 1.25rem;
+}
+
+.noticeBanner {
+  margin-bottom: 1rem;
+  border: 1px solid #e9c65a;
+  background: #fff8de;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+  color: #7d5b00;
+}
+
+.stateShell {
+  min-height: 100vh;
+  background: #ececec;
+  padding: 2.5rem 1.25rem;
+  color: rgb(41 37 36);
+}
+
+.stateCard {
+  margin: 0 auto;
+  max-width: 56rem;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.stateHeader {
+  background: #1eb7ce;
+  padding: 2.5rem 2rem;
+  color: #fff;
+}
+
+.stateEyebrow {
+  font-size: 0.875rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.78);
+}
+
+.stateTitle {
+  margin-top: 1rem;
+  font-size: 2.25rem;
+  font-weight: 300;
+  letter-spacing: -0.04em;
+}
+
+.stateDetail {
+  margin-top: 1rem;
+  max-width: 48rem;
+  font-size: 1.125rem;
+  line-height: 2rem;
+  color: rgb(255 255 255 / 0.88);
+}
+
+.stateActions {
+  margin-top: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.stateButton {
+  border-radius: 999px;
+  border: 1px solid rgb(255 255 255 / 0.35);
+  background: rgb(255 255 255 / 0.12);
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  transition: background-color 160ms ease;
+}
+
+.stateButton:hover {
+  background: rgb(255 255 255 / 0.22);
+}
+
+@media (min-width: 640px) {
+  .headerInner,
+  .tabInner,
+  .contentShell,
+  .stateShell {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  .heroTitle {
+    font-size: 2.85rem;
+  }
+
+  .heroMeta {
+    font-size: 1.12rem;
+  }
+
+  .heroSectionTitle {
+    font-size: 2.45rem;
+  }
+
+  .heroTimestamp {
+    font-size: 1rem;
+  }
+
+  .quickStatsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mastheadTable {
+    font-size: 0.98rem;
+  }
+
+  .primaryTab {
+    font-size: 1.55rem;
+  }
+
+  .secondaryTab {
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .headerInner,
+  .tabInner,
+  .contentShell,
+  .stateShell {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+
+  .heroGrid {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    align-items: flex-start;
+  }
+
+  .heroTitle {
+    font-size: 3.35rem;
+  }
+
+  .heroMeta {
+    font-size: 1.32rem;
+  }
+
+  .heroSidebar {
+    justify-self: end;
+    text-align: right;
+  }
+
+  .mastheadTable {
+    max-width: 38rem;
+    text-align: right;
+  }
+
+  .mastheadHeaderCell {
+    text-align: right;
+  }
+
+  .webcamCardBody {
+    text-align: right;
+  }
+}
+
+@media (min-width: 1280px) {
+  .quickStatsGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { getTimes } from "suncalc";
 
 import { WeatherCameraGrid } from "@/components/weather/camera-grid";
+import styles from "@/app/weather/weather.module.css";
 import {
   getWeatherPageData,
   normalizeWeatherDashboardView,
@@ -238,22 +239,22 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const visibleNotice = shouldDisplayWeatherNotice(result.notice) ? result.notice : undefined;
 
   return (
-    <main className="min-h-screen bg-[#ececec] text-stone-800">
-      <header className="bg-[#1eb7ce] text-white">
-        <div className="mx-auto max-w-7xl px-5 py-5 sm:px-8 lg:px-10">
-          <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
+    <main className={styles.page}>
+      <header className={styles.header}>
+        <div className={styles.headerInner}>
+          <div className={styles.heroGrid}>
             <div>
-              <p className="text-[0.72rem] uppercase tracking-[0.24em] text-white/78">
+              <p className={styles.heroEyebrow}>
                 Monosyth Personal Weather
               </p>
-              <h1 className="mt-2 max-w-4xl text-[2.25rem] font-light leading-[1] tracking-[-0.04em] sm:text-[2.85rem] lg:text-[3.35rem]">
+              <h1 className={styles.heroTitle}>
                 {data.station.name}
               </h1>
-              <p className="mt-3 max-w-4xl text-[0.94rem] font-light leading-[1.5] text-white/90 sm:text-[1.12rem] lg:text-[1.32rem]">
+              <p className={styles.heroMeta}>
                 {buildHeaderMeta(data, coordinates)}
                 {" "}
                 <a
-                  className="underline decoration-white/55 underline-offset-4 hover:decoration-white"
+                  className={styles.mapLink}
                   href={mapUrl}
                   target="_blank"
                   rel="noreferrer"
@@ -262,33 +263,33 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
                 </a>
               </p>
 
-              <h2 className="mt-7 text-[2rem] font-light tracking-[-0.03em] sm:text-[2.45rem]">
+              <h2 className={styles.heroSectionTitle}>
                 {pageMeta.heading}
               </h2>
-              <p className="mt-1.5 text-sm text-white/84 sm:text-base">
+              <p className={styles.heroTimestamp}>
                 {pageMeta.timestampLabel}
               </p>
-              <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <div className={styles.quickStatsGrid}>
                 {quickStats.map((stat) => (
-                  <div key={stat.label} className="border border-white/18 bg-[#18adc3] px-3 py-2">
-                    <p className="text-[0.64rem] uppercase tracking-[0.18em] text-white/68">
+                  <div key={stat.label} className={styles.quickStatCard}>
+                    <p className={styles.quickStatLabel}>
                       {stat.label}
                     </p>
-                    <p className="mt-1 text-[0.95rem] text-white">{stat.value}</p>
+                    <p className={styles.quickStatValue}>{stat.value}</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="grid gap-3 lg:justify-self-end lg:text-right">
-              <table className="w-full border-collapse border border-white/18 bg-[#18adc3] text-left text-sm sm:text-[0.98rem] lg:max-w-[38rem] lg:text-right">
+            <div className={styles.heroSidebar}>
+              <table className={styles.mastheadTable}>
                 <tbody>
                   {mastheadRows.map((row) => (
-                    <tr key={row.label} className="border-b border-white/18 last:border-b-0">
-                      <th className="px-4 py-2 pr-4 font-semibold text-white/92 lg:w-[38%] lg:text-right">
+                    <tr key={row.label} className={styles.mastheadRow}>
+                      <th className={styles.mastheadHeaderCell}>
                         {row.label}:
                       </th>
-                      <td className="px-4 py-2 text-white/84">{row.value}</td>
+                      <td className={styles.mastheadValueCell}>{row.value}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -298,31 +299,31 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
                 href={skylineWebcamHeaderCard.href}
                 target="_blank"
                 rel="noreferrer"
-                className="block overflow-hidden border border-white/18 bg-[#18adc3] transition hover:border-white/30"
+                className={styles.webcamCard}
               >
-                <div className="aspect-[16/9] overflow-hidden bg-[#17a8bd]">
+                <div className={styles.webcamFrame}>
                   {/* External webcam preview is kept as a plain img so we can use the source site directly. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={skylineWebcamHeaderCard.imageUrl}
                     alt="Seattle skyline webcam preview"
                     loading="lazy"
-                    className="h-full w-full object-cover"
+                    className={styles.webcamImage}
                   />
                 </div>
-                <div className="px-3 py-2 text-left lg:text-right">
-                  <p className="text-[0.72rem] uppercase tracking-[0.16em] text-white/70">
+                <div className={styles.webcamCardBody}>
+                  <p className={styles.webcamCardEyebrow}>
                     {skylineWebcamHeaderCard.title}
                   </p>
-                  <p className="mt-1 text-sm text-white/92">{skylineWebcamHeaderCard.note}</p>
+                  <p className={styles.webcamCardNote}>{skylineWebcamHeaderCard.note}</p>
                 </div>
               </a>
             </div>
           </div>
         </div>
-        <div className="border-t border-white/18 bg-[#1eb7ce]">
-          <div className="mx-auto max-w-7xl px-5 py-3 sm:px-8 lg:px-10">
-            <div className="flex flex-wrap items-end gap-x-6 gap-y-2 border-b border-white/18 pb-2">
+        <div className={styles.tabShell}>
+          <div className={styles.tabInner}>
+            <div className={styles.primaryTabs}>
               {summaryTabs.map((tab) => {
                 const isActive = tab.view === activeView;
                 const href = buildWeatherHref(tab.view, activeDocumentTab);
@@ -333,23 +334,23 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
                     href={href}
                     prefetch
                     scroll={false}
-                    className={`border-b-[3px] pb-1.5 text-[1.2rem] font-light leading-none transition sm:text-[1.55rem] ${isActive ? "border-[#f4d24f] text-white" : "border-transparent text-white/88 hover:text-white"}`}
+                    className={`${styles.primaryTab} ${isActive ? styles.primaryTabActive : styles.primaryTabInactive}`}
                   >
                     {tab.label}
                   </Link>
                 );
               })}
             </div>
-            <div className="flex flex-wrap items-end gap-x-5 gap-y-2 pt-2">
+            <div className={styles.secondaryTabs}>
               {documentTabs.map((tab) => (
                 <Link
                   key={tab.tab}
                   href={buildWeatherHref(activeView, tab.tab)}
                   scroll={false}
-                  className={`border-b-[3px] pb-1.5 text-[0.92rem] font-medium uppercase tracking-[0.14em] transition sm:text-[1rem] ${
+                  className={`${styles.secondaryTab} ${
                     activeDocumentTab === tab.tab
-                      ? "border-[#f4d24f] text-white"
-                      : "border-transparent text-white/80 hover:text-white"
+                      ? styles.secondaryTabActive
+                      : styles.secondaryTabInactive
                   }`}
                 >
                   {tab.label}
@@ -360,9 +361,9 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-5 py-6 sm:px-8 lg:px-10">
+      <div className={styles.contentShell}>
         {visibleNotice ? (
-          <div className="mb-4 border border-[#e9c65a] bg-[#fff8de] px-4 py-2 text-sm leading-6 text-[#7d5b00]">
+          <div className={styles.noticeBanner}>
             {visibleNotice}
           </div>
         ) : null}
@@ -421,24 +422,24 @@ function WeatherState({ result }: { result: Exclude<WeatherPageData, { state: "r
       : result.message;
 
   return (
-    <main className="min-h-screen bg-[#ececec] px-5 py-10 text-stone-800 sm:px-8 lg:px-10">
-      <div className="mx-auto max-w-4xl overflow-hidden rounded-sm bg-white shadow-[0_8px_24px_rgba(0,0,0,0.08)]">
-        <div className="bg-[#1eb7ce] px-8 py-10 text-white">
-          <p className="text-sm uppercase tracking-[0.18em] text-white/78">
+    <main className={styles.stateShell}>
+      <div className={styles.stateCard}>
+        <div className={styles.stateHeader}>
+          <p className={styles.stateEyebrow}>
             Monosyth Personal Weather
           </p>
-          <h1 className="mt-4 text-4xl font-light tracking-[-0.04em]">{title}</h1>
-          <p className="mt-4 max-w-3xl text-lg leading-8 text-white/88">{detail}</p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <h1 className={styles.stateTitle}>{title}</h1>
+          <p className={styles.stateDetail}>{detail}</p>
+          <div className={styles.stateActions}>
             <Link
               href="/weather"
-              className="rounded-full border border-white/35 bg-white/12 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/22"
+              className={styles.stateButton}
             >
               Reload Weather
             </Link>
             <Link
               href="/"
-              className="rounded-full border border-white/35 bg-white/12 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/22"
+              className={styles.stateButton}
             >
               Back Home
             </Link>
