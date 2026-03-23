@@ -2806,7 +2806,7 @@ function trimSeriesPointsForView(points: WeatherSeries["points"], view: WeatherD
   const latestTimestamp = points.at(-1)?.timestamp ?? 0;
   const windowMs =
     view === "current"
-      ? 27 * 60 * 60 * 1000
+      ? 24 * 60 * 60 * 1000
       : view === "week"
         ? 7 * 24 * 60 * 60 * 1000
         : view === "month"
