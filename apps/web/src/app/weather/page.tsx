@@ -141,10 +141,10 @@ const documentTabs = [
 
 const trafficMapUrl = "https://web.seattle.gov/travelers/";
 const skylineWebcamHeaderCard = {
-  href: "https://www.skylinewebcams.com/en/webcam/united-states/washington/seattle/panorama.html",
-  imageUrl: "/api/weather/webcam",
-  title: "Seattle Skyline Cam",
-  note: "Current frame from the live Seattle skyline stream",
+  href: "/weather?tab=cameras",
+  imageUrl: "/api/weather/station-camera",
+  title: "Station Camera",
+  note: "Latest uploaded frame from the live weather cam",
 };
 
 function normalizeWeatherDocumentTab(value?: string): WeatherDocumentTab {
