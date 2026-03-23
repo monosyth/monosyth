@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { getTimes } from "suncalc";
 
 import { WeatherCameraGrid } from "@/components/weather/camera-grid";
+import { RadarEmbed } from "@/components/weather/radar-embed";
 import styles from "@/app/weather/weather.module.css";
 import {
   getWeatherPageData,
@@ -654,14 +655,7 @@ function RadarTabContent({
         subtitle="Regional radar centered on the station area."
         compact
       >
-        <div className="overflow-hidden border border-stone-200 bg-white">
-          <iframe
-            title="Weather radar"
-            src={radarUrl}
-            className="h-[640px] w-full"
-            loading="lazy"
-          />
-        </div>
+        <RadarEmbed title="Weather radar" src={radarUrl} />
       </TablePanel>
 
       <div className="grid gap-4">
