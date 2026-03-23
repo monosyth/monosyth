@@ -77,8 +77,11 @@ type RecordCard = {
 type WeatherPageProps = {
   searchParams?: Promise<{
     view?: string;
+    tab?: string;
   }>;
 };
+
+type WeatherDocumentTab = "dashboard" | "about";
 
 const DISPLAY_COORDINATES = {
   latitude: 47.7565,
@@ -118,9 +121,9 @@ const summaryTabs = [
 ] as const satisfies ReadonlyArray<{ label: string; view: WeatherDashboardView }>;
 
 const documentTabs = [
-  { label: "Summaries", href: "#summary-section" },
-  { label: "About", href: "#about-section" },
-] as const;
+  { label: "Summaries", tab: "dashboard" },
+  { label: "About", tab: "about" },
+] as const satisfies ReadonlyArray<{ label: string; tab: WeatherDocumentTab }>;
 
 const trafficMapUrl = "https://web.seattle.gov/travelers/";
 
@@ -179,9 +182,29 @@ const regionalWeatherLinks = [
   },
 ] as const;
 
+function normalizeWeatherDocumentTab(value?: string): WeatherDocumentTab {
+  return value === "about" ? "about" : "dashboard";
+}
+
+function buildWeatherHref(view: WeatherDashboardView, tab: WeatherDocumentTab = "dashboard") {
+  const params = new URLSearchParams();
+
+  if (view !== "current") {
+    params.set("view", view);
+  }
+
+  if (tab === "about") {
+    params.set("tab", "about");
+  }
+
+  const query = params.toString();
+  return query ? `/weather?${query}` : "/weather";
+}
+
 export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const resolvedSearchParams = (await searchParams) ?? {};
   const activeView = normalizeWeatherDashboardView(resolvedSearchParams.view);
+  const activeDocumentTab = normalizeWeatherDocumentTab(resolvedSearchParams.tab);
   const result = await getWeatherPageData(activeView);
 
   if (result.state !== "ready") {
@@ -214,6 +237,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const recordCards = buildRecordCards(data, activeView);
   const quickStats = buildQuickStats(data, activeView);
   const isCurrentView = activeView === "current";
+  const isAboutTab = activeDocumentTab === "about";
   const featuredComparisonPanel = isCurrentView
     ? comparisonPanels.find((panel) => panel.title.startsWith("Last ")) ?? null
     : comparisonPanels[0] ?? null;
@@ -282,8 +306,8 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-8 gap-y-3 overflow-x-auto px-5 py-3 sm:px-8 lg:px-10">
             <div className="flex min-w-max items-end gap-7 pr-1">
               {summaryTabs.map((tab) => {
-                const isActive = tab.view === activeView;
-                const href = tab.view === "current" ? "/weather" : `/weather?view=${tab.view}`;
+                const isActive = activeDocumentTab === "dashboard" && tab.view === activeView;
+                const href = buildWeatherHref(tab.view);
 
                 return (
                   <Link
@@ -298,13 +322,22 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
                 );
               })}
               {documentTabs.map((tab) => (
-                <a
-                  key={tab.href}
-                  href={tab.href}
-                  className="border-b-[4px] border-transparent pb-2 text-[1.85rem] font-light leading-none text-white/88 transition hover:text-white sm:text-[2.15rem]"
+                <Link
+                  key={tab.tab}
+                  href={
+                    tab.tab === "dashboard"
+                      ? `${buildWeatherHref(activeView)}#summary-section`
+                      : buildWeatherHref(activeView, "about")
+                  }
+                  scroll={false}
+                  className={`border-b-[4px] pb-2 text-[1.85rem] font-light leading-none transition sm:text-[2.15rem] ${
+                    activeDocumentTab === tab.tab
+                      ? "border-[#f4d24f] text-white"
+                      : "border-transparent text-white/88 hover:text-white"
+                  }`}
                 >
                   {tab.label}
-                </a>
+                </Link>
               ))}
             </div>
           </div>
@@ -318,7 +351,14 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           </div>
         ) : null}
 
-        {isCurrentView ? (
+        {isAboutTab ? (
+          <AboutTabContent
+            almanac={almanac}
+            forecast={data.forecast.slice(0, 8)}
+            rawRows={rawRows}
+            stationRows={stationRows}
+          />
+        ) : isCurrentView ? (
           <>
             <div className="grid gap-4 xl:grid-cols-[1.12fr_0.88fr]">
               <TablePanel
@@ -544,29 +584,6 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
               <ForecastTable periods={data.forecast.slice(0, 8)} />
             </TablePanel>
 
-            <TablePanel
-              id="about-section"
-              title="About This Station"
-              subtitle="Station details and newest raw payload values."
-              compact
-            >
-              <div className="grid gap-4">
-                <TwoColumnTable
-                  rows={stationRows}
-                  emptyMessage="Station details will appear after the first successful station fetch."
-                />
-                <div className="border-t border-stone-200 pt-4">
-                  <h3 className="text-lg font-medium uppercase tracking-[0.14em] text-stone-600">Raw Snapshot</h3>
-                  <div className="mt-2">
-                    <TwoColumnTable
-                      rows={rawRows}
-                      emptyMessage="The newest raw payload will appear here after a successful fetch."
-                      monoLabels
-                    />
-                  </div>
-                </div>
-              </div>
-            </TablePanel>
           </div>
         </div>
 
@@ -633,6 +650,80 @@ function WeatherState({ result }: { result: Exclude<WeatherPageData, { state: "r
         </div>
       </div>
     </main>
+  );
+}
+
+function AboutTabContent({
+  almanac,
+  forecast,
+  rawRows,
+  stationRows,
+}: {
+  almanac: ReturnType<typeof buildWeatherAlmanac>;
+  forecast: WeatherForecastPeriod[];
+  rawRows: FactRow[];
+  stationRows: FactRow[];
+}) {
+  return (
+    <div className="grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
+      <TablePanel
+        id="about-section"
+        title="About This Station"
+        subtitle="Station details and newest raw payload values."
+        compact
+      >
+        <div className="grid gap-4">
+          <TwoColumnTable
+            rows={stationRows}
+            emptyMessage="Station details will appear after the first successful station fetch."
+          />
+          <div className="border-t border-stone-200 pt-4">
+            <h3 className="text-lg font-medium uppercase tracking-[0.14em] text-stone-600">Raw Snapshot</h3>
+            <div className="mt-2">
+              <TwoColumnTable
+                rows={rawRows}
+                emptyMessage="The newest raw payload will appear here after a successful fetch."
+                monoLabels
+              />
+            </div>
+          </div>
+        </div>
+      </TablePanel>
+
+      <div className="grid gap-4">
+        <TablePanel
+          id="almanac-section-about"
+          title="Almanac"
+          subtitle="Sun and moon timing for the station area."
+          compact
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <h3 className="text-lg font-medium uppercase tracking-[0.14em] text-stone-600">Sun</h3>
+              <div className="mt-2">
+                <TwoColumnTable rows={almanac.sun} emptyMessage="Sun details unavailable." />
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-medium uppercase tracking-[0.14em] text-stone-600">Moon</h3>
+              <div className="mt-2">
+                <TwoColumnTable rows={almanac.moon} emptyMessage="Moon details unavailable." />
+              </div>
+            </div>
+          </div>
+        </TablePanel>
+
+        <TablePanel
+          id="forecast-section-about"
+          title="Forecast Outlook"
+          subtitle="Hourly outlook."
+          compact
+        >
+          <ForecastTable periods={forecast} />
+        </TablePanel>
+      </div>
+    </div>
   );
 }
 
