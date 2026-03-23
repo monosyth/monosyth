@@ -29,7 +29,7 @@ export function WeatherCameraGrid({
                 {/* Live traffic snapshots come from external camera feeds, so a plain img avoids optimizer rewrites. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={`/api/weather/camera?id=${encodeURIComponent(item.id)}`}
+                  src={item.imageUrl}
                   alt={`${item.label} current traffic camera view`}
                   loading="lazy"
                   className="h-full w-full object-cover"
