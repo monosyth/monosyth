@@ -245,10 +245,10 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
               <p className="text-[0.72rem] uppercase tracking-[0.24em] text-white/78">
                 Monosyth Personal Weather
               </p>
-              <h1 className="mt-2 max-w-4xl text-[2.85rem] font-light leading-[0.98] tracking-[-0.045em] sm:text-[3.5rem] lg:text-[4rem]">
+              <h1 className="mt-2 max-w-4xl text-[2.25rem] font-light leading-[1] tracking-[-0.04em] sm:text-[2.85rem] lg:text-[3.35rem]">
                 {data.station.name}
               </h1>
-              <p className="mt-3 max-w-4xl text-[1.05rem] font-light leading-[1.55] text-white/90 sm:text-[1.35rem] lg:text-[1.65rem]">
+              <p className="mt-3 max-w-4xl text-[0.94rem] font-light leading-[1.5] text-white/90 sm:text-[1.12rem] lg:text-[1.32rem]">
                 {buildHeaderMeta(data, coordinates)}
                 {" "}
                 <a
