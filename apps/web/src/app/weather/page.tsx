@@ -82,7 +82,7 @@ type WeatherPageProps = {
   }>;
 };
 
-type WeatherDocumentTab = "dashboard" | "about";
+type WeatherDocumentTab = "summaries" | "radar" | "cameras" | "graphs" | "about";
 
 const DISPLAY_COORDINATES = {
   latitude: 47.7565,
@@ -122,7 +122,10 @@ const summaryTabs = [
 ] as const satisfies ReadonlyArray<{ label: string; view: WeatherDashboardView }>;
 
 const documentTabs = [
-  { label: "Summaries", tab: "dashboard" },
+  { label: "Summaries", tab: "summaries" },
+  { label: "Radar", tab: "radar" },
+  { label: "Cameras", tab: "cameras" },
+  { label: "Graphs", tab: "graphs" },
   { label: "About", tab: "about" },
 ] as const satisfies ReadonlyArray<{ label: string; tab: WeatherDocumentTab }>;
 
@@ -147,18 +150,27 @@ const regionalWeatherLinks = [
 ] as const;
 
 function normalizeWeatherDocumentTab(value?: string): WeatherDocumentTab {
-  return value === "about" ? "about" : "dashboard";
+  if (
+    value === "radar" ||
+    value === "cameras" ||
+    value === "graphs" ||
+    value === "about"
+  ) {
+    return value;
+  }
+
+  return "summaries";
 }
 
-function buildWeatherHref(view: WeatherDashboardView, tab: WeatherDocumentTab = "dashboard") {
+function buildWeatherHref(view: WeatherDashboardView, tab: WeatherDocumentTab = "summaries") {
   const params = new URLSearchParams();
 
   if (view !== "current") {
     params.set("view", view);
   }
 
-  if (tab === "about") {
-    params.set("tab", "about");
+  if (tab !== "summaries") {
+    params.set("tab", tab);
   }
 
   const query = params.toString();
@@ -201,6 +213,10 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const recordCards = buildRecordCards(data, activeView);
   const quickStats = buildQuickStats(data, activeView);
   const isCurrentView = activeView === "current";
+  const isSummariesTab = activeDocumentTab === "summaries";
+  const isRadarTab = activeDocumentTab === "radar";
+  const isCamerasTab = activeDocumentTab === "cameras";
+  const isGraphsTab = activeDocumentTab === "graphs";
   const isAboutTab = activeDocumentTab === "about";
   const featuredComparisonPanel = isCurrentView
     ? comparisonPanels.find((panel) => panel.title.startsWith("Last ")) ?? null
@@ -270,8 +286,8 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-8 gap-y-3 overflow-x-auto px-5 py-3 sm:px-8 lg:px-10">
             <div className="flex min-w-max items-end gap-7 pr-1">
               {summaryTabs.map((tab) => {
-                const isActive = activeDocumentTab === "dashboard" && tab.view === activeView;
-                const href = buildWeatherHref(tab.view);
+                const isActive = tab.view === activeView;
+                const href = buildWeatherHref(tab.view, activeDocumentTab);
 
                 return (
                   <Link
@@ -288,11 +304,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
               {documentTabs.map((tab) => (
                 <Link
                   key={tab.tab}
-                  href={
-                    tab.tab === "dashboard"
-                      ? `${buildWeatherHref(activeView)}#summary-section`
-                      : buildWeatherHref(activeView, "about")
-                  }
+                  href={buildWeatherHref(activeView, tab.tab)}
                   scroll={false}
                   className={`border-b-[4px] pb-2 text-[1.85rem] font-light leading-none transition sm:text-[2.15rem] ${
                     activeDocumentTab === tab.tab
@@ -315,264 +327,42 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           </div>
         ) : null}
 
-        {isAboutTab ? (
+        {isSummariesTab ? (
+          <SummariesTabContent
+            almanac={almanac}
+            currentRows={currentRows}
+            featuredComparisonPanel={featuredComparisonPanel}
+            isCurrentView={isCurrentView}
+            periodRows={periodRows}
+            rangeRows={rangeRows}
+            recordCards={recordCards}
+            secondaryComparisonPanels={secondaryComparisonPanels}
+            summaryCards={summaryCards}
+            viewMeta={viewMeta}
+          />
+        ) : isRadarTab ? (
+          <RadarTabContent
+            almanac={almanac}
+            forecast={data.forecast.slice(0, 8)}
+            radarUrl={radarUrl}
+          />
+        ) : isCamerasTab ? (
+          <CamerasTabContent />
+        ) : isGraphsTab ? (
+          <GraphsTabContent
+            coordinates={coordinates}
+            graphPanels={graphPanels}
+            view={activeView}
+            viewMeta={viewMeta}
+          />
+        ) : isAboutTab ? (
           <AboutTabContent
             almanac={almanac}
             forecast={data.forecast.slice(0, 8)}
             rawRows={rawRows}
             stationRows={stationRows}
           />
-        ) : isCurrentView ? (
-          <>
-            <div className="grid gap-4 xl:grid-cols-[1.12fr_0.88fr]">
-              <TablePanel
-                id="current-section"
-                title={viewMeta.primaryTitle}
-                subtitle={viewMeta.primarySubtitle}
-                compact
-              >
-                <TwoColumnTable
-                  rows={currentRows}
-                  emptyMessage="Current conditions will appear after the next successful station fetch."
-                />
-              </TablePanel>
-
-              <TablePanel
-                id="almanac-section"
-                title="Almanac"
-                subtitle="Sun and moon timing for the station area."
-                compact
-              >
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <h3 className="text-lg font-medium uppercase tracking-[0.14em] text-stone-600">Sun</h3>
-                    <div className="mt-2">
-                      <TwoColumnTable rows={almanac.sun} emptyMessage="Sun details unavailable." />
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-medium uppercase tracking-[0.14em] text-stone-600">Moon</h3>
-                    <div className="mt-2">
-                      <TwoColumnTable rows={almanac.moon} emptyMessage="Moon details unavailable." />
-                    </div>
-                  </div>
-                </div>
-              </TablePanel>
-            </div>
-
-            <div id="summary-section" className="mt-4 grid gap-4 xl:grid-cols-2">
-              <TablePanel
-                id="today-section"
-                title={viewMeta.periodTitle}
-                subtitle={viewMeta.periodSubtitle}
-                compact
-              >
-                <ThreeColumnTable
-                  rows={periodRows}
-                  emptyMessage="Period highs and lows will populate once enough observations are available."
-                />
-              </TablePanel>
-
-              {featuredComparisonPanel ? (
-                <TablePanel
-                  id="comparison-section"
-                  title={featuredComparisonPanel.title}
-                  subtitle={featuredComparisonPanel.subtitle}
-                  compact
-                >
-                  <ThreeColumnTable
-                    rows={featuredComparisonPanel.rows}
-                    emptyMessage="Archive comparisons will appear after enough stored station history accumulates."
-                  />
-                </TablePanel>
-              ) : (
-                <TablePanel
-                  id="recent-section"
-                  title="Recent Range"
-                  subtitle="Active window summary."
-                  compact
-                >
-                  <ThreeColumnTable
-                    rows={rangeRows}
-                    emptyMessage="Range details will appear once enough observations are available."
-                  />
-                </TablePanel>
-              )}
-            </div>
-          </>
-        ) : (
-          <div className="grid gap-4 xl:grid-cols-[1.12fr_0.88fr]">
-            <TablePanel
-              id="summary-section"
-              title={viewMeta.periodTitle}
-              subtitle={viewMeta.periodSubtitle}
-              compact
-            >
-              <ThreeColumnTable
-                rows={periodRows}
-                emptyMessage="Period highs and lows will populate once enough observations are available."
-              />
-            </TablePanel>
-
-            {featuredComparisonPanel ? (
-              <TablePanel
-                id="comparison-section"
-                title={featuredComparisonPanel.title}
-                subtitle={featuredComparisonPanel.subtitle}
-                compact
-              >
-                <ThreeColumnTable
-                  rows={featuredComparisonPanel.rows}
-                  emptyMessage="Archive comparisons will appear after enough stored station history accumulates."
-                />
-              </TablePanel>
-            ) : (
-              <TablePanel
-                id="recent-section"
-                title="Recent Range"
-                subtitle="Active window summary."
-                compact
-              >
-                <ThreeColumnTable
-                  rows={rangeRows}
-                  emptyMessage="Range details will appear once enough observations are available."
-                />
-              </TablePanel>
-            )}
-          </div>
-        )}
-
-        {activeView !== "current" ? (
-          <>
-            <div className="mt-4 grid gap-px border border-stone-200 bg-stone-200 xl:grid-cols-4">
-              {summaryCards.map((card) => (
-                <SummaryCardPanel key={card.label} card={card} />
-              ))}
-            </div>
-
-            <div id="records-section" className="mt-4 grid gap-px border border-stone-200 bg-stone-200 md:grid-cols-2 xl:grid-cols-5">
-              {recordCards.map((card) => (
-                <RecordCardPanel key={card.label} card={card} />
-              ))}
-            </div>
-
-            {secondaryComparisonPanels.length ? (
-              <div className="mt-4 grid gap-px border border-stone-200 bg-stone-200 md:grid-cols-2 xl:grid-cols-3">
-                {secondaryComparisonPanels.map((panel) => (
-                  <ArchivePanel
-                    key={panel.title}
-                    id={`comparison-${panel.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
-                    panel={panel}
-                  />
-                ))}
-              </div>
-            ) : null}
-          </>
         ) : null}
-
-        <div className="mt-4 grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-          <TablePanel
-            id="radar-section"
-            title="Radar"
-            subtitle="Regional radar centered on the station area."
-            compact
-          >
-            <div className="overflow-hidden border border-stone-200 bg-white">
-              <iframe
-                title="Weather radar"
-                src={radarUrl}
-                className="h-[500px] w-full"
-                loading="lazy"
-              />
-            </div>
-          </TablePanel>
-
-          <div className="grid gap-4">
-            <TablePanel
-              id="cameras-section"
-              title="Local Cameras"
-              subtitle="Nearby live traffic views, map context, and regional reference links."
-              compact
-            >
-              <div className="grid gap-4">
-                <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-                  <CameraGrid
-                    title="Nearby Camera Views"
-                    items={nearbyWeatherCameras}
-                  />
-                  <TrafficMapPanel
-                    title="Seattle Traffic Map"
-                    src={trafficMapUrl}
-                    href={trafficMapUrl}
-                  />
-                </div>
-                <LinkList
-                  title="Regional Weather Links"
-                  items={regionalWeatherLinks}
-                />
-              </div>
-            </TablePanel>
-
-            {!isCurrentView ? (
-              <TablePanel
-                id="almanac-section-secondary"
-                title="Almanac"
-                subtitle="Sun and moon timing for the station area."
-                compact
-              >
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <h3 className="text-lg font-medium uppercase tracking-[0.14em] text-stone-600">Sun</h3>
-                    <div className="mt-2">
-                      <TwoColumnTable rows={almanac.sun} emptyMessage="Sun details unavailable." />
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-medium uppercase tracking-[0.14em] text-stone-600">Moon</h3>
-                    <div className="mt-2">
-                      <TwoColumnTable rows={almanac.moon} emptyMessage="Moon details unavailable." />
-                    </div>
-                  </div>
-                </div>
-              </TablePanel>
-            ) : null}
-
-            <TablePanel
-              id="forecast-section"
-              title="Forecast Outlook"
-              subtitle="Hourly outlook."
-              compact
-            >
-              <ForecastTable periods={data.forecast.slice(0, 8)} />
-            </TablePanel>
-
-          </div>
-        </div>
-
-        <TablePanel
-          id="graphs-section"
-          title="Graphs"
-          subtitle={`${viewMeta.label === "Current" ? "Daily" : viewMeta.label} station plots.`}
-          className="mt-4"
-          compact
-        >
-          {graphPanels.length ? (
-            <div className="grid gap-3 md:grid-cols-2">
-              {graphPanels.map((panel) => (
-                <StationTrendPanel
-                  key={panel.id}
-                  panel={panel}
-                  view={activeView}
-                  coordinates={coordinates}
-                />
-              ))}
-            </div>
-          ) : (
-            <PanelState message="Trend charts need at least two recent observations with matching fields." />
-          )}
-        </TablePanel>
       </div>
     </main>
   );
@@ -614,6 +404,305 @@ function WeatherState({ result }: { result: Exclude<WeatherPageData, { state: "r
         </div>
       </div>
     </main>
+  );
+}
+
+function SummariesTabContent({
+  almanac,
+  currentRows,
+  featuredComparisonPanel,
+  isCurrentView,
+  periodRows,
+  rangeRows,
+  recordCards,
+  secondaryComparisonPanels,
+  summaryCards,
+  viewMeta,
+}: {
+  almanac: ReturnType<typeof buildWeatherAlmanac>;
+  currentRows: FactRow[];
+  featuredComparisonPanel: ComparisonPanel | null;
+  isCurrentView: boolean;
+  periodRows: SummaryRow[];
+  rangeRows: SummaryRow[];
+  recordCards: RecordCard[];
+  secondaryComparisonPanels: ComparisonPanel[];
+  summaryCards: SummaryCard[];
+  viewMeta: ReturnType<typeof getViewMeta>;
+}) {
+  return (
+    <>
+      {isCurrentView ? (
+        <>
+          <div className="grid gap-4 xl:grid-cols-[1.12fr_0.88fr]">
+            <TablePanel
+              id="current-section"
+              title={viewMeta.primaryTitle}
+              subtitle={viewMeta.primarySubtitle}
+              compact
+            >
+              <TwoColumnTable
+                rows={currentRows}
+                emptyMessage="Current conditions will appear after the next successful station fetch."
+              />
+            </TablePanel>
+
+            <TablePanel
+              id="almanac-section"
+              title="Almanac"
+              subtitle="Sun and moon timing for the station area."
+              compact
+            >
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <h3 className="text-lg font-medium uppercase tracking-[0.14em] text-stone-600">Sun</h3>
+                  <div className="mt-2">
+                    <TwoColumnTable rows={almanac.sun} emptyMessage="Sun details unavailable." />
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-medium uppercase tracking-[0.14em] text-stone-600">Moon</h3>
+                  <div className="mt-2">
+                    <TwoColumnTable rows={almanac.moon} emptyMessage="Moon details unavailable." />
+                  </div>
+                </div>
+              </div>
+            </TablePanel>
+          </div>
+
+          <div id="summary-section" className="mt-4 grid gap-4 xl:grid-cols-2">
+            <TablePanel
+              id="today-section"
+              title={viewMeta.periodTitle}
+              subtitle={viewMeta.periodSubtitle}
+              compact
+            >
+              <ThreeColumnTable
+                rows={periodRows}
+                emptyMessage="Period highs and lows will populate once enough observations are available."
+              />
+            </TablePanel>
+
+            {featuredComparisonPanel ? (
+              <TablePanel
+                id="comparison-section"
+                title={featuredComparisonPanel.title}
+                subtitle={featuredComparisonPanel.subtitle}
+                compact
+              >
+                <ThreeColumnTable
+                  rows={featuredComparisonPanel.rows}
+                  emptyMessage="Archive comparisons will appear after enough stored station history accumulates."
+                />
+              </TablePanel>
+            ) : (
+              <TablePanel
+                id="recent-section"
+                title="Recent Range"
+                subtitle="Active window summary."
+                compact
+              >
+                <ThreeColumnTable
+                  rows={rangeRows}
+                  emptyMessage="Range details will appear once enough observations are available."
+                />
+              </TablePanel>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="grid gap-4 xl:grid-cols-[1.12fr_0.88fr]">
+          <TablePanel
+            id="summary-section"
+            title={viewMeta.periodTitle}
+            subtitle={viewMeta.periodSubtitle}
+            compact
+          >
+            <ThreeColumnTable
+              rows={periodRows}
+              emptyMessage="Period highs and lows will populate once enough observations are available."
+            />
+          </TablePanel>
+
+          {featuredComparisonPanel ? (
+            <TablePanel
+              id="comparison-section"
+              title={featuredComparisonPanel.title}
+              subtitle={featuredComparisonPanel.subtitle}
+              compact
+            >
+              <ThreeColumnTable
+                rows={featuredComparisonPanel.rows}
+                emptyMessage="Archive comparisons will appear after enough stored station history accumulates."
+              />
+            </TablePanel>
+          ) : (
+            <TablePanel
+              id="recent-section"
+              title="Recent Range"
+              subtitle="Active window summary."
+              compact
+            >
+              <ThreeColumnTable
+                rows={rangeRows}
+                emptyMessage="Range details will appear once enough observations are available."
+              />
+            </TablePanel>
+          )}
+        </div>
+      )}
+
+      {!isCurrentView ? (
+        <>
+          <div className="mt-4 grid gap-px border border-stone-200 bg-stone-200 xl:grid-cols-4">
+            {summaryCards.map((card) => (
+              <SummaryCardPanel key={card.label} card={card} />
+            ))}
+          </div>
+
+          <div
+            id="records-section"
+            className="mt-4 grid gap-px border border-stone-200 bg-stone-200 md:grid-cols-2 xl:grid-cols-5"
+          >
+            {recordCards.map((card) => (
+              <RecordCardPanel key={card.label} card={card} />
+            ))}
+          </div>
+
+          {secondaryComparisonPanels.length ? (
+            <div className="mt-4 grid gap-px border border-stone-200 bg-stone-200 md:grid-cols-2 xl:grid-cols-3">
+              {secondaryComparisonPanels.map((panel) => (
+                <ArchivePanel
+                  key={panel.title}
+                  id={`comparison-${panel.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+                  panel={panel}
+                />
+              ))}
+            </div>
+          ) : null}
+        </>
+      ) : null}
+    </>
+  );
+}
+
+function RadarTabContent({
+  almanac,
+  forecast,
+  radarUrl,
+}: {
+  almanac: ReturnType<typeof buildWeatherAlmanac>;
+  forecast: WeatherForecastPeriod[];
+  radarUrl: string;
+}) {
+  return (
+    <div className="grid gap-4 xl:grid-cols-[1.12fr_0.88fr]">
+      <TablePanel
+        id="radar-section"
+        title="Radar"
+        subtitle="Regional radar centered on the station area."
+        compact
+      >
+        <div className="overflow-hidden border border-stone-200 bg-white">
+          <iframe
+            title="Weather radar"
+            src={radarUrl}
+            className="h-[640px] w-full"
+            loading="lazy"
+          />
+        </div>
+      </TablePanel>
+
+      <div className="grid gap-4">
+        <TablePanel
+          id="forecast-section"
+          title="Forecast Outlook"
+          subtitle="Hourly outlook."
+          compact
+        >
+          <ForecastTable periods={forecast} />
+        </TablePanel>
+
+        <TablePanel
+          id="almanac-section-radar"
+          title="Almanac"
+          subtitle="Sun and moon timing for the station area."
+          compact
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <h3 className="text-lg font-medium uppercase tracking-[0.14em] text-stone-600">Sun</h3>
+              <div className="mt-2">
+                <TwoColumnTable rows={almanac.sun} emptyMessage="Sun details unavailable." />
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-medium uppercase tracking-[0.14em] text-stone-600">Moon</h3>
+              <div className="mt-2">
+                <TwoColumnTable rows={almanac.moon} emptyMessage="Moon details unavailable." />
+              </div>
+            </div>
+          </div>
+        </TablePanel>
+      </div>
+    </div>
+  );
+}
+
+function CamerasTabContent() {
+  return (
+    <TablePanel
+      id="cameras-section"
+      title="Local Cameras"
+      subtitle="Nearby live traffic views, map context, and regional reference links."
+      compact
+    >
+      <div className="grid gap-4">
+        <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+          <CameraGrid title="Nearby Camera Views" items={nearbyWeatherCameras} />
+          <TrafficMapPanel title="Seattle Traffic Map" src={trafficMapUrl} href={trafficMapUrl} />
+        </div>
+        <LinkList title="Regional Weather Links" items={regionalWeatherLinks} />
+      </div>
+    </TablePanel>
+  );
+}
+
+function GraphsTabContent({
+  coordinates,
+  graphPanels,
+  view,
+  viewMeta,
+}: {
+  coordinates: { latitude: number; longitude: number };
+  graphPanels: StationGraphPanel[];
+  view: WeatherDashboardView;
+  viewMeta: ReturnType<typeof getViewMeta>;
+}) {
+  return (
+    <TablePanel
+      id="graphs-section"
+      title="Graphs"
+      subtitle={`${viewMeta.label === "Current" ? "Daily" : viewMeta.label} station plots.`}
+      compact
+    >
+      {graphPanels.length ? (
+        <div className="grid gap-3 md:grid-cols-2">
+          {graphPanels.map((panel) => (
+            <StationTrendPanel
+              key={panel.id}
+              panel={panel}
+              view={view}
+              coordinates={coordinates}
+            />
+          ))}
+        </div>
+      ) : (
+        <PanelState message="Trend charts need at least two recent observations with matching fields." />
+      )}
+    </TablePanel>
   );
 }
 
