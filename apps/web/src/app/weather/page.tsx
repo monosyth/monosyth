@@ -140,6 +140,12 @@ const documentTabs = [
 ] as const satisfies ReadonlyArray<{ label: string; tab: WeatherDocumentTab }>;
 
 const trafficMapUrl = "https://web.seattle.gov/travelers/";
+const skylineWebcamHeaderCard = {
+  href: "https://www.skylinewebcams.com/en/webcam/united-states/washington/seattle/panorama.html",
+  imageUrl: "https://cdn.skylinewebcams.com/social5024.jpg",
+  title: "Seattle Skyline Cam",
+  note: "Space Needle skyline view",
+};
 
 function normalizeWeatherDocumentTab(value?: string): WeatherDocumentTab {
   if (
@@ -273,7 +279,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
               </div>
             </div>
 
-            <div className="lg:justify-self-end lg:text-right">
+            <div className="grid gap-3 lg:justify-self-end lg:text-right">
               <table className="w-full border-collapse border border-white/18 bg-[#18adc3] text-left text-sm sm:text-[0.98rem] lg:max-w-[38rem] lg:text-right">
                 <tbody>
                   {mastheadRows.map((row) => (
@@ -286,6 +292,30 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
                   ))}
                 </tbody>
               </table>
+
+              <a
+                href={skylineWebcamHeaderCard.href}
+                target="_blank"
+                rel="noreferrer"
+                className="block overflow-hidden border border-white/18 bg-[#18adc3] transition hover:border-white/30"
+              >
+                <div className="aspect-[16/9] overflow-hidden bg-[#17a8bd]">
+                  {/* External webcam preview is kept as a plain img so we can use the source site directly. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={skylineWebcamHeaderCard.imageUrl}
+                    alt="Seattle skyline webcam preview"
+                    loading="lazy"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <div className="px-3 py-2 text-left lg:text-right">
+                  <p className="text-[0.72rem] uppercase tracking-[0.16em] text-white/70">
+                    {skylineWebcamHeaderCard.title}
+                  </p>
+                  <p className="mt-1 text-sm text-white/92">{skylineWebcamHeaderCard.note}</p>
+                </div>
+              </a>
             </div>
           </div>
         </div>
