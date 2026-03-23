@@ -5,7 +5,7 @@
 }
 
 .header {
-  background: #1eb7ce;
+  background: var(--teal-700);
   color: #fff;
 }
 
@@ -76,7 +76,7 @@
 
 .quickStatCard {
   border: 1px solid rgb(255 255 255 / 0.18);
-  background: #18adc3;
+  background: var(--teal-600);
   padding: 0.5rem 0.75rem;
 }
 
@@ -102,7 +102,7 @@
   width: 100%;
   border-collapse: collapse;
   border: 1px solid rgb(255 255 255 / 0.18);
-  background: #18adc3;
+  background: var(--teal-600);
   text-align: left;
   font-size: 0.875rem;
 }
@@ -132,7 +132,7 @@
   display: block;
   overflow: hidden;
   border: 1px solid rgb(255 255 255 / 0.18);
-  background: #18adc3;
+  background: var(--teal-600);
   transition: border-color 160ms ease;
 }
 
@@ -143,7 +143,7 @@
 .webcamFrame {
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  background: #17a8bd;
+  background: var(--teal-500);
 }
 
 .webcamImage {
@@ -172,7 +172,7 @@
 
 .tabShell {
   border-top: 1px solid rgb(255 255 255 / 0.18);
-  background: #1eb7ce;
+  background: var(--teal-700);
 }
 
 .tabInner {
