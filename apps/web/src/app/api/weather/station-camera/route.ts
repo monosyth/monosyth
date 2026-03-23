@@ -13,7 +13,10 @@ export async function GET() {
     const [exists] = await file.exists();
 
     if (!exists) {
-      return fallbackToSkyline();
+      return NextResponse.json(
+        { error: "Station camera image is not available yet." },
+        { status: 404 },
+      );
     }
 
     const [buffer] = await file.download();
@@ -36,33 +39,9 @@ export async function GET() {
       headers,
     });
   } catch {
-    return fallbackToSkyline();
-  }
-}
-
-async function fallbackToSkyline() {
-  const response = await fetch(new URL("/api/weather/webcam", process.env.NEXT_PUBLIC_SITE_URL || "https://monosyth.com"), {
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
     return NextResponse.json(
-      { error: "Station camera image is not available yet." },
+      { error: "Station camera image could not be loaded." },
       { status: 502 },
     );
   }
-
-  const buffer = await response.arrayBuffer();
-
-  const headers = new Headers({
-    "content-type": response.headers.get("content-type") || "image/jpeg",
-    "cache-control":
-      response.headers.get("cache-control") || "public, max-age=60, s-maxage=60, stale-while-revalidate=300",
-    "x-station-camera-source": "skyline-fallback",
-  });
-
-  return new NextResponse(new Uint8Array(buffer), {
-    status: 200,
-    headers,
-  });
 }
