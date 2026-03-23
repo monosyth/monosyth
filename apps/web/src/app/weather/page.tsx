@@ -308,8 +308,8 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
         <div className="grid gap-4 xl:grid-cols-[1.12fr_0.88fr]">
           <TablePanel
             id="current-section"
-            title="Current Conditions"
-            subtitle={`Latest station reading for the ${viewMeta.label.toLowerCase()} view.`}
+            title={viewMeta.primaryTitle}
+            subtitle={viewMeta.primarySubtitle}
             compact
           >
             <TwoColumnTable
@@ -1231,6 +1231,8 @@ function getViewMeta(view: WeatherDashboardView) {
     label: "Year",
     heading: "Yearly Weather History",
     subtitle: "Persisted yearly station history.",
+    primaryTitle: "This Year",
+    primarySubtitle: "Stored station readings collected across the yearly view.",
     periodTitle: "This Year",
     periodSubtitle: "Highs, lows, and peaks across the stored yearly view.",
   };
@@ -1241,6 +1243,8 @@ function getViewMeta(view: WeatherDashboardView) {
       label: "Month",
       heading: "Monthly Weather History",
       subtitle: "Month-scale station archive.",
+      primaryTitle: "This Month",
+      primarySubtitle: "Stored station readings collected across the monthly view.",
       periodTitle: "This Month",
       periodSubtitle: "Highs, lows, and peaks across the stored monthly view.",
     };
@@ -1251,6 +1255,8 @@ function getViewMeta(view: WeatherDashboardView) {
       label: "Week",
       heading: "Weekly Weather History",
       subtitle: "Seven-day station archive.",
+      primaryTitle: "This Week",
+      primarySubtitle: "Stored station readings collected across the weekly view.",
       periodTitle: "This Week",
       periodSubtitle: "Highs, lows, and peaks across the stored weekly view.",
     };
@@ -1260,6 +1266,8 @@ function getViewMeta(view: WeatherDashboardView) {
     label: "Current",
     heading: "Current Weather Conditions",
     subtitle: "Latest live station conditions.",
+    primaryTitle: "Current Conditions",
+    primarySubtitle: "Latest station reading from the current live view.",
     periodTitle: "Since Midnight",
     periodSubtitle: "Today's highs, lows, and peaks from the loaded station observations.",
   };
