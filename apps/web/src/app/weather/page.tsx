@@ -144,7 +144,7 @@ const skylineWebcamHeaderCard = {
   href: "https://www.skylinewebcams.com/en/webcam/united-states/washington/seattle/panorama.html",
   imageUrl: "/api/weather/webcam",
   title: "Seattle Skyline Cam",
-  note: "Recent live frame with Space Needle view",
+  note: "Current frame from the live Seattle skyline stream",
 };
 
 function normalizeWeatherDocumentTab(value?: string): WeatherDocumentTab {
