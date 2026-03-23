@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { getTimes } from "suncalc";
 
+import { WeatherCameraGrid } from "@/components/weather/camera-grid";
 import {
   getWeatherPageData,
   normalizeWeatherDashboardView,
@@ -139,24 +140,6 @@ const documentTabs = [
 ] as const satisfies ReadonlyArray<{ label: string; tab: WeatherDocumentTab }>;
 
 const trafficMapUrl = "https://web.seattle.gov/travelers/";
-
-const regionalWeatherLinks = [
-  {
-    label: "NOAA Point Forecast",
-    href: "https://forecast.weather.gov/MapClick.php?lat=47.7565&lon=-122.3450",
-    note: "Official NWS point forecast for the station area.",
-  },
-  {
-    label: "Windy Regional Radar",
-    href: "https://www.windy.com/47.7565/-122.3450",
-    note: "Interactive radar and satellite view.",
-  },
-  {
-    label: "WSDOT Cameras",
-    href: "https://wsdot.com/travel/real-time/cameras",
-    note: "Broader freeway camera coverage across the region.",
-  },
-] as const;
 
 function normalizeWeatherDocumentTab(value?: string): WeatherDocumentTab {
   if (
@@ -684,15 +667,12 @@ function CamerasTabContent() {
     <TablePanel
       id="cameras-section"
       title="Local Cameras"
-      subtitle="Nearby live traffic views, map context, and regional reference links."
+      subtitle="Nearby live traffic views with a compact traveler map."
       compact
     >
-      <div className="grid gap-4">
-        <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-          <CameraGrid title="Nearby Camera Views" items={nearbyWeatherCameras} />
-          <TrafficMapPanel title="Seattle Traffic Map" src={trafficMapUrl} href={trafficMapUrl} />
-        </div>
-        <LinkList title="Regional Weather Links" items={regionalWeatherLinks} />
+      <div className="grid gap-4 xl:grid-cols-[0.86fr_1.14fr]">
+        <TrafficMapPanel title="Seattle Traffic Map" src={trafficMapUrl} href={trafficMapUrl} />
+        <CameraGrid title="Nearby Camera Views" items={nearbyWeatherCameras} />
       </div>
     </TablePanel>
   );
@@ -1565,35 +1545,6 @@ function PanelState({ message }: { message: string }) {
   );
 }
 
-function LinkList({
-  title,
-  items,
-}: {
-  title: string;
-  items: ReadonlyArray<{ label: string; href: string; note: string }>;
-}) {
-  return (
-    <div>
-      <h3 className="text-xl font-light text-stone-700">{title}</h3>
-      <ul className="mt-2 divide-y divide-stone-200 border border-stone-200">
-        {items.map((item) => (
-          <li key={item.href} className="bg-white px-3 py-2.5">
-            <a
-              href={item.href}
-              target="_blank"
-              rel="noreferrer"
-              className="text-base text-stone-800 underline decoration-stone-300 underline-offset-4 hover:decoration-stone-700"
-            >
-              {item.label}
-            </a>
-            <p className="mt-1 text-sm leading-6 text-stone-500">{item.note}</p>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 function CameraGrid({
   title,
   items,
@@ -1603,32 +1554,14 @@ function CameraGrid({
 }) {
   return (
     <div>
-      <h3 className="text-xl font-light text-stone-700">{title}</h3>
-      <div className="mt-2 grid gap-3">
-        {items.map((item) => (
-          <a
-            key={item.href}
-            href={item.href}
-            target="_blank"
-            rel="noreferrer"
-            className="block overflow-hidden border border-stone-200 bg-white transition hover:border-stone-400"
-          >
-            <div className="aspect-[4/3] overflow-hidden bg-stone-100">
-              {/* Live traffic snapshots come from external camera feeds, so a plain img avoids optimizer rewrites. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`/api/weather/camera?id=${encodeURIComponent(item.id)}`}
-                alt={`${item.label} current traffic camera view`}
-                loading="lazy"
-                className="h-full w-full object-cover"
-              />
-            </div>
-            <div className="px-3 py-2.5">
-              <p className="text-sm font-medium text-stone-800">{item.label}</p>
-              <p className="mt-1 text-xs leading-5 text-stone-500">{item.note}</p>
-            </div>
-          </a>
-        ))}
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-xl font-light text-stone-700">{title}</h3>
+        <p className="text-[0.68rem] uppercase tracking-[0.14em] text-stone-500">
+          Tap any card for live view
+        </p>
+      </div>
+      <div className="mt-2">
+        <WeatherCameraGrid items={items} />
       </div>
     </div>
   );
@@ -1661,11 +1594,11 @@ function TrafficMapPanel({
           title={title}
           src={src}
           loading="lazy"
-          className="h-[640px] w-full"
+          className="h-[430px] w-full"
         />
       </div>
       <p className="mt-2 text-xs leading-5 text-stone-500">
-        Live SDOT traveler map for incidents, congestion, and camera context around Seattle and the north-end station area.
+        Live SDOT traveler map for incidents, congestion, and camera context around the station area.
       </p>
     </div>
   );
