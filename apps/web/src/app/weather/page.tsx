@@ -235,6 +235,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const secondaryComparisonPanels = featuredComparisonPanel
     ? comparisonPanels.filter((panel) => panel.title !== featuredComparisonPanel.title)
     : comparisonPanels;
+  const visibleNotice = shouldDisplayWeatherNotice(result.notice) ? result.notice : undefined;
 
   return (
     <main className="min-h-screen bg-[#ececec] text-stone-800">
@@ -360,9 +361,9 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
       </header>
 
       <div className="mx-auto max-w-7xl px-5 py-6 sm:px-8 lg:px-10">
-        {result.notice ? (
+        {visibleNotice ? (
           <div className="mb-4 border border-[#e9c65a] bg-[#fff8de] px-4 py-2 text-sm leading-6 text-[#7d5b00]">
-            {result.notice}
+            {visibleNotice}
           </div>
         ) : null}
 
@@ -1808,6 +1809,18 @@ function buildStationDetailRows(data: WeatherOverview, notice?: string): FactRow
     { label: "Forecast Source", value: data.forecast.length ? "NOAA hourly forecast" : "Unavailable on this fetch" },
     { label: "Feed Status", value: notice ? "Serving cached or persisted data" : "Serving latest fetch" },
   ];
+}
+
+function shouldDisplayWeatherNotice(notice?: string) {
+  if (!notice) {
+    return false;
+  }
+
+  return !(
+    notice.includes("recently cached station snapshot") ||
+    notice.includes("rate-limited the live fetch") ||
+    notice.includes("persisted logger history from Firestore")
+  );
 }
 
 function getViewMeta(view: WeatherDashboardView) {
