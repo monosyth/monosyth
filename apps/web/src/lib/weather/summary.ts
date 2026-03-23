@@ -74,6 +74,26 @@ export type WeatherPeriodMatrix = {
   rows: WeatherPeriodMatrixRow[];
 };
 
+export type WeatherMonthCalendarDay = {
+  key: string;
+  dayNumber: number | null;
+  isCurrentMonth: boolean;
+  isFuture: boolean;
+  highValue: number | null;
+  highDisplay: string;
+  lowValue: number | null;
+  lowDisplay: string;
+  rainValue: number | null;
+  rainDisplay: string;
+};
+
+export type WeatherMonthCalendar = {
+  title: string;
+  subtitle: string;
+  monthLabel: string;
+  weeks: WeatherMonthCalendarDay[][];
+};
+
 export type WeatherSummaryArchive = {
   stationStartLabel: string;
   lastUpdatedLabel: string;
@@ -228,6 +248,66 @@ export function buildWeatherPeriodMatrices(
   return matrices.filter((matrix) =>
     matrix.rows.some((row) => row.cells.some((cell) => cell.hasObservation)),
   );
+}
+
+export function buildWeatherMonthCalendar(
+  observations: WeatherObservation[],
+): WeatherMonthCalendar | null {
+  if (!observations.length) {
+    return null;
+  }
+
+  const today = getCalendarParts(Date.now());
+  const todayKey = buildDayKey(today.year, today.month, today.day);
+  const firstWeekday = getWeekdayIndex(today.year, today.month, 1);
+  const daysInMonth = getDaysInMonth(today.year, today.month);
+  const totalCells = Math.ceil((firstWeekday + daysInMonth) / 7) * 7;
+  const dayMap = buildDayAggregates(observations);
+  const days = Array.from({ length: totalCells }, (_, index) => {
+    const dayNumber = index - firstWeekday + 1;
+
+    if (dayNumber < 1 || dayNumber > daysInMonth) {
+      return {
+        key: `empty-${index}`,
+        dayNumber: null,
+        isCurrentMonth: false,
+        isFuture: false,
+        highValue: null,
+        highDisplay: "-",
+        lowValue: null,
+        lowDisplay: "-",
+        rainValue: null,
+        rainDisplay: "-",
+      } satisfies WeatherMonthCalendarDay;
+    }
+
+    const key = buildDayKey(today.year, today.month, dayNumber);
+    const aggregate = dayMap.get(key);
+
+    return {
+      key,
+      dayNumber,
+      isCurrentMonth: true,
+      isFuture: key > todayKey,
+      highValue: aggregate?.maxTemp?.value ?? null,
+      highDisplay: aggregate?.maxTemp ? formatNumber(aggregate.maxTemp.value, 1) : "-",
+      lowValue: aggregate?.minTemp?.value ?? null,
+      lowDisplay: aggregate?.minTemp ? formatNumber(aggregate.minTemp.value, 1) : "-",
+      rainValue: aggregate?.maxDailyRain?.value ?? null,
+      rainDisplay: aggregate?.maxDailyRain ? formatNumber(aggregate.maxDailyRain.value, 2) : "-",
+    } satisfies WeatherMonthCalendarDay;
+  });
+
+  const weeks = Array.from({ length: days.length / 7 }, (_, index) => days.slice(index * 7, index * 7 + 7));
+
+  return {
+    title: "Current Month Daily Calendar",
+    subtitle: "Daily highs, lows, and rainfall laid out in calendar order for the current month.",
+    monthLabel: formatSummaryMonthYear(
+      Date.UTC(today.year, today.month - 1, 1, 12, 0, 0, 0),
+    ),
+    weeks,
+  };
 }
 
 function buildDayAggregates(observations: WeatherObservation[]) {

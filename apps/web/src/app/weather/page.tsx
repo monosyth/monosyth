@@ -17,9 +17,11 @@ import {
   readStoredWeatherObservationsForDay,
 } from "@/lib/weather/history";
 import {
+  buildWeatherMonthCalendar,
   buildWeatherPeriodMatrices,
   buildWeatherSummaryArchive,
   WEATHER_SUMMARY_MONTH_LABELS,
+  type WeatherMonthCalendar,
   type WeatherPeriodMatrix,
   type WeatherMonthlyMatrix,
   type WeatherMonthlyReportRow,
@@ -230,9 +232,13 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
     ? await loadWeatherSummaryArchive(data.station.macAddress)
     : null;
   const periodMatrices =
-    isSummariesTab && (activeView === "week" || activeView === "month")
+    isSummariesTab && activeView === "week"
       ? buildWeatherPeriodMatrices(data.observations, activeView)
       : [];
+  const monthCalendar =
+    isSummariesTab && activeView === "month"
+      ? buildWeatherMonthCalendar(data.observations)
+      : null;
   const pageMeta = getPageMeta(
     activeView,
     activeDocumentTab,
@@ -385,6 +391,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
         {isSummariesTab ? (
           <SummaryArchiveTabContent
             activeView={activeView}
+            monthCalendar={monthCalendar}
             periodMatrices={periodMatrices}
             summaryArchive={summaryArchive}
           />
@@ -833,14 +840,16 @@ function AboutTabContent({
 
 function SummaryArchiveTabContent({
   activeView,
+  monthCalendar,
   periodMatrices,
   summaryArchive,
 }: {
   activeView: WeatherDashboardView;
+  monthCalendar: WeatherMonthCalendar | null;
   periodMatrices: WeatherPeriodMatrix[];
   summaryArchive: WeatherSummaryArchive | null;
 }) {
-  if (!summaryArchive && !periodMatrices.length) {
+  if (!summaryArchive && !periodMatrices.length && !monthCalendar) {
     return (
       <PanelState message="Summary tables will appear after enough archived station history has been collected." />
     );
@@ -848,6 +857,8 @@ function SummaryArchiveTabContent({
 
   return (
     <div className="space-y-4">
+      {monthCalendar ? <MonthClimateCalendar calendar={monthCalendar} /> : null}
+
       {periodMatrices.length ? (
         <div className="grid gap-4">
           {periodMatrices.map((matrix) => (
@@ -1050,6 +1061,118 @@ function DailyPeriodClimateTable({ matrix }: { matrix: WeatherPeriodMatrix }) {
         </table>
       </div>
     </TablePanel>
+  );
+}
+
+function MonthClimateCalendar({ calendar }: { calendar: WeatherMonthCalendar }) {
+  const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  return (
+    <TablePanel
+      id={`month-calendar-${calendar.monthLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+      title={calendar.title}
+      subtitle={calendar.subtitle}
+      compact
+    >
+      <div className="overflow-x-auto">
+        <div className="min-w-[54rem]">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-lg font-medium text-stone-700">{calendar.monthLabel}</h3>
+            <p className="text-[0.72rem] uppercase tracking-[0.16em] text-stone-500">High / Low / Rain</p>
+          </div>
+
+          <div className="grid grid-cols-7 border border-stone-200 bg-stone-100">
+            {weekdayLabels.map((label) => (
+              <div
+                key={label}
+                className="border-b border-r border-stone-200 bg-stone-50 px-3 py-2 text-center text-[0.72rem] font-medium uppercase tracking-[0.14em] text-stone-500 last:border-r-0"
+              >
+                {label}
+              </div>
+            ))}
+
+            {calendar.weeks.flat().map((day) => (
+              <div
+                key={day.key}
+                className={`min-h-[8.5rem] border-r border-b border-stone-200 px-3 py-2 ${
+                  day.isCurrentMonth ? "bg-white" : "bg-stone-50"
+                }`}
+              >
+                {day.dayNumber === null ? null : (
+                  <>
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className={`text-sm font-medium ${day.isFuture ? "text-stone-400" : "text-stone-700"}`}>
+                        {day.dayNumber}
+                      </span>
+                      {day.isFuture ? (
+                        <span className="text-[0.68rem] uppercase tracking-[0.14em] text-stone-300">Future</span>
+                      ) : null}
+                    </div>
+
+                    <div className="grid gap-1.5">
+                      <ClimateStatPill
+                        label="High"
+                        value={day.highDisplay}
+                        numericValue={day.highValue}
+                        colorScale="temperature"
+                        muted={day.isFuture}
+                      />
+                      <ClimateStatPill
+                        label="Low"
+                        value={day.lowDisplay}
+                        numericValue={day.lowValue}
+                        colorScale="temperature"
+                        muted={day.isFuture}
+                      />
+                      <ClimateStatPill
+                        label="Rain"
+                        value={day.rainDisplay}
+                        numericValue={day.rainValue}
+                        colorScale="rain"
+                        muted={day.isFuture}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </TablePanel>
+  );
+}
+
+function ClimateStatPill({
+  label,
+  value,
+  numericValue,
+  colorScale,
+  muted = false,
+}: {
+  label: string;
+  value: string;
+  numericValue: number | null;
+  colorScale: "temperature" | "rain";
+  muted?: boolean;
+}) {
+  const hasValue = numericValue !== null && value !== "-";
+  const style = muted || !hasValue ? undefined : resolveSingleClimateValueStyle(numericValue, colorScale);
+
+  return (
+    <div
+      className={`flex items-center justify-between rounded-sm border px-2 py-1.5 text-sm ${
+        muted
+          ? "border-stone-200 bg-stone-50 text-stone-400"
+          : hasValue
+            ? "border-transparent text-stone-900"
+            : "border-stone-200 bg-stone-50 text-stone-400"
+      }`}
+      style={style}
+    >
+      <span className="text-[0.68rem] font-medium uppercase tracking-[0.14em]">{label}</span>
+      <span className="font-medium">{value}</span>
+    </div>
   );
 }
 
@@ -2627,6 +2750,10 @@ function resolveClimateCellStyle(
     return undefined;
   }
 
+  if (colorScale === "temperature") {
+    return resolveSingleClimateValueStyle(cell.numericValue, colorScale);
+  }
+
   const values = rowCells
     .map((entry) => entry.numericValue)
     .filter((value): value is number => value !== null);
@@ -2635,16 +2762,27 @@ function resolveClimateCellStyle(
   const max = Math.max(...values);
   const ratio = min === max ? 0.58 : (cell.numericValue - min) / (max - min);
 
+  return {
+    backgroundColor: `hsl(116 86% ${95 - ratio * 42}%)`,
+    color: "#111827",
+  };
+}
+
+function resolveSingleClimateValueStyle(
+  value: number,
+  colorScale: "temperature" | "rain",
+) {
   if (colorScale === "rain") {
-    const lightness = 95 - ratio * 42;
+    const ratio = clamp01(value / 2);
 
     return {
-      backgroundColor: `hsl(116 86% ${lightness}%)`,
+      backgroundColor: `hsl(116 86% ${96 - ratio * 40}%)`,
       color: "#111827",
     };
   }
 
-  const hue = 208 - ratio * 208;
+  const ratio = clamp01((value - 20) / 70);
+  const hue = 218 - ratio * 218;
   const saturation = 92;
   const lightness = 94 - ratio * 44;
 
@@ -2652,6 +2790,10 @@ function resolveClimateCellStyle(
     backgroundColor: `hsl(${hue} ${saturation}% ${lightness}%)`,
     color: ratio > 0.72 ? "#ffffff" : "#111827",
   };
+}
+
+function clamp01(value: number) {
+  return Math.max(0, Math.min(1, value));
 }
 
 function formatWind(
