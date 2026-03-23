@@ -142,9 +142,9 @@ const documentTabs = [
 const trafficMapUrl = "https://web.seattle.gov/travelers/";
 const skylineWebcamHeaderCard = {
   href: "https://www.skylinewebcams.com/en/webcam/united-states/washington/seattle/panorama.html",
-  imageUrl: "https://cdn.skylinewebcams.com/social5024.jpg",
+  imageUrl: "/api/weather/webcam",
   title: "Seattle Skyline Cam",
-  note: "Space Needle skyline view",
+  note: "Recent live frame with Space Needle view",
 };
 
 function normalizeWeatherDocumentTab(value?: string): WeatherDocumentTab {
