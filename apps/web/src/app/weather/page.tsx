@@ -17,8 +17,10 @@ import {
   readStoredWeatherObservationsForDay,
 } from "@/lib/weather/history";
 import {
+  buildWeatherPeriodMatrices,
   buildWeatherSummaryArchive,
   WEATHER_SUMMARY_MONTH_LABELS,
+  type WeatherPeriodMatrix,
   type WeatherMonthlyMatrix,
   type WeatherMonthlyReportRow,
   type WeatherSummaryArchive,
@@ -227,6 +229,10 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const summaryArchive = isSummariesTab
     ? await loadWeatherSummaryArchive(data.station.macAddress)
     : null;
+  const periodMatrices =
+    isSummariesTab && (activeView === "week" || activeView === "month")
+      ? buildWeatherPeriodMatrices(data.observations, activeView)
+      : [];
   const pageMeta = getPageMeta(
     activeView,
     activeDocumentTab,
@@ -377,7 +383,11 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
         ) : null}
 
         {isSummariesTab ? (
-          <SummaryArchiveTabContent summaryArchive={summaryArchive} />
+          <SummaryArchiveTabContent
+            activeView={activeView}
+            periodMatrices={periodMatrices}
+            summaryArchive={summaryArchive}
+          />
         ) : isDashboardTab ? (
           <SummariesTabContent
             almanac={almanac}
@@ -822,11 +832,15 @@ function AboutTabContent({
 }
 
 function SummaryArchiveTabContent({
+  activeView,
+  periodMatrices,
   summaryArchive,
 }: {
+  activeView: WeatherDashboardView;
+  periodMatrices: WeatherPeriodMatrix[];
   summaryArchive: WeatherSummaryArchive | null;
 }) {
-  if (!summaryArchive) {
+  if (!summaryArchive && !periodMatrices.length) {
     return (
       <PanelState message="Summary tables will appear after enough archived station history has been collected." />
     );
@@ -834,33 +848,48 @@ function SummaryArchiveTabContent({
 
   return (
     <div className="space-y-4">
-      <TablePanel
-        id="summary-records-section"
-        title={`All Time Records (Since ${summaryArchive.stationStartLabel})`}
-        subtitle="Archive-wide station records built from stored observations."
-        compact
-      >
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {summaryArchive.recordSections.map((section) => (
-            <SummarySectionCard key={section.title} section={section} />
+      {periodMatrices.length ? (
+        <div className="grid gap-4">
+          {periodMatrices.map((matrix) => (
+            <DailyPeriodClimateTable
+              key={`${activeView}-${matrix.title}`}
+              matrix={matrix}
+            />
           ))}
         </div>
-      </TablePanel>
+      ) : null}
 
-      <TablePanel
-        id="monthly-reports-section"
-        title="Monthly Reports"
-        subtitle="Months with stored station archive data."
-        compact
-      >
-        <MonthlyReportAvailabilityTable rows={summaryArchive.monthlyReportRows} />
-      </TablePanel>
+      {!summaryArchive ? null : (
+        <>
+          <TablePanel
+            id="summary-records-section"
+            title={`All Time Records (Since ${summaryArchive.stationStartLabel})`}
+            subtitle="Archive-wide station records built from stored observations."
+            compact
+          >
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {summaryArchive.recordSections.map((section) => (
+                <SummarySectionCard key={section.title} section={section} />
+              ))}
+            </div>
+          </TablePanel>
 
-      <div className="grid gap-4">
-        {summaryArchive.monthlyMatrices.map((matrix) => (
-          <MonthlyClimateTable key={matrix.title} matrix={matrix} />
-        ))}
-      </div>
+          <TablePanel
+            id="monthly-reports-section"
+            title="Monthly Reports"
+            subtitle="Months with stored station archive data."
+            compact
+          >
+            <MonthlyReportAvailabilityTable rows={summaryArchive.monthlyReportRows} />
+          </TablePanel>
+
+          <div className="grid gap-4">
+            {summaryArchive.monthlyMatrices.map((matrix) => (
+              <MonthlyClimateTable key={matrix.title} matrix={matrix} />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -956,6 +985,65 @@ function MonthlyClimateTable({ matrix }: { matrix: WeatherMonthlyMatrix }) {
                   </td>
                 ))}
                 <td className="px-2 py-2.5 text-right font-medium text-stone-800">{row.total}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </TablePanel>
+  );
+}
+
+function DailyPeriodClimateTable({ matrix }: { matrix: WeatherPeriodMatrix }) {
+  return (
+    <TablePanel
+      id={`period-${matrix.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+      title={matrix.title}
+      subtitle={matrix.subtitle}
+      compact
+    >
+      <div className="overflow-x-auto">
+        <table className="min-w-full border-collapse">
+          <thead>
+            <tr className="border-b border-stone-300 text-left text-[0.68rem] uppercase tracking-[0.16em] text-stone-500">
+              <th className="sticky left-0 z-10 bg-white px-2 py-2.5 font-medium">{matrix.unitLabel}</th>
+              {matrix.columns.map((column) => (
+                <th key={column.key} className="min-w-[4.4rem] px-1 py-2 text-center font-medium">
+                  <span className="block text-[0.74rem] text-stone-700">{column.label}</span>
+                  <span className="mt-0.5 block text-[0.64rem] font-normal uppercase tracking-[0.08em] text-stone-400">
+                    {column.detail}
+                  </span>
+                </th>
+              ))}
+              <th className="sticky right-0 z-10 bg-white px-2 py-2.5 text-right font-medium">
+                {matrix.summaryLabel}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {matrix.rows.map((row) => (
+              <tr key={`${matrix.title}-${row.label}`} className="border-b border-stone-200 last:border-b-0">
+                <th className="sticky left-0 z-10 bg-white px-2 py-2.5 text-left font-normal text-stone-700">
+                  {row.label}
+                </th>
+                {row.cells.map((cell, index) => (
+                  <td
+                    key={`${row.label}-${matrix.columns[index]?.key ?? index}`}
+                    className={`px-1 py-2 text-center text-sm ${
+                      cell.hasObservation
+                        ? "text-stone-900"
+                        : cell.isFuture
+                          ? "text-stone-300"
+                          : "text-stone-400"
+                    }`}
+                    style={resolveClimateCellStyle(row.cells, cell, matrix.colorScale)}
+                  >
+                    {cell.displayValue}
+                  </td>
+                ))}
+                <td className="sticky right-0 z-10 bg-white px-2 py-2.5 text-right font-medium text-stone-800">
+                  {row.summaryValue}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -2522,6 +2610,48 @@ function formatCompact(value: number, decimals: number) {
     minimumFractionDigits: 0,
     maximumFractionDigits: decimals,
   });
+}
+
+function resolveClimateCellStyle(
+  rowCells: Array<{ numericValue: number | null; hasObservation: boolean; isFuture: boolean }>,
+  cell: { numericValue: number | null; hasObservation: boolean; isFuture: boolean },
+  colorScale: "temperature" | "rain",
+) {
+  if (!cell.hasObservation || cell.numericValue === null) {
+    if (cell.isFuture) {
+      return {
+        backgroundColor: "#fafaf9",
+      };
+    }
+
+    return undefined;
+  }
+
+  const values = rowCells
+    .map((entry) => entry.numericValue)
+    .filter((value): value is number => value !== null);
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const ratio = min === max ? 0.58 : (cell.numericValue - min) / (max - min);
+
+  if (colorScale === "rain") {
+    const lightness = 95 - ratio * 42;
+
+    return {
+      backgroundColor: `hsl(116 86% ${lightness}%)`,
+      color: "#111827",
+    };
+  }
+
+  const hue = 208 - ratio * 208;
+  const saturation = 92;
+  const lightness = 94 - ratio * 44;
+
+  return {
+    backgroundColor: `hsl(${hue} ${saturation}% ${lightness}%)`,
+    color: ratio > 0.72 ? "#ffffff" : "#111827",
+  };
 }
 
 function formatWind(

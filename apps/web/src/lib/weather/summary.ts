@@ -44,6 +44,36 @@ export type WeatherMonthlyMatrix = {
   rows: WeatherMonthlyMatrixRow[];
 };
 
+export type WeatherPeriodMatrixColumn = {
+  key: string;
+  label: string;
+  detail: string;
+  isFuture: boolean;
+};
+
+export type WeatherPeriodMatrixCell = {
+  displayValue: string;
+  numericValue: number | null;
+  hasObservation: boolean;
+  isFuture: boolean;
+};
+
+export type WeatherPeriodMatrixRow = {
+  label: string;
+  summaryValue: string;
+  cells: WeatherPeriodMatrixCell[];
+};
+
+export type WeatherPeriodMatrix = {
+  title: string;
+  subtitle: string;
+  unitLabel: string;
+  summaryLabel: string;
+  colorScale: "temperature" | "rain";
+  columns: WeatherPeriodMatrixColumn[];
+  rows: WeatherPeriodMatrixRow[];
+};
+
 export type WeatherSummaryArchive = {
   stationStartLabel: string;
   lastUpdatedLabel: string;
@@ -155,6 +185,51 @@ export function buildWeatherSummaryArchive(observations: WeatherObservation[]): 
   };
 }
 
+export function buildWeatherPeriodMatrices(
+  observations: WeatherObservation[],
+  view: "week" | "month",
+): WeatherPeriodMatrix[] {
+  if (!observations.length) {
+    return [];
+  }
+
+  const dayMap = buildDayAggregates(observations);
+  const columns = buildPeriodColumns(view);
+
+  if (!columns.length) {
+    return [];
+  }
+
+  const temperatureRows = buildTemperatureRows(columns, dayMap);
+  const rainfallRows = buildRainfallRows(columns, dayMap);
+  const periodLabel = view === "week" ? "week" : "month";
+
+  const matrices: WeatherPeriodMatrix[] = [
+    {
+      title: view === "week" ? "Current Week Daily Temperatures" : "Current Month Daily Temperatures",
+      subtitle: `Daily highs and lows recorded so far this ${periodLabel}.`,
+      unitLabel: "°F",
+      summaryLabel: "Avg",
+      colorScale: "temperature",
+      columns,
+      rows: temperatureRows,
+    },
+    {
+      title: view === "week" ? "Current Week Daily Rainfall" : "Current Month Daily Rainfall",
+      subtitle: `Daily rainfall totals recorded so far this ${periodLabel}.`,
+      unitLabel: "in",
+      summaryLabel: "Total",
+      colorScale: "rain",
+      columns,
+      rows: rainfallRows,
+    },
+  ];
+
+  return matrices.filter((matrix) =>
+    matrix.rows.some((row) => row.cells.some((cell) => cell.hasObservation)),
+  );
+}
+
 function buildDayAggregates(observations: WeatherObservation[]) {
   const dayMap = new Map<string, DayAggregate>();
 
@@ -166,7 +241,7 @@ function buildDayAggregates(observations: WeatherObservation[]) {
     }
 
     const parts = getCalendarParts(timestamp);
-    const key = `${parts.year}-${parts.month}-${parts.day}`;
+    const key = buildDayKey(parts.year, parts.month, parts.day);
     const aggregate = dayMap.get(key) ?? {
       year: parts.year,
       month: parts.month,
@@ -193,6 +268,44 @@ function buildDayAggregates(observations: WeatherObservation[]) {
   }
 
   return dayMap;
+}
+
+function buildTemperatureRows(
+  columns: WeatherPeriodMatrixColumn[],
+  dayMap: Map<string, DayAggregate>,
+): WeatherPeriodMatrixRow[] {
+  const highs = columns.map((column) => buildMetricCell(dayMap.get(column.key)?.maxTemp, 1, column.isFuture));
+  const lows = columns.map((column) => buildMetricCell(dayMap.get(column.key)?.minTemp, 1, column.isFuture));
+
+  return [
+    {
+      label: "High",
+      summaryValue: formatAverageSummary(highs, 1),
+      cells: highs,
+    },
+    {
+      label: "Low",
+      summaryValue: formatAverageSummary(lows, 1),
+      cells: lows,
+    },
+  ];
+}
+
+function buildRainfallRows(
+  columns: WeatherPeriodMatrixColumn[],
+  dayMap: Map<string, DayAggregate>,
+): WeatherPeriodMatrixRow[] {
+  const rain = columns.map((column) =>
+    buildMetricCell(dayMap.get(column.key)?.maxDailyRain, 2, column.isFuture),
+  );
+
+  return [
+    {
+      label: "Rain",
+      summaryValue: formatTotalSummary(rain, 2),
+      cells: rain,
+    },
+  ];
 }
 
 function buildYearAggregates(observations: WeatherObservation[], dayMap: Map<string, DayAggregate>) {
@@ -333,6 +446,42 @@ function buildMonthlyMatrix(
   };
 }
 
+function buildPeriodColumns(view: "week" | "month"): WeatherPeriodMatrixColumn[] {
+  const today = getCalendarParts(Date.now());
+  const todayKey = buildDayKey(today.year, today.month, today.day);
+
+  if (view === "week") {
+    const weekdayIndex = getWeekdayIndex(today.year, today.month, today.day);
+    const weekStart = shiftCalendarDay(today.year, today.month, today.day, -weekdayIndex);
+
+    return Array.from({ length: 7 }, (_, index) => {
+      const day = shiftCalendarDay(weekStart.year, weekStart.month, weekStart.day, index);
+      const key = buildDayKey(day.year, day.month, day.day);
+
+      return {
+        key,
+        label: formatShortWeekday(day.year, day.month, day.day),
+        detail: formatMonthDay(day.year, day.month, day.day),
+        isFuture: key > todayKey,
+      };
+    });
+  }
+
+  const daysInMonth = getDaysInMonth(today.year, today.month);
+
+  return Array.from({ length: daysInMonth }, (_, index) => {
+    const dayNumber = index + 1;
+    const key = buildDayKey(today.year, today.month, dayNumber);
+
+    return {
+      key,
+      label: String(dayNumber),
+      detail: formatShortWeekday(today.year, today.month, dayNumber),
+      isFuture: key > todayKey,
+    };
+  });
+}
+
 function getYearAggregate(yearMap: Map<number, YearAggregate>, year: number) {
   const existing = yearMap.get(year);
 
@@ -383,6 +532,28 @@ function buildMetricRow(
     label,
     value: `${formatNumber(record.value, decimals)}${unit ? ` ${unit}` : ""}`.trim(),
     detail: dayOnly ? formatSummaryDate(record.timestamp) : formatSummaryDateTime(record.timestamp),
+  };
+}
+
+function buildMetricCell(
+  record: MetricRecord | null | undefined,
+  decimals: number,
+  isFuture: boolean,
+): WeatherPeriodMatrixCell {
+  if (!record) {
+    return {
+      displayValue: "-",
+      numericValue: null,
+      hasObservation: false,
+      isFuture,
+    };
+  }
+
+  return {
+    displayValue: formatNumber(record.value, decimals),
+    numericValue: record.value,
+    hasObservation: true,
+    isFuture,
   };
 }
 
@@ -541,6 +712,68 @@ function getCalendarParts(timestamp: number) {
     month: Number(parts.find((part) => part.type === "month")?.value ?? "0"),
     day: Number(parts.find((part) => part.type === "day")?.value ?? "0"),
   };
+}
+
+function buildDayKey(year: number, month: number, day: number) {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function getWeekdayIndex(year: number, month: number, day: number) {
+  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0)).getUTCDay();
+}
+
+function shiftCalendarDay(year: number, month: number, day: number, offsetDays: number) {
+  const date = new Date(Date.UTC(year, month - 1, day + offsetDays, 12, 0, 0, 0));
+
+  return {
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth() + 1,
+    day: date.getUTCDate(),
+  };
+}
+
+function getDaysInMonth(year: number, month: number) {
+  return new Date(Date.UTC(year, month, 0, 12, 0, 0, 0)).getUTCDate();
+}
+
+function formatShortWeekday(year: number, month: number, day: number) {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: WEATHER_TIME_ZONE,
+    weekday: "short",
+  }).format(new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0)));
+}
+
+function formatMonthDay(year: number, month: number, day: number) {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: WEATHER_TIME_ZONE,
+    month: "short",
+    day: "numeric",
+  }).format(new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0)));
+}
+
+function formatAverageSummary(cells: WeatherPeriodMatrixCell[], decimals: number) {
+  const values = cells
+    .map((cell) => cell.numericValue)
+    .filter((value): value is number => value !== null);
+
+  if (!values.length) {
+    return "-";
+  }
+
+  const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+  return formatNumber(average, decimals);
+}
+
+function formatTotalSummary(cells: WeatherPeriodMatrixCell[], decimals: number) {
+  const values = cells
+    .map((cell) => cell.numericValue)
+    .filter((value): value is number => value !== null);
+
+  if (!values.length) {
+    return "-";
+  }
+
+  return formatNumber(values.reduce((sum, value) => sum + value, 0), decimals);
 }
 
 function formatNumber(value: number, decimals: number) {
