@@ -250,14 +250,16 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   return (
     <main className="min-h-screen bg-[#ececec] text-stone-800">
       <header className="bg-[#1eb7ce] text-white">
-        <div className="mx-auto max-w-7xl px-5 py-6 sm:px-8 lg:px-10">
-          <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
+        <div className="mx-auto max-w-7xl px-5 py-5 sm:px-8 lg:px-10">
+          <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
             <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-white/80">Monosyth Personal Weather</p>
-              <h1 className="mt-2 text-4xl font-light tracking-[-0.04em] sm:text-[3.65rem]">
+              <p className="text-[0.72rem] uppercase tracking-[0.24em] text-white/78">
+                Monosyth Personal Weather
+              </p>
+              <h1 className="mt-2 max-w-4xl text-[2.85rem] font-light leading-[0.98] tracking-[-0.045em] sm:text-[3.5rem] lg:text-[4rem]">
                 {data.station.name}
               </h1>
-              <p className="mt-2 text-lg font-light text-white/92 sm:text-[1.85rem]">
+              <p className="mt-3 max-w-4xl text-[1.05rem] font-light leading-[1.55] text-white/90 sm:text-[1.35rem] lg:text-[1.65rem]">
                 {buildHeaderMeta(data, coordinates)}
                 {" "}
                 <a
@@ -270,30 +272,30 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
                 </a>
               </p>
 
-              <h2 className="mt-6 text-[2.2rem] font-light tracking-[-0.03em] sm:text-[3rem]">
+              <h2 className="mt-7 text-[2rem] font-light tracking-[-0.03em] sm:text-[2.45rem]">
                 {pageMeta.heading}
               </h2>
-              <p className="mt-2 text-base text-white/88 sm:text-lg">
+              <p className="mt-1.5 text-sm text-white/84 sm:text-base">
                 {pageMeta.timestampLabel}
               </p>
-              <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 {quickStats.map((stat) => (
-                  <div key={stat.label} className="border border-white/20 bg-[#18adc3] px-3 py-2">
-                    <p className="text-[0.68rem] uppercase tracking-[0.18em] text-white/72">
+                  <div key={stat.label} className="border border-white/18 bg-[#18adc3] px-3 py-2">
+                    <p className="text-[0.64rem] uppercase tracking-[0.18em] text-white/68">
                       {stat.label}
                     </p>
-                    <p className="mt-1 text-sm text-white">{stat.value}</p>
+                    <p className="mt-1 text-[0.95rem] text-white">{stat.value}</p>
                   </div>
                 ))}
               </div>
             </div>
 
             <div className="lg:justify-self-end lg:text-right">
-              <table className="w-full border-collapse border border-white/18 bg-[#18adc3] text-left text-base lg:max-w-md lg:text-right">
+              <table className="w-full border-collapse border border-white/18 bg-[#18adc3] text-left text-sm sm:text-[0.98rem] lg:max-w-[38rem] lg:text-right">
                 <tbody>
                   {mastheadRows.map((row) => (
                     <tr key={row.label} className="border-b border-white/18 last:border-b-0">
-                      <th className="px-4 py-2 pr-4 font-semibold text-white/92 lg:text-right">
+                      <th className="px-4 py-2 pr-4 font-semibold text-white/92 lg:w-[38%] lg:text-right">
                         {row.label}:
                       </th>
                       <td className="px-4 py-2 text-white/84">{row.value}</td>
@@ -305,8 +307,8 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           </div>
         </div>
         <div className="border-t border-white/18 bg-[#1eb7ce]">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-8 gap-y-3 overflow-x-auto px-5 py-3 sm:px-8 lg:px-10">
-            <div className="flex min-w-max items-end gap-7 pr-1">
+          <div className="mx-auto max-w-7xl px-5 py-3 sm:px-8 lg:px-10">
+            <div className="flex flex-wrap items-end gap-x-6 gap-y-2 border-b border-white/18 pb-2">
               {summaryTabs.map((tab) => {
                 const isActive = tab.view === activeView;
                 const href = buildWeatherHref(tab.view, activeDocumentTab);
@@ -317,21 +319,23 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
                     href={href}
                     prefetch
                     scroll={false}
-                    className={`border-b-[4px] pb-2 text-[1.85rem] font-light leading-none transition sm:text-[2.15rem] ${isActive ? "border-[#f4d24f] text-white" : "border-transparent text-white/88 hover:text-white"}`}
+                    className={`border-b-[3px] pb-1.5 text-[1.2rem] font-light leading-none transition sm:text-[1.55rem] ${isActive ? "border-[#f4d24f] text-white" : "border-transparent text-white/88 hover:text-white"}`}
                   >
                     {tab.label}
                   </Link>
                 );
               })}
+            </div>
+            <div className="flex flex-wrap items-end gap-x-5 gap-y-2 pt-2">
               {documentTabs.map((tab) => (
                 <Link
                   key={tab.tab}
                   href={buildWeatherHref(activeView, tab.tab)}
                   scroll={false}
-                  className={`border-b-[4px] pb-2 text-[1.85rem] font-light leading-none transition sm:text-[2.15rem] ${
+                  className={`border-b-[3px] pb-1.5 text-[0.92rem] font-medium uppercase tracking-[0.14em] transition sm:text-[1rem] ${
                     activeDocumentTab === tab.tab
                       ? "border-[#f4d24f] text-white"
-                      : "border-transparent text-white/88 hover:text-white"
+                      : "border-transparent text-white/80 hover:text-white"
                   }`}
                 >
                   {tab.label}
