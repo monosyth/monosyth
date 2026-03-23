@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 
-import { EditableUserProfile } from "@/lib/firebase/profiles";
+import {
+  EditableUserProfile,
+  STUDIO_THEMES,
+} from "@/lib/firebase/profiles";
 import { useAuth } from "@/components/auth/auth-provider";
 
 type FormState = {
@@ -85,23 +88,38 @@ export function ProfileEditor() {
             />
           </label>
 
-          <label className="grid gap-2 text-sm text-stone-700">
+          <div className="grid gap-2 text-sm text-stone-700">
             <span className="font-medium">Theme preference</span>
-            <select
-              value={form.theme}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  theme: event.target.value as EditableUserProfile["theme"],
-                }))
-              }
-              className="rounded-2xl border border-stone-900/10 bg-white/80 px-4 py-3 text-stone-900 outline-none transition focus:border-stone-900/25"
-            >
-              <option value="ember">Ember</option>
-              <option value="forest">Forest</option>
-              <option value="stone">Stone</option>
-            </select>
-          </label>
+            <div className="grid gap-2">
+              {STUDIO_THEMES.map((theme) => {
+                const isActive = form.theme === theme.value;
+
+                return (
+                  <button
+                    key={theme.value}
+                    type="button"
+                    onClick={() =>
+                      setForm((current) => ({
+                        ...current,
+                        theme: theme.value,
+                      }))
+                    }
+                    className={`rounded-2xl border px-4 py-3 text-left transition ${
+                      isActive
+                        ? "border-[var(--teal)] bg-[color:var(--teal-50)] text-stone-950 shadow-[0_10px_30px_rgba(20,40,36,0.10)]"
+                        : "border-stone-900/10 bg-white/80 text-stone-700 hover:border-stone-900/20 hover:bg-white"
+                    }`}
+                    aria-pressed={isActive}
+                  >
+                    <span className="block text-sm font-semibold">{theme.label}</span>
+                    <span className="mt-1 block text-xs leading-5 text-stone-500">
+                      {theme.description}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         <label className="grid gap-2 text-sm text-stone-700">

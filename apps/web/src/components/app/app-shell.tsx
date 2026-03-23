@@ -5,6 +5,16 @@ import Link from "next/link";
 import { useAuth } from "@/components/auth/auth-provider";
 import { ProfileEditor } from "@/components/app/profile-editor";
 
+const studioProjects = [
+  {
+    name: "Weather",
+    href: "/weather",
+    label: "Live site",
+    details: "Ambient station dashboard",
+    meta: "Next.js + Firestore",
+  },
+];
+
 function formatTimestamp(value: string | null) {
   if (!value) {
     return "Pending sync";
@@ -29,6 +39,7 @@ export function AppShell() {
     status,
     user,
   } = useAuth();
+  const studioTheme = profile?.theme ?? "ember";
 
   if (status !== "signed_in") {
     return (
@@ -79,7 +90,7 @@ export function AppShell() {
   }
 
   return (
-    <div className="grid gap-6">
+    <div data-studio-theme={studioTheme} className="studio-theme grid gap-6">
       <section className="glass-panel rounded-[2rem] px-6 py-8 sm:px-8">
         <p className="font-mono text-xs uppercase tracking-[0.28em] text-[var(--teal)]">
           Signed in
@@ -149,6 +160,47 @@ export function AppShell() {
             or a lightweight internal tool powered by Firebase data.
           </p>
         </article>
+      </section>
+
+      <section className="glass-panel rounded-[1.75rem] px-5 py-6">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="font-mono text-xs uppercase tracking-[0.28em] text-stone-500">
+              Projects
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em]">
+              Current Monosyth builds
+            </h2>
+          </div>
+          <p className="text-sm leading-7 text-stone-600">
+            A compact list of what is live and worth jumping into.
+          </p>
+        </div>
+
+        <div className="mt-5 grid gap-3">
+          {studioProjects.map((project) => (
+            <article
+              key={project.name}
+              className="rounded-2xl border border-stone-900/10 bg-white/70 px-4 py-4 text-sm text-stone-700"
+            >
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <span className="text-base font-semibold text-stone-900">
+                  {project.name}
+                </span>
+                <span>{project.details}</span>
+                <span className="text-stone-400">/</span>
+                <span>{project.meta}</span>
+                <span className="text-stone-400">/</span>
+                <Link
+                  href={project.href}
+                  className="font-medium text-[var(--teal)] underline decoration-stone-300 underline-offset-4 transition hover:text-[var(--pine)]"
+                >
+                  {project.label}
+                </Link>
+              </div>
+            </article>
+          ))}
+        </div>
       </section>
 
       <ProfileEditor

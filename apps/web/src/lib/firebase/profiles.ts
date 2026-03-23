@@ -3,11 +3,46 @@ import { Timestamp, doc, getDoc, serverTimestamp, setDoc } from "firebase/firest
 
 import { getFirebaseDb } from "./client";
 
+export const STUDIO_THEMES = [
+  {
+    value: "ember",
+    label: "Ember",
+    description: "Warm clay, brass light, dark pine controls.",
+  },
+  {
+    value: "forest",
+    label: "Forest",
+    description: "Moss glass, cedar accents, softer contrast.",
+  },
+  {
+    value: "stone",
+    label: "Stone",
+    description: "Quiet mineral neutrals with cool gray edges.",
+  },
+  {
+    value: "tide",
+    label: "Tide",
+    description: "Salt blue gradients with deep harbor accents.",
+  },
+  {
+    value: "signal",
+    label: "Signal",
+    description: "Cream paper with bold red-orange markers.",
+  },
+  {
+    value: "night",
+    label: "Night",
+    description: "Ink panels, pale text, copper highlights.",
+  },
+] as const;
+
+export type StudioTheme = (typeof STUDIO_THEMES)[number]["value"];
+
 export type EditableUserProfile = {
   bio: string;
   handle: string;
   links: string[];
-  theme: "ember" | "forest" | "stone";
+  theme: StudioTheme;
 };
 
 export type UserProfile = {
@@ -86,7 +121,7 @@ function serializeProfile(
     ),
     links: normalizeLinks((value?.links as string[] | undefined) ?? defaults.links),
     theme:
-      (value?.theme as EditableUserProfile["theme"] | undefined) ??
+      (value?.theme as StudioTheme | undefined) ??
       defaults.theme,
     createdAt: toIsoString(value?.createdAt),
     lastLoginAt: toIsoString(value?.lastLoginAt),
@@ -104,30 +139,27 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
   const ref = doc(db, "users", user.uid);
   const existingSnapshot = await getDoc(ref);
   const defaults = getDefaultProfileFields(user);
+  const isNewProfile = !existingSnapshot.exists();
 
   const payload = {
     uid: user.uid,
     email: user.email ?? null,
     displayName: user.displayName ?? null,
     photoURL: user.photoURL ?? null,
-    bio: existingSnapshot.exists()
-      ? undefined
-      : defaults.bio,
-    handle: existingSnapshot.exists()
-      ? undefined
-      : defaults.handle,
-    links: existingSnapshot.exists()
-      ? undefined
-      : defaults.links,
-    theme: existingSnapshot.exists()
-      ? undefined
-      : defaults.theme,
     providerIds: user.providerData
       .map((entry) => entry.providerId)
       .filter(Boolean),
     lastLoginAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-    ...(existingSnapshot.exists() ? {} : { createdAt: serverTimestamp() }),
+    ...(isNewProfile
+      ? {
+          bio: defaults.bio,
+          handle: defaults.handle,
+          links: defaults.links,
+          theme: defaults.theme,
+          createdAt: serverTimestamp(),
+        }
+      : {}),
   };
 
   await setDoc(ref, payload, { merge: true });
