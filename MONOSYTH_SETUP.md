@@ -109,6 +109,13 @@ git push origin main
 
 When `main` updates, Firebase App Hosting creates a new rollout automatically.
 
+Codex deploy behavior:
+
+- If the user says `deploy`, treat that as approval to run the normal deploy flow for this repo.
+- For the main Monosyth site, the expected deploy path is commit the intended changes and push `main`.
+- In Codex desktop, a command-level approval popup may still appear for `git add`, `git commit`, or `git push` when the sandbox requires it.
+- That popup is controlled by the runtime environment, not by repo policy, so the project can allow deploys while the tool host still asks for security approval.
+
 ## App Hosting Configuration
 
 - GitHub repo: `monosyth/monosyth`

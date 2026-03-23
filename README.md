@@ -43,6 +43,13 @@ Use Firebase App Hosting with:
 - GitHub repo: `monosyth/monosyth`
 - App root directory: `apps/web`
 
+## Deployment preference
+
+- When the user says `deploy`, treat that as approval to proceed with the normal deployment flow for this repo without asking for an extra conversational confirmation step first.
+- For the main site, that normally means committing the current intended changes and pushing `main` so Firebase App Hosting can roll out the update.
+- In Codex desktop, a tool-level approval popup may still appear for commands like `git commit` or `git push` if the sandbox requires it. That popup is enforced by the runtime, not by project policy.
+- If the environment has already approved the needed Git command prefixes, deploy can proceed without any extra interruption.
+
 ## Project notes
 
 - `README.md`: quick repo overview
