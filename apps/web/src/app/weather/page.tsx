@@ -182,6 +182,12 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const resolvedSearchParams = (await searchParams) ?? {};
   const activeView = normalizeWeatherDashboardView(resolvedSearchParams.view);
   const activeDocumentTab = normalizeWeatherDocumentTab(resolvedSearchParams.tab);
+  const isDashboardTab = activeDocumentTab === "dashboard";
+  const isSummariesTab = activeDocumentTab === "summaries";
+  const isRadarTab = activeDocumentTab === "radar";
+  const isCamerasTab = activeDocumentTab === "cameras";
+  const isGraphsTab = activeDocumentTab === "graphs";
+  const isAboutTab = activeDocumentTab === "about";
   const result = await getWeatherPageData(activeView);
 
   if (result.state !== "ready") {
@@ -189,16 +195,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   }
 
   const { data } = result;
-  const currentRows = buildCurrentConditionRows(data.observations);
-  const periodRows = buildPeriodSummaryRows(data, activeView);
-  const rangeRows = buildRecentSummaryRows(data);
   const mastheadRows = buildMastheadRows(data, activeView);
-  const stationRows = buildStationDetailRows(data, result.notice);
-  const rawRows = data.snapshot.slice(0, 24).map((item) => ({
-    label: item.key,
-    value: item.value,
-  }));
-  const graphSeries = prepareGraphSeries(data.series, activeView);
   const coordinates = resolveDisplayCoordinates(data);
   const almanac = buildWeatherAlmanac({
     date: new Date(data.fetchedAt),
@@ -208,12 +205,25 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const mapUrl = buildMapUrl(coordinates.latitude, coordinates.longitude);
   const radarUrl = buildRadarEmbedUrl(coordinates.latitude, coordinates.longitude);
   const viewMeta = getViewMeta(activeView);
-  const comparisonPanels = await getHistoricalComparisonPanels(data, activeView);
-  const graphPanels = buildStationGraphPanels(graphSeries, activeView, data.series);
-  const summaryCards = buildSummaryCards(data);
-  const recordCards = buildRecordCards(data, activeView);
-  const quickStats = buildQuickStats(data, activeView);
-  const summaryArchive = activeDocumentTab === "summaries"
+  const currentRows = isDashboardTab ? buildCurrentConditionRows(data.observations) : [];
+  const periodRows = isDashboardTab ? buildPeriodSummaryRows(data, activeView) : [];
+  const rangeRows = isDashboardTab ? buildRecentSummaryRows(data) : [];
+  const comparisonPanels = isDashboardTab
+    ? await getHistoricalComparisonPanels(data, activeView)
+    : [];
+  const graphPanels = isGraphsTab
+    ? buildStationGraphPanels(prepareGraphSeries(data.series, activeView), activeView, data.series)
+    : [];
+  const summaryCards = isDashboardTab ? buildSummaryCards(data) : [];
+  const recordCards = isDashboardTab ? buildRecordCards(data, activeView) : [];
+  const stationRows = isAboutTab ? buildStationDetailRows(data, result.notice) : [];
+  const rawRows = isAboutTab
+    ? data.snapshot.slice(0, 24).map((item) => ({
+        label: item.key,
+        value: item.value,
+      }))
+    : [];
+  const summaryArchive = isSummariesTab
     ? await loadWeatherSummaryArchive(data.station.macAddress)
     : null;
   const pageMeta = getPageMeta(
@@ -224,12 +234,6 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
     data.station.lastObservationAt || formatWeatherLong(data.fetchedAt),
   );
   const isCurrentView = activeView === "current";
-  const isDashboardTab = activeDocumentTab === "dashboard";
-  const isSummariesTab = activeDocumentTab === "summaries";
-  const isRadarTab = activeDocumentTab === "radar";
-  const isCamerasTab = activeDocumentTab === "cameras";
-  const isGraphsTab = activeDocumentTab === "graphs";
-  const isAboutTab = activeDocumentTab === "about";
   const featuredComparisonPanel = isCurrentView
     ? comparisonPanels.find((panel) => panel.title.startsWith("Last ")) ?? null
     : comparisonPanels[0] ?? null;
@@ -237,6 +241,8 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
     ? comparisonPanels.filter((panel) => panel.title !== featuredComparisonPanel.title)
     : comparisonPanels;
   const visibleNotice = shouldDisplayWeatherNotice(result.notice) ? result.notice : undefined;
+  const currentTemperatureLabel =
+    createLatestValueRow(data.observations, "Temperature", ["tempf"], 1, "F")?.value ?? null;
 
   return (
     <main className={styles.page}>
@@ -265,23 +271,17 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
 
               <div className={styles.heroSummaryRow}>
                 <div className={styles.heroPageCopy}>
-                  <h2 className={styles.heroSectionTitle}>
-                    {pageMeta.heading}
-                  </h2>
+                  <div className={styles.heroHeadingRow}>
+                    <h2 className={styles.heroSectionTitle}>
+                      {pageMeta.heading}
+                    </h2>
+                    {currentTemperatureLabel ? (
+                      <p className={styles.heroCurrentTemp}>{currentTemperatureLabel}</p>
+                    ) : null}
+                  </div>
                   <p className={styles.heroTimestamp}>
                     {pageMeta.timestampLabel}
                   </p>
-                </div>
-
-                <div className={styles.quickStatsGrid}>
-                  {quickStats.map((stat) => (
-                    <div key={stat.label} className={styles.quickStatCard}>
-                      <p className={styles.quickStatLabel}>
-                        {stat.label}
-                      </p>
-                      <p className={styles.quickStatValue}>{stat.value}</p>
-                    </div>
-                  ))}
                 </div>
               </div>
             </div>
@@ -1898,36 +1898,6 @@ function getViewMeta(view: WeatherDashboardView) {
   };
 }
 
-function buildQuickStats(data: WeatherOverview, view: WeatherDashboardView): FactRow[] {
-  const latestTemperature = createLatestValueRow(data.observations, "Temperature", ["tempf"], 1, "F");
-  const latestHumidity = createLatestValueRow(data.observations, "Humidity", ["humidity"], 0, "%");
-  const latestWind = createLatestValueRow(data.observations, "Wind", ["windspeedmph"], 1, "mph");
-  const latestPressure = createLatestValueRow(
-    data.observations,
-    "Pressure",
-    ["baromrelin", "baromabsin"],
-    3,
-    "inHg",
-  );
-
-  return [
-    { label: "View", value: getViewMeta(view).label },
-    { label: "Loaded", value: `${data.observationCount} obs` },
-    { label: "Temperature", value: latestTemperature?.value ?? "Not reported" },
-    { label: "Pressure", value: latestPressure?.value ?? "Not reported" },
-    {
-      label: "Air",
-      value: [latestTemperature?.value, latestHumidity ? `${latestHumidity.value} RH` : null, latestWind ? `${latestWind.value} wind` : null]
-        .filter((part): part is string => Boolean(part))
-        .join(" / "),
-    },
-    {
-      label: "Station",
-      value: data.station.location || "Shoreline, WA",
-    },
-  ];
-}
-
 function buildSummaryCards(data: WeatherOverview): SummaryCard[] {
   const humidityRow = createLatestValueRow(data.observations, "Humidity", ["humidity"], 0, "%");
   const rainRow = createLatestValueRow(data.observations, "Rain", ["dailyrainin"], 2, "in");
@@ -2337,9 +2307,16 @@ function createLatestValueRow(
   decimals: number,
   unit: string,
 ) {
-  const latest = [...observations]
-    .reverse()
-    .find((observation) => pickNumber(observation, keys) !== null);
+  let latest: WeatherObservation | null = null;
+
+  for (let index = observations.length - 1; index >= 0; index -= 1) {
+    const candidate = observations[index];
+
+    if (pickNumber(candidate, keys) !== null) {
+      latest = candidate;
+      break;
+    }
+  }
 
   if (!latest) {
     return null;
@@ -2418,12 +2395,16 @@ function buildTrendValue(
   }
 
   const cutoff = latestTimestamp - lookbackMs;
-  const prior = [...observations]
-    .reverse()
-    .find(
-      (observation) =>
-        (observation.timestamp ?? 0) <= cutoff && pickNumber(observation, keys) !== null,
-    );
+  let prior: WeatherObservation | null = null;
+
+  for (let index = observations.length - 1; index >= 0; index -= 1) {
+    const candidate = observations[index];
+
+    if ((candidate.timestamp ?? 0) <= cutoff && pickNumber(candidate, keys) !== null) {
+      prior = candidate;
+      break;
+    }
+  }
 
   if (!prior) {
     return null;
