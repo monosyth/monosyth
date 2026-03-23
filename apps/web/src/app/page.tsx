@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { AuthConsoleCard } from "@/components/auth/auth-console-card";
 
 export default function Home() {
@@ -10,6 +12,20 @@ export default function Home() {
               <h1 className="text-6xl font-semibold leading-none tracking-[-0.08em] text-balance sm:text-7xl lg:text-8xl">
                 monosyth
               </h1>
+
+              <div className="max-w-xl space-y-4">
+                <p className="text-base leading-7 text-stone-700 sm:text-lg">
+                  Live local conditions, camera views, and station history from Monosyth&apos;s weather station in Shoreline, Washington.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Link
+                    href="/weather"
+                    className="inline-flex items-center rounded-full bg-stone-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800"
+                  >
+                    Monosyth&apos;s Weather Station
+                  </Link>
+                </div>
+              </div>
             </div>
 
             <AuthConsoleCard />

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { getTimes } from "suncalc";
@@ -43,6 +44,9 @@ import type {
 } from "@/lib/weather/types";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: "Monosyth's Weather - Shoreline, WA",
+};
 
 type FactRow = {
   label: string;
