@@ -37,10 +37,11 @@ type SummaryRow = {
   detail: string;
 };
 
-type GraphGroup = {
+type StationGraphPanel = {
+  id: string;
   title: string;
   subtitle: string;
-  series: WeatherSeries[];
+  seriesList: WeatherSeries[];
 };
 
 type ComparisonPanel = {
@@ -185,7 +186,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
     label: item.key,
     value: item.value,
   }));
-  const graphSeries = prepareGraphSeries(data.series).slice(0, 12);
+  const graphSeries = prepareGraphSeries(data.series, activeView);
   const coordinates = resolveDisplayCoordinates(data);
   const almanac = buildWeatherAlmanac({
     date: new Date(data.fetchedAt),
@@ -196,7 +197,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const radarUrl = buildRadarEmbedUrl(coordinates.latitude, coordinates.longitude);
   const viewMeta = getViewMeta(activeView);
   const comparisonPanels = await getHistoricalComparisonPanels(data, activeView);
-  const graphDeck = buildGraphDeck(graphSeries);
+  const graphPanels = buildStationGraphPanels(graphSeries, activeView);
   const summaryCards = buildSummaryCards(data);
   const recordCards = buildRecordCards(data, activeView);
   const quickStats = buildQuickStats(data, activeView);
@@ -491,34 +492,21 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
         <TablePanel
           id="graphs-section"
           title="Graphs"
-          subtitle="Station graph gallery."
+          subtitle={`${viewMeta.label === "Current" ? "Daily" : viewMeta.label} station plots.`}
           className="mt-4"
           compact
         >
-          {graphSeries.length ? (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {graphDeck.hero ? (
-                <CombinedTrendPanel
-                  title={graphDeck.hero.title}
-                  subtitle={graphDeck.hero.subtitle}
-                  seriesList={graphDeck.hero.series}
-                  compact
-                />
-              ) : null}
-              {graphDeck.featured.map((group) => (
-                <CombinedTrendPanel
-                  key={group.title}
-                  title={group.title}
-                  subtitle={group.subtitle}
-                  seriesList={group.series}
-                  compact
+          {graphPanels.length ? (
+            <div className="space-y-3">
+              {graphPanels.map((panel) => (
+                <StationTrendPanel
+                  key={panel.id}
+                  title={panel.title}
+                  subtitle={panel.subtitle}
+                  seriesList={panel.seriesList}
+                  view={activeView}
                 />
               ))}
-              <div className="contents">
-                {graphDeck.singles.map((series) => (
-                  <TrendPanel key={series.id} series={series} compact />
-                ))}
-              </div>
             </div>
           ) : (
             <PanelState message="Trend charts need at least two recent observations with matching fields." />
@@ -702,90 +690,91 @@ function ForecastTable({ periods }: { periods: WeatherForecastPeriod[] }) {
   );
 }
 
-function CombinedTrendPanel({
+function StationTrendPanel({
   title,
   subtitle,
   seriesList,
-  size = "standard",
-  compact = false,
+  view,
 }: {
   title: string;
   subtitle: string;
   seriesList: WeatherSeries[];
-  size?: "hero" | "standard";
-  compact?: boolean;
+  view: WeatherDashboardView;
 }) {
-  const width = 420;
-  const height = compact ? 156 : size === "hero" ? 240 : 180;
-  const left = 18;
-  const right = 14;
-  const top = 10;
-  const bottom = 22;
+  const width = 980;
+  const height = 220;
+  const left = 54;
+  const right = 16;
+  const top = 16;
+  const bottom = 34;
   const plotWidth = width - left - right;
   const plotHeight = height - top - bottom;
-  const values = seriesList.flatMap((series) => series.points.map((point) => point.value));
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || 1;
-  const labelSeries = seriesList[0]!;
-  const gridLines = [0, 0.25, 0.5, 0.75, 1];
+  const timeStart = Math.min(...seriesList.flatMap((series) => series.points.map((point) => point.timestamp)));
+  const timeEnd = Math.max(...seriesList.flatMap((series) => series.points.map((point) => point.timestamp)));
+  const scale = buildSeriesScale(seriesList);
+  const xTicks = buildTimeTicks(timeStart, timeEnd, view, 6);
+  const dotStride = pickDotStride(seriesList);
+  const latestSummary = seriesList
+    .map((series) => `${series.label} ${formatSeriesValue(series.points.at(-1)?.value ?? null, series.decimals, series.unit)}`)
+    .join("  •  ");
 
   return (
-    <article className="border border-stone-200 bg-[#fcfcfb] p-3">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <p className="text-[0.68rem] uppercase tracking-[0.18em] text-stone-500">Combined Graph</p>
-          <p className="mt-1 text-lg font-light tracking-[-0.02em] text-stone-700">{title}</p>
-          <p className={`mt-1 text-stone-500 ${compact ? "text-[11px]" : "text-sm"}`}>{subtitle}</p>
+    <article className="overflow-hidden border border-stone-300 bg-[#fffef8]">
+      <div className="border-b border-stone-200 bg-white px-3 py-2.5">
+        <p className="text-[0.72rem] uppercase tracking-[0.18em] text-stone-500">Station Plot</p>
+        <div className="mt-1 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h3 className="text-[1.15rem] font-normal text-stone-800">{title}</h3>
+            <p className="mt-0.5 text-[11px] uppercase tracking-[0.16em] text-stone-500">{subtitle}</p>
+          </div>
+          <p className="text-right text-[11px] leading-5 text-stone-500">{latestSummary}</p>
         </div>
       </div>
 
-      <div className={`mt-2 flex flex-wrap gap-x-4 gap-y-1 border-t border-stone-200 pt-2 text-stone-600 ${compact ? "text-xs" : "text-sm"}`}>
-        {seriesList.map((series) => (
-          <span key={series.id}>
-            <span
-              className="mr-2 inline-block h-2.5 w-2.5 rounded-full align-middle"
-              style={{ backgroundColor: pickSeriesAccent(series.id) }}
-            />
-            {series.label}: {formatSeriesValue(series.points.at(-1)?.value ?? null, series.decimals, series.unit)}
-          </span>
-        ))}
-      </div>
-
-      <div className="mt-2 border border-stone-200 bg-[#fffef8] p-2">
+      <div className="px-2 py-2">
         <svg
           viewBox={`0 0 ${width} ${height}`}
           role="img"
-          aria-label={`${title} trend`}
-          className={`${compact ? "h-36" : size === "hero" ? "h-64" : "h-44"} w-full`}
+          aria-label={`${title} station plot`}
+          className="h-[220px] w-full"
         >
-          {gridLines.map((ratio) => {
-            const y = top + plotHeight * ratio;
+          <rect x={left} y={top} width={plotWidth} height={plotHeight} fill="#ffffff" stroke="#d6d3d1" />
+          {scale.ticks.map((tick) => {
+            const y = projectY(tick, scale.min, scale.max, top, plotHeight);
 
             return (
-              <line
-                key={ratio}
-                x1={left}
-                y1={y}
-                x2={left + plotWidth}
-                y2={y}
-                stroke={ratio === 0 || ratio === 1 ? "#cfcfcf" : "#e7e7e7"}
-                strokeWidth="1"
-              />
+              <g key={`${title}-y-${tick}`}>
+                <line x1={left} y1={y} x2={left + plotWidth} y2={y} stroke="#e7e5e4" strokeWidth="1" />
+                <text x={left - 8} y={y + 4} textAnchor="end" fill="#78716c" fontSize="11">
+                  {formatTickValue(tick, seriesList[0]?.decimals ?? 0)}
+                </text>
+              </g>
             );
           })}
+
+          {xTicks.map((tick) => {
+            const x = projectX(tick.timestamp, timeStart, timeEnd, left, plotWidth);
+
+            return (
+              <g key={`${title}-x-${tick.timestamp}`}>
+                <line x1={x} y1={top} x2={x} y2={top + plotHeight} stroke="#f0efee" strokeWidth="1" />
+                <text x={x} y={top + plotHeight + 18} textAnchor="middle" fill="#78716c" fontSize="11">
+                  {tick.label}
+                </text>
+              </g>
+            );
+          })}
+
           {seriesList.map((series) => {
-            const points = series.points.map((point, index) => {
-              const x = left + (index / Math.max(series.points.length - 1, 1)) * plotWidth;
-              const y = top + (1 - (point.value - min) / span) * plotHeight;
-              return { x, y };
-            });
-            const linePath = points
-              .map((point, index) =>
-                `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`,
-              )
-              .join(" ");
             const accent = pickSeriesAccent(series.id);
+            const points = series.points.map((point) => ({
+              x: projectX(point.timestamp, timeStart, timeEnd, left, plotWidth),
+              y: projectY(point.value, scale.min, scale.max, top, plotHeight),
+              value: point.value,
+            }));
+            const linePath = points
+              .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+              .join(" ");
 
             return (
               <g key={series.id}>
@@ -793,142 +782,29 @@ function CombinedTrendPanel({
                   d={linePath}
                   fill="none"
                   stroke={accent}
-                  strokeWidth="3"
+                  strokeWidth="1.8"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
-                {points.at(-1) ? (
-                  <circle
-                    cx={points.at(-1)?.x ?? left}
-                    cy={points.at(-1)?.y ?? top}
-                    r="4"
-                    fill={accent}
-                  />
-                ) : null}
+                {points.map((point, index) =>
+                  index % dotStride === 0 || index === points.length - 1 ? (
+                    <circle
+                      key={`${series.id}-${index}`}
+                      cx={point.x}
+                      cy={point.y}
+                      r="1.7"
+                      fill={accent}
+                    />
+                  ) : null,
+                )}
               </g>
             );
           })}
-          <text x="6" y={top + 4} fill="#7a7a7a" fontSize="12">
-            {formatCompact(max, labelSeries.decimals)}
-          </text>
-          <text x="6" y={top + plotHeight / 2 + 4} fill="#7a7a7a" fontSize="12">
-            {formatCompact(min + span / 2, labelSeries.decimals)}
-          </text>
-          <text x="6" y={top + plotHeight + 4} fill="#7a7a7a" fontSize="12">
-            {formatCompact(min, labelSeries.decimals)}
+
+          <text x={left + plotWidth} y={12} textAnchor="end" fill="#78716c" fontSize="11">
+            {seriesList.map((series) => series.label).join(" / ")}
           </text>
         </svg>
-      </div>
-
-      <div className={`mt-2 flex items-center justify-between border-t border-stone-200 pt-2 text-stone-500 ${compact ? "text-xs" : "text-sm"}`}>
-        <span>{labelSeries.points[0]?.label}</span>
-        <span>{labelSeries.unit || "Multi-series"}</span>
-        <span>{labelSeries.points.at(-1)?.label}</span>
-      </div>
-    </article>
-  );
-}
-
-function TrendPanel({ series, compact = false }: { series: WeatherSeries; compact?: boolean }) {
-  const width = 420;
-  const height = compact ? 146 : 168;
-  const left = 18;
-  const right = 14;
-  const top = 10;
-  const bottom = 22;
-  const plotWidth = width - left - right;
-  const plotHeight = height - top - bottom;
-  const span = series.max - series.min || 1;
-  const latestPoint = series.points.at(-1) ?? null;
-  const accent = pickSeriesAccent(series.id);
-  const fill = `${accent}22`;
-  const gridLines = [0, 0.25, 0.5, 0.75, 1];
-  const points = series.points.map((point, index) => {
-    const x = left + (index / Math.max(series.points.length - 1, 1)) * plotWidth;
-    const y = top + (1 - (point.value - series.min) / span) * plotHeight;
-    return { x, y };
-  });
-  const linePath = points
-    .map((point, index) =>
-      `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`,
-    )
-    .join(" ");
-  const fillPath = `${linePath} L ${(left + plotWidth).toFixed(2)} ${(top + plotHeight).toFixed(2)} L ${left} ${(top + plotHeight).toFixed(2)} Z`;
-
-  return (
-    <article className="border border-stone-200 bg-[#fcfcfb] p-3">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <p className="text-[0.68rem] uppercase tracking-[0.18em] text-stone-500">Instrument Graph</p>
-          <p className="mt-1 text-lg font-light tracking-[-0.02em] text-stone-700">{series.label}</p>
-          <p className={`mt-1 text-stone-500 ${compact ? "text-[11px]" : "text-sm"}`}>{formatSeriesRange(series)}</p>
-        </div>
-        <div className="text-right">
-          <p className="text-xs uppercase tracking-[0.16em] text-stone-500">Now</p>
-          <p className={`mt-1 font-light text-stone-800 ${compact ? "text-xl" : "text-2xl"}`}>
-            {formatSeriesValue(latestPoint?.value ?? null, series.decimals, series.unit)}
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-2 border border-stone-200 bg-[#fffef8] p-2">
-        <svg
-          viewBox={`0 0 ${width} ${height}`}
-          role="img"
-          aria-label={`${series.label} trend`}
-          className={`${compact ? "h-36" : "h-40"} w-full`}
-        >
-          {gridLines.map((ratio) => {
-            const y = top + plotHeight * ratio;
-
-            return (
-              <line
-                key={ratio}
-                x1={left}
-                y1={y}
-                x2={left + plotWidth}
-                y2={y}
-                stroke={ratio === 0 || ratio === 1 ? "#cfcfcf" : "#e7e7e7"}
-                strokeWidth="1"
-              />
-            );
-          })}
-          <path d={fillPath} fill={fill} />
-          <path
-            d={linePath}
-            fill="none"
-            stroke={accent}
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          {latestPoint ? (
-            <circle
-              cx={points.at(-1)?.x ?? left}
-              cy={points.at(-1)?.y ?? top}
-              r="4"
-              fill={accent}
-            />
-          ) : null}
-          <text x="6" y={top + 4} fill="#7a7a7a" fontSize="12">
-            {formatCompact(series.max, series.decimals)}
-          </text>
-          <text x="6" y={top + plotHeight / 2 + 4} fill="#7a7a7a" fontSize="12">
-            {formatCompact(series.min + span / 2, series.decimals)}
-          </text>
-          <text x="6" y={top + plotHeight + 4} fill="#7a7a7a" fontSize="12">
-            {formatCompact(series.min, series.decimals)}
-          </text>
-        </svg>
-      </div>
-
-      <div className={`mt-2 flex items-center justify-between border-t border-stone-200 pt-2 text-stone-500 ${compact ? "text-xs" : "text-sm"}`}>
-        <span>{series.points[0]?.label}</span>
-        <span>
-          Low {formatCompact(series.min, series.decimals)} / High{" "}
-          {formatCompact(series.max, series.decimals)}
-        </span>
-        <span>{series.points.at(-1)?.label}</span>
       </div>
     </article>
   );
@@ -1838,10 +1714,6 @@ function formatSeriesValue(value: number | null, decimals: number, unit: string)
   return `${formatCompact(value, decimals)}${suffix}`;
 }
 
-function formatSeriesRange(series: WeatherSeries) {
-  return `${formatCompact(series.min, series.decimals)} to ${formatCompact(series.max, series.decimals)} ${series.unit}`.trim();
-}
-
 function formatCompact(value: number, decimals: number) {
   return value.toLocaleString(undefined, {
     minimumFractionDigits: 0,
@@ -1934,64 +1806,105 @@ function formatSpan(spanMs: number) {
   return parts.join(" ") || "Less than 1m";
 }
 
-function prepareGraphSeries(seriesList: WeatherSeries[]) {
+function prepareGraphSeries(
+  seriesList: WeatherSeries[],
+  view: WeatherDashboardView,
+) {
   return seriesList
     .map((series) => ({
       ...series,
-      points: condenseSeriesPoints(series.points, 240),
+      points: normalizeSeriesPointsForView(series, view),
     }))
     .filter((series) => series.points.length > 1);
 }
 
-function buildGraphDeck(seriesList: WeatherSeries[]) {
+function buildStationGraphPanels(
+  seriesList: WeatherSeries[],
+  view: WeatherDashboardView,
+): StationGraphPanel[] {
   const byId = new Map(seriesList.map((series) => [series.id, series] as const));
-  const usedIds = new Set<string>();
-  const featured: GraphGroup[] = [];
-  const combinations = [
+  const periodLabel = view === "current" ? "Daily" : view === "week" ? "Weekly" : view === "month" ? "Monthly" : "Yearly";
+  const specs = [
     {
-      title: "Temperature Family",
-      subtitle: "Outdoor temperature, dew point, and indoor temperature",
+      id: "temperatures",
+      title: "Temperatures",
+      subtitle: `${periodLabel} outdoor temperature and dew point`,
       ids: ["temperature", "dewpoint", "indoorTemperature"],
     },
     {
+      id: "rain",
+      title: "Rain",
+      subtitle: `${periodLabel} rain accumulation`,
+      ids: ["rain"],
+    },
+    {
+      id: "wind",
+      title: "Wind",
+      subtitle: `${periodLabel} sustained wind speed`,
+      ids: ["wind"],
+    },
+    {
+      id: "high-wind",
+      title: "Hi Wind",
+      subtitle: `${periodLabel} peak gust plot`,
+      ids: ["gust"],
+    },
+    {
+      id: "wind-vector",
+      title: "Wind Vector",
+      subtitle: `${periodLabel} wind direction in degrees`,
+      ids: ["windDirection"],
+    },
+    {
+      id: "barometer",
+      title: "Barometer",
+      subtitle: `${periodLabel} pressure trend`,
+      ids: ["pressure"],
+    },
+    {
+      id: "humidity",
       title: "Inside/Outside Humidity",
-      subtitle: "Outdoor humidity compared with the indoor sensor",
+      subtitle: `${periodLabel} humidity comparison`,
       ids: ["humidity", "indoorHumidity"],
     },
     {
-      title: "Wind and Gust",
-      subtitle: "Wind speed and gusts on the same chart",
-      ids: ["wind", "gust"],
+      id: "radiation",
+      title: "Radiation",
+      subtitle: `${periodLabel} solar radiation`,
+      ids: ["solar"],
+    },
+    {
+      id: "uv",
+      title: "UV Index",
+      subtitle: `${periodLabel} UV trend`,
+      ids: ["uv"],
+    },
+    {
+      id: "lightning",
+      title: "Lightning",
+      subtitle: `${periodLabel} lightning count`,
+      ids: ["lightning"],
     },
   ];
 
-  for (const combo of combinations) {
-    const series = combo.ids
-      .map((id) => byId.get(id))
-      .filter((item): item is WeatherSeries => Boolean(item));
+  return specs
+    .map((spec) => {
+      const panelSeries = spec.ids
+        .map((id) => byId.get(id))
+        .filter((series): series is WeatherSeries => Boolean(series));
 
-    if (series.length < 2) {
-      continue;
-    }
+      if (panelSeries.length === 0) {
+        return null;
+      }
 
-    for (const item of series) {
-      usedIds.add(item.id);
-    }
-
-    featured.push({
-      title: combo.title,
-      subtitle: combo.subtitle,
-      series,
-    });
-  }
-
-  const hero = featured.shift() ?? null;
-
-  return {
-    hero,
-    featured,
-    singles: seriesList.filter((series) => !usedIds.has(series.id)),
-  };
+      return {
+        id: spec.id,
+        title: spec.title,
+        subtitle: spec.subtitle,
+        seriesList: panelSeries,
+      };
+    })
+    .filter((panel): panel is StationGraphPanel => panel !== null);
 }
 
 function condenseSeriesPoints(points: WeatherSeries["points"], maxPoints: number) {
@@ -2010,6 +1923,225 @@ function condenseSeriesPoints(points: WeatherSeries["points"], maxPoints: number
   return condensed;
 }
 
+function normalizeSeriesPointsForView(
+  series: WeatherSeries,
+  view: WeatherDashboardView,
+) {
+  const aggregated = aggregateSeriesPoints(
+    series.points,
+    view === "current" ? 0 : view === "week" ? 60 * 60 * 1000 : view === "month" ? 3 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000,
+    pickAggregationMode(series.id),
+  );
+  const maxPoints =
+    view === "current" ? 288 : view === "week" ? 700 : view === "month" ? 1000 : 800;
+
+  return condenseSeriesPoints(aggregated, maxPoints);
+}
+
+function aggregateSeriesPoints(
+  points: WeatherSeries["points"],
+  intervalMs: number,
+  mode: "avg" | "max" | "last",
+) {
+  if (intervalMs <= 0 || points.length < 3) {
+    return points;
+  }
+
+  const buckets = new Map<number, WeatherSeries["points"]>();
+
+  for (const point of points) {
+    const bucketStart = Math.floor(point.timestamp / intervalMs) * intervalMs;
+    const bucket = buckets.get(bucketStart) ?? [];
+    bucket.push(point);
+    buckets.set(bucketStart, bucket);
+  }
+
+  return [...buckets.entries()]
+    .sort((left, right) => left[0] - right[0])
+    .map(([, bucket]) => {
+      const lastPoint = bucket.at(-1) ?? bucket[0]!;
+      const value =
+        mode === "max"
+          ? Math.max(...bucket.map((point) => point.value))
+          : mode === "last"
+            ? lastPoint.value
+            : bucket.reduce((sum, point) => sum + point.value, 0) / bucket.length;
+
+      return {
+        timestamp: lastPoint.timestamp,
+        value,
+        label: lastPoint.label,
+      };
+    });
+}
+
+function pickAggregationMode(seriesId: string): "avg" | "max" | "last" {
+  if (seriesId === "gust" || seriesId === "lightning" || seriesId === "rain") {
+    return "max";
+  }
+
+  if (seriesId === "windDirection") {
+    return "last";
+  }
+
+  return "avg";
+}
+
+function buildSeriesScale(seriesList: WeatherSeries[]) {
+  const values = seriesList.flatMap((series) => series.points.map((point) => point.value));
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+  const seriesIds = new Set(seriesList.map((series) => series.id));
+  const forceZero =
+    [...seriesIds].every((id) =>
+      ["humidity", "indoorHumidity", "wind", "gust", "uv", "solar", "rain", "rainRate", "lightning"].includes(id),
+    ) || seriesIds.has("windDirection");
+  const baseMin = seriesIds.has("windDirection") ? 0 : minValue;
+  const baseMax = seriesIds.has("windDirection") ? 360 : maxValue;
+  return buildNiceScale(baseMin, baseMax, 5, forceZero);
+}
+
+function buildNiceScale(min: number, max: number, tickCount: number, forceZero = false) {
+  let localMin = forceZero ? Math.min(0, min) : min;
+  let localMax = max;
+
+  if (localMin === localMax) {
+    localMin -= 1;
+    localMax += 1;
+  }
+
+  const range = niceNumber(localMax - localMin, false);
+  const step = niceNumber(range / Math.max(tickCount - 1, 1), true);
+  const scaleMin = Math.floor(localMin / step) * step;
+  const scaleMax = Math.ceil(localMax / step) * step;
+  const ticks: number[] = [];
+
+  for (let value = scaleMin; value <= scaleMax + step / 2; value += step) {
+    ticks.push(Number(value.toFixed(6)));
+  }
+
+  return {
+    min: scaleMin,
+    max: scaleMax,
+    ticks,
+  };
+}
+
+function niceNumber(value: number, round: boolean) {
+  const exponent = Math.floor(Math.log10(Math.abs(value || 1)));
+  const fraction = value / 10 ** exponent;
+  let niceFraction = 1;
+
+  if (round) {
+    if (fraction < 1.5) {
+      niceFraction = 1;
+    } else if (fraction < 3) {
+      niceFraction = 2;
+    } else if (fraction < 7) {
+      niceFraction = 5;
+    } else {
+      niceFraction = 10;
+    }
+  } else if (fraction <= 1) {
+    niceFraction = 1;
+  } else if (fraction <= 2) {
+    niceFraction = 2;
+  } else if (fraction <= 5) {
+    niceFraction = 5;
+  } else {
+    niceFraction = 10;
+  }
+
+  return niceFraction * 10 ** exponent;
+}
+
+function projectX(timestamp: number, min: number, max: number, left: number, width: number) {
+  const span = Math.max(max - min, 1);
+  return left + ((timestamp - min) / span) * width;
+}
+
+function projectY(value: number, min: number, max: number, top: number, height: number) {
+  const span = Math.max(max - min, 1);
+  return top + (1 - (value - min) / span) * height;
+}
+
+function buildTimeTicks(
+  startMs: number,
+  endMs: number,
+  view: WeatherDashboardView,
+  tickCount: number,
+) {
+  const span = Math.max(endMs - startMs, 1);
+
+  return Array.from({ length: tickCount }, (_, index) => {
+    const ratio = tickCount === 1 ? 0 : index / (tickCount - 1);
+    const timestamp = startMs + span * ratio;
+
+    return {
+      timestamp,
+      label: formatGraphTimeLabel(timestamp, view, index, tickCount),
+    };
+  });
+}
+
+function formatGraphTimeLabel(
+  value: number,
+  view: WeatherDashboardView,
+  index: number,
+  tickCount: number,
+) {
+  if (view === "current") {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Los_Angeles",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(new Date(value));
+  }
+
+  if (view === "week") {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Los_Angeles",
+      weekday: "short",
+      hour: index === 0 || index === tickCount - 1 ? "numeric" : undefined,
+    }).format(new Date(value));
+  }
+
+  if (view === "month") {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Los_Angeles",
+      month: "numeric",
+      day: "numeric",
+    }).format(new Date(value));
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    month: "short",
+  }).format(new Date(value));
+}
+
+function pickDotStride(seriesList: WeatherSeries[]) {
+  const maxPoints = Math.max(...seriesList.map((series) => series.points.length));
+
+  if (maxPoints <= 240) {
+    return 1;
+  }
+
+  if (maxPoints <= 720) {
+    return 2;
+  }
+
+  if (maxPoints <= 1440) {
+    return 4;
+  }
+
+  return 8;
+}
+
+function formatTickValue(value: number, decimals: number) {
+  return formatCompact(value, Math.min(decimals, 3));
+}
+
 function pickSeriesAccent(seriesId: string) {
   if (seriesId === "temperature" || seriesId === "indoorTemperature") {
     return "#d97b23";
@@ -2025,6 +2157,10 @@ function pickSeriesAccent(seriesId: string) {
 
   if (seriesId === "wind" || seriesId === "gust") {
     return "#3b82f6";
+  }
+
+  if (seriesId === "windDirection") {
+    return "#4b5563";
   }
 
   if (seriesId === "pressure") {

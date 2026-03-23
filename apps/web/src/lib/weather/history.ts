@@ -113,16 +113,14 @@ export async function readStoredWeatherObservations(input: {
   const stationId = buildStationId(input.macAddress);
   const db = getFirebaseAdminDb();
   const sinceMs = Date.now() - pickRangeDurationMs(input.range);
-  const snapshot = await db
-    .collection("weatherStations")
-    .doc(stationId)
-    .collection("observations")
-    .where("observedAt", ">=", Timestamp.fromMillis(sinceMs))
-    .orderBy("observedAt", "asc")
-    .limit(4000)
-    .get();
-
-  return mapStoredObservations(snapshot.docs.map((doc) => doc.data()));
+  return readObservationQuery(
+    db
+      .collection("weatherStations")
+      .doc(stationId)
+      .collection("observations")
+      .where("observedAt", ">=", Timestamp.fromMillis(sinceMs))
+      .orderBy("observedAt", "asc"),
+  );
 }
 
 export async function readStoredWeatherObservationsForDay(input: {
@@ -135,17 +133,15 @@ export async function readStoredWeatherObservationsForDay(input: {
   const db = getFirebaseAdminDb();
   const start = new Date(Date.UTC(input.year, input.month - 1, input.day, 0, 0, 0, 0));
   const end = new Date(Date.UTC(input.year, input.month - 1, input.day + 1, 0, 0, 0, 0));
-  const snapshot = await db
-    .collection("weatherStations")
-    .doc(stationId)
-    .collection("observations")
-    .where("observedAt", ">=", Timestamp.fromMillis(start.getTime()))
-    .where("observedAt", "<", Timestamp.fromMillis(end.getTime()))
-    .orderBy("observedAt", "asc")
-    .limit(4000)
-    .get();
-
-  return mapStoredObservations(snapshot.docs.map((doc) => doc.data()));
+  return readObservationQuery(
+    db
+      .collection("weatherStations")
+      .doc(stationId)
+      .collection("observations")
+      .where("observedAt", ">=", Timestamp.fromMillis(start.getTime()))
+      .where("observedAt", "<", Timestamp.fromMillis(end.getTime()))
+      .orderBy("observedAt", "asc"),
+  );
 }
 
 export async function readStoredWeatherObservationsBetween(input: {
@@ -156,17 +152,16 @@ export async function readStoredWeatherObservationsBetween(input: {
 }): Promise<WeatherObservation[]> {
   const stationId = buildStationId(input.macAddress);
   const db = getFirebaseAdminDb();
-  const snapshot = await db
-    .collection("weatherStations")
-    .doc(stationId)
-    .collection("observations")
-    .where("observedAt", ">=", Timestamp.fromMillis(input.startMs))
-    .where("observedAt", "<", Timestamp.fromMillis(input.endMs))
-    .orderBy("observedAt", "asc")
-    .limit(input.limit ?? 4000)
-    .get();
-
-  return mapStoredObservations(snapshot.docs.map((doc) => doc.data()));
+  return readObservationQuery(
+    db
+      .collection("weatherStations")
+      .doc(stationId)
+      .collection("observations")
+      .where("observedAt", ">=", Timestamp.fromMillis(input.startMs))
+      .where("observedAt", "<", Timestamp.fromMillis(input.endMs))
+      .orderBy("observedAt", "asc"),
+    input.limit,
+  );
 }
 
 export async function readStoredWeatherStationMeta(input: {
@@ -199,6 +194,38 @@ export async function readStoredWeatherStationMeta(input: {
 export function buildStationId(macAddress?: string) {
   const base = (macAddress ?? "default-station").trim().toLowerCase();
   return base.replace(/[^a-z0-9_-]/g, "_");
+}
+
+async function readObservationQuery(
+  query: FirebaseFirestore.Query,
+  maxDocuments = 50_000,
+) {
+  const pageSize = 1000;
+  const rows: Array<Record<string, unknown>> = [];
+  let cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+
+  while (rows.length < maxDocuments) {
+    let pageQuery = query.limit(Math.min(pageSize, maxDocuments - rows.length));
+
+    if (cursor) {
+      pageQuery = pageQuery.startAfter(cursor);
+    }
+
+    const snapshot = await pageQuery.get();
+
+    if (snapshot.empty) {
+      break;
+    }
+
+    rows.push(...snapshot.docs.map((doc) => doc.data()));
+    cursor = snapshot.docs.at(-1);
+
+    if (snapshot.size < pageSize) {
+      break;
+    }
+  }
+
+  return mapStoredObservations(rows);
 }
 
 function pickRangeDurationMs(range: WeatherHistoryRange) {

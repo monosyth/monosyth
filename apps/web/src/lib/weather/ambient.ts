@@ -2,6 +2,7 @@ import { buildWeatherOverview } from "@/lib/weather/overview";
 import {
   persistWeatherHistory,
   readStoredWeatherObservations,
+  readStoredWeatherObservationsForDay,
   readStoredWeatherStationMeta,
 } from "@/lib/weather/history";
 import { getHourlyForecast } from "@/lib/weather/nws";
@@ -323,14 +324,24 @@ async function getCurrentWeatherPageData(): Promise<WeatherPageData> {
       observations,
       source: "page",
     }).catch(() => null);
-    const coordinates = resolveForecastCoordinates(observations);
+    const currentDayObservations = device.macAddress
+      ? await readStoredWeatherObservationsForDay({
+          macAddress: device.macAddress,
+          ...getWeatherCalendarParts(Date.now()),
+        }).catch(() => [])
+      : [];
+    const mergedObservations = mergeObservations(
+      currentDayObservations.length ? currentDayObservations : observations,
+      observations,
+    );
+    const coordinates = resolveForecastCoordinates(mergedObservations);
     const forecast = await getHourlyForecast(
       coordinates.latitude,
       coordinates.longitude,
     ).catch(() => []);
     const readyResult: Extract<WeatherPageData, { state: "ready" }> = {
       state: "ready",
-      data: applyStationOverrides(buildWeatherOverview(device, observations, forecast)),
+      data: applyStationOverrides(buildWeatherOverview(device, mergedObservations, forecast)),
     };
 
     writeCachedWeatherPageData(readyResult);
@@ -489,5 +500,43 @@ export async function captureWeatherHistorySnapshot() {
   return {
     ...persisted,
     observationCount: observations.length,
+  };
+}
+
+function mergeObservations(primary: WeatherObservation[], secondary: WeatherObservation[]) {
+  const byTimestamp = new Map<number, WeatherObservation>();
+
+  for (const observation of [...primary, ...secondary]) {
+    const timestamp = pickNumber(observation, ["timestamp", "dateutc"]);
+
+    if (timestamp === null) {
+      continue;
+    }
+
+    const normalizedTimestamp = timestamp > 1e12 ? timestamp : timestamp * 1000;
+    byTimestamp.set(normalizedTimestamp, {
+      ...observation,
+      timestamp: normalizedTimestamp,
+    });
+  }
+
+  return [...byTimestamp.entries()]
+    .sort((left, right) => left[0] - right[0])
+    .map(([, observation]) => observation);
+}
+
+function getWeatherCalendarParts(value: number) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  });
+  const parts = formatter.formatToParts(new Date(value));
+
+  return {
+    year: Number(parts.find((part) => part.type === "year")?.value ?? "0"),
+    month: Number(parts.find((part) => part.type === "month")?.value ?? "0"),
+    day: Number(parts.find((part) => part.type === "day")?.value ?? "0"),
   };
 }
