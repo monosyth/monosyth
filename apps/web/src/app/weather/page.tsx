@@ -243,7 +243,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
       <header className={styles.header}>
         <div className={styles.headerInner}>
           <div className={styles.heroGrid}>
-            <div>
+            <div className={styles.heroMain}>
               <p className={styles.heroEyebrow}>
                 Monosyth Personal Weather
               </p>
@@ -263,61 +263,68 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
                 </a>
               </p>
 
-              <h2 className={styles.heroSectionTitle}>
-                {pageMeta.heading}
-              </h2>
-              <p className={styles.heroTimestamp}>
-                {pageMeta.timestampLabel}
-              </p>
-              <div className={styles.quickStatsGrid}>
-                {quickStats.map((stat) => (
-                  <div key={stat.label} className={styles.quickStatCard}>
-                    <p className={styles.quickStatLabel}>
-                      {stat.label}
-                    </p>
-                    <p className={styles.quickStatValue}>{stat.value}</p>
-                  </div>
-                ))}
+              <div className={styles.heroSummaryRow}>
+                <div className={styles.heroPageCopy}>
+                  <h2 className={styles.heroSectionTitle}>
+                    {pageMeta.heading}
+                  </h2>
+                  <p className={styles.heroTimestamp}>
+                    {pageMeta.timestampLabel}
+                  </p>
+                </div>
+
+                <div className={styles.quickStatsGrid}>
+                  {quickStats.map((stat) => (
+                    <div key={stat.label} className={styles.quickStatCard}>
+                      <p className={styles.quickStatLabel}>
+                        {stat.label}
+                      </p>
+                      <p className={styles.quickStatValue}>{stat.value}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
             <div className={styles.heroSidebar}>
-              <table className={styles.mastheadTable}>
-                <tbody>
-                  {mastheadRows.map((row) => (
-                    <tr key={row.label} className={styles.mastheadRow}>
-                      <th className={styles.mastheadHeaderCell}>
-                        {row.label}:
-                      </th>
-                      <td className={styles.mastheadValueCell}>{row.value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className={styles.heroSidebarGrid}>
+                <a
+                  href={skylineWebcamHeaderCard.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={styles.webcamCard}
+                >
+                  <div className={styles.webcamFrame}>
+                    {/* External webcam preview is kept as a plain img so we can use the source site directly. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={skylineWebcamHeaderCard.imageUrl}
+                      alt="Seattle skyline webcam preview"
+                      loading="lazy"
+                      className={styles.webcamImage}
+                    />
+                  </div>
+                  <div className={styles.webcamCardBody}>
+                    <p className={styles.webcamCardEyebrow}>
+                      {skylineWebcamHeaderCard.title}
+                    </p>
+                    <p className={styles.webcamCardNote}>{skylineWebcamHeaderCard.note}</p>
+                  </div>
+                </a>
 
-              <a
-                href={skylineWebcamHeaderCard.href}
-                target="_blank"
-                rel="noreferrer"
-                className={styles.webcamCard}
-              >
-                <div className={styles.webcamFrame}>
-                  {/* External webcam preview is kept as a plain img so we can use the source site directly. */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={skylineWebcamHeaderCard.imageUrl}
-                    alt="Seattle skyline webcam preview"
-                    loading="lazy"
-                    className={styles.webcamImage}
-                  />
-                </div>
-                <div className={styles.webcamCardBody}>
-                  <p className={styles.webcamCardEyebrow}>
-                    {skylineWebcamHeaderCard.title}
-                  </p>
-                  <p className={styles.webcamCardNote}>{skylineWebcamHeaderCard.note}</p>
-                </div>
-              </a>
+                <table className={styles.mastheadTable}>
+                  <tbody>
+                    {mastheadRows.map((row) => (
+                      <tr key={row.label} className={styles.mastheadRow}>
+                        <th className={styles.mastheadHeaderCell}>
+                          {row.label}:
+                        </th>
+                        <td className={styles.mastheadValueCell}>{row.value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -1895,16 +1902,28 @@ function buildQuickStats(data: WeatherOverview, view: WeatherDashboardView): Fac
   const latestTemperature = createLatestValueRow(data.observations, "Temperature", ["tempf"], 1, "F");
   const latestHumidity = createLatestValueRow(data.observations, "Humidity", ["humidity"], 0, "%");
   const latestWind = createLatestValueRow(data.observations, "Wind", ["windspeedmph"], 1, "mph");
+  const latestPressure = createLatestValueRow(
+    data.observations,
+    "Pressure",
+    ["baromrelin", "baromabsin"],
+    3,
+    "inHg",
+  );
 
   return [
-    { label: "Location", value: data.station.location || "Shoreline, WA" },
-    { label: "Loaded", value: `${data.observationCount} observations` },
     { label: "View", value: getViewMeta(view).label },
+    { label: "Loaded", value: `${data.observationCount} obs` },
+    { label: "Temperature", value: latestTemperature?.value ?? "Not reported" },
+    { label: "Pressure", value: latestPressure?.value ?? "Not reported" },
     {
-      label: "Now",
+      label: "Air",
       value: [latestTemperature?.value, latestHumidity ? `${latestHumidity.value} RH` : null, latestWind ? `${latestWind.value} wind` : null]
         .filter((part): part is string => Boolean(part))
         .join(" / "),
+    },
+    {
+      label: "Station",
+      value: data.station.location || "Shoreline, WA",
     },
   ];
 }
