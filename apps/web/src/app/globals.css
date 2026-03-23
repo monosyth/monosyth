@@ -20,6 +20,26 @@
   --teal-900: #1a4533;
   --teal-950: #112f23;
   --pine: #15322f;
+  --weather-plot-card-background: #fffef8;
+  --weather-plot-card-border: #d6d3d1;
+  --weather-plot-area-background: #ffffff;
+  --weather-plot-area-border: #d6d3d1;
+  --weather-plot-night-band: #ece7ea;
+  --weather-plot-y-grid-line: #ddd8d4;
+  --weather-plot-x-grid-line: #efedeb;
+  --weather-plot-axis-text: #78716c;
+  --weather-plot-center-line: #e7e5e4;
+  --weather-series-temperature: #d97b23;
+  --weather-series-year-high: #d97b23;
+  --weather-series-year-low: #2563eb;
+  --weather-series-dewpoint: #8d6fd1;
+  --weather-series-humidity: #16a1b7;
+  --weather-series-wind: #3b82f6;
+  --weather-series-wind-direction: #4b5563;
+  --weather-series-pressure: #159957;
+  --weather-series-solar: #e6a400;
+  --weather-series-rain: #2563eb;
+  --weather-series-default: #0f92a7;
 }
 
 @theme inline {

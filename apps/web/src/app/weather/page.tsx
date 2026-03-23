@@ -1149,7 +1149,7 @@ function StationTrendPanel({
       : top + plotHeight;
 
   return (
-    <article className="overflow-hidden border border-stone-300 bg-[#fffef8]">
+    <article className={styles.stationTrendCard}>
       <div className="border-b border-stone-200 bg-white px-3 py-2">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
@@ -1167,9 +1167,15 @@ function StationTrendPanel({
           viewBox={`0 0 ${width} ${height}`}
           role="img"
           aria-label={`${title} station plot`}
-          className="w-full"
+          className={styles.stationTrendPlot}
         >
-          <rect x={left} y={top} width={plotWidth} height={plotHeight} fill="#ffffff" stroke="#d6d3d1" />
+          <rect
+            x={left}
+            y={top}
+            width={plotWidth}
+            height={plotHeight}
+            className={styles.stationTrendPlotCanvas}
+          />
 
           {panel.plotType === "vector" ? (
             renderWindVectorPlot({
@@ -1187,15 +1193,14 @@ function StationTrendPanel({
                 const bandRight = projectX(band.endMs, timeStart, timeEnd, left, plotWidth);
 
                 return (
-                  <rect
-                    key={`${panel.id}-night-${band.startMs}`}
-                    x={x}
-                    y={top}
-                    width={Math.max(bandRight - x, 0)}
-                    height={plotHeight}
-                    fill="#ece7ea"
-                    opacity="0.75"
-                  />
+                    <rect
+                      key={`${panel.id}-night-${band.startMs}`}
+                      x={x}
+                      y={top}
+                      width={Math.max(bandRight - x, 0)}
+                      height={plotHeight}
+                      className={styles.stationTrendNightBand}
+                    />
                 );
               })}
 
@@ -1204,17 +1209,16 @@ function StationTrendPanel({
 
                 return (
                   <g key={`${title}-y-${tick}`}>
-                    <line
-                      x1={left}
-                      y1={y}
-                      x2={left + plotWidth}
-                      y2={y}
-                      stroke="#ddd8d4"
-                      strokeWidth="1"
-                    />
-                    <text x={left - 6} y={y + 3} textAnchor="end" fill="#78716c" fontSize="9">
-                      {formatTickValue(tick, seriesList[0]?.decimals ?? 0)}
-                    </text>
+                      <line
+                        x1={left}
+                        y1={y}
+                        x2={left + plotWidth}
+                        y2={y}
+                        className={styles.stationTrendGridLine}
+                      />
+                      <text x={left - 6} y={y + 3} textAnchor="end" className={styles.stationTrendAxisText}>
+                        {formatTickValue(tick, seriesList[0]?.decimals ?? 0)}
+                      </text>
                   </g>
                 );
               })}
@@ -1224,23 +1228,21 @@ function StationTrendPanel({
 
                 return (
                   <g key={`${title}-x-${tick.timestamp}`}>
-                    <line
-                      x1={x}
-                      y1={top}
-                      x2={x}
-                      y2={top + plotHeight}
-                      stroke="#efedeb"
-                      strokeWidth="1"
-                    />
-                    <text
-                      x={x}
-                      y={top + plotHeight + 14}
-                      textAnchor="middle"
-                      fill="#78716c"
-                      fontSize="9"
-                    >
-                      {tick.label}
-                    </text>
+                      <line
+                        x1={x}
+                        y1={top}
+                        x2={x}
+                        y2={top + plotHeight}
+                        className={styles.stationTrendTickLine}
+                      />
+                      <text
+                        x={x}
+                        y={top + plotHeight + 14}
+                        textAnchor="middle"
+                        className={styles.stationTrendAxisText}
+                      >
+                        {tick.label}
+                      </text>
                   </g>
                 );
               })}
@@ -1288,7 +1290,7 @@ function StationTrendPanel({
             </>
           ) : null}
 
-          <text x={left + 2} y={11} fill="#78716c" fontSize="9">
+          <text x={left + 2} y={11} className={styles.stationTrendAxisText}>
             {unitLabel}
           </text>
         </svg>
@@ -1447,9 +1449,26 @@ function renderWindVectorPlot(input: {
 
   return (
     <g>
-      <line x1={centerX} y1={top + 8} x2={centerX} y2={top + plotHeight - 8} stroke="#e7e5e4" />
-      <line x1={left + 8} y1={centerY} x2={left + plotWidth - 8} y2={centerY} stroke="#e7e5e4" />
-      <circle cx={centerX} cy={centerY} r={Math.min(plotWidth, plotHeight) * 0.34} fill="none" stroke="#efedeb" />
+      <line
+        x1={centerX}
+        y1={top + 8}
+        x2={centerX}
+        y2={top + plotHeight - 8}
+        className={styles.stationTrendCenterLine}
+      />
+      <line
+        x1={left + 8}
+        y1={centerY}
+        x2={left + plotWidth - 8}
+        y2={centerY}
+        className={styles.stationTrendCenterLine}
+      />
+      <circle
+        cx={centerX}
+        cy={centerY}
+        r={Math.min(plotWidth, plotHeight) * 0.34}
+        className={styles.stationTrendVectorFrame}
+      />
       <path
         d={path}
         fill="none"
@@ -1464,13 +1483,13 @@ function renderWindVectorPlot(input: {
         r="2"
         fill={pickSeriesAccent("gust")}
       />
-      <text x={centerX} y={top + 10} textAnchor="middle" fill="#78716c" fontSize="9">
+      <text x={centerX} y={top + 10} textAnchor="middle" className={styles.stationTrendAxisText}>
         N
       </text>
-      <text x={left + 6} y={top + plotHeight - 6} fill="#78716c" fontSize="9">
+      <text x={left + 6} y={top + plotHeight - 6} className={styles.stationTrendAxisText}>
         Progressive vector
       </text>
-      <text x={left + plotWidth - 6} y={top + plotHeight - 6} textAnchor="end" fill="#78716c" fontSize="9">
+      <text x={left + plotWidth - 6} y={top + plotHeight - 6} textAnchor="end" className={styles.stationTrendAxisText}>
         {title}
       </text>
     </g>
@@ -3165,46 +3184,46 @@ function formatTickValue(value: number, decimals: number) {
 
 function pickSeriesAccent(seriesId: string) {
   if (seriesId === "temperature" || seriesId === "indoorTemperature") {
-    return "#d97b23";
+    return "var(--weather-series-temperature)";
   }
 
   if (seriesId === "yearHigh") {
-    return "#d97b23";
+    return "var(--weather-series-year-high)";
   }
 
   if (seriesId === "yearLow") {
-    return "#2563eb";
+    return "var(--weather-series-year-low)";
   }
 
   if (seriesId === "dewpoint") {
-    return "#8d6fd1";
+    return "var(--weather-series-dewpoint)";
   }
 
   if (seriesId === "humidity" || seriesId === "indoorHumidity") {
-    return "#16a1b7";
+    return "var(--weather-series-humidity)";
   }
 
   if (seriesId === "wind" || seriesId === "gust") {
-    return "#3b82f6";
+    return "var(--weather-series-wind)";
   }
 
   if (seriesId === "windDirection") {
-    return "#4b5563";
+    return "var(--weather-series-wind-direction)";
   }
 
   if (seriesId === "pressure") {
-    return "#159957";
+    return "var(--weather-series-pressure)";
   }
 
   if (seriesId === "uv" || seriesId === "solar" || seriesId === "brightness") {
-    return "#e6a400";
+    return "var(--weather-series-solar)";
   }
 
   if (seriesId === "rain" || seriesId === "rainRate") {
-    return "#2563eb";
+    return "var(--weather-series-rain)";
   }
 
-  return "#0f92a7";
+  return "var(--weather-series-default)";
 }
 
 function getWeatherCalendarParts(value: Date) {

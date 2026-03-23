@@ -4,6 +4,52 @@
   min-height: 100vh;
 }
 
+.stationTrendCard {
+  overflow: hidden;
+  border: 1px solid var(--weather-plot-card-border);
+  background: var(--weather-plot-card-background);
+}
+
+.stationTrendPlot {
+  width: 100%;
+}
+
+.stationTrendPlotCanvas {
+  fill: var(--weather-plot-area-background);
+  stroke: var(--weather-plot-area-border);
+}
+
+.stationTrendNightBand {
+  fill: var(--weather-plot-night-band);
+  opacity: 0.75;
+}
+
+.stationTrendGridLine {
+  stroke: var(--weather-plot-y-grid-line);
+  stroke-width: 1;
+}
+
+.stationTrendTickLine {
+  stroke: var(--weather-plot-x-grid-line);
+  stroke-width: 1;
+}
+
+.stationTrendAxisText {
+  fill: var(--weather-plot-axis-text);
+  font-size: 9px;
+}
+
+.stationTrendCenterLine {
+  stroke: var(--weather-plot-center-line);
+  stroke-width: 1;
+}
+
+.stationTrendVectorFrame {
+  fill: none;
+  stroke: var(--weather-plot-x-grid-line);
+  stroke-width: 1;
+}
+
 .header {
   background: var(--teal-700);
   color: #fff;
@@ -275,7 +321,7 @@
 }
 
 .stateHeader {
-  background: #1eb7ce;
+  background: var(--teal-700);
   padding: 2.5rem 2rem;
   color: #fff;
 }
