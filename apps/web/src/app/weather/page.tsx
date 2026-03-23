@@ -1,8 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { RefreshButton } from "@/components/weather/refresh-button";
-import { WeatherSectionNav } from "@/components/weather/section-nav";
 import {
   getWeatherPageData,
   normalizeWeatherDashboardView,
@@ -106,15 +104,8 @@ const summaryTabs = [
   { label: "Year", view: "year" },
 ] as const satisfies ReadonlyArray<{ label: string; view: WeatherDashboardView }>;
 
-const sectionTabs = [
-  { label: "Current", href: "#current-section" },
-  { label: "Forecast", href: "#forecast-section" },
+const documentTabs = [
   { label: "Summaries", href: "#summary-section" },
-  { label: "Records", href: "#records-section" },
-  { label: "Radar", href: "#radar-section" },
-  { label: "Cameras", href: "#cameras-section" },
-  { label: "Almanac", href: "#almanac-section" },
-  { label: "Graphs", href: "#graphs-section" },
   { label: "About", href: "#about-section" },
 ] as const;
 
@@ -209,6 +200,13 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const summaryCards = buildSummaryCards(data);
   const recordCards = buildRecordCards(data, activeView);
   const quickStats = buildQuickStats(data, activeView);
+  const featuredComparisonPanel =
+    activeView === "current"
+      ? comparisonPanels.find((panel) => panel.title.startsWith("Last ")) ?? null
+      : null;
+  const secondaryComparisonPanels = featuredComparisonPanel
+    ? comparisonPanels.filter((panel) => panel.title !== featuredComparisonPanel.title)
+    : comparisonPanels;
 
   return (
     <main className="min-h-screen bg-[#ececec] text-stone-800">
@@ -267,39 +265,34 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
             </div>
           </div>
         </div>
-        <div className="sticky top-0 z-20 border-y border-white/18 bg-[#1eb7ce] shadow-[0_2px_0_rgba(0,0,0,0.05)]">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-3 overflow-x-auto px-5 py-2 sm:px-8 lg:px-10">
+        <div className="border-t border-white/18 bg-[#1eb7ce]">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-8 gap-y-3 overflow-x-auto px-5 py-3 sm:px-8 lg:px-10">
             <div className="flex min-w-max items-end gap-7 pr-1">
-            {summaryTabs.map((tab) => {
-              const isActive = tab.view === activeView;
-              const href = tab.view === "current" ? "/weather" : `/weather?view=${tab.view}`;
+              {summaryTabs.map((tab) => {
+                const isActive = tab.view === activeView;
+                const href = tab.view === "current" ? "/weather" : `/weather?view=${tab.view}`;
 
-              return (
-                <Link
-                  key={tab.view}
-                  href={href}
-                  prefetch
-                  scroll={false}
-                  className={`border-b-[3px] pb-2 text-[1.75rem] font-light leading-none transition sm:text-[2rem] ${isActive ? "border-[#f4d24f] text-white" : "border-transparent text-white/82 hover:text-white"}`}
+                return (
+                  <Link
+                    key={tab.view}
+                    href={href}
+                    prefetch
+                    scroll={false}
+                    className={`border-b-[4px] pb-2 text-[1.85rem] font-light leading-none transition sm:text-[2.15rem] ${isActive ? "border-[#f4d24f] text-white" : "border-transparent text-white/88 hover:text-white"}`}
+                  >
+                    {tab.label}
+                  </Link>
+                );
+              })}
+              {documentTabs.map((tab) => (
+                <a
+                  key={tab.href}
+                  href={tab.href}
+                  className="border-b-[4px] border-transparent pb-2 text-[1.85rem] font-light leading-none text-white/88 transition hover:text-white sm:text-[2.15rem]"
                 >
                   {tab.label}
-                </Link>
-              );
-            })}
-          </div>
-
-            <div className="hidden h-7 w-px shrink-0 bg-white/24 lg:block" />
-
-            <WeatherSectionNav tabs={sectionTabs} />
-
-            <div className="ml-auto flex min-w-max items-center gap-2">
-              <RefreshButton />
-              <Link
-                href="/"
-                className="border border-white/30 px-3 py-1.5 text-xs font-medium uppercase tracking-[0.16em] text-white transition hover:bg-white/10"
-              >
-                Back Home
-              </Link>
+                </a>
+              ))}
             </div>
           </div>
         </div>
@@ -362,41 +355,59 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
             />
           </TablePanel>
 
-          <TablePanel
-            id="recent-section"
-            title="Recent Range"
-            subtitle="Active window summary."
-            compact
-          >
-            <ThreeColumnTable
-              rows={rangeRows}
-              emptyMessage="Range details will appear once enough observations are available."
-            />
-          </TablePanel>
-        </div>
-
-        <div className="mt-4 grid gap-px border border-stone-200 bg-stone-200 xl:grid-cols-4">
-          {summaryCards.map((card) => (
-            <SummaryCardPanel key={card.label} card={card} />
-          ))}
-        </div>
-
-        <div id="records-section" className="mt-4 grid gap-px border border-stone-200 bg-stone-200 md:grid-cols-2 xl:grid-cols-5">
-          {recordCards.map((card) => (
-            <RecordCardPanel key={card.label} card={card} />
-          ))}
-        </div>
-
-        {comparisonPanels.length ? (
-          <div className="mt-4 grid gap-px border border-stone-200 bg-stone-200 md:grid-cols-2 xl:grid-cols-3">
-            {comparisonPanels.map((panel) => (
-              <ArchivePanel
-                key={panel.title}
-                id={`comparison-${panel.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
-                panel={panel}
+          {featuredComparisonPanel ? (
+            <TablePanel
+              id="comparison-section"
+              title={featuredComparisonPanel.title}
+              subtitle={featuredComparisonPanel.subtitle}
+              compact
+            >
+              <ThreeColumnTable
+                rows={featuredComparisonPanel.rows}
+                emptyMessage="Archive comparisons will appear after enough stored station history accumulates."
               />
-            ))}
-          </div>
+            </TablePanel>
+          ) : (
+            <TablePanel
+              id="recent-section"
+              title="Recent Range"
+              subtitle="Active window summary."
+              compact
+            >
+              <ThreeColumnTable
+                rows={rangeRows}
+                emptyMessage="Range details will appear once enough observations are available."
+              />
+            </TablePanel>
+          )}
+        </div>
+
+        {activeView !== "current" ? (
+          <>
+            <div className="mt-4 grid gap-px border border-stone-200 bg-stone-200 xl:grid-cols-4">
+              {summaryCards.map((card) => (
+                <SummaryCardPanel key={card.label} card={card} />
+              ))}
+            </div>
+
+            <div id="records-section" className="mt-4 grid gap-px border border-stone-200 bg-stone-200 md:grid-cols-2 xl:grid-cols-5">
+              {recordCards.map((card) => (
+                <RecordCardPanel key={card.label} card={card} />
+              ))}
+            </div>
+
+            {secondaryComparisonPanels.length ? (
+              <div className="mt-4 grid gap-px border border-stone-200 bg-stone-200 md:grid-cols-2 xl:grid-cols-3">
+                {secondaryComparisonPanels.map((panel) => (
+                  <ArchivePanel
+                    key={panel.title}
+                    id={`comparison-${panel.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+                    panel={panel}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </>
         ) : null}
 
         <div className="mt-4 grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
