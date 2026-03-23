@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { getTimes } from "suncalc";
 
 import {
   getWeatherPageData,
@@ -22,6 +23,7 @@ import type {
   WeatherOverview,
   WeatherPageData,
   WeatherSeries,
+  WeatherSeriesPoint,
 } from "@/lib/weather/types";
 
 export const dynamic = "force-dynamic";
@@ -42,7 +44,17 @@ type StationGraphPanel = {
   title: string;
   subtitle: string;
   seriesList: WeatherSeries[];
+  plotType: StationPlotType;
+  showDayNight: boolean;
+  fixedScale?: {
+    min: number;
+    max: number;
+    minInterval: number;
+  };
 };
+
+type StationPlotType = "line" | "bar" | "scatter" | "vector";
+type WeatherAggregationMode = "avg" | "max" | "last" | "sum" | "min" | "vecdir";
 
 type ComparisonPanel = {
   title: string;
@@ -197,14 +209,14 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const radarUrl = buildRadarEmbedUrl(coordinates.latitude, coordinates.longitude);
   const viewMeta = getViewMeta(activeView);
   const comparisonPanels = await getHistoricalComparisonPanels(data, activeView);
-  const graphPanels = buildStationGraphPanels(graphSeries, activeView);
+  const graphPanels = buildStationGraphPanels(graphSeries, activeView, data.series);
   const summaryCards = buildSummaryCards(data);
   const recordCards = buildRecordCards(data, activeView);
   const quickStats = buildQuickStats(data, activeView);
-  const featuredComparisonPanel =
-    activeView === "current"
-      ? comparisonPanels.find((panel) => panel.title.startsWith("Last ")) ?? null
-      : null;
+  const isCurrentView = activeView === "current";
+  const featuredComparisonPanel = isCurrentView
+    ? comparisonPanels.find((panel) => panel.title.startsWith("Last ")) ?? null
+    : comparisonPanels[0] ?? null;
   const secondaryComparisonPanels = featuredComparisonPanel
     ? comparisonPanels.filter((panel) => panel.title !== featuredComparisonPanel.title)
     : comparisonPanels;
@@ -306,82 +318,126 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           </div>
         ) : null}
 
-        <div className="grid gap-4 xl:grid-cols-[1.12fr_0.88fr]">
-          <TablePanel
-            id="current-section"
-            title={viewMeta.primaryTitle}
-            subtitle={viewMeta.primarySubtitle}
-            compact
-          >
-            <TwoColumnTable
-              rows={currentRows}
-              emptyMessage="Current conditions will appear after the next successful station fetch."
-            />
-          </TablePanel>
+        {isCurrentView ? (
+          <>
+            <div className="grid gap-4 xl:grid-cols-[1.12fr_0.88fr]">
+              <TablePanel
+                id="current-section"
+                title={viewMeta.primaryTitle}
+                subtitle={viewMeta.primarySubtitle}
+                compact
+              >
+                <TwoColumnTable
+                  rows={currentRows}
+                  emptyMessage="Current conditions will appear after the next successful station fetch."
+                />
+              </TablePanel>
 
-          <TablePanel
-            id="almanac-section"
-            title="Almanac"
-            subtitle="Sun and moon timing for the station area."
-            compact
-          >
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <h3 className="text-lg font-medium uppercase tracking-[0.14em] text-stone-600">Sun</h3>
-                <div className="mt-2">
-                  <TwoColumnTable rows={almanac.sun} emptyMessage="Sun details unavailable." />
-                </div>
-              </div>
+              <TablePanel
+                id="almanac-section"
+                title="Almanac"
+                subtitle="Sun and moon timing for the station area."
+                compact
+              >
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <h3 className="text-lg font-medium uppercase tracking-[0.14em] text-stone-600">Sun</h3>
+                    <div className="mt-2">
+                      <TwoColumnTable rows={almanac.sun} emptyMessage="Sun details unavailable." />
+                    </div>
+                  </div>
 
-              <div>
-                <h3 className="text-lg font-medium uppercase tracking-[0.14em] text-stone-600">Moon</h3>
-                <div className="mt-2">
-                  <TwoColumnTable rows={almanac.moon} emptyMessage="Moon details unavailable." />
+                  <div>
+                    <h3 className="text-lg font-medium uppercase tracking-[0.14em] text-stone-600">Moon</h3>
+                    <div className="mt-2">
+                      <TwoColumnTable rows={almanac.moon} emptyMessage="Moon details unavailable." />
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </TablePanel>
             </div>
-          </TablePanel>
-        </div>
 
-        <div id="summary-section" className="mt-4 grid gap-4 xl:grid-cols-2">
-          <TablePanel
-            id="today-section"
-            title={viewMeta.periodTitle}
-            subtitle={viewMeta.periodSubtitle}
-            compact
-          >
-            <ThreeColumnTable
-              rows={periodRows}
-              emptyMessage="Period highs and lows will populate once enough observations are available."
-            />
-          </TablePanel>
+            <div id="summary-section" className="mt-4 grid gap-4 xl:grid-cols-2">
+              <TablePanel
+                id="today-section"
+                title={viewMeta.periodTitle}
+                subtitle={viewMeta.periodSubtitle}
+                compact
+              >
+                <ThreeColumnTable
+                  rows={periodRows}
+                  emptyMessage="Period highs and lows will populate once enough observations are available."
+                />
+              </TablePanel>
 
-          {featuredComparisonPanel ? (
+              {featuredComparisonPanel ? (
+                <TablePanel
+                  id="comparison-section"
+                  title={featuredComparisonPanel.title}
+                  subtitle={featuredComparisonPanel.subtitle}
+                  compact
+                >
+                  <ThreeColumnTable
+                    rows={featuredComparisonPanel.rows}
+                    emptyMessage="Archive comparisons will appear after enough stored station history accumulates."
+                  />
+                </TablePanel>
+              ) : (
+                <TablePanel
+                  id="recent-section"
+                  title="Recent Range"
+                  subtitle="Active window summary."
+                  compact
+                >
+                  <ThreeColumnTable
+                    rows={rangeRows}
+                    emptyMessage="Range details will appear once enough observations are available."
+                  />
+                </TablePanel>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="grid gap-4 xl:grid-cols-[1.12fr_0.88fr]">
             <TablePanel
-              id="comparison-section"
-              title={featuredComparisonPanel.title}
-              subtitle={featuredComparisonPanel.subtitle}
+              id="summary-section"
+              title={viewMeta.periodTitle}
+              subtitle={viewMeta.periodSubtitle}
               compact
             >
               <ThreeColumnTable
-                rows={featuredComparisonPanel.rows}
-                emptyMessage="Archive comparisons will appear after enough stored station history accumulates."
+                rows={periodRows}
+                emptyMessage="Period highs and lows will populate once enough observations are available."
               />
             </TablePanel>
-          ) : (
-            <TablePanel
-              id="recent-section"
-              title="Recent Range"
-              subtitle="Active window summary."
-              compact
-            >
-              <ThreeColumnTable
-                rows={rangeRows}
-                emptyMessage="Range details will appear once enough observations are available."
-              />
-            </TablePanel>
-          )}
-        </div>
+
+            {featuredComparisonPanel ? (
+              <TablePanel
+                id="comparison-section"
+                title={featuredComparisonPanel.title}
+                subtitle={featuredComparisonPanel.subtitle}
+                compact
+              >
+                <ThreeColumnTable
+                  rows={featuredComparisonPanel.rows}
+                  emptyMessage="Archive comparisons will appear after enough stored station history accumulates."
+                />
+              </TablePanel>
+            ) : (
+              <TablePanel
+                id="recent-section"
+                title="Recent Range"
+                subtitle="Active window summary."
+                compact
+              >
+                <ThreeColumnTable
+                  rows={rangeRows}
+                  emptyMessage="Range details will appear once enough observations are available."
+                />
+              </TablePanel>
+            )}
+          </div>
+        )}
 
         {activeView !== "current" ? (
           <>
@@ -454,6 +510,31 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
               </div>
             </TablePanel>
 
+            {!isCurrentView ? (
+              <TablePanel
+                id="almanac-section-secondary"
+                title="Almanac"
+                subtitle="Sun and moon timing for the station area."
+                compact
+              >
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <h3 className="text-lg font-medium uppercase tracking-[0.14em] text-stone-600">Sun</h3>
+                    <div className="mt-2">
+                      <TwoColumnTable rows={almanac.sun} emptyMessage="Sun details unavailable." />
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-medium uppercase tracking-[0.14em] text-stone-600">Moon</h3>
+                    <div className="mt-2">
+                      <TwoColumnTable rows={almanac.moon} emptyMessage="Moon details unavailable." />
+                    </div>
+                  </div>
+                </div>
+              </TablePanel>
+            ) : null}
+
             <TablePanel
               id="forecast-section"
               title="Forecast Outlook"
@@ -497,14 +578,13 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           compact
         >
           {graphPanels.length ? (
-            <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-2">
               {graphPanels.map((panel) => (
                 <StationTrendPanel
                   key={panel.id}
-                  title={panel.title}
-                  subtitle={panel.subtitle}
-                  seriesList={panel.seriesList}
+                  panel={panel}
                   view={activeView}
+                  coordinates={coordinates}
                 />
               ))}
             </div>
@@ -691,43 +771,66 @@ function ForecastTable({ periods }: { periods: WeatherForecastPeriod[] }) {
 }
 
 function StationTrendPanel({
-  title,
-  subtitle,
-  seriesList,
+  panel,
   view,
+  coordinates,
 }: {
-  title: string;
-  subtitle: string;
-  seriesList: WeatherSeries[];
+  panel: StationGraphPanel;
   view: WeatherDashboardView;
+  coordinates: { latitude: number; longitude: number };
 }) {
-  const width = 980;
-  const height = 220;
-  const left = 54;
-  const right = 16;
-  const top = 16;
-  const bottom = 34;
+  const { title, subtitle, seriesList } = panel;
+  const width = 500;
+  const height = 180;
+  const left = 38;
+  const right = 10;
+  const top = 14;
+  const bottom = 28;
   const plotWidth = width - left - right;
   const plotHeight = height - top - bottom;
-  const timeStart = Math.min(...seriesList.flatMap((series) => series.points.map((point) => point.timestamp)));
-  const timeEnd = Math.max(...seriesList.flatMap((series) => series.points.map((point) => point.timestamp)));
-  const scale = buildSeriesScale(seriesList);
-  const xTicks = buildTimeTicks(timeStart, timeEnd, view, 6);
-  const dotStride = pickDotStride(seriesList);
+  const timeStart = Math.min(
+    ...seriesList.flatMap((series) => series.points.map((point) => point.timestamp)),
+  );
+  const timeEnd = Math.max(
+    ...seriesList.flatMap((series) => series.points.map((point) => point.timestamp)),
+  );
+  const scale =
+    panel.plotType === "vector"
+      ? null
+      : buildSeriesScale(seriesList, panel);
+  const xTicks = panel.plotType === "vector" ? [] : buildTimeTicks(timeStart, timeEnd, view);
+  const dotStride = panel.plotType === "line" ? pickDotStride(seriesList) : 1;
+  const nightBands =
+    panel.showDayNight && panel.plotType !== "vector"
+      ? buildNightBands(timeStart, timeEnd, coordinates)
+      : [];
   const latestSummary = seriesList
-    .map((series) => `${series.label} ${formatSeriesValue(series.points.at(-1)?.value ?? null, series.decimals, series.unit)}`)
+    .map(
+      (series) =>
+        `${series.label} ${formatSeriesValue(
+          series.points.at(-1)?.value ?? null,
+          series.decimals,
+          series.unit,
+        )}`,
+    )
     .join("  •  ");
+  const unitLabel = buildUnitLabel(seriesList);
+  const zeroY =
+    scale && scale.min <= 0 && scale.max >= 0
+      ? projectY(0, scale.min, scale.max, top, plotHeight)
+      : top + plotHeight;
 
   return (
     <article className="overflow-hidden border border-stone-300 bg-[#fffef8]">
-      <div className="border-b border-stone-200 bg-white px-3 py-2.5">
-        <p className="text-[0.72rem] uppercase tracking-[0.18em] text-stone-500">Station Plot</p>
-        <div className="mt-1 flex flex-wrap items-end justify-between gap-2">
+      <div className="border-b border-stone-200 bg-white px-3 py-2">
+        <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
-            <h3 className="text-[1.15rem] font-normal text-stone-800">{title}</h3>
-            <p className="mt-0.5 text-[11px] uppercase tracking-[0.16em] text-stone-500">{subtitle}</p>
+            <h3 className="text-[1rem] font-normal text-stone-800">{title}</h3>
+            <p className="mt-0.5 text-[10px] uppercase tracking-[0.16em] text-stone-500">
+              {subtitle}
+            </p>
           </div>
-          <p className="text-right text-[11px] leading-5 text-stone-500">{latestSummary}</p>
+          <p className="text-right text-[10px] leading-4 text-stone-500">{latestSummary}</p>
         </div>
       </div>
 
@@ -736,78 +839,406 @@ function StationTrendPanel({
           viewBox={`0 0 ${width} ${height}`}
           role="img"
           aria-label={`${title} station plot`}
-          className="h-[220px] w-full"
+          className="w-full"
         >
           <rect x={left} y={top} width={plotWidth} height={plotHeight} fill="#ffffff" stroke="#d6d3d1" />
-          {scale.ticks.map((tick) => {
-            const y = projectY(tick, scale.min, scale.max, top, plotHeight);
 
-            return (
-              <g key={`${title}-y-${tick}`}>
-                <line x1={left} y1={y} x2={left + plotWidth} y2={y} stroke="#e7e5e4" strokeWidth="1" />
-                <text x={left - 8} y={y + 4} textAnchor="end" fill="#78716c" fontSize="11">
-                  {formatTickValue(tick, seriesList[0]?.decimals ?? 0)}
-                </text>
-              </g>
-            );
-          })}
+          {panel.plotType === "vector" ? (
+            renderWindVectorPlot({
+              title,
+              seriesList,
+              left,
+              top,
+              plotWidth,
+              plotHeight,
+            })
+          ) : scale ? (
+            <>
+              {nightBands.map((band) => {
+                const x = projectX(band.startMs, timeStart, timeEnd, left, plotWidth);
+                const bandRight = projectX(band.endMs, timeStart, timeEnd, left, plotWidth);
 
-          {xTicks.map((tick) => {
-            const x = projectX(tick.timestamp, timeStart, timeEnd, left, plotWidth);
+                return (
+                  <rect
+                    key={`${panel.id}-night-${band.startMs}`}
+                    x={x}
+                    y={top}
+                    width={Math.max(bandRight - x, 0)}
+                    height={plotHeight}
+                    fill="#ece7ea"
+                    opacity="0.75"
+                  />
+                );
+              })}
 
-            return (
-              <g key={`${title}-x-${tick.timestamp}`}>
-                <line x1={x} y1={top} x2={x} y2={top + plotHeight} stroke="#f0efee" strokeWidth="1" />
-                <text x={x} y={top + plotHeight + 18} textAnchor="middle" fill="#78716c" fontSize="11">
-                  {tick.label}
-                </text>
-              </g>
-            );
-          })}
+              {scale.ticks.map((tick) => {
+                const y = projectY(tick, scale.min, scale.max, top, plotHeight);
 
-          {seriesList.map((series) => {
-            const accent = pickSeriesAccent(series.id);
-            const points = series.points.map((point) => ({
-              x: projectX(point.timestamp, timeStart, timeEnd, left, plotWidth),
-              y: projectY(point.value, scale.min, scale.max, top, plotHeight),
-              value: point.value,
-            }));
-            const linePath = points
-              .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
-              .join(" ");
-
-            return (
-              <g key={series.id}>
-                <path
-                  d={linePath}
-                  fill="none"
-                  stroke={accent}
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                {points.map((point, index) =>
-                  index % dotStride === 0 || index === points.length - 1 ? (
-                    <circle
-                      key={`${series.id}-${index}`}
-                      cx={point.x}
-                      cy={point.y}
-                      r="1.7"
-                      fill={accent}
+                return (
+                  <g key={`${title}-y-${tick}`}>
+                    <line
+                      x1={left}
+                      y1={y}
+                      x2={left + plotWidth}
+                      y2={y}
+                      stroke="#ddd8d4"
+                      strokeWidth="1"
                     />
-                  ) : null,
-                )}
-              </g>
-            );
-          })}
+                    <text x={left - 6} y={y + 3} textAnchor="end" fill="#78716c" fontSize="9">
+                      {formatTickValue(tick, seriesList[0]?.decimals ?? 0)}
+                    </text>
+                  </g>
+                );
+              })}
 
-          <text x={left + plotWidth} y={12} textAnchor="end" fill="#78716c" fontSize="11">
-            {seriesList.map((series) => series.label).join(" / ")}
+              {xTicks.map((tick) => {
+                const x = projectX(tick.timestamp, timeStart, timeEnd, left, plotWidth);
+
+                return (
+                  <g key={`${title}-x-${tick.timestamp}`}>
+                    <line
+                      x1={x}
+                      y1={top}
+                      x2={x}
+                      y2={top + plotHeight}
+                      stroke="#efedeb"
+                      strokeWidth="1"
+                    />
+                    <text
+                      x={x}
+                      y={top + plotHeight + 14}
+                      textAnchor="middle"
+                      fill="#78716c"
+                      fontSize="9"
+                    >
+                      {tick.label}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {panel.plotType === "bar"
+                ? seriesList.map((series) =>
+                    renderBarSeries({
+                      series,
+                      scale,
+                      left,
+                      top,
+                      plotWidth,
+                      plotHeight,
+                      timeStart,
+                      timeEnd,
+                      zeroY,
+                    }),
+                  )
+                : panel.plotType === "scatter"
+                  ? seriesList.map((series) =>
+                      renderScatterSeries({
+                        series,
+                        scale,
+                        left,
+                        top,
+                        plotWidth,
+                        plotHeight,
+                        timeStart,
+                        timeEnd,
+                      }),
+                    )
+                  : seriesList.map((series) =>
+                      renderLineSeries({
+                        series,
+                        scale,
+                        left,
+                        top,
+                        plotWidth,
+                        plotHeight,
+                        timeStart,
+                        timeEnd,
+                        dotStride,
+                      }),
+                    )}
+            </>
+          ) : null}
+
+          <text x={left + 2} y={11} fill="#78716c" fontSize="9">
+            {unitLabel}
           </text>
         </svg>
       </div>
     </article>
   );
+}
+
+function renderLineSeries(input: {
+  series: WeatherSeries;
+  scale: { min: number; max: number; ticks: number[] };
+  left: number;
+  top: number;
+  plotWidth: number;
+  plotHeight: number;
+  timeStart: number;
+  timeEnd: number;
+  dotStride: number;
+}) {
+  const { series, scale, left, top, plotWidth, plotHeight, timeStart, timeEnd, dotStride } = input;
+  const accent = pickSeriesAccent(series.id);
+  const points = series.points.map((point) => ({
+    x: projectX(point.timestamp, timeStart, timeEnd, left, plotWidth),
+    y: projectY(point.value, scale.min, scale.max, top, plotHeight),
+    timestamp: point.timestamp,
+  }));
+  const linePath = buildSegmentedLinePath(points, (timeEnd - timeStart) * 0.05);
+
+  return (
+    <g key={series.id}>
+      <path
+        d={linePath}
+        fill="none"
+        stroke={accent}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {points.map((point, index) =>
+        index % dotStride === 0 || index === points.length - 1 ? (
+          <circle key={`${series.id}-${index}`} cx={point.x} cy={point.y} r="1.2" fill={accent} />
+        ) : null,
+      )}
+    </g>
+  );
+}
+
+function renderBarSeries(input: {
+  series: WeatherSeries;
+  scale: { min: number; max: number; ticks: number[] };
+  left: number;
+  top: number;
+  plotWidth: number;
+  plotHeight: number;
+  timeStart: number;
+  timeEnd: number;
+  zeroY: number;
+}) {
+  const { series, scale, left, top, plotWidth, plotHeight, timeStart, timeEnd, zeroY } = input;
+  const accent = pickSeriesAccent(series.id);
+  const barWidth = pickBarWidth(series.points, timeStart, timeEnd, plotWidth);
+
+  return (
+    <g key={series.id}>
+      {series.points.map((point, index) => {
+        const xCenter = projectX(point.timestamp, timeStart, timeEnd, left, plotWidth);
+        const y = projectY(point.value, scale.min, scale.max, top, plotHeight);
+        const barHeight = Math.max(Math.abs(zeroY - y), 1);
+
+        return (
+          <rect
+            key={`${series.id}-${index}`}
+            x={xCenter - barWidth / 2}
+            y={Math.min(y, zeroY)}
+            width={barWidth}
+            height={barHeight}
+            fill={accent}
+            opacity="0.75"
+          />
+        );
+      })}
+    </g>
+  );
+}
+
+function renderScatterSeries(input: {
+  series: WeatherSeries;
+  scale: { min: number; max: number; ticks: number[] };
+  left: number;
+  top: number;
+  plotWidth: number;
+  plotHeight: number;
+  timeStart: number;
+  timeEnd: number;
+}) {
+  const { series, scale, left, top, plotWidth, plotHeight, timeStart, timeEnd } = input;
+  const accent = pickSeriesAccent(series.id);
+
+  return (
+    <g key={series.id}>
+      {series.points.map((point, index) => {
+        const x = projectX(point.timestamp, timeStart, timeEnd, left, plotWidth);
+        const y = projectY(point.value, scale.min, scale.max, top, plotHeight);
+
+        return (
+          <rect
+            key={`${series.id}-${index}`}
+            x={x - 1.5}
+            y={y - 1.5}
+            width="3"
+            height="3"
+            fill={accent}
+          />
+        );
+      })}
+    </g>
+  );
+}
+
+function renderWindVectorPlot(input: {
+  title: string;
+  seriesList: WeatherSeries[];
+  left: number;
+  top: number;
+  plotWidth: number;
+  plotHeight: number;
+}) {
+  const { title, seriesList, left, top, plotWidth, plotHeight } = input;
+  const windSeries = seriesList.find((series) => series.id === "wind") ?? null;
+  const directionSeries = seriesList.find((series) => series.id === "windDirection") ?? null;
+
+  if (!windSeries || !directionSeries) {
+    return null;
+  }
+
+  const vectorPoints = buildWindVectorSeries(windSeries.points, directionSeries.points);
+
+  if (vectorPoints.length < 2) {
+    return null;
+  }
+
+  const maxAbs = Math.max(
+    ...vectorPoints.flatMap((point) => [Math.abs(point.x), Math.abs(point.y)]),
+    1,
+  );
+  const scale = (Math.min(plotWidth, plotHeight) * 0.45) / maxAbs;
+  const centerX = left + plotWidth / 2;
+  const centerY = top + plotHeight / 2;
+  const path = vectorPoints
+    .map((point, index) => {
+      const x = centerX + point.x * scale;
+      const y = centerY - point.y * scale;
+      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(" ");
+
+  return (
+    <g>
+      <line x1={centerX} y1={top + 8} x2={centerX} y2={top + plotHeight - 8} stroke="#e7e5e4" />
+      <line x1={left + 8} y1={centerY} x2={left + plotWidth - 8} y2={centerY} stroke="#e7e5e4" />
+      <circle cx={centerX} cy={centerY} r={Math.min(plotWidth, plotHeight) * 0.34} fill="none" stroke="#efedeb" />
+      <path
+        d={path}
+        fill="none"
+        stroke={pickSeriesAccent("wind")}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle
+        cx={centerX + vectorPoints.at(-1)!.x * scale}
+        cy={centerY - vectorPoints.at(-1)!.y * scale}
+        r="2"
+        fill={pickSeriesAccent("gust")}
+      />
+      <text x={centerX} y={top + 10} textAnchor="middle" fill="#78716c" fontSize="9">
+        N
+      </text>
+      <text x={left + 6} y={top + plotHeight - 6} fill="#78716c" fontSize="9">
+        Progressive vector
+      </text>
+      <text x={left + plotWidth - 6} y={top + plotHeight - 6} textAnchor="end" fill="#78716c" fontSize="9">
+        {title}
+      </text>
+    </g>
+  );
+}
+
+function buildWindVectorSeries(
+  windPoints: WeatherSeriesPoint[],
+  directionPoints: WeatherSeriesPoint[],
+) {
+  const directionByTimestamp = new Map(directionPoints.map((point) => [point.timestamp, point.value]));
+  let x = 0;
+  let y = 0;
+  const path = [{ x, y }];
+
+  for (const point of windPoints) {
+    const direction = directionByTimestamp.get(point.timestamp);
+
+    if (direction === undefined) {
+      continue;
+    }
+
+    const radians = ((direction - 90) * Math.PI) / 180;
+    x += Math.cos(radians) * point.value;
+    y += Math.sin(radians) * point.value;
+    path.push({ x, y });
+  }
+
+  return path;
+}
+
+function buildSegmentedLinePath(
+  points: Array<{ x: number; y: number; timestamp: number }>,
+  maxGapMs: number,
+) {
+  let path = "";
+
+  points.forEach((point, index) => {
+    const previous = points[index - 1];
+    const command =
+      !previous || point.timestamp - previous.timestamp > maxGapMs ? "M" : "L";
+    path += `${command} ${point.x.toFixed(2)} ${point.y.toFixed(2)} `;
+  });
+
+  return path.trim();
+}
+
+function pickBarWidth(points: WeatherSeriesPoint[], timeStart: number, timeEnd: number, plotWidth: number) {
+  if (points.length < 2) {
+    return 6;
+  }
+
+  const positions = points.map((point) => projectX(point.timestamp, timeStart, timeEnd, 0, plotWidth));
+  let minGap = Number.POSITIVE_INFINITY;
+
+  for (let index = 1; index < positions.length; index += 1) {
+    minGap = Math.min(minGap, positions[index] - positions[index - 1]);
+  }
+
+  return Math.max(Math.min(minGap * 0.7, 14), 3);
+}
+
+function buildUnitLabel(seriesList: WeatherSeries[]) {
+  const units = [...new Set(seriesList.map((series) => series.unit).filter(Boolean))];
+  return units.length ? units.join(" / ") : "station plot";
+}
+
+function buildNightBands(
+  startMs: number,
+  endMs: number,
+  coordinates: { latitude: number; longitude: number },
+) {
+  const startParts = getWeatherCalendarParts(new Date(startMs));
+  const firstLocalNoon = new Date(Date.UTC(startParts.year, startParts.month - 1, startParts.day - 1, 12));
+  const bands: Array<{ startMs: number; endMs: number }> = [];
+
+  for (
+    let cursor = firstLocalNoon.getTime();
+    cursor <= endMs + 24 * 60 * 60 * 1000;
+    cursor += 24 * 60 * 60 * 1000
+  ) {
+    const tonight = getTimes(new Date(cursor), coordinates.latitude, coordinates.longitude).sunset.getTime();
+    const tomorrow = getTimes(
+      new Date(cursor + 24 * 60 * 60 * 1000),
+      coordinates.latitude,
+      coordinates.longitude,
+    ).sunrise.getTime();
+    const bandStart = Math.max(tonight, startMs);
+    const bandEnd = Math.min(tomorrow, endMs);
+
+    if (bandEnd > bandStart) {
+      bands.push({ startMs: bandStart, endMs: bandEnd });
+    }
+  }
+
+  return bands;
 }
 
 function PanelState({ message }: { message: string }) {
@@ -1821,73 +2252,113 @@ function prepareGraphSeries(
 function buildStationGraphPanels(
   seriesList: WeatherSeries[],
   view: WeatherDashboardView,
+  rawSeriesList: WeatherSeries[] = seriesList,
 ): StationGraphPanel[] {
   const byId = new Map(seriesList.map((series) => [series.id, series] as const));
-  const periodLabel = view === "current" ? "Daily" : view === "week" ? "Weekly" : view === "month" ? "Monthly" : "Yearly";
+  const rawById = new Map(rawSeriesList.map((series) => [series.id, series] as const));
+  const periodLabel =
+    view === "current"
+      ? "Daily"
+      : view === "week"
+        ? "Weekly"
+        : view === "month"
+          ? "Monthly"
+          : "Yearly";
   const specs = [
     {
       id: "temperatures",
       title: "Temperatures",
       subtitle: `${periodLabel} outdoor temperature and dew point`,
       ids: ["temperature", "dewpoint", "indoorTemperature"],
+      plotType: "line",
+      showDayNight: view === "current" || view === "week",
     },
     {
       id: "rain",
       title: "Rain",
-      subtitle: `${periodLabel} rain accumulation`,
+      subtitle: `${periodLabel} rain totals`,
       ids: ["rain"],
+      plotType: "bar",
+      showDayNight: false,
+      fixedScale: { min: 0, max: 0, minInterval: 0.02 },
     },
     {
       id: "wind",
       title: "Wind",
       subtitle: `${periodLabel} sustained wind speed`,
       ids: ["wind"],
+      plotType: "line",
+      showDayNight: view === "current" || view === "week",
     },
     {
       id: "high-wind",
       title: "Hi Wind",
       subtitle: `${periodLabel} peak gust plot`,
       ids: ["gust"],
+      plotType: "line",
+      showDayNight: view === "current" || view === "week",
+    },
+    {
+      id: "wind-direction",
+      title: "Wind Direction",
+      subtitle: `${periodLabel} direction markers`,
+      ids: ["windDirection"],
+      plotType: "scatter",
+      showDayNight: false,
+      fixedScale: { min: 0, max: 360, minInterval: 45 },
     },
     {
       id: "wind-vector",
       title: "Wind Vector",
-      subtitle: `${periodLabel} wind direction in degrees`,
-      ids: ["windDirection"],
+      subtitle: `${periodLabel} progressive vector plot`,
+      ids: ["wind", "windDirection"],
+      plotType: "vector",
+      showDayNight: false,
     },
     {
       id: "barometer",
       title: "Barometer",
       subtitle: `${periodLabel} pressure trend`,
       ids: ["pressure"],
+      plotType: "line",
+      showDayNight: view === "current" || view === "week",
     },
     {
       id: "humidity",
       title: "Inside/Outside Humidity",
       subtitle: `${periodLabel} humidity comparison`,
       ids: ["humidity", "indoorHumidity"],
+      plotType: "line",
+      showDayNight: view === "current" || view === "week",
     },
     {
       id: "radiation",
       title: "Radiation",
       subtitle: `${periodLabel} solar radiation`,
       ids: ["solar"],
+      plotType: "line",
+      showDayNight: view === "current" || view === "week",
     },
     {
       id: "uv",
       title: "UV Index",
       subtitle: `${periodLabel} UV trend`,
       ids: ["uv"],
+      plotType: "line",
+      showDayNight: view === "current" || view === "week",
     },
     {
       id: "lightning",
       title: "Lightning",
       subtitle: `${periodLabel} lightning count`,
       ids: ["lightning"],
+      plotType: "bar",
+      showDayNight: false,
+      fixedScale: { min: 0, max: 0, minInterval: 1 },
     },
-  ];
+  ] satisfies Array<Omit<StationGraphPanel, "seriesList"> & { ids: string[] }>;
 
-  return specs
+  const panels = specs
     .map((spec) => {
       const panelSeries = spec.ids
         .map((id) => byId.get(id))
@@ -1902,9 +2373,133 @@ function buildStationGraphPanels(
         title: spec.title,
         subtitle: spec.subtitle,
         seriesList: panelSeries,
+        plotType: spec.plotType,
+        showDayNight: spec.showDayNight,
+        fixedScale: spec.fixedScale,
       };
     })
-    .filter((panel): panel is StationGraphPanel => panel !== null);
+    .filter(Boolean) as StationGraphPanel[];
+
+  if (view === "year") {
+    const yearHiLowPanel = buildYearHiLowPanel(rawById.get("temperature"));
+
+    if (yearHiLowPanel) {
+      panels.splice(1, 0, yearHiLowPanel);
+    }
+  }
+
+  return panels;
+}
+
+function buildYearHiLowPanel(temperatureSeries?: WeatherSeries) {
+  if (!temperatureSeries) {
+    return null;
+  }
+
+  const highPoints = aggregateSeriesPoints(temperatureSeries.points, 24 * 60 * 60 * 1000, "max");
+  const lowPoints = aggregateSeriesPoints(temperatureSeries.points, 24 * 60 * 60 * 1000, "min");
+
+  if (highPoints.length < 2 || lowPoints.length < 2) {
+    return null;
+  }
+
+  return {
+    id: "year-hi-low",
+    title: "Year Hi/Low",
+    subtitle: "Daily high and low temperatures",
+    plotType: "line" as const,
+    showDayNight: false,
+    seriesList: [
+      {
+        ...temperatureSeries,
+        id: "yearHigh",
+        label: "High",
+        points: highPoints,
+      },
+      {
+        ...temperatureSeries,
+        id: "yearLow",
+        label: "Low",
+        points: lowPoints,
+      },
+    ],
+  };
+}
+
+function trimSeriesPointsForView(points: WeatherSeries["points"], view: WeatherDashboardView) {
+  if (!points.length) {
+    return points;
+  }
+
+  const latestTimestamp = points.at(-1)?.timestamp ?? 0;
+  const windowMs =
+    view === "current"
+      ? 27 * 60 * 60 * 1000
+      : view === "week"
+        ? 7 * 24 * 60 * 60 * 1000
+        : view === "month"
+          ? 30 * 24 * 60 * 60 * 1000
+          : 365 * 24 * 60 * 60 * 1000;
+  const cutoff = latestTimestamp - windowMs;
+
+  return points.filter((point) => point.timestamp >= cutoff);
+}
+
+function resolveAggregationConfig(seriesId: string, view: WeatherDashboardView) {
+  if (view === "current") {
+    if (seriesId === "rain" || seriesId === "lightning") {
+      return { intervalMs: 60 * 60 * 1000, mode: "sum" as const };
+    }
+
+    return { intervalMs: 0, mode: "last" as const };
+  }
+
+  const defaultIntervalMs =
+    view === "week"
+      ? 60 * 60 * 1000
+      : view === "month"
+        ? 3 * 60 * 60 * 1000
+        : 24 * 60 * 60 * 1000;
+
+  if (seriesId === "rain" || seriesId === "lightning") {
+    return {
+      intervalMs:
+        view === "week" || view === "month"
+          ? 24 * 60 * 60 * 1000
+          : 7 * 24 * 60 * 60 * 1000,
+      mode: "sum" as const,
+    };
+  }
+
+  if (seriesId === "gust") {
+    return { intervalMs: defaultIntervalMs, mode: "max" as const };
+  }
+
+  if (seriesId === "windDirection") {
+    return { intervalMs: defaultIntervalMs, mode: "vecdir" as const };
+  }
+
+  return { intervalMs: defaultIntervalMs, mode: "avg" as const };
+}
+
+function averageDegrees(values: number[]) {
+  if (!values.length) {
+    return 0;
+  }
+
+  const vector = values.reduce(
+    (accumulator, value) => {
+      const radians = (value * Math.PI) / 180;
+      return {
+        x: accumulator.x + Math.cos(radians),
+        y: accumulator.y + Math.sin(radians),
+      };
+    },
+    { x: 0, y: 0 },
+  );
+
+  const angle = (Math.atan2(vector.y, vector.x) * 180) / Math.PI;
+  return (angle + 360) % 360;
 }
 
 function condenseSeriesPoints(points: WeatherSeries["points"], maxPoints: number) {
@@ -1927,10 +2522,12 @@ function normalizeSeriesPointsForView(
   series: WeatherSeries,
   view: WeatherDashboardView,
 ) {
+  const trimmedPoints = trimSeriesPointsForView(series.points, view);
+  const { intervalMs, mode } = resolveAggregationConfig(series.id, view);
   const aggregated = aggregateSeriesPoints(
-    series.points,
-    view === "current" ? 0 : view === "week" ? 60 * 60 * 1000 : view === "month" ? 3 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000,
-    pickAggregationMode(series.id),
+    trimmedPoints,
+    intervalMs,
+    mode,
   );
   const maxPoints =
     view === "current" ? 288 : view === "week" ? 700 : view === "month" ? 1000 : 800;
@@ -1941,7 +2538,7 @@ function normalizeSeriesPointsForView(
 function aggregateSeriesPoints(
   points: WeatherSeries["points"],
   intervalMs: number,
-  mode: "avg" | "max" | "last",
+  mode: WeatherAggregationMode,
 ) {
   if (intervalMs <= 0 || points.length < 3) {
     return points;
@@ -1963,6 +2560,12 @@ function aggregateSeriesPoints(
       const value =
         mode === "max"
           ? Math.max(...bucket.map((point) => point.value))
+          : mode === "min"
+            ? Math.min(...bucket.map((point) => point.value))
+            : mode === "sum"
+              ? bucket.reduce((sum, point) => sum + point.value, 0)
+              : mode === "vecdir"
+                ? averageDegrees(bucket.map((point) => point.value))
           : mode === "last"
             ? lastPoint.value
             : bucket.reduce((sum, point) => sum + point.value, 0) / bucket.length;
@@ -1975,19 +2578,11 @@ function aggregateSeriesPoints(
     });
 }
 
-function pickAggregationMode(seriesId: string): "avg" | "max" | "last" {
-  if (seriesId === "gust" || seriesId === "lightning" || seriesId === "rain") {
-    return "max";
+function buildSeriesScale(seriesList: WeatherSeries[], panel: StationGraphPanel) {
+  if (panel.fixedScale) {
+    return buildConfiguredScale(seriesList, panel.fixedScale);
   }
 
-  if (seriesId === "windDirection") {
-    return "last";
-  }
-
-  return "avg";
-}
-
-function buildSeriesScale(seriesList: WeatherSeries[]) {
   const values = seriesList.flatMap((series) => series.points.map((point) => point.value));
   const minValue = Math.min(...values);
   const maxValue = Math.max(...values);
@@ -1999,6 +2594,44 @@ function buildSeriesScale(seriesList: WeatherSeries[]) {
   const baseMin = seriesIds.has("windDirection") ? 0 : minValue;
   const baseMax = seriesIds.has("windDirection") ? 360 : maxValue;
   return buildNiceScale(baseMin, baseMax, 5, forceZero);
+}
+
+function buildConfiguredScale(
+  seriesList: WeatherSeries[],
+  config: { min: number; max: number; minInterval: number },
+) {
+  if (config.max > config.min) {
+    const ticks: number[] = [];
+
+    for (let value = config.min; value <= config.max + config.minInterval / 2; value += config.minInterval) {
+      ticks.push(Number(value.toFixed(6)));
+    }
+
+    return { min: config.min, max: config.max, ticks };
+  }
+
+  const maxSeriesValue = Math.max(
+    ...seriesList.flatMap((series) => series.points.map((point) => point.value)),
+    0,
+  );
+  const max = Math.max(config.max > config.min ? config.max : maxSeriesValue, config.min + config.minInterval);
+  const scale = buildNiceScale(config.min, max, 5, true);
+
+  if (scale.ticks.length >= 2) {
+    const currentInterval = scale.ticks[1] - scale.ticks[0];
+
+    if (currentInterval >= config.minInterval) {
+      return scale;
+    }
+  }
+
+  const ticks: number[] = [];
+
+  for (let value = scale.min; value <= scale.max + config.minInterval / 2; value += config.minInterval) {
+    ticks.push(Number(value.toFixed(6)));
+  }
+
+  return { min: scale.min, max: scale.max, ticks };
 }
 
 function buildNiceScale(min: number, max: number, tickCount: number, forceZero = false) {
@@ -2069,27 +2702,57 @@ function buildTimeTicks(
   startMs: number,
   endMs: number,
   view: WeatherDashboardView,
-  tickCount: number,
 ) {
-  const span = Math.max(endMs - startMs, 1);
+  if (view === "year") {
+    return buildMonthlyTicks(startMs, endMs);
+  }
 
-  return Array.from({ length: tickCount }, (_, index) => {
-    const ratio = tickCount === 1 ? 0 : index / (tickCount - 1);
-    const timestamp = startMs + span * ratio;
+  const intervalMs =
+    view === "current"
+      ? 3 * 60 * 60 * 1000
+      : view === "week"
+        ? 24 * 60 * 60 * 1000
+        : 5 * 24 * 60 * 60 * 1000;
+  const firstTick = Math.floor(startMs / intervalMs) * intervalMs;
+  const ticks: Array<{ timestamp: number; label: string }> = [];
 
-    return {
+  for (let timestamp = firstTick; timestamp <= endMs + intervalMs; timestamp += intervalMs) {
+    if (timestamp < startMs - intervalMs * 0.25) {
+      continue;
+    }
+
+    ticks.push({
       timestamp,
-      label: formatGraphTimeLabel(timestamp, view, index, tickCount),
-    };
-  });
+      label: formatGraphTimeLabel(timestamp, view),
+    });
+  }
+
+  return ticks;
 }
 
-function formatGraphTimeLabel(
-  value: number,
-  view: WeatherDashboardView,
-  index: number,
-  tickCount: number,
-) {
+function buildMonthlyTicks(startMs: number, endMs: number) {
+  const ticks: Array<{ timestamp: number; label: string }> = [];
+  const start = new Date(startMs);
+  const end = new Date(endMs);
+  const cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1, 0, 0, 0, 0));
+
+  while (cursor.getTime() <= endMs + 31 * 24 * 60 * 60 * 1000) {
+    const timestamp = cursor.getTime();
+
+    if (timestamp >= startMs - 31 * 24 * 60 * 60 * 1000) {
+      ticks.push({
+        timestamp,
+        label: formatGraphTimeLabel(timestamp, "year"),
+      });
+    }
+
+    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+  }
+
+  return ticks.filter((tick) => tick.timestamp <= end.getTime() + 31 * 24 * 60 * 60 * 1000);
+}
+
+function formatGraphTimeLabel(value: number, view: WeatherDashboardView) {
   if (view === "current") {
     return new Intl.DateTimeFormat("en-US", {
       timeZone: "America/Los_Angeles",
@@ -2101,8 +2764,7 @@ function formatGraphTimeLabel(
   if (view === "week") {
     return new Intl.DateTimeFormat("en-US", {
       timeZone: "America/Los_Angeles",
-      weekday: "short",
-      hour: index === 0 || index === tickCount - 1 ? "numeric" : undefined,
+      day: "numeric",
     }).format(new Date(value));
   }
 
@@ -2116,7 +2778,7 @@ function formatGraphTimeLabel(
 
   return new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Los_Angeles",
-    month: "short",
+    month: "2-digit",
   }).format(new Date(value));
 }
 
@@ -2145,6 +2807,14 @@ function formatTickValue(value: number, decimals: number) {
 function pickSeriesAccent(seriesId: string) {
   if (seriesId === "temperature" || seriesId === "indoorTemperature") {
     return "#d97b23";
+  }
+
+  if (seriesId === "yearHigh") {
+    return "#d97b23";
+  }
+
+  if (seriesId === "yearLow") {
+    return "#2563eb";
   }
 
   if (seriesId === "dewpoint") {

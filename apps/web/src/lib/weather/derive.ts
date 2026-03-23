@@ -118,7 +118,7 @@ export function buildWeatherSeries(observations: WeatherObservation[]): WeatherS
   const series: WeatherSeries[] = [];
 
   for (const definition of seriesDefinitions) {
-    const points = observations
+    const rawPoints = observations
       .map((observation) => {
         const value = pickNumber(observation, definition.keys);
         const timestamp = toWeatherTimestamp(observation.timestamp);
@@ -134,6 +134,9 @@ export function buildWeatherSeries(observations: WeatherObservation[]): WeatherS
         };
       })
       .filter((value): value is NonNullable<typeof value> => value !== null);
+    const points = isCumulativeSeries(definition.id)
+      ? buildIncrementalSeries(rawPoints)
+      : rawPoints;
 
     if (points.length < 2) {
       continue;
@@ -151,6 +154,29 @@ export function buildWeatherSeries(observations: WeatherObservation[]): WeatherS
   }
 
   return series;
+}
+
+function isCumulativeSeries(seriesId: string) {
+  return seriesId === "rain" || seriesId === "lightning";
+}
+
+function buildIncrementalSeries(points: Array<{ timestamp: number; value: number; label: string }>) {
+  let previousValue: number | null = null;
+
+  return points.map((point) => {
+    let nextValue = point.value;
+
+    if (previousValue !== null) {
+      nextValue = point.value >= previousValue ? point.value - previousValue : point.value;
+    }
+
+    previousValue = point.value;
+
+    return {
+      ...point,
+      value: Math.max(nextValue, 0),
+    };
+  });
 }
 
 export function flattenWeatherSnapshot(latest: WeatherObservation): WeatherSnapshotItem[] {

@@ -2,7 +2,7 @@ import { buildWeatherOverview } from "@/lib/weather/overview";
 import {
   persistWeatherHistory,
   readStoredWeatherObservations,
-  readStoredWeatherObservationsForDay,
+  readStoredWeatherObservationsBetween,
   readStoredWeatherStationMeta,
 } from "@/lib/weather/history";
 import { getHourlyForecast } from "@/lib/weather/nws";
@@ -324,10 +324,17 @@ async function getCurrentWeatherPageData(): Promise<WeatherPageData> {
       observations,
       source: "page",
     }).catch(() => null);
+    const latestObservationTimestamp =
+      pickNumber(observations.at(-1) ?? null, ["dateutc", "timestamp"]) ?? Date.now();
+    const normalizedLatestTimestamp =
+      latestObservationTimestamp > 1e12
+        ? latestObservationTimestamp
+        : latestObservationTimestamp * 1000;
     const currentDayObservations = device.macAddress
-      ? await readStoredWeatherObservationsForDay({
+      ? await readStoredWeatherObservationsBetween({
           macAddress: device.macAddress,
-          ...getWeatherCalendarParts(Date.now()),
+          startMs: normalizedLatestTimestamp - 27 * 60 * 60 * 1000,
+          endMs: normalizedLatestTimestamp + 60_000,
         }).catch(() => [])
       : [];
     const mergedObservations = mergeObservations(
@@ -523,20 +530,4 @@ function mergeObservations(primary: WeatherObservation[], secondary: WeatherObse
   return [...byTimestamp.entries()]
     .sort((left, right) => left[0] - right[0])
     .map(([, observation]) => observation);
-}
-
-function getWeatherCalendarParts(value: number) {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Los_Angeles",
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-  });
-  const parts = formatter.formatToParts(new Date(value));
-
-  return {
-    year: Number(parts.find((part) => part.type === "year")?.value ?? "0"),
-    month: Number(parts.find((part) => part.type === "month")?.value ?? "0"),
-    day: Number(parts.find((part) => part.type === "day")?.value ?? "0"),
-  };
 }
