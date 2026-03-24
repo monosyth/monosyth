@@ -41,6 +41,7 @@
           Sections
         </button>
         <div class="section-nav__menu" id="nav-menu">
+          <a class="section-nav__link" href="#alerts-section">Alerts</a>
           <a class="section-nav__link" href="#current-section">Current</a>
           <a class="section-nav__link" href="#today-section">Today</a>
           <a class="section-nav__link" href="#recent-section">Recent</a>
@@ -58,6 +59,14 @@
 
       <main class="content-layout">
         <div class="primary-column">
+          <section class="weather-section" id="alerts-section">
+            <div class="section-heading">
+              <h2>Station Alerts</h2>
+              <p>Threshold-based signals for cold snaps, heat, wind, rainfall, and UV based on your loaded history.</p>
+            </div>
+            <div class="alerts-grid" id="alerts-grid"></div>
+          </section>
+
           <section class="weather-section" id="current-section">
             <div class="section-heading">
               <h2>Current Conditions</h2>

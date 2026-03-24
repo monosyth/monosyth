@@ -151,7 +151,7 @@ async function fetchOverviewPayload() {
     limit: config.limit,
   });
 
-  const payload = applyStationOverrides(buildOverviewPayload(device, observations), config);
+  const payload = applyStationOverrides(buildOverviewPayload(device, observations, config), config);
   const now = Date.now();
   overviewCache.payload = payload;
   overviewCache.fetchedAtMs = now;

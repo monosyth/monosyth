@@ -5,6 +5,7 @@ const stationDetailsBody = document.querySelector("#station-details-body");
 const rawSnapshotBody = document.querySelector("#raw-snapshot-body");
 const mastheadDetailsBody = document.querySelector("#masthead-details-body");
 const chartGrid = document.querySelector("#chart-grid");
+const alertsGrid = document.querySelector("#alerts-grid");
 const stationName = document.querySelector("#station-name");
 const stationMeta = document.querySelector("#station-meta");
 const stationSummary = document.querySelector("#station-summary");
@@ -156,6 +157,7 @@ function renderDashboard(payload) {
   lastUpdated.textContent = formatHeaderTimestamp(payload.fetchedAt);
   rangeSummary.textContent = describeRangeSummary(payload, derived, responseMeta);
 
+  renderAlerts(payload.alerts || []);
   renderTwoColumnTable(
     mastheadDetailsBody,
     buildMastheadRows(payload, derived, responseMeta),
@@ -199,6 +201,7 @@ function renderError(error) {
   lastUpdated.textContent = "Needs attention";
   rangeSummary.textContent = describeErrorRangeSummary(error);
 
+  renderAlerts([], "Threshold alerts will appear after the first successful station fetch.");
   renderTwoColumnTable(currentConditionsBody, [], message);
   renderThreeColumnTable(
     daySummaryBody,
@@ -244,12 +247,17 @@ function buildHeaderMeta(station, totalCount, activeRangeLabel) {
 function buildHeaderSummary(payload, derived, responseMeta = {}) {
   const totalCount = Array.isArray(payload.observations) ? payload.observations.length : 0;
   const loadedSpan = formatSpan(payload.timeRange?.spanMs ?? 0);
+  const alertCount = Array.isArray(payload.alerts) ? payload.alerts.length : 0;
   let summary = `${derived.observationCount} observations are active in the current window out of ${totalCount} loaded locally across ${loadedSpan}.`;
 
   if (responseMeta.warning) {
     summary = `${summary} ${responseMeta.warning}`;
   } else if (responseMeta.servedFromCache) {
     summary = `${summary} Served from the local cache to reduce Ambient API traffic.`;
+  }
+
+  if (alertCount) {
+    summary = `${summary} ${alertCount} threshold alert${alertCount === 1 ? "" : "s"} active in the loaded history.`;
   }
 
   return summary;
@@ -368,6 +376,53 @@ function buildStationDetailRows(payload, derived) {
     { label: "Visible Observations", value: String(derived.observationCount) },
     { label: "Refresh Cadence", value: "60 seconds" },
   ];
+}
+
+function renderAlerts(alerts, emptyMessage = "No active threshold alerts in the loaded history.") {
+  alertsGrid.replaceChildren();
+
+  if (!Array.isArray(alerts) || !alerts.length) {
+    alertsGrid.appendChild(createState(emptyMessage));
+    return;
+  }
+
+  for (const alert of alerts) {
+    alertsGrid.appendChild(createAlertCard(alert));
+  }
+}
+
+function createAlertCard(alert) {
+  const severity = normalizeAlertSeverity(alert?.severity);
+  const card = document.createElement("article");
+  card.className = `alert-card alert-card--${severity}`;
+
+  const eyebrow = document.createElement("p");
+  eyebrow.className = "alert-card__eyebrow";
+  eyebrow.textContent = formatAlertSeverity(severity);
+
+  const titleRow = document.createElement("div");
+  titleRow.className = "alert-card__title-row";
+
+  const title = document.createElement("h3");
+  title.className = "alert-card__title";
+  title.textContent = alert?.title || "Station alert";
+
+  const value = document.createElement("p");
+  value.className = "alert-card__value";
+  value.textContent = alert?.value || "Active";
+
+  titleRow.append(title, value);
+
+  const summary = document.createElement("p");
+  summary.className = "alert-card__summary";
+  summary.textContent = alert?.summary || "Threshold criteria were met in the loaded observations.";
+
+  const detail = document.createElement("p");
+  detail.className = "alert-card__detail";
+  detail.textContent = alert?.detail || "Observed in the current history window.";
+
+  card.append(eyebrow, titleRow, summary, detail);
+  return card;
 }
 
 function renderChartGrid(seriesList) {
@@ -1046,4 +1101,18 @@ function getSeriesColor(seriesId) {
   };
 
   return palette[seriesId] || "#18b8cf";
+}
+
+function normalizeAlertSeverity(severity) {
+  return ["danger", "warning", "notice"].includes(severity) ? severity : "notice";
+}
+
+function formatAlertSeverity(severity) {
+  const labels = {
+    danger: "Urgent",
+    warning: "Heads up",
+    notice: "Notice",
+  };
+
+  return labels[severity] || "Notice";
 }

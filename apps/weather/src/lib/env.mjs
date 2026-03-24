@@ -7,6 +7,12 @@ const DEFAULT_WEATHER_LIMIT = 48;
 const MAX_WEATHER_LIMIT = 288;
 const DEFAULT_AMBIENT_REQUEST_TIMEOUT_MS = 15_000;
 const MAX_AMBIENT_REQUEST_TIMEOUT_MS = 60_000;
+const DEFAULT_FREEZE_ALERT_TEMP_F = 36;
+const DEFAULT_HEAT_ALERT_TEMP_F = 90;
+const DEFAULT_WIND_ALERT_MPH = 20;
+const DEFAULT_GUST_ALERT_MPH = 30;
+const DEFAULT_HOURLY_RAIN_ALERT_IN = 0.3;
+const DEFAULT_UV_ALERT_INDEX = 8;
 
 function parseEnvFile(filePath) {
   const entries = {};
@@ -99,6 +105,21 @@ function parseAmbientRequestTimeout(value) {
   return Math.min(parsed, MAX_AMBIENT_REQUEST_TIMEOUT_MS);
 }
 
+function parseAlertThreshold(value, fallback) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+
+  if (!normalized) {
+    return fallback;
+  }
+
+  if (["off", "false", "none", "disabled"].includes(normalized)) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 export function getAmbientConfig() {
   return {
     apiKey: getRequiredEnv("AMBIENT_API_KEY"),
@@ -113,5 +134,31 @@ export function getAmbientConfig() {
         String(DEFAULT_AMBIENT_REQUEST_TIMEOUT_MS),
       ),
     ),
+    alerts: {
+      freezeTempF: parseAlertThreshold(
+        getOptionalEnv("WEATHER_ALERT_FREEZE_TEMP_F", String(DEFAULT_FREEZE_ALERT_TEMP_F)),
+        DEFAULT_FREEZE_ALERT_TEMP_F,
+      ),
+      heatTempF: parseAlertThreshold(
+        getOptionalEnv("WEATHER_ALERT_HEAT_TEMP_F", String(DEFAULT_HEAT_ALERT_TEMP_F)),
+        DEFAULT_HEAT_ALERT_TEMP_F,
+      ),
+      windMph: parseAlertThreshold(
+        getOptionalEnv("WEATHER_ALERT_WIND_MPH", String(DEFAULT_WIND_ALERT_MPH)),
+        DEFAULT_WIND_ALERT_MPH,
+      ),
+      gustMph: parseAlertThreshold(
+        getOptionalEnv("WEATHER_ALERT_GUST_MPH", String(DEFAULT_GUST_ALERT_MPH)),
+        DEFAULT_GUST_ALERT_MPH,
+      ),
+      hourlyRainIn: parseAlertThreshold(
+        getOptionalEnv("WEATHER_ALERT_HOURLY_RAIN_IN", String(DEFAULT_HOURLY_RAIN_ALERT_IN)),
+        DEFAULT_HOURLY_RAIN_ALERT_IN,
+      ),
+      uvIndex: parseAlertThreshold(
+        getOptionalEnv("WEATHER_ALERT_UV_INDEX", String(DEFAULT_UV_ALERT_INDEX)),
+        DEFAULT_UV_ALERT_INDEX,
+      ),
+    },
   };
 }

@@ -18,8 +18,9 @@ This folder is a safe place to explore your Ambient Weather station data without
 4. Run `npm run devices` inside this folder to see your stations.
 5. Copy your station `macAddress` into `AMBIENT_MAC_ADDRESS`.
 6. Leave `WEATHER_LIMIT=48` unless you want a smaller or larger recent window.
-7. Start the dashboard with `npm run dev`.
-8. Open `http://localhost:8787`.
+7. Optionally tune the `WEATHER_ALERT_*` thresholds in `.env`.
+8. Start the dashboard with `npm run dev`.
+9. Open `http://localhost:8787`.
 
 ## Commands
 
@@ -34,9 +35,23 @@ npm run latest:json
 
 - Current-condition cards for temperature, humidity, wind, rain, pressure, and solar data when available
 - Derived highlights like gust peak, recent temperature range, and rainfall totals
+- Configurable threshold alerts for freeze risk, heat spikes, strong wind, rain rate, and UV exposure
 - Mini SVG charts for recent temperature, humidity, wind, and rain trends
 - A live raw snapshot panel so we can quickly see what your specific station sends
 - A refresh button plus automatic polling
+
+## Alert thresholds
+
+The dashboard reads these optional environment variables:
+
+- `WEATHER_ALERT_FREEZE_TEMP_F`
+- `WEATHER_ALERT_HEAT_TEMP_F`
+- `WEATHER_ALERT_WIND_MPH`
+- `WEATHER_ALERT_GUST_MPH`
+- `WEATHER_ALERT_HOURLY_RAIN_IN`
+- `WEATHER_ALERT_UV_INDEX`
+
+Set any of them to `off` if you want to disable that alert type entirely.
 
 ## Verified API shape
 
@@ -53,7 +68,7 @@ This starter uses those two credentials for every request and keeps them on the 
 
 ## Good next expansions
 
-- Add threshold alerts for freeze risk, heat spikes, or strong wind
+- Log alert events to a local file or database so we can review them later
 - Build a daily summary email or SMS
 - Save readings to a local database for longer-term charts
 - Add indoor sensors, lightning, or air-quality fields if your station reports them
