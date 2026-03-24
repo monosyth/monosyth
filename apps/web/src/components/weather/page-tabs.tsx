@@ -57,6 +57,7 @@ export function WeatherPageTabs({
 }: WeatherPageTabsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isManuallyPending, setIsManuallyPending] = useState(false);
   const [optimisticView, setOptimisticView] =
     useState<WeatherDashboardView>(activeView);
   const [optimisticDocumentTab, setOptimisticDocumentTab] =
@@ -69,6 +70,10 @@ export function WeatherPageTabs({
   useEffect(() => {
     setOptimisticDocumentTab(activeDocumentTab);
   }, [activeDocumentTab]);
+
+  useEffect(() => {
+    setIsManuallyPending(false);
+  }, [activeView, activeDocumentTab]);
 
   const prefetchHrefs = useMemo(() => {
     const hrefs = new Set<string>();
@@ -104,21 +109,30 @@ export function WeatherPageTabs({
       return;
     }
 
+    setIsManuallyPending(true);
+
     startTransition(() => {
       router.push(href, { scroll: false });
     });
   }
 
+  const isLoading = isPending || isManuallyPending;
+  const activeSummaryLabel =
+    summaryTabs.find((tab) => tab.view === optimisticView)?.label ?? "Current";
+  const activeDocumentLabel =
+    documentTabs.find((tab) => tab.tab === optimisticDocumentTab)?.label ?? "Dashboard";
+  const loadingMessage = `Loading ${activeSummaryLabel} ${activeDocumentLabel}`;
+
   return (
     <div className={styles.tabShell}>
       <div
         className={styles.tabInner}
-        aria-busy={isPending}
+        aria-busy={isLoading}
       >
         <div className={styles.primaryTabs}>
           {summaryTabs.map((tab) => {
             const isActive = tab.view === optimisticView;
-            const isPendingTab = isPending && isActive;
+            const isPendingTab = isLoading && isActive;
 
             return (
               <button
@@ -144,7 +158,7 @@ export function WeatherPageTabs({
         <div className={styles.secondaryTabs}>
           {documentTabs.map((tab) => {
             const isActive = tab.tab === optimisticDocumentTab;
-            const isPendingTab = isPending && isActive;
+            const isPendingTab = isLoading && isActive;
 
             return (
               <button
@@ -168,6 +182,50 @@ export function WeatherPageTabs({
             );
           })}
         </div>
+
+        {isLoading ? (
+          <div
+            className={`${styles.tabStatusRow} ${styles.tabStatusRowVisible}`}
+            aria-live="polite"
+          >
+            <div className={styles.tabStatusBadge}>
+              <span className={styles.tabStatusDot} aria-hidden="true" />
+              <span>{loadingMessage}</span>
+            </div>
+            <div className={styles.tabStatusTrack} aria-hidden="true">
+              <span className={styles.tabStatusBar} />
+            </div>
+          </div>
+        ) : null}
+
+        {isLoading ? (
+          <div className={styles.tabLoadingOverlay} role="status" aria-live="polite">
+            <div className={styles.tabLoadingOverlayCard}>
+              <div className={styles.tabLoadingOverlayTop}>
+                <div className={styles.tabLoadingRadar} aria-hidden="true">
+                  <span className={styles.tabLoadingRadarRing} />
+                  <span
+                    className={`${styles.tabLoadingRadarRing} ${styles.tabLoadingRadarRingInner}`}
+                  />
+                  <span className={styles.tabLoadingRadarSweep} />
+                  <span className={styles.tabLoadingRadarDot} />
+                </div>
+
+                <div className={styles.tabLoadingOverlayCopyBlock}>
+                  <p className={styles.tabLoadingOverlayEyebrow}>Weather Station</p>
+                  <p className={styles.tabLoadingOverlayTitle}>{loadingMessage}</p>
+                  <p className={styles.tabLoadingOverlayCopy}>
+                    Refreshing station panels, charts, and archive data.
+                  </p>
+                </div>
+              </div>
+
+              <div className={styles.tabStatusTrack} aria-hidden="true">
+                <span className={styles.tabStatusBar} />
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

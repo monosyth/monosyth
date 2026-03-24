@@ -28,6 +28,18 @@ export function formatWeatherDateTime(value: string | number | Date) {
   }).format(new Date(value));
 }
 
+export function formatWeatherWeekdayDateTime(value: string | number | Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: WEATHER_TIME_ZONE,
+    weekday: "short",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
 export function formatWeatherClock(value: string | number | Date) {
   return new Intl.DateTimeFormat("en-US", {
     timeZone: WEATHER_TIME_ZONE,

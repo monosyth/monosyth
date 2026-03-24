@@ -32,9 +32,9 @@ import {
   type WeatherSummarySection,
 } from "@/lib/weather/summary";
 import {
-  formatWeatherClock,
   formatWeatherDateTime,
   formatWeatherLong,
+  formatWeatherWeekdayDateTime,
 } from "@/lib/weather/time";
 import type {
   WeatherForecastPeriod,
@@ -152,12 +152,20 @@ const documentTabs = [
 ] as const satisfies ReadonlyArray<{ label: string; tab: WeatherDocumentTab }>;
 
 const trafficMapUrl = "https://web.seattle.gov/travelers/";
+const SUMMARY_ARCHIVE_CACHE_TTL_MS = 5 * 60 * 1000;
 const skylineWebcamHeaderCard = {
   href: "/weather?tab=cameras",
   imageUrl: "/api/weather/station-camera",
   title: "Station Camera",
   note: "Latest uploaded frame from the live weather cam",
 };
+const summaryArchiveCache = new Map<
+  string,
+  {
+    expiresAt: number;
+    value: WeatherSummaryArchive | null;
+  }
+>();
 
 function normalizeWeatherDocumentTab(value?: string): WeatherDocumentTab {
   if (
@@ -201,12 +209,22 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const mapUrl = buildMapUrl(coordinates.latitude, coordinates.longitude);
   const radarUrl = buildRadarEmbedUrl(coordinates.latitude, coordinates.longitude);
   const viewMeta = getViewMeta(activeView);
+  const comparisonPanelsPromise = isDashboardTab
+    ? getHistoricalComparisonPanels(data, activeView)
+    : Promise.resolve<ComparisonPanel[]>([]);
+  const summaryMatrixObservationsPromise =
+    isSummariesTab && activeView === "current"
+      ? readStoredWeatherObservations({
+          macAddress: data.station.macAddress,
+          range: "week",
+        }).catch(() => data.observations)
+      : Promise.resolve(data.observations);
+  const summaryArchivePromise = isSummariesTab
+    ? loadWeatherSummaryArchive(data.station.macAddress)
+    : Promise.resolve<WeatherSummaryArchive | null>(null);
   const currentRows = isDashboardTab ? buildCurrentConditionRows(data.observations) : [];
   const periodRows = isDashboardTab ? buildPeriodSummaryRows(data, activeView) : [];
   const rangeRows = isDashboardTab ? buildRecentSummaryRows(data) : [];
-  const comparisonPanels = isDashboardTab
-    ? await getHistoricalComparisonPanels(data, activeView)
-    : [];
   const graphPanels = isGraphsTab
     ? buildStationGraphPanels(prepareGraphSeries(data.series, activeView), activeView, data.series)
     : [];
@@ -225,16 +243,11 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
       : activeView === "current" || activeView === "week"
         ? "week"
         : null;
-  const summaryMatrixObservations =
-    isSummariesTab && activeView === "current"
-      ? await readStoredWeatherObservations({
-          macAddress: data.station.macAddress,
-          range: "week",
-        }).catch(() => data.observations)
-      : data.observations;
-  const summaryArchive = isSummariesTab
-    ? await loadWeatherSummaryArchive(data.station.macAddress)
-    : null;
+  const [comparisonPanels, summaryMatrixObservations, summaryArchive] = await Promise.all([
+    comparisonPanelsPromise,
+    summaryMatrixObservationsPromise,
+    summaryArchivePromise,
+  ]);
   const periodMatrices =
     isSummariesTab && summaryPeriodMatrixView
       ? buildWeatherPeriodMatrices(summaryMatrixObservations, summaryPeriodMatrixView)
@@ -2427,7 +2440,7 @@ function createExtremeRow(
   return {
     label,
     value: formatSeriesValue(winner.value, decimals, unit),
-    detail: winner.timestamp ? formatWeatherClock(winner.timestamp) : "--",
+    detail: winner.timestamp ? formatWeatherWeekdayDateTime(winner.timestamp) : "--",
   };
 }
 
@@ -2510,7 +2523,7 @@ function createLatestValueRow(
   return {
     label,
     value: formatSeriesValue(value, decimals, unit),
-    detail: latest.timestamp ? formatWeatherClock(latest.timestamp) : "--",
+    detail: latest.timestamp ? formatWeatherWeekdayDateTime(latest.timestamp) : "--",
   };
 }
 
@@ -2550,7 +2563,7 @@ function createRangeRow(
   return {
     label,
     value: `${formatSeriesValue(min.value, decimals, unit)} to ${formatSeriesValue(max.value, decimals, unit)}`,
-    detail: `${formatWeatherClock(min.timestamp)} / ${formatWeatherClock(max.timestamp)}`,
+    detail: `${formatWeatherWeekdayDateTime(min.timestamp)} / ${formatWeatherWeekdayDateTime(max.timestamp)}`,
   };
 }
 
@@ -2606,6 +2619,14 @@ async function loadWeatherSummaryArchive(macAddress: string) {
     return null;
   }
 
+  const cacheKey = macAddress.trim().toLowerCase();
+  const now = Date.now();
+  const cached = summaryArchiveCache.get(cacheKey);
+
+  if (cached && cached.expiresAt > now) {
+    return cached.value;
+  }
+
   try {
     const observations = await readStoredWeatherObservationsBetween({
       macAddress,
@@ -2613,9 +2634,17 @@ async function loadWeatherSummaryArchive(macAddress: string) {
       endMs: Date.now() + 24 * 60 * 60 * 1000,
       limit: 100_000,
     });
-
-    return buildWeatherSummaryArchive(observations);
+    const archive = buildWeatherSummaryArchive(observations);
+    summaryArchiveCache.set(cacheKey, {
+      expiresAt: now + SUMMARY_ARCHIVE_CACHE_TTL_MS,
+      value: archive,
+    });
+    return archive;
   } catch {
+    summaryArchiveCache.set(cacheKey, {
+      expiresAt: now + 60_000,
+      value: null,
+    });
     return null;
   }
 }

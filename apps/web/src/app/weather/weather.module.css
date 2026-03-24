@@ -366,6 +366,187 @@
   color: #fff;
 }
 
+.tabStatusRow {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-0.35rem);
+  transition:
+    max-height 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease,
+    padding-top 180ms ease;
+}
+
+.tabStatusRowVisible {
+  max-height: 4rem;
+  padding-top: 0.6rem;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tabStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid rgb(255 255 255 / 0.22);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.08);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.94);
+}
+
+.tabStatusDot {
+  height: 0.52rem;
+  width: 0.52rem;
+  border-radius: 999px;
+  background: #f4d24f;
+  box-shadow: 0 0 0 0 rgb(244 210 79 / 0.55);
+  animation: weatherTabBeacon 1.15s ease-out infinite;
+}
+
+.tabStatusTrack {
+  position: relative;
+  margin-top: 0.45rem;
+  height: 0.28rem;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.12);
+}
+
+.tabStatusBar {
+  position: absolute;
+  inset: 0 auto 0 -32%;
+  width: 32%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    rgb(244 210 79 / 0),
+    rgb(244 210 79 / 0.92),
+    rgb(255 255 255 / 0.98)
+  );
+  animation: weatherTabSweep 1.05s linear infinite;
+}
+
+.tabLoadingOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgb(10 28 24 / 0.24);
+  backdrop-filter: blur(3px);
+}
+
+.tabLoadingOverlayCard {
+  width: min(27rem, 100%);
+  border: 1px solid rgb(255 255 255 / 0.18);
+  background:
+    radial-gradient(circle at top, rgb(255 255 255 / 0.1), transparent 48%),
+    linear-gradient(160deg, rgb(15 118 110 / 0.98), rgb(17 94 89 / 0.98));
+  box-shadow:
+    0 1.5rem 3.5rem rgb(15 23 42 / 0.24),
+    0 0 0 1px rgb(255 255 255 / 0.06);
+  padding: 1rem 1rem 0.95rem;
+  color: #fff;
+}
+
+.tabLoadingOverlayTop {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.tabLoadingOverlayCopyBlock {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.tabLoadingOverlayEyebrow {
+  margin: 0;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.72);
+}
+
+.tabLoadingOverlayTitle {
+  margin-top: 0.32rem;
+  font-size: 1.1rem;
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.tabLoadingOverlayCopy {
+  margin-top: 0.28rem;
+  font-size: 0.84rem;
+  line-height: 1.35;
+  color: rgb(255 255 255 / 0.86);
+}
+
+.tabLoadingOverlayCard .tabStatusTrack {
+  margin-top: 0.9rem;
+}
+
+.tabLoadingRadar {
+  position: relative;
+  flex: 0 0 auto;
+  height: 4rem;
+  width: 4rem;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at center, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.02) 58%, transparent 62%),
+    rgb(255 255 255 / 0.05);
+}
+
+.tabLoadingRadarRing {
+  position: absolute;
+  inset: 0.58rem;
+  border: 1px solid rgb(255 255 255 / 0.3);
+  border-radius: 999px;
+  animation: weatherRadarPulse 1.6s ease-out infinite;
+}
+
+.tabLoadingRadarRingInner {
+  inset: 1.2rem;
+  animation-delay: 0.45s;
+}
+
+.tabLoadingRadarSweep {
+  position: absolute;
+  inset: -22%;
+  background: conic-gradient(
+    from 0deg,
+    rgb(244 210 79 / 0),
+    rgb(244 210 79 / 0.82) 16%,
+    rgb(255 255 255 / 0.12) 22%,
+    rgb(244 210 79 / 0) 30%
+  );
+  animation: weatherRadarSweep 1.25s linear infinite;
+}
+
+.tabLoadingRadarDot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  height: 0.4rem;
+  width: 0.4rem;
+  border-radius: 999px;
+  background: #f4d24f;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0.45rem rgb(244 210 79 / 0.7);
+}
+
 .contentShell {
   margin: 0 auto;
   max-width: 80rem;
@@ -379,6 +560,57 @@
 
   to {
     opacity: 1;
+  }
+}
+
+@keyframes weatherTabBeacon {
+  0% {
+    box-shadow: 0 0 0 0 rgb(244 210 79 / 0.55);
+  }
+
+  70% {
+    box-shadow: 0 0 0 0.55rem rgb(244 210 79 / 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgb(244 210 79 / 0);
+  }
+}
+
+@keyframes weatherTabSweep {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(420%);
+  }
+}
+
+@keyframes weatherRadarPulse {
+  0% {
+    opacity: 0.35;
+    transform: scale(0.96);
+  }
+
+  70% {
+    opacity: 0.9;
+    transform: scale(1.02);
+  }
+
+  100% {
+    opacity: 0.35;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes weatherRadarSweep {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
   }
 }
 
