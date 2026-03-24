@@ -11,6 +11,8 @@ const stationMeta = document.querySelector("#station-meta");
 const stationSummary = document.querySelector("#station-summary");
 const lastUpdated = document.querySelector("#last-updated");
 const refreshButton = document.querySelector("#refresh-button");
+const loadingStatus = document.querySelector("#loading-status");
+const loadingStatusLabel = document.querySelector("#loading-status-label");
 const rangeButtonGroup = document.querySelector("#range-button-group");
 const rangeSummary = document.querySelector("#range-summary");
 const rangeButtonTemplate = document.querySelector("#range-button-template");
@@ -23,8 +25,12 @@ let currentController = null;
 let latestPayload = null;
 let activeRangeId = "6h";
 let hasInitializedRange = false;
+let loadingTitleTimer = null;
+let loadingTitleFrameIndex = 0;
+let resolvedDocumentTitle = document.title || "Monosyth Weather";
 const defaultRefreshIntervalMs = 60_000;
 const rateLimitRefreshIntervalMs = 15 * 60_000;
+const loadingTitleFrames = ["WX Scan |", "WX Scan /", "WX Scan -", "WX Scan \\"];
 
 const currentConditionDefinitions = [
   { label: "Outside Temperature", keys: ["tempf"], decimals: 1, unit: "F" },
@@ -86,6 +92,7 @@ async function loadDashboard() {
   const controller = new AbortController();
   currentController = controller;
   refreshButton.disabled = true;
+  setLoadingState(true, latestPayload ? "Refreshing station feed" : "Booting live weather link");
   let nextRefreshMs = defaultRefreshIntervalMs;
 
   try {
@@ -123,6 +130,7 @@ async function loadDashboard() {
   } finally {
     if (requestId === currentRequestId) {
       refreshButton.disabled = false;
+      setLoadingState(false);
       scheduleNextRefresh(nextRefreshMs);
     }
 
@@ -140,6 +148,7 @@ function stopDashboardPolling() {
 
   currentController?.abort();
   currentController = null;
+  setLoadingState(false);
 }
 
 function renderDashboard(payload) {
@@ -150,6 +159,7 @@ function renderDashboard(payload) {
   const activeRange = getRangeOption(activeRangeId);
   const activeRangeLabel = activeRange ? activeRange.label : "All";
   const responseMeta = payload.responseMeta || {};
+  setResolvedDocumentTitle(station.name ? `${station.name} | Monosyth Weather` : "Monosyth Weather");
 
   stationName.textContent = station.name || station.location || "Your Weather Station";
   stationMeta.textContent = buildHeaderMeta(station, totalCount, activeRangeLabel);
@@ -195,6 +205,7 @@ function renderDashboard(payload) {
 function renderError(error) {
   const message = error instanceof Error ? error.message : String(error);
   latestPayload = null;
+  setResolvedDocumentTitle("Weather Feed Error | Monosyth Weather");
   stationName.textContent = "Weather dashboard waiting on station data";
   stationMeta.textContent = "The local page is available, but the server could not reach your Ambient Weather feed.";
   stationSummary.textContent = describeErrorSummary(error);
@@ -1101,6 +1112,54 @@ function getSeriesColor(seriesId) {
   };
 
   return palette[seriesId] || "#18b8cf";
+}
+
+function setLoadingState(isLoading, label = "Syncing station feed") {
+  if (loadingStatus && loadingStatusLabel) {
+    loadingStatus.hidden = !isLoading;
+    loadingStatusLabel.textContent = label;
+  }
+
+  if (isLoading) {
+    startLoadingTitleAnimation();
+    return;
+  }
+
+  stopLoadingTitleAnimation();
+}
+
+function setResolvedDocumentTitle(title) {
+  resolvedDocumentTitle = title || "Monosyth Weather";
+
+  if (loadingTitleTimer === null) {
+    document.title = resolvedDocumentTitle;
+  }
+}
+
+function startLoadingTitleAnimation() {
+  if (loadingTitleTimer !== null) {
+    updateLoadingTitle();
+    return;
+  }
+
+  loadingTitleFrameIndex = 0;
+  updateLoadingTitle();
+  loadingTitleTimer = window.setInterval(updateLoadingTitle, 220);
+}
+
+function stopLoadingTitleAnimation() {
+  if (loadingTitleTimer !== null) {
+    window.clearInterval(loadingTitleTimer);
+    loadingTitleTimer = null;
+  }
+
+  document.title = resolvedDocumentTitle;
+}
+
+function updateLoadingTitle() {
+  const frame = loadingTitleFrames[loadingTitleFrameIndex % loadingTitleFrames.length];
+  document.title = `${frame} ${resolvedDocumentTitle}`;
+  loadingTitleFrameIndex += 1;
 }
 
 function normalizeAlertSeverity(severity) {

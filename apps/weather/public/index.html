@@ -18,7 +18,16 @@
           <p class="site-header__time" id="last-updated">Waiting for first update</p>
         </div>
         <div class="site-header__actions">
-          <button class="refresh-button" id="refresh-button" type="button">Refresh</button>
+          <div class="site-header__controls">
+            <button class="refresh-button" id="refresh-button" type="button">Refresh</button>
+            <div class="loading-chip" id="loading-status" role="status" aria-live="polite" hidden>
+              <span class="loading-chip__radar" aria-hidden="true">
+                <span class="loading-chip__radar-sweep"></span>
+                <span class="loading-chip__radar-core"></span>
+              </span>
+              <span class="loading-chip__label" id="loading-status-label">Syncing station feed</span>
+            </div>
+          </div>
           <p class="site-header__summary" id="station-summary">
             Loading the latest conditions and recent station history.
           </p>
