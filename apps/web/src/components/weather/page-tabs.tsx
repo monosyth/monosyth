@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import styles from "@/app/weather/weather.module.css";
+import { WeatherPendingOverlay } from "@/components/weather/pending-overlay";
 import type { WeatherDashboardView } from "@/lib/weather/ambient";
 
 type WeatherDocumentTab =
@@ -199,32 +200,10 @@ export function WeatherPageTabs({
         ) : null}
 
         {isLoading ? (
-          <div className={styles.tabLoadingOverlay} role="status" aria-live="polite">
-            <div className={styles.tabLoadingOverlayCard}>
-              <div className={styles.tabLoadingOverlayTop}>
-                <div className={styles.tabLoadingRadar} aria-hidden="true">
-                  <span className={styles.tabLoadingRadarRing} />
-                  <span
-                    className={`${styles.tabLoadingRadarRing} ${styles.tabLoadingRadarRingInner}`}
-                  />
-                  <span className={styles.tabLoadingRadarSweep} />
-                  <span className={styles.tabLoadingRadarDot} />
-                </div>
-
-                <div className={styles.tabLoadingOverlayCopyBlock}>
-                  <p className={styles.tabLoadingOverlayEyebrow}>Weather Station</p>
-                  <p className={styles.tabLoadingOverlayTitle}>{loadingMessage}</p>
-                  <p className={styles.tabLoadingOverlayCopy}>
-                    Refreshing station panels, charts, and archive data.
-                  </p>
-                </div>
-              </div>
-
-              <div className={styles.tabStatusTrack} aria-hidden="true">
-                <span className={styles.tabStatusBar} />
-              </div>
-            </div>
-          </div>
+          <WeatherPendingOverlay
+            title={loadingMessage}
+            detail="Refreshing station panels, charts, and archive data."
+          />
         ) : null}
       </div>
     </div>

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { getTimes } from "suncalc";
 
 import { WeatherCameraGrid } from "@/components/weather/camera-grid";
+import { WeatherHomeLink } from "@/components/weather/home-link";
 import { WeatherPageTabs } from "@/components/weather/page-tabs";
 import { RadarEmbed } from "@/components/weather/radar-embed";
 import styles from "@/app/weather/weather.module.css";
@@ -284,9 +285,9 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
                 Monosyth Personal Weather
               </p>
               <h1 className={styles.heroTitle}>
-                <Link href="/weather" className={styles.heroTitleLink}>
+                <WeatherHomeLink className={styles.heroTitleLink}>
                   {data.station.name}
-                </Link>
+                </WeatherHomeLink>
               </h1>
               <p className={styles.heroMeta}>
                 {buildHeaderMeta(data, coordinates)}
