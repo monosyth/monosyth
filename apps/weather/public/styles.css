@@ -21,7 +21,6 @@
 }
 
 html {
-  scroll-behavior: smooth;
   background: #dcdcdc;
 }
 
@@ -302,6 +301,12 @@ textarea {
   color: var(--sky-deep);
 }
 
+.section-nav__link.is-active {
+  background: rgba(24, 184, 207, 0.14);
+  color: var(--sky-deep);
+  box-shadow: inset 0 -2px 0 var(--sky);
+}
+
 .range-button-group {
   display: inline-flex;
   flex-wrap: wrap;
@@ -316,6 +321,10 @@ textarea {
 .range-button.is-active {
   background: var(--sky);
   color: #ffffff;
+}
+
+.range-button-group.is-pending .range-button.is-active {
+  animation: range-button-pulse 420ms ease-in-out infinite alternate;
 }
 
 .range-button:disabled {
@@ -346,6 +355,7 @@ textarea {
   border-radius: var(--radius);
   box-shadow: var(--shadow-soft);
   overflow: hidden;
+  scroll-margin-top: 72px;
 }
 
 .section-heading {
@@ -712,6 +722,18 @@ textarea {
   50% {
     transform: scale(1.12);
     opacity: 1;
+  }
+}
+
+@keyframes range-button-pulse {
+  from {
+    transform: translateY(0);
+    box-shadow: 0 0 0 rgba(24, 184, 207, 0);
+  }
+
+  to {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(24, 184, 207, 0.22);
   }
 }
 

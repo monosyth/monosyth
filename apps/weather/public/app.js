@@ -18,16 +18,23 @@ const rangeSummary = document.querySelector("#range-summary");
 const rangeButtonTemplate = document.querySelector("#range-button-template");
 const navToggle = document.querySelector("#nav-toggle");
 const navMenu = document.querySelector("#nav-menu");
+const sectionNav = document.querySelector(".section-nav");
+const sectionLinks = Array.from(navMenu?.querySelectorAll(".section-nav__link") ?? []);
 
 let refreshTimer = null;
 let currentRequestId = 0;
 let currentController = null;
 let latestPayload = null;
 let activeRangeId = "6h";
+let activeSectionId = "";
 let hasInitializedRange = false;
 let loadingTitleTimer = null;
 let loadingTitleFrameIndex = 0;
 let resolvedDocumentTitle = document.title || "Monosyth Weather";
+let pendingRangeRenderId = 0;
+let sectionScrollFrame = 0;
+let derivedViewCacheKey = "";
+const derivedViewCache = new Map();
 const defaultRefreshIntervalMs = 60_000;
 const rateLimitRefreshIntervalMs = 15 * 60_000;
 const loadingTitleFrames = ["WX Scan |", "WX Scan /", "WX Scan -", "WX Scan \\"];
@@ -67,6 +74,20 @@ const rangeOptions = [
   { id: "all", label: "All", durationMs: null },
 ];
 
+const sectionTargets = sectionLinks
+  .map((link) => {
+    const href = link.getAttribute("href");
+
+    if (!href?.startsWith("#")) {
+      return null;
+    }
+
+    const id = href.slice(1);
+    const element = document.getElementById(id);
+    return element ? { id, element } : null;
+  })
+  .filter(Boolean);
+
 refreshButton.addEventListener("click", () => {
   scheduleNextRefresh(0);
   loadDashboard();
@@ -77,13 +98,15 @@ navToggle?.addEventListener("click", () => {
   navToggle.setAttribute("aria-expanded", String(isOpen));
 });
 
-for (const link of navMenu?.querySelectorAll(".section-nav__link") ?? []) {
-  link.addEventListener("click", () => closeNavMenu());
+for (const link of sectionLinks) {
+  link.addEventListener("click", handleSectionLinkClick);
 }
 
 renderRangeButtons();
+updateActiveSectionFromScroll();
 loadDashboard();
 window.addEventListener("beforeunload", stopDashboardPolling);
+window.addEventListener("scroll", handleWindowScroll, { passive: true });
 
 async function loadDashboard() {
   const requestId = currentRequestId + 1;
@@ -153,26 +176,15 @@ function stopDashboardPolling() {
 
 function renderDashboard(payload) {
   const observations = Array.isArray(payload.observations) ? payload.observations : [];
-  const derived = buildDerivedView(payload, activeRangeId);
+  const derived = getDerivedView(payload, activeRangeId);
   const station = payload.station || {};
-  const totalCount = observations.length || payload.observationCount || 0;
-  const activeRange = getRangeOption(activeRangeId);
-  const activeRangeLabel = activeRange ? activeRange.label : "All";
   const responseMeta = payload.responseMeta || {};
   setResolvedDocumentTitle(station.name ? `${station.name} | Monosyth Weather` : "Monosyth Weather");
 
   stationName.textContent = station.name || station.location || "Your Weather Station";
-  stationMeta.textContent = buildHeaderMeta(station, totalCount, activeRangeLabel);
-  stationSummary.textContent = buildHeaderSummary(payload, derived, responseMeta);
   lastUpdated.textContent = formatHeaderTimestamp(payload.fetchedAt);
-  rangeSummary.textContent = describeRangeSummary(payload, derived, responseMeta);
 
   renderAlerts(payload.alerts || []);
-  renderTwoColumnTable(
-    mastheadDetailsBody,
-    buildMastheadRows(payload, derived, responseMeta),
-    "Station facts will appear after the first successful station fetch.",
-  );
   renderTwoColumnTable(
     currentConditionsBody,
     buildCurrentConditionRows(payload.current),
@@ -183,23 +195,8 @@ function renderDashboard(payload) {
     buildDaySummaryRows(observations),
     "Today’s highs and lows will populate once observations are available for the current day.",
   );
-  renderThreeColumnTable(
-    recentSummaryBody,
-    buildRecentSummaryRows(payload, derived),
-    "Recent view details will appear once the selected range includes enough observations.",
-  );
-  renderTwoColumnTable(
-    stationDetailsBody,
-    buildStationDetailRows(payload, derived),
-    "Station details will appear after the first successful load.",
-  );
-  renderTwoColumnTable(
-    rawSnapshotBody,
-    derived.snapshot,
-    "The latest raw payload will show up here after a successful fetch.",
-  );
-  renderChartGrid(derived.series);
-  updateRangeButtons();
+  renderRangeDependentSections(payload, derived, responseMeta);
+  updateActiveSectionFromScroll();
 }
 
 function renderError(error) {
@@ -235,6 +232,43 @@ function renderError(error) {
     "The raw station payload will appear here after a successful fetch.",
   );
   renderChartGrid([]);
+  setRangeRenderPending(false);
+  updateRangeButtons();
+}
+
+function renderRangeDependentSections(payload, derived, responseMeta = {}) {
+  const observations = Array.isArray(payload.observations) ? payload.observations : [];
+  const station = payload.station || {};
+  const totalCount = observations.length || payload.observationCount || 0;
+  const activeRange = getRangeOption(activeRangeId);
+  const activeRangeLabel = activeRange ? activeRange.label : "All";
+
+  stationMeta.textContent = buildHeaderMeta(station, totalCount, activeRangeLabel);
+  stationSummary.textContent = buildHeaderSummary(payload, derived, responseMeta);
+  rangeSummary.textContent = describeRangeSummary(payload, derived, responseMeta);
+
+  renderTwoColumnTable(
+    mastheadDetailsBody,
+    buildMastheadRows(payload, derived, responseMeta),
+    "Station facts will appear after the first successful station fetch.",
+  );
+  renderThreeColumnTable(
+    recentSummaryBody,
+    buildRecentSummaryRows(payload, derived),
+    "Recent view details will appear once the selected range includes enough observations.",
+  );
+  renderTwoColumnTable(
+    stationDetailsBody,
+    buildStationDetailRows(payload, derived),
+    "Station details will appear after the first successful load.",
+  );
+  renderTwoColumnTable(
+    rawSnapshotBody,
+    derived.snapshot,
+    "The latest raw payload will show up here after a successful fetch.",
+  );
+  renderChartGrid(derived.series);
+  setRangeRenderPending(false);
   updateRangeButtons();
 }
 
@@ -343,7 +377,7 @@ function buildRecentSummaryRows(payload, derived) {
     return [];
   }
 
-  const filteredObservations = filterObservationsByRange(payload.observations || [], activeRangeId);
+  const filteredObservations = derived.observations || [];
   const activeRange = getRangeOption(activeRangeId);
   const firstTimestamp = filteredObservations[0]?.timestamp ?? null;
   const lastTimestamp = filteredObservations.at(-1)?.timestamp ?? null;
@@ -623,12 +657,16 @@ function renderRangeButtons() {
     node.dataset.range = option.id;
     node.textContent = option.label;
     node.addEventListener("click", () => {
+      if (option.id === activeRangeId) {
+        return;
+      }
+
       activeRangeId = option.id;
       hasInitializedRange = true;
       updateRangeButtons();
 
       if (latestPayload) {
-        renderDashboard(latestPayload);
+        scheduleRangeViewRender(latestPayload);
       }
     });
     rangeButtonGroup.appendChild(node);
@@ -672,12 +710,33 @@ function syncActiveRange(payload) {
   hasInitializedRange = true;
 }
 
+function getDerivedView(payload, rangeId) {
+  const cacheKey =
+    payload?.fetchedAt ||
+    `${payload?.timeRange?.endAt || ""}:${payload?.observationCount || 0}`;
+
+  if (cacheKey !== derivedViewCacheKey) {
+    derivedViewCacheKey = cacheKey;
+    derivedViewCache.clear();
+  }
+
+  if (derivedViewCache.has(rangeId)) {
+    return derivedViewCache.get(rangeId);
+  }
+
+  const derived = buildDerivedView(payload, rangeId);
+  derivedViewCache.set(rangeId, derived);
+  return derived;
+}
+
 function buildDerivedView(payload, rangeId) {
   const observations = Array.isArray(payload.observations) ? payload.observations : [];
   const filteredObservations = filterObservationsByRange(observations, rangeId);
   const latest = filteredObservations.at(-1) || null;
 
   return {
+    observations: filteredObservations,
+    latest,
     observationCount: filteredObservations.length,
     series: buildSeries(filteredObservations),
     snapshot: latest ? flattenSnapshot(latest) : [],
@@ -1024,6 +1083,121 @@ function spanBetween(startTimestamp, endTimestamp) {
 function closeNavMenu() {
   navMenu?.classList.remove("is-open");
   navToggle?.setAttribute("aria-expanded", "false");
+}
+
+function handleSectionLinkClick(event) {
+  const link = event.currentTarget;
+
+  if (!(link instanceof HTMLAnchorElement)) {
+    return;
+  }
+
+  const href = link.getAttribute("href");
+
+  if (!href?.startsWith("#")) {
+    closeNavMenu();
+    return;
+  }
+
+  const target = document.getElementById(href.slice(1));
+
+  if (!target) {
+    closeNavMenu();
+    return;
+  }
+
+  event.preventDefault();
+  setActiveSectionLink(target.id);
+  closeNavMenu();
+  scrollToSection(target);
+}
+
+function scrollToSection(target) {
+  const navHeight = sectionNav?.offsetHeight ?? 0;
+  const targetTop = target.getBoundingClientRect().top + window.scrollY - navHeight - 12;
+  window.scrollTo({
+    top: Math.max(targetTop, 0),
+    behavior: "auto",
+  });
+}
+
+function setActiveSectionLink(sectionId) {
+  if (!sectionId) {
+    return;
+  }
+
+  activeSectionId = sectionId;
+
+  for (const link of sectionLinks) {
+    const isActive = link.getAttribute("href") === `#${sectionId}`;
+    link.classList.toggle("is-active", isActive);
+
+    if (isActive) {
+      link.setAttribute("aria-current", "page");
+    } else {
+      link.removeAttribute("aria-current");
+    }
+  }
+}
+
+function handleWindowScroll() {
+  if (sectionScrollFrame) {
+    return;
+  }
+
+  sectionScrollFrame = window.requestAnimationFrame(() => {
+    sectionScrollFrame = 0;
+    updateActiveSectionFromScroll();
+  });
+}
+
+function updateActiveSectionFromScroll() {
+  if (!sectionTargets.length) {
+    return;
+  }
+
+  const navHeight = sectionNav?.offsetHeight ?? 0;
+  const activationOffset = navHeight + 28;
+  let nextActiveSectionId = sectionTargets[0].id;
+
+  for (const target of sectionTargets) {
+    if (target.element.getBoundingClientRect().top - activationOffset <= 0) {
+      nextActiveSectionId = target.id;
+    } else {
+      break;
+    }
+  }
+
+  if (nextActiveSectionId !== activeSectionId) {
+    setActiveSectionLink(nextActiveSectionId);
+  }
+}
+
+function scheduleRangeViewRender(payload) {
+  const renderId = pendingRangeRenderId + 1;
+  pendingRangeRenderId = renderId;
+  setRangeRenderPending(true);
+
+  window.requestAnimationFrame(() => {
+    if (renderId !== pendingRangeRenderId) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      if (renderId !== pendingRangeRenderId) {
+        return;
+      }
+
+      const derived = getDerivedView(payload, activeRangeId);
+      renderRangeDependentSections(payload, derived, payload.responseMeta || {});
+      updateActiveSectionFromScroll();
+    });
+  });
+}
+
+function setRangeRenderPending(isPending) {
+  rangeButtonGroup.classList.toggle("is-pending", isPending);
+  rangeButtonGroup.setAttribute("aria-busy", String(isPending));
 }
 
 function scheduleNextRefresh(delayMs = defaultRefreshIntervalMs) {
