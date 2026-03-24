@@ -218,12 +218,18 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
         value: item.value,
       }))
     : [];
+  const summaryPeriodMatrixView =
+    activeView === "month"
+      ? "month"
+      : activeView === "current" || activeView === "week"
+        ? "week"
+        : null;
   const summaryArchive = isSummariesTab
     ? await loadWeatherSummaryArchive(data.station.macAddress)
     : null;
   const periodMatrices =
-    isSummariesTab && activeView === "week"
-      ? buildWeatherPeriodMatrices(data.observations, activeView)
+    isSummariesTab && summaryPeriodMatrixView
+      ? buildWeatherPeriodMatrices(data.observations, summaryPeriodMatrixView)
       : [];
   const monthCalendar =
     isSummariesTab && activeView === "month"
@@ -257,7 +263,9 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
                 Monosyth Personal Weather
               </p>
               <h1 className={styles.heroTitle}>
-                {data.station.name}
+                <Link href="/weather" className={styles.heroTitleLink}>
+                  {data.station.name}
+                </Link>
               </h1>
               <p className={styles.heroMeta}>
                 {buildHeaderMeta(data, coordinates)}

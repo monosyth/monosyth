@@ -108,6 +108,16 @@
   letter-spacing: -0.04em;
 }
 
+.heroTitleLink {
+  color: inherit;
+  text-decoration: none;
+  transition: opacity 160ms ease;
+}
+
+.heroTitleLink:hover {
+  opacity: 0.9;
+}
+
 .heroMeta {
   margin-top: 0.2rem;
   max-width: 56rem;
