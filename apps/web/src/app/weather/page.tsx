@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { getTimes } from "suncalc";
 
 import { WeatherCameraGrid } from "@/components/weather/camera-grid";
+import { WeatherPageTabs } from "@/components/weather/page-tabs";
 import { RadarEmbed } from "@/components/weather/radar-embed";
 import styles from "@/app/weather/weather.module.css";
 import {
@@ -172,21 +173,6 @@ function normalizeWeatherDocumentTab(value?: string): WeatherDocumentTab {
   return "dashboard";
 }
 
-function buildWeatherHref(view: WeatherDashboardView, tab: WeatherDocumentTab = "dashboard") {
-  const params = new URLSearchParams();
-
-  if (view !== "current") {
-    params.set("view", view);
-  }
-
-  if (tab !== "dashboard") {
-    params.set("tab", tab);
-  }
-
-  const query = params.toString();
-  return query ? `/weather?${query}` : "/weather";
-}
-
 export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const resolvedSearchParams = (await searchParams) ?? {};
   const activeView = normalizeWeatherDashboardView(resolvedSearchParams.view);
@@ -345,44 +331,12 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
             </div>
           </div>
         </div>
-        <div className={styles.tabShell}>
-          <div className={styles.tabInner}>
-            <div className={styles.primaryTabs}>
-              {summaryTabs.map((tab) => {
-                const isActive = tab.view === activeView;
-                const href = buildWeatherHref(tab.view, activeDocumentTab);
-
-                return (
-                  <Link
-                    key={tab.view}
-                    href={href}
-                    prefetch
-                    scroll={false}
-                    className={`${styles.primaryTab} ${isActive ? styles.primaryTabActive : styles.primaryTabInactive}`}
-                  >
-                    {tab.label}
-                  </Link>
-                );
-              })}
-            </div>
-            <div className={styles.secondaryTabs}>
-              {documentTabs.map((tab) => (
-                <Link
-                  key={tab.tab}
-                  href={buildWeatherHref(activeView, tab.tab)}
-                  scroll={false}
-                  className={`${styles.secondaryTab} ${
-                    activeDocumentTab === tab.tab
-                      ? styles.secondaryTabActive
-                      : styles.secondaryTabInactive
-                  }`}
-                >
-                  {tab.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
+        <WeatherPageTabs
+          summaryTabs={summaryTabs}
+          documentTabs={documentTabs}
+          activeView={activeView}
+          activeDocumentTab={activeDocumentTab}
+        />
       </header>
 
       <div className={styles.contentShell}>
