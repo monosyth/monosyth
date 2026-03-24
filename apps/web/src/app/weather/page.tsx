@@ -15,6 +15,7 @@ import {
 import { buildWeatherAlmanac } from "@/lib/weather/almanac";
 import { nearbyWeatherCameras, type WeatherCamera } from "@/lib/weather/cameras";
 import {
+  readStoredWeatherObservations,
   readStoredWeatherObservationsBetween,
   readStoredWeatherObservationsForDay,
 } from "@/lib/weather/history";
@@ -224,12 +225,19 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
       : activeView === "current" || activeView === "week"
         ? "week"
         : null;
+  const summaryMatrixObservations =
+    isSummariesTab && activeView === "current"
+      ? await readStoredWeatherObservations({
+          macAddress: data.station.macAddress,
+          range: "week",
+        }).catch(() => data.observations)
+      : data.observations;
   const summaryArchive = isSummariesTab
     ? await loadWeatherSummaryArchive(data.station.macAddress)
     : null;
   const periodMatrices =
     isSummariesTab && summaryPeriodMatrixView
-      ? buildWeatherPeriodMatrices(data.observations, summaryPeriodMatrixView)
+      ? buildWeatherPeriodMatrices(summaryMatrixObservations, summaryPeriodMatrixView)
       : [];
   const monthCalendar =
     isSummariesTab && activeView === "month"
