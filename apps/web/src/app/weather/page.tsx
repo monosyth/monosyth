@@ -239,9 +239,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
       }))
     : [];
   const summaryPeriodMatrixView =
-    activeView === "month"
-      ? "month"
-      : activeView === "current" || activeView === "week"
+    activeView === "current" || activeView === "week"
         ? "week"
         : null;
   const [comparisonPanels, summaryMatrixObservations, summaryArchive] = await Promise.all([
@@ -847,7 +845,7 @@ function SummaryArchiveTabContent({
     <div className="space-y-4">
       {monthCalendar ? <MonthClimateCalendar calendar={monthCalendar} /> : null}
 
-      {periodMatrices.length ? (
+      {activeView !== "month" && periodMatrices.length ? (
         <div className="grid gap-4">
           {periodMatrices.map((matrix) => (
             <DailyPeriodClimateTable

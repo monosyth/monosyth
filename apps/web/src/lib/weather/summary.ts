@@ -109,7 +109,7 @@ type DayAggregate = {
   label: string;
   maxTemp: MetricRecord | null;
   minTemp: MetricRecord | null;
-  maxDailyRain: MetricRecord | null;
+  dailyRainTotal: MetricRecord | null;
   maxLightning: MetricRecord | null;
 };
 
@@ -293,8 +293,8 @@ export function buildWeatherMonthCalendar(
       highDisplay: aggregate?.maxTemp ? formatNumber(aggregate.maxTemp.value, 1) : "-",
       lowValue: aggregate?.minTemp?.value ?? null,
       lowDisplay: aggregate?.minTemp ? formatNumber(aggregate.minTemp.value, 1) : "-",
-      rainValue: aggregate?.maxDailyRain?.value ?? null,
-      rainDisplay: aggregate?.maxDailyRain ? formatNumber(aggregate.maxDailyRain.value, 2) : "-",
+      rainValue: aggregate?.dailyRainTotal?.value ?? null,
+      rainDisplay: aggregate?.dailyRainTotal ? formatNumber(aggregate.dailyRainTotal.value, 2) : "-",
     } satisfies WeatherMonthCalendarDay;
   });
 
@@ -312,8 +312,12 @@ export function buildWeatherMonthCalendar(
 
 function buildDayAggregates(observations: WeatherObservation[]) {
   const dayMap = new Map<string, DayAggregate>();
+  const sortedObservations = [...observations].sort(
+    (left, right) => (left.timestamp ?? 0) - (right.timestamp ?? 0),
+  );
+  let previousDailyRain: number | null = null;
 
-  for (const observation of observations) {
+  for (const observation of sortedObservations) {
     const timestamp = observation.timestamp ?? 0;
 
     if (!timestamp) {
@@ -329,16 +333,29 @@ function buildDayAggregates(observations: WeatherObservation[]) {
       label: `${parts.month}/${parts.day}/${parts.year}`,
       maxTemp: null,
       minTemp: null,
-      maxDailyRain: null,
+      dailyRainTotal: null,
       maxLightning: null,
     };
 
     aggregate.maxTemp = pickHighRecord(aggregate.maxTemp, pickObservationRecord(observation, ["tempf"]));
     aggregate.minTemp = pickLowRecord(aggregate.minTemp, pickObservationRecord(observation, ["tempf"]));
-    aggregate.maxDailyRain = pickHighRecord(
-      aggregate.maxDailyRain,
-      pickObservationRecord(observation, ["dailyrainin"]),
-    );
+    const dailyRain = pickNumber(observation, ["dailyrainin"]);
+
+    if (dailyRain !== null) {
+      const rainIncrement =
+        previousDailyRain === null
+          ? dailyRain
+          : dailyRain + 1e-6 >= previousDailyRain
+            ? Math.max(dailyRain - previousDailyRain, 0)
+            : dailyRain;
+
+      aggregate.dailyRainTotal = {
+        value: roundMetric((aggregate.dailyRainTotal?.value ?? 0) + rainIncrement, 4),
+        timestamp,
+      };
+      previousDailyRain = dailyRain;
+    }
+
     aggregate.maxLightning = pickHighRecord(
       aggregate.maxLightning,
       pickObservationRecord(observation, ["lightning_day", "lightning"]),
@@ -376,7 +393,7 @@ function buildRainfallRows(
   dayMap: Map<string, DayAggregate>,
 ): WeatherPeriodMatrixRow[] {
   const rain = columns.map((column) =>
-    buildMetricCell(dayMap.get(column.key)?.maxDailyRain, 2, column.isFuture),
+    buildMetricCell(dayMap.get(column.key)?.dailyRainTotal, 2, column.isFuture),
   );
 
   return [
@@ -416,8 +433,8 @@ function buildYearAggregates(observations: WeatherObservation[], dayMap: Map<str
     const monthAggregate = getMonthAggregate(yearAggregate, day.month);
 
     monthAggregate.observationDays += 1;
-    monthAggregate.rainTotal += day.maxDailyRain?.value ?? 0;
-    monthAggregate.rainyDays += (day.maxDailyRain?.value ?? 0) > 0 ? 1 : 0;
+    monthAggregate.rainTotal += day.dailyRainTotal?.value ?? 0;
+    monthAggregate.rainyDays += (day.dailyRainTotal?.value ?? 0) > 0 ? 1 : 0;
     monthAggregate.lightningTotal += Math.round(day.maxLightning?.value ?? 0);
   }
 
@@ -450,7 +467,7 @@ function buildRecordSections(
     {
       title: "Precipitation",
       rows: [
-        buildMetricRow("Highest Daily Rainfall", findExtremeDay(dayAggregates, "maxDailyRain", "max"), 2, "in", true),
+        buildMetricRow("Highest Daily Rainfall", findExtremeDay(dayAggregates, "dailyRainTotal", "max"), 2, "in", true),
         buildMetricRow("Highest Rain Rate", findExtremeObservation(observations, ["hourlyrainin"], "max"), 2, "in/h"),
       ].filter((row): row is WeatherSummaryRecordRow => row !== null),
     },
@@ -666,7 +683,7 @@ function findExtremeObservation(
 
 function findExtremeDay(
   days: DayAggregate[],
-  key: "maxDailyRain" | "maxLightning",
+  key: "dailyRainTotal" | "maxLightning",
   mode: "min" | "max",
 ) {
   let winner: MetricRecord | null = null;
@@ -861,6 +878,11 @@ function formatNumber(value: number, decimals: number) {
     minimumFractionDigits: 0,
     maximumFractionDigits: decimals,
   });
+}
+
+function roundMetric(value: number, decimals: number) {
+  const precision = 10 ** decimals;
+  return Math.round(value * precision) / precision;
 }
 
 function formatSummaryDateTime(timestamp: number) {
