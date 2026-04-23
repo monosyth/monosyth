@@ -63,7 +63,7 @@ export function AuthConsoleCard() {
               href="/app"
               className="rounded-full bg-[var(--gold)] px-4 py-2 text-sm font-medium text-stone-950 transition hover:bg-[#ffd774]"
             >
-              enter
+              enter studio
             </Link>
             <ActionButton onClick={() => void signOut()} disabled={isWorking}>
               {isWorking ? "working..." : "sign out"}
@@ -75,7 +75,7 @@ export function AuthConsoleCard() {
             primary
             disabled={!isConfigured || isWorking}
           >
-            {isWorking ? "working..." : "sign in"}
+            {isWorking ? "working..." : "admin sign in"}
           </ActionButton>
         )}
       </div>

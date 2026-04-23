@@ -6,22 +6,19 @@ const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://monosyth.com";
 
 export const metadata: Metadata = {
-  title: "Monosyth RSVP Studio",
-  description:
-    "A personal RSVP experience inspired by RSVPify and rebuilt inside Monosyth.",
+  title: "Monosyth Events",
+  description: "Browse upcoming events and send your RSVP.",
   openGraph: {
-    title: "Monosyth RSVP Studio",
-    description:
-      "A personal RSVP experience inspired by RSVPify and rebuilt inside Monosyth.",
+    title: "Monosyth Events",
+    description: "Browse upcoming events and send your RSVP.",
     url: `${siteUrl}/rsvp`,
     siteName: "Monosyth",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Monosyth RSVP Studio",
-    description:
-      "A personal RSVP experience inspired by RSVPify and rebuilt inside Monosyth.",
+    title: "Monosyth Events",
+    description: "Browse upcoming events and send your RSVP.",
   },
 };
 

@@ -51,9 +51,8 @@ export function AppShell() {
           The Monosyth studio is ready for sign-in.
         </h1>
         <p className="mt-4 max-w-2xl text-base leading-8 text-stone-700">
-          This route is your private workspace for Monosyth. Once you sign in,
-          it becomes the place to shape the site, manage internal tools, and
-          build whatever comes next.
+          Sign in to manage Monosyth settings, event details, and the parts of
+          the site that require account access.
         </p>
 
         <div className="mt-6 flex flex-wrap gap-3">
@@ -63,7 +62,7 @@ export function AppShell() {
             disabled={!isConfigured || isWorking}
             className="rounded-full bg-[var(--pine)] px-5 py-3 text-sm font-medium text-stone-50 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isWorking ? "Working..." : "Sign in with Google"}
+            {isWorking ? "Working..." : "Admin sign in with Google"}
           </button>
           <Link
             href="/"
@@ -101,9 +100,7 @@ export function AppShell() {
               Welcome to the Monosyth studio.
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-8 text-stone-700">
-              This is your private admin layer. From here, we can grow
-              dashboards, controls, tools, and internal workflows without
-              turning the site into a multi-user product.
+              Manage settings, content, and site tools from one place.
             </p>
           </div>
           <button
@@ -126,8 +123,7 @@ export function AppShell() {
             Signed in as {profile?.displayName ?? user?.displayName ?? user?.email ?? "monosyth"}
           </h2>
           <p className="mt-3 text-sm leading-7 text-stone-700">
-            Use this studio layer for admin controls, internal notes, and the
-            parts of Monosyth that are only for you.
+            Account access is active for site management and private routes.
           </p>
         </article>
         <article className="glass-panel rounded-[1.75rem] px-5 py-6">
@@ -139,10 +135,10 @@ export function AppShell() {
           </h2>
           <p className="mt-3 text-sm leading-7 text-stone-700">
             {profileStatus === "ready"
-              ? "Your private studio document is connected and syncing."
+              ? "Your account data is connected and syncing."
               : profileStatus === "loading"
-                ? "Signing in worked. Firestore is syncing the studio data now."
-                : "The route is ready for Firestore-backed settings, content, and tools."}
+                ? "Signing in worked. Your account data is syncing now."
+                : "This area is ready for account-backed settings and content."}
           </p>
           <div className="mt-4 rounded-2xl border border-stone-900/10 bg-white/70 px-4 py-3 text-sm text-stone-700">
             Last login: {formatTimestamp(profile?.lastLoginAt ?? null)}
@@ -150,14 +146,14 @@ export function AppShell() {
         </article>
         <article className="glass-panel rounded-[1.75rem] px-5 py-6">
           <p className="font-mono text-xs uppercase tracking-[0.28em] text-stone-500">
-            Next
+            Ready
           </p>
           <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">
-            First private tools
+            Available controls
           </h2>
           <p className="mt-3 text-sm leading-7 text-stone-700">
-            The next coding move can be an admin dashboard, content controls,
-            or a lightweight internal tool powered by Firebase data.
+            Open the routes you manage most often and keep key tools close at
+            hand.
           </p>
         </article>
       </section>

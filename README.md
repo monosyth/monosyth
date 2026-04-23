@@ -47,6 +47,7 @@ Use Firebase App Hosting with:
 
 - When the user says `deploy`, treat that as approval to proceed with the normal deployment flow for this repo without asking for an extra conversational confirmation step first.
 - For the main site, that normally means committing the current intended changes and pushing `main` so Firebase App Hosting can roll out the update.
+- After completing an intended repo update, stage it, commit it, and push it to GitHub before handing off unless the user explicitly says not to push yet.
 - In Codex desktop, a tool-level approval popup may still appear for commands like `git commit` or `git push` if the sandbox requires it. That popup is enforced by the runtime, not by project policy.
 - If the environment has already approved the needed Git command prefixes, deploy can proceed without any extra interruption.
 

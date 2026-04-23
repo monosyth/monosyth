@@ -15,6 +15,7 @@ import {
   signOut as firebaseSignOut,
 } from "firebase/auth";
 
+import { isMonosythAdminEmail } from "@/lib/auth/admin";
 import { getFirebaseAuth, getGoogleProvider } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import {
@@ -104,6 +105,14 @@ export function AuthProvider({
     }
 
     return onAuthStateChanged(auth, (nextUser) => {
+      if (nextUser && !isMonosythAdminEmail(nextUser.email)) {
+        setError("This Google account is not approved for Monosyth admin access.");
+        setIsWorking(false);
+        void firebaseSignOut(auth);
+        applyUser(null);
+        return;
+      }
+
       applyUser(nextUser);
     });
   }, []);
@@ -181,7 +190,12 @@ export function AuthProvider({
     setError(null);
 
     try {
-      await signInWithPopup(auth, getGoogleProvider());
+      const credential = await signInWithPopup(auth, getGoogleProvider());
+
+      if (!isMonosythAdminEmail(credential.user.email)) {
+        await firebaseSignOut(auth);
+        setError("This Google account is not approved for Monosyth admin access.");
+      }
     } catch (nextError) {
       const message =
         nextError instanceof Error

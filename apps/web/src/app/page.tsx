@@ -13,13 +13,12 @@ export default function Home() {
 
               <div className="max-w-xl space-y-4">
                 <p className="text-base leading-7 text-stone-700 sm:text-lg">
-                  Monosyth is a private studio for personal tools, experiments,
-                  and systems that are not meant to be browsed from the public
-                  homepage.
+                  Monosyth is a simple home for events, tools, and services
+                  that are reached through direct links and sign-in.
                 </p>
                 <p className="text-sm leading-7 text-stone-500 sm:text-base">
-                  The public page stays intentionally minimal. Private apps live
-                  behind direct access and sign-in.
+                  The public page stays intentionally minimal. Use your direct
+                  link or sign in to continue.
                 </p>
               </div>
             </div>

@@ -55,7 +55,7 @@ committing it to source control.
 
 - `/`: brand home and auth-aware landing page
 - `/app`: first protected app shell
-- `/rsvp`: personal RSVP experience inspired by RSVPify
+- `/rsvp`: multi-event RSVP route with online submissions and admin editing
 - `/weather`: Ambient Weather dashboard route
 
 ## Notes
