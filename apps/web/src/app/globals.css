@@ -28,6 +28,19 @@
   --studio-panel-background: rgba(255, 255, 255, 0.7);
   --studio-panel-shadow: 0 16px 60px rgba(32, 28, 24, 0.08);
   --studio-grid-line: rgba(19, 19, 19, 0.05);
+  --rsvp-ink: #16312c;
+  --rsvp-accent: #4d9f86;
+  --rsvp-mint: #d7f3e3;
+  --rsvp-accent-soft: #d7f3e3;
+  --rsvp-blush: #ffe7db;
+  --rsvp-border: rgba(22, 49, 44, 0.12);
+  --rsvp-panel-background: rgba(255, 255, 255, 0.7);
+  --rsvp-panel-shadow: 0 24px 70px rgba(33, 41, 37, 0.1);
+  --rsvp-shell-background:
+    radial-gradient(circle at 10% 10%, rgba(255, 214, 191, 0.58), transparent 24%),
+    radial-gradient(circle at 85% 14%, rgba(194, 240, 220, 0.68), transparent 26%),
+    radial-gradient(circle at 50% 85%, rgba(239, 225, 209, 0.86), transparent 30%),
+    linear-gradient(180deg, #fbf8f3 0%, #f2ece3 52%, #ebe6dc 100%);
 }
 
 @theme inline {
@@ -257,6 +270,87 @@ a {
   --studio-panel-background: rgba(27, 35, 39, 0.84);
   --studio-panel-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
   --studio-grid-line: rgba(230, 218, 203, 0.06);
+}
+
+.rsvp-shell {
+  background: var(--rsvp-shell-background);
+}
+
+.rsvp-panel {
+  background: var(--rsvp-panel-background);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow: var(--rsvp-panel-shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.rsvp-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.64), transparent 30%),
+    linear-gradient(180deg, transparent 65%, rgba(77, 159, 134, 0.05));
+}
+
+.rsvp-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(77, 159, 134, 0.18);
+  background: rgba(255, 255, 255, 0.72);
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(22, 49, 44, 0.68);
+}
+
+.rsvp-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(22, 49, 44, 0.12);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.72));
+  padding: 0.85rem 1.2rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  color: var(--rsvp-ink);
+  box-shadow: 0 16px 34px rgba(33, 41, 37, 0.08);
+}
+
+.rsvp-brand-mark::before {
+  content: "";
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 999px;
+  margin-right: 0.7rem;
+  background:
+    radial-gradient(circle at 35% 35%, #fdf8f2 0 22%, transparent 23%),
+    linear-gradient(135deg, #4d9f86, #ed9d75);
+  box-shadow: 0 0 0 4px rgba(77, 159, 134, 0.12);
+}
+
+@keyframes rsvp-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rsvp-reveal {
+  animation: rsvp-reveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .studio-theme[data-studio-theme="night"] .glass-panel,
