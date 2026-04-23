@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
+import {
+  Bebas_Neue,
+  IBM_Plex_Mono,
+  Playfair_Display,
+  Space_Grotesk,
+} from "next/font/google";
 
 import { AuthProvider } from "@/components/auth/auth-provider";
 
@@ -15,6 +20,19 @@ const ibmPlexMono = IBM_Plex_Mono({
   variable: "--font-ibm-plex-mono",
   subsets: ["latin"],
   weight: ["400", "500"],
+});
+
+const playfairDisplay = Playfair_Display({
+  variable: "--font-playfair-display",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
+  style: ["normal", "italic"],
+});
+
+const bebasNeue = Bebas_Neue({
+  variable: "--font-bebas-neue",
+  subsets: ["latin"],
+  weight: ["400"],
 });
 
 const siteUrl =
@@ -38,7 +56,7 @@ export const metadata: Metadata = {
   },
 };
 
-const bodyClassName = `${spaceGrotesk.variable} ${ibmPlexMono.variable} min-h-full`;
+const bodyClassName = `${spaceGrotesk.variable} ${ibmPlexMono.variable} ${playfairDisplay.variable} ${bebasNeue.variable} min-h-full`;
 
 export default function RootLayout({
   children,

@@ -31,7 +31,53 @@ export type RSVPQuestion = {
   max?: number;
   options?: RSVPOption[];
   showWhen?: RSVPConditionalRule;
+  imageUrl?: string;
+  imageAlt?: string;
 };
+
+export type RSVPImageAsset = {
+  id: string;
+  label: string;
+  url: string;
+};
+
+/**
+ * Catalog of images bundled with the RSVP app. Admins can assign these to any
+ * question from the admin studio. Add new entries here (and drop the image
+ * file in `public/rsvp-images/`) to extend the picker.
+ */
+export const RSVP_IMAGE_LIBRARY: RSVPImageAsset[] = [
+  {
+    id: "dallas-hero",
+    label: "Dallas — hero portrait",
+    url: "/rsvp-images/dallas-hero.webp",
+  },
+  {
+    id: "bavettes",
+    label: "Bavette's — CEO of Sin dinner",
+    url: "/rsvp-images/bavettes.webp",
+  },
+  {
+    id: "cabana",
+    label: "Bellagio poolside cabana",
+    url: "/rsvp-images/cabana.jpg",
+  },
+  {
+    id: "kelly",
+    label: "Kelly Clarkson concert",
+    url: "/rsvp-images/kelly.jpg",
+  },
+  {
+    id: "speedway",
+    label: "SpeedVegas racing",
+    url: "/rsvp-images/speedway.jpg",
+  },
+];
+
+export function getRsvpImageByUrl(url: string | undefined) {
+  if (!url) return undefined;
+  return RSVP_IMAGE_LIBRARY.find((asset) => asset.url === url);
+}
 
 export type RSVPEvent = {
   id: string;
@@ -314,21 +360,21 @@ export function duplicateEventTemplate(event: RSVPEvent): RSVPEvent {
 const vegasStudio: RSVPEvent = {
   id: "event-vegas-2026",
   slug: "dallas-in-vegas-2026",
-  eventLabel: "Signature trip",
-  title: "Dallas in Vegas",
-  welcomeTitle: "Come join the Sin, The Fun, The Adrenaline, & The Redemption...",
-  timeframe: "July 30 - August 3",
+  eventLabel: "Dallas turns 34",
+  title: "Dallas's Sin City Birthday Party",
+  welcomeTitle: "We're off to Las Vegas, baby!",
+  timeframe: "July 30 – August 4",
   location: "Las Vegas, Nevada",
   summary:
-    "A long birthday weekend with dinners, shows, themed nights, deposits, and just enough chaos.",
+    "Six nights of dinners, shows, pool time, themed dinners, and just enough redemption.",
   intro:
-    "Join the birthday weekend in Las Vegas for dinners, shows, pool time, and a few beautifully questionable decisions.",
+    "Join Dallas in Sin City for the birthday long weekend — dinners at Zuma, Bavette's, Hell's Kitchen and LAGO; shows, cabana, Kelly Clarkson, and Speed Vegas; plus brunch every morning we manage to open our eyes.",
   notes: [
-    "Please select all events, brunches, and dinners you plan to attend.",
-    "Deposits are required for paid events to secure group seating.",
-    "Restaurant RSVPs are required to reserve your seat at the table.",
-    "All RSVPs and deposits must be submitted by June 10.",
-    "If you are paying for the show, cabana, or concert, please send payment to Scott or Dallas.",
+    "RSVP and submit deposits by June 10th to secure your seat at shows, cabanas, dinners, and brunches.",
+    "Deposits hold group seating for paid events. RSVPs hold your chair at each table.",
+    "Send payment for paid events (Absinthe, Cabana, Kelly Clarkson) to Scott or Dallas.",
+    "You can attend dinners without the paired show — just RSVP separately.",
+    "Themed dinners: 'CEO of Sin' (Friday) and 'The Last Supper: Redemption' (Sunday). Dressing in theme is highly encouraged.",
   ],
   questions: [
     createTextQuestion(
@@ -359,14 +405,18 @@ const vegasStudio: RSVPEvent = {
       min: 1,
       max: 12,
     },
-    createSelectQuestion(
-      "vegas-weekend-status",
-      "weekend-commitment",
-      "Weekend commitment",
-      "Will Dallas see you there?",
-      "Even if you cannot make every part of the trip, mark attending and we will iron out the details after this.",
-      createWeekendOptions(),
-    ),
+    {
+      ...createSelectQuestion(
+        "vegas-weekend-status",
+        "weekend-commitment",
+        "Weekend commitment",
+        "Will Dallas see you there?",
+        "Even if you cannot make every part of the trip, mark attending and we will iron out the details after this.",
+        createWeekendOptions(),
+      ),
+      imageUrl: "/rsvp-images/dallas-hero.webp",
+      imageAlt: "Dallas on a Vegas hotel balcony",
+    },
     createSelectQuestion(
       "vegas-zuma-dinner",
       "zuma-dinner",
@@ -393,30 +443,38 @@ const vegasStudio: RSVPEvent = {
         equalsAny: ["attending"],
       },
     ),
-    createSelectQuestion(
-      "vegas-cabana",
-      "poolside-cabana",
-      "Pool day",
-      "Poolside Cabana! ($70 ea.) Bellagio, Friday July 31",
-      "Verona Cabana at Bellagio with food, beverage service, and shaded seating from 9:00am to 5:00pm. Deposits are needed by June 10th.",
-      createAttendanceOptions("Decide by June 10th."),
-      {
-        questionId: "vegas-weekend-status",
-        equalsAny: ["attending"],
-      },
-    ),
-    createSelectQuestion(
-      "vegas-sinners-dinner",
-      "sinners-dinner",
-      "Themed dinner",
-      "Sinners Dinner! (Themed) Friday, July 31",
-      "The first themed dinner: \"Welcome to Sin!\" at Bavette's Steakhouse inside Park MGM. Dressing in theme is highly encouraged.",
-      createAttendanceOptions("Will be added to the reservation."),
-      {
-        questionId: "vegas-weekend-status",
-        equalsAny: ["attending"],
-      },
-    ),
+    {
+      ...createSelectQuestion(
+        "vegas-cabana",
+        "poolside-cabana",
+        "Pool day",
+        "Poolside Cabana! ($70 ea.) Bellagio, Friday July 31",
+        "Verona Cabana at Bellagio with food, beverage service, and shaded seating from 9:00am to 5:00pm. Deposits are needed by June 10th.",
+        createAttendanceOptions("Decide by June 10th."),
+        {
+          questionId: "vegas-weekend-status",
+          equalsAny: ["attending"],
+        },
+      ),
+      imageUrl: "/rsvp-images/cabana.jpg",
+      imageAlt: "Bellagio poolside cabana with misters and loungers",
+    },
+    {
+      ...createSelectQuestion(
+        "vegas-sinners-dinner",
+        "sinners-dinner",
+        "Themed dinner",
+        "Sinners Dinner! (Themed) Friday, July 31",
+        "The first themed dinner: \"Welcome to Sin!\" at Bavette's Steakhouse inside Park MGM. Dressing in theme is highly encouraged.",
+        createAttendanceOptions("Will be added to the reservation."),
+        {
+          questionId: "vegas-weekend-status",
+          equalsAny: ["attending"],
+        },
+      ),
+      imageUrl: "/rsvp-images/bavettes.webp",
+      imageAlt: "Bavette's Steakhouse dining room",
+    },
     createSelectQuestion(
       "vegas-toca-madera",
       "toca-madera-brunch",
@@ -441,18 +499,22 @@ const vegasStudio: RSVPEvent = {
         equalsAny: ["attending"],
       },
     ),
-    createSelectQuestion(
-      "vegas-kelly",
-      "kelly-clarkson",
-      "Concert ticket",
-      "Kelly Clarkson! Sat. Aug 1st. $256 per person!",
-      "Tickets for group seating next to Dallas are $256 per person. Deposit needed by June 10th, or you can buy your own seats elsewhere.",
-      createAttendanceOptions("You can always buy tickets on your own."),
-      {
-        questionId: "vegas-weekend-status",
-        equalsAny: ["attending"],
-      },
-    ),
+    {
+      ...createSelectQuestion(
+        "vegas-kelly",
+        "kelly-clarkson",
+        "Concert ticket",
+        "Kelly Clarkson! Sat. Aug 1st. $256 per person!",
+        "Tickets for group seating next to Dallas are $256 per person. Deposit needed by June 10th, or you can buy your own seats elsewhere.",
+        createAttendanceOptions("You can always buy tickets on your own."),
+        {
+          questionId: "vegas-weekend-status",
+          equalsAny: ["attending"],
+        },
+      ),
+      imageUrl: "/rsvp-images/kelly.jpg",
+      imageAlt: "Kelly Clarkson performing at Caesar's Colosseum",
+    },
     createSelectQuestion(
       "vegas-sadelles",
       "sadelles-brunch",
@@ -465,32 +527,36 @@ const vegasStudio: RSVPEvent = {
         equalsAny: ["attending"],
       },
     ),
-    createSelectQuestion(
-      "vegas-speed",
-      "speed-vegas",
-      "Adrenaline",
-      "Speed Vegas: Sun. Aug 2 Racing + Go-Karts!",
-      "Choose between exotic car racing, passenger drifting, or go-karts. Dallas will contact the venue based on what everyone wants to do.",
-      [
-        createOption("vegas-speed-attending", "attending", "Attending"),
-        createOption(
-          "vegas-speed-maybe",
-          "might-attend",
-          "Might Attend",
-          "Decide by June 10th.",
-        ),
-        createOption(
-          "vegas-speed-no",
-          "cant-make-it",
-          "Can't Make It",
-          "Too butch for me!",
-        ),
-      ],
-      {
-        questionId: "vegas-weekend-status",
-        equalsAny: ["attending"],
-      },
-    ),
+    {
+      ...createSelectQuestion(
+        "vegas-speed",
+        "speed-vegas",
+        "Adrenaline",
+        "Speed Vegas: Sun. Aug 2 Racing + Go-Karts!",
+        "Choose between exotic car racing, passenger drifting, or go-karts. Dallas will contact the venue based on what everyone wants to do.",
+        [
+          createOption("vegas-speed-attending", "attending", "Attending"),
+          createOption(
+            "vegas-speed-maybe",
+            "might-attend",
+            "Might Attend",
+            "Decide by June 10th.",
+          ),
+          createOption(
+            "vegas-speed-no",
+            "cant-make-it",
+            "Can't Make It",
+            "Too butch for me!",
+          ),
+        ],
+        {
+          questionId: "vegas-weekend-status",
+          equalsAny: ["attending"],
+        },
+      ),
+      imageUrl: "/rsvp-images/speedway.jpg",
+      imageAlt: "SpeedVegas exotic car racing track",
+    },
     createMultiSelectQuestion(
       "vegas-speed-interests",
       "speed-vegas-interests",
@@ -859,9 +925,13 @@ const retreatStudio: RSVPEvent = {
 
 export function createSeededStudio(): RSVPStudio {
   return {
-    events: [vegasStudio, salonStudio, retreatStudio],
+    events: [vegasStudio],
   };
 }
+
+// Retained for potential future seeding; not exported from createSeededStudio.
+void salonStudio;
+void retreatStudio;
 
 function normalizeOption(
   input: Partial<RSVPOption> | undefined,
@@ -912,6 +982,14 @@ function normalizeQuestion(
     max:
       typeof input?.max === "number" && Number.isFinite(input.max)
         ? input.max
+        : undefined,
+    imageUrl:
+      typeof input?.imageUrl === "string" && input.imageUrl.trim()
+        ? input.imageUrl.trim()
+        : undefined,
+    imageAlt:
+      typeof input?.imageAlt === "string" && input.imageAlt.trim()
+        ? input.imageAlt.trim()
         : undefined,
   };
 
