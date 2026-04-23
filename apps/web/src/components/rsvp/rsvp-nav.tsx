@@ -1,0 +1,276 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+
+import { useAuth } from "@/components/auth/auth-provider";
+import { isMonosythAdminEmail } from "@/lib/auth/admin";
+
+type NavItem = {
+  label: string;
+  href: string;
+  /** Matches the path exactly or prefix (used for Day links). */
+  match?: "exact" | "prefix";
+  children?: { label: string; href: string }[];
+};
+
+const NAV_ITEMS: NavItem[] = [
+  { label: "Home", href: "/rsvp", match: "exact" },
+  { label: "Overview", href: "/rsvp/overview" },
+  { label: "Hotel", href: "/rsvp/hotel" },
+  { label: "Tips", href: "/rsvp/travel-tips" },
+  {
+    label: "Days",
+    href: "/rsvp/day/thursday",
+    match: "prefix",
+    children: [
+      { label: "Day 1 · Thursday", href: "/rsvp/day/thursday" },
+      { label: "Day 2 · Friday", href: "/rsvp/day/friday" },
+      { label: "Day 3 · Saturday", href: "/rsvp/day/saturday" },
+      { label: "Day 4 · Sunday", href: "/rsvp/day/sunday" },
+      { label: "Day 5 · Monday", href: "/rsvp/day/monday" },
+    ],
+  },
+  { label: "Activities", href: "/rsvp/activities" },
+  { label: "Restaurants", href: "/rsvp/restaurants" },
+  { label: "RSVP", href: "/rsvp/rsvp" },
+  { label: "Deposits", href: "/rsvp/deposits" },
+];
+
+function isActive(pathname: string, item: NavItem) {
+  if (item.match === "exact") {
+    return pathname === item.href;
+  }
+  if (item.match === "prefix") {
+    return pathname.startsWith(item.href.split("/").slice(0, -1).join("/"));
+  }
+  return pathname === item.href || pathname.startsWith(`${item.href}/`);
+}
+
+export function RsvpNav() {
+  const pathname = usePathname() ?? "/rsvp";
+  const {
+    isConfigured,
+    isWorking,
+    signInWithGoogle,
+    signOut,
+    status,
+    user,
+  } = useAuth();
+  const canEdit = status === "signed_in" && isMonosythAdminEmail(user?.email);
+  const [daysOpen, setDaysOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  return (
+    <header className="sticky top-0 z-40 border-b border-[var(--rsvp-border-soft)] bg-[rgba(7,4,10,0.82)] backdrop-blur-md">
+      <div className="mx-auto flex w-full max-w-[78rem] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-10">
+        {/* Brand */}
+        <Link
+          href="/rsvp"
+          className="rsvp-brand-mark shrink-0 text-[0.85rem]"
+          aria-label="Back to event home"
+        >
+          Dallas · Sin City
+        </Link>
+
+        {/* Desktop tabs */}
+        <nav className="hidden flex-1 items-center justify-center gap-1 lg:flex">
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(pathname, item);
+            if (item.children) {
+              return (
+                <div
+                  key={item.label}
+                  className="relative"
+                  onMouseEnter={() => setDaysOpen(true)}
+                  onMouseLeave={() => setDaysOpen(false)}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setDaysOpen((v) => !v)}
+                    className={`rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                      active
+                        ? "bg-gradient-to-r from-[var(--rsvp-pink)] to-[#d3278b] text-white shadow-[0_0_14px_rgba(255,61,154,0.45)]"
+                        : "text-[var(--rsvp-ink-dim)] hover:text-[var(--rsvp-ink)]"
+                    }`}
+                  >
+                    {item.label} ▾
+                  </button>
+                  {daysOpen ? (
+                    <div className="absolute left-1/2 top-full w-56 -translate-x-1/2 rounded-2xl border border-[var(--rsvp-border-soft)] bg-[rgba(10,4,18,0.96)] p-2 shadow-[0_20px_48px_rgba(0,0,0,0.6)]">
+                      {item.children.map((c) => (
+                        <Link
+                          key={c.href}
+                          href={c.href}
+                          onClick={() => setDaysOpen(false)}
+                          className={`block rounded-xl px-3 py-2 text-sm transition ${
+                            pathname === c.href
+                              ? "bg-[var(--rsvp-pink)]/15 text-[var(--rsvp-pink-soft)]"
+                              : "text-[var(--rsvp-ink-dim)] hover:bg-white/5 hover:text-[var(--rsvp-ink)]"
+                          }`}
+                        >
+                          {c.label}
+                        </Link>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            }
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                  active
+                    ? "bg-gradient-to-r from-[var(--rsvp-pink)] to-[#d3278b] text-white shadow-[0_0_14px_rgba(255,61,154,0.45)]"
+                    : "text-[var(--rsvp-ink-dim)] hover:text-[var(--rsvp-ink)]"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Auth cluster */}
+        <div className="hidden shrink-0 items-center gap-2 lg:flex">
+          {canEdit ? (
+            <>
+              <Link
+                href="/rsvp/admin"
+                className="rsvp-btn rsvp-btn-neon px-3 py-1.5 text-xs"
+              >
+                Admin
+              </Link>
+              <button
+                type="button"
+                onClick={() => void signOut()}
+                disabled={isWorking}
+                className="rsvp-btn rsvp-btn-ghost px-3 py-1.5 text-xs"
+              >
+                {isWorking ? "…" : "Sign out"}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void signInWithGoogle()}
+              disabled={!isConfigured || isWorking}
+              className="rsvp-btn rsvp-btn-ghost px-3 py-1.5 text-xs"
+            >
+              {isWorking ? "…" : "Admin sign in"}
+            </button>
+          )}
+        </div>
+
+        {/* Mobile hamburger */}
+        <button
+          type="button"
+          aria-label="Toggle menu"
+          aria-expanded={mobileOpen}
+          onClick={() => setMobileOpen((v) => !v)}
+          className="rsvp-btn rsvp-btn-ghost flex h-10 w-10 shrink-0 items-center justify-center p-0 lg:hidden"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            {mobileOpen ? (
+              <>
+                <path d="M6 6l12 12" />
+                <path d="M18 6L6 18" />
+              </>
+            ) : (
+              <>
+                <path d="M4 7h16" />
+                <path d="M4 12h16" />
+                <path d="M4 17h16" />
+              </>
+            )}
+          </svg>
+        </button>
+      </div>
+
+      {/* Mobile panel */}
+      {mobileOpen ? (
+        <div className="border-t border-[var(--rsvp-border-soft)] bg-[rgba(7,4,10,0.95)] px-4 py-4 lg:hidden">
+          <div className="mx-auto flex w-full max-w-[78rem] flex-col gap-1">
+            {NAV_ITEMS.map((item) => (
+              <div key={item.href}>
+                <Link
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`block rounded-xl px-4 py-3 text-sm font-semibold uppercase tracking-[0.2em] transition ${
+                    isActive(pathname, item)
+                      ? "bg-[var(--rsvp-pink)]/15 text-[var(--rsvp-pink-soft)]"
+                      : "text-[var(--rsvp-ink-dim)] hover:bg-white/5 hover:text-[var(--rsvp-ink)]"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+                {item.children ? (
+                  <div className="ml-3 grid gap-1 border-l border-[var(--rsvp-border-soft)] pl-3">
+                    {item.children.map((c) => (
+                      <Link
+                        key={c.href}
+                        href={c.href}
+                        onClick={() => setMobileOpen(false)}
+                        className={`block rounded-lg px-3 py-2 text-sm transition ${
+                          pathname === c.href
+                            ? "bg-[var(--rsvp-teal)]/10 text-[var(--rsvp-teal)]"
+                            : "text-[var(--rsvp-ink-dim)] hover:bg-white/5 hover:text-[var(--rsvp-ink)]"
+                        }`}
+                      >
+                        {c.label}
+                      </Link>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+            <div className="mt-3 border-t border-[var(--rsvp-border-soft)] pt-3">
+              {canEdit ? (
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href="/rsvp/admin"
+                    onClick={() => setMobileOpen(false)}
+                    className="rsvp-btn rsvp-btn-neon px-3 py-1.5 text-xs"
+                  >
+                    Admin studio
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void signOut();
+                      setMobileOpen(false);
+                    }}
+                    disabled={isWorking}
+                    className="rsvp-btn rsvp-btn-ghost px-3 py-1.5 text-xs"
+                  >
+                    {isWorking ? "…" : "Sign out"}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void signInWithGoogle()}
+                  disabled={!isConfigured || isWorking}
+                  className="rsvp-btn rsvp-btn-ghost px-3 py-1.5 text-xs"
+                >
+                  {isWorking ? "…" : "Admin sign in"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </header>
+  );
+}

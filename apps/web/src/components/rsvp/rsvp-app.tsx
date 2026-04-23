@@ -675,7 +675,23 @@ const DINNERS = [
 /* Main component                                                      */
 /* ------------------------------------------------------------------ */
 
-export function RSVPApp() {
+type RSVPAppProps = Readonly<{
+  /**
+   * Which screen to start on. The full event app routes now deep-link into the
+   * wizard via /rsvp/rsvp, so those routes pass `"wizard"`.
+   */
+  initialView?: GuestView;
+  /**
+   * Called when the user clicks a nav action that, in the old single-page app,
+   * would have returned them to the poster landing. The new multi-page app
+   * routes this back to /rsvp via next/navigation. If omitted, falls back to
+   * internal poster view (back-compat for the old landing page).
+   */
+  onExitToHome?: () => void;
+}>;
+
+export function RSVPApp(props: RSVPAppProps = {}) {
+  const { initialView = "poster", onExitToHome } = props;
   const {
     error: authError,
     isConfigured,
@@ -700,7 +716,7 @@ export function RSVPApp() {
   );
   const [adminTab, setAdminTab] = useState<AdminTab>("details");
   const [adminOpen, setAdminOpen] = useState(false);
-  const [guestView, setGuestView] = useState<GuestView>("poster");
+  const [guestView, setGuestView] = useState<GuestView>(initialView);
 
   const [studioLoadState, setStudioLoadState] =
     useState<StudioLoadState>("loading");
@@ -1382,11 +1398,22 @@ export function RSVPApp() {
     />
   ) : null;
 
+  const goHome = () => {
+    if (onExitToHome) {
+      onExitToHome();
+    } else {
+      setGuestView("poster");
+    }
+  };
+
+  const wizardBackHandler = currentStep === 0 ? goHome : handleBack;
+
   /* --------- Guest views --------- */
-  return (
-    <main className="rsvp-shell min-h-screen px-4 pb-24 pt-6 sm:px-8 lg:px-12">
-      <div className="mx-auto flex w-full max-w-[78rem] flex-col gap-10">
-        {/* Header bar */}
+  const content = (
+    <div className="mx-auto flex w-full max-w-[78rem] flex-col gap-10">
+      {/* Embedded-mode: the outer layout provides the nav. Only render the
+          standalone header when we're not in embedded mode. */}
+      {onExitToHome ? null : (
         <header className="flex flex-wrap items-center justify-between gap-4">
           <span className="rsvp-brand-mark">Monosyth Events</span>
           <div className="flex flex-wrap items-center gap-3">
@@ -1420,69 +1447,93 @@ export function RSVPApp() {
             )}
           </div>
         </header>
+      )}
 
-        {adminStudio}
+      {/* Admin studio toggle for embedded mode */}
+      {onExitToHome && canEdit ? (
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            className="rsvp-btn rsvp-btn-neon text-xs"
+            onClick={() => setAdminOpen((v) => !v)}
+          >
+            {adminOpen ? "Close admin studio" : "Open admin studio"}
+          </button>
+        </div>
+      ) : null}
 
-        {/* POSTER VIEW */}
-        {guestView === "poster" ? (
-          <PosterView
-            event={currentEvent}
-            completionPercent={completionPercent}
-            answeredCount={answeredCount}
-            totalQuestions={totalQuestions}
-            pendingCount={pendingCount}
-            onRSVP={() => setGuestView("wizard")}
-            authError={authError}
-          />
-        ) : null}
+      {adminStudio}
 
-        {/* WIZARD VIEW */}
-        {guestView === "wizard" && activeQuestion ? (
-          <WizardView
-            event={currentEvent}
-            step={currentStep}
-            total={totalQuestions}
-            activeQuestion={activeQuestion}
-            answers={currentDraft.answers}
-            completionPercent={completionPercent}
-            validationMessage={validationMessage}
-            onAnswerChange={handleAnswerChange}
-            onBack={currentStep === 0 ? () => setGuestView("poster") : handleBack}
-            onNext={handleNext}
-            isLastStep={currentStep === totalQuestions - 1}
-            onReview={() => setGuestView("wizard")}
-            visibleQuestions={visibleQuestions}
-            onJumpToStep={handleJumpToStep}
-          />
-        ) : null}
+      {/* POSTER VIEW — only in standalone mode */}
+      {!onExitToHome && guestView === "poster" ? (
+        <PosterView
+          event={currentEvent}
+          completionPercent={completionPercent}
+          answeredCount={answeredCount}
+          totalQuestions={totalQuestions}
+          pendingCount={pendingCount}
+          onRSVP={() => setGuestView("wizard")}
+          authError={authError}
+        />
+      ) : null}
 
-        {/* REVIEW / SUBMIT */}
-        {guestView === "wizard" && !activeQuestion ? (
-          <ReviewView
-            event={currentEvent}
-            summaryText={summaryText}
-            submitState={submitState}
-            copyState={copyState}
-            completionPercent={completionPercent}
-            onBack={handleBack}
-            onSubmit={handleSubmitResponse}
-            onCopySummary={() => void handleCopySummary()}
-            onReset={handleResetResponses}
-          />
-        ) : null}
+      {/* WIZARD VIEW */}
+      {guestView === "wizard" && activeQuestion ? (
+        <WizardView
+          event={currentEvent}
+          step={currentStep}
+          total={totalQuestions}
+          activeQuestion={activeQuestion}
+          answers={currentDraft.answers}
+          completionPercent={completionPercent}
+          validationMessage={validationMessage}
+          onAnswerChange={handleAnswerChange}
+          onBack={wizardBackHandler}
+          onNext={handleNext}
+          isLastStep={currentStep === totalQuestions - 1}
+          onReview={() => setGuestView("wizard")}
+          visibleQuestions={visibleQuestions}
+          onJumpToStep={handleJumpToStep}
+        />
+      ) : null}
 
-        {/* SUBMITTED */}
-        {guestView === "submitted" ? (
-          <SubmittedView
-            event={currentEvent}
-            submitState={submitState}
-            copyState={copyState}
-            onCopySummary={() => void handleCopySummary()}
-            onStartAnother={handleStartAnotherResponse}
-            onBackToPoster={() => setGuestView("poster")}
-          />
-        ) : null}
-      </div>
+      {/* REVIEW / SUBMIT */}
+      {guestView === "wizard" && !activeQuestion ? (
+        <ReviewView
+          event={currentEvent}
+          summaryText={summaryText}
+          submitState={submitState}
+          copyState={copyState}
+          completionPercent={completionPercent}
+          onBack={handleBack}
+          onSubmit={handleSubmitResponse}
+          onCopySummary={() => void handleCopySummary()}
+          onReset={handleResetResponses}
+        />
+      ) : null}
+
+      {/* SUBMITTED */}
+      {guestView === "submitted" ? (
+        <SubmittedView
+          event={currentEvent}
+          submitState={submitState}
+          copyState={copyState}
+          onCopySummary={() => void handleCopySummary()}
+          onStartAnother={handleStartAnotherResponse}
+          onBackToPoster={goHome}
+        />
+      ) : null}
+    </div>
+  );
+
+  // In embedded mode (used by /rsvp/rsvp page), the outer layout supplies
+  // the shell + nav. In standalone mode (legacy), render our own shell.
+  if (onExitToHome) {
+    return <div className="px-4 pb-24 pt-6 sm:px-8 lg:px-12">{content}</div>;
+  }
+  return (
+    <main className="rsvp-shell min-h-screen px-4 pb-24 pt-6 sm:px-8 lg:px-12">
+      {content}
     </main>
   );
 }
