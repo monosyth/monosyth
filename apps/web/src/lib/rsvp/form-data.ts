@@ -48,19 +48,19 @@ export type RSVPImageAsset = {
  */
 export const RSVP_IMAGE_LIBRARY: RSVPImageAsset[] = [
   {
-    id: "dallas-hero",
-    label: "Dallas — hero portrait",
+    id: "dallas",
+    label: "Dallas — hero photo",
+    url: "/rsvp-images/dallas.jpg",
+  },
+  {
+    id: "dallas-balcony",
+    label: "Dallas — balcony portrait",
     url: "/rsvp-images/dallas-hero.webp",
   },
   {
     id: "bavettes",
     label: "Bavette's — CEO of Sin dinner",
     url: "/rsvp-images/bavettes.webp",
-  },
-  {
-    id: "cabana",
-    label: "Bellagio poolside cabana",
-    url: "/rsvp-images/cabana.jpg",
   },
   {
     id: "kelly",
@@ -414,8 +414,8 @@ const vegasStudio: RSVPEvent = {
         "Even if you cannot make every part of the trip, mark attending and we will iron out the details after this.",
         createWeekendOptions(),
       ),
-      imageUrl: "/rsvp-images/dallas-hero.webp",
-      imageAlt: "Dallas on a Vegas hotel balcony",
+      imageUrl: "/rsvp-images/dallas.jpg",
+      imageAlt: "Dallas — Sin City birthday hero photo",
     },
     createSelectQuestion(
       "vegas-zuma-dinner",
@@ -443,22 +443,18 @@ const vegasStudio: RSVPEvent = {
         equalsAny: ["attending"],
       },
     ),
-    {
-      ...createSelectQuestion(
-        "vegas-cabana",
-        "poolside-cabana",
-        "Pool day",
-        "Poolside Cabana! ($70 ea.) Bellagio, Friday July 31",
-        "Verona Cabana at Bellagio with food, beverage service, and shaded seating from 9:00am to 5:00pm. Deposits are needed by June 10th.",
-        createAttendanceOptions("Decide by June 10th."),
-        {
-          questionId: "vegas-weekend-status",
-          equalsAny: ["attending"],
-        },
-      ),
-      imageUrl: "/rsvp-images/cabana.jpg",
-      imageAlt: "Bellagio poolside cabana with misters and loungers",
-    },
+    createSelectQuestion(
+      "vegas-cabana",
+      "poolside-cabana",
+      "Pool day",
+      "Poolside Cabana! ($70 ea.) Bellagio, Friday July 31",
+      "Verona Cabana at Bellagio with food, beverage service, and shaded seating from 9:00am to 5:00pm. Deposits are needed by June 10th.",
+      createAttendanceOptions("Decide by June 10th."),
+      {
+        questionId: "vegas-weekend-status",
+        equalsAny: ["attending"],
+      },
+    ),
     {
       ...createSelectQuestion(
         "vegas-sinners-dinner",

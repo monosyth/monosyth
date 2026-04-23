@@ -1577,10 +1577,10 @@ function PosterView({
               className="relative mx-auto aspect-square w-full max-w-[24rem] overflow-hidden rounded-full border-2 border-[var(--rsvp-gold)]/70 shadow-[0_0_50px_rgba(244,201,93,0.3)]"
               style={{
                 backgroundImage: `
-                  linear-gradient(180deg, rgba(7,4,10,0.25) 0%, rgba(7,4,10,0.65) 100%),
-                  url('/rsvp-images/dallas-hero.webp')`,
+                  linear-gradient(180deg, rgba(7,4,10,0.2) 0%, rgba(7,4,10,0.7) 100%),
+                  url('/rsvp-images/dallas.jpg')`,
                 backgroundSize: "cover",
-                backgroundPosition: "center 20%",
+                backgroundPosition: "center 25%",
               }}
             >
               {/* Stylized playing cards */}
