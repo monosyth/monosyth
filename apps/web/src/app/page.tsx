@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { AuthConsoleCard } from "@/components/auth/auth-console-card";
 
 export default function Home() {
@@ -15,23 +13,14 @@ export default function Home() {
 
               <div className="max-w-xl space-y-4">
                 <p className="text-base leading-7 text-stone-700 sm:text-lg">
-                  Live local conditions, camera views, station history, and new
-                  personal product experiments from Monosyth.
+                  Monosyth is a private studio for personal tools, experiments,
+                  and systems that are not meant to be browsed from the public
+                  homepage.
                 </p>
-                <div className="flex flex-wrap gap-3">
-                  <Link
-                    href="/weather"
-                    className="inline-flex items-center rounded-full bg-stone-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800"
-                  >
-                    Monosyth&apos;s Weather Station
-                  </Link>
-                  <Link
-                    href="/rsvp"
-                    className="inline-flex items-center rounded-full border border-stone-900/10 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-50"
-                  >
-                    Personal RSVP App
-                  </Link>
-                </div>
+                <p className="text-sm leading-7 text-stone-500 sm:text-base">
+                  The public page stays intentionally minimal. Private apps live
+                  behind direct access and sign-in.
+                </p>
               </div>
             </div>
 
