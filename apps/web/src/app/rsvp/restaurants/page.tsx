@@ -1,17 +1,11 @@
-import type { Metadata } from "next";
+"use client";
 
+import { useEventStore } from "@/components/rsvp/event-store";
 import { QuickRSVP } from "@/components/rsvp/quick-rsvp";
 import { PageShell, SectionHeading, SectionPanel } from "@/components/rsvp/ui";
-import {
-  DALLAS_EVENT_CONTENT,
-  type RestaurantItem,
-} from "@/lib/rsvp/event-content";
+import type { RestaurantItem } from "@/lib/rsvp/event-content";
 
-export const metadata: Metadata = {
-  title: "Restaurants",
-};
-
-function RestaurantCard({ item }: Readonly<{ item: RestaurantItem; kind: "brunch" | "dinner" }>) {
+function RestaurantCard({ item }: Readonly<{ item: RestaurantItem }>) {
   return (
     <article className="flex flex-col gap-3 rounded-2xl border border-[var(--rsvp-border-soft)] bg-[rgba(10,4,18,0.55)] px-5 py-5">
       <header>
@@ -44,7 +38,8 @@ function RestaurantCard({ item }: Readonly<{ item: RestaurantItem; kind: "brunch
 }
 
 export default function RestaurantsPage() {
-  const { restaurants } = DALLAS_EVENT_CONTENT;
+  const { content } = useEventStore();
+  const { restaurants } = content;
 
   return (
     <PageShell>
@@ -61,7 +56,7 @@ export default function RestaurantsPage() {
             <h2 className="rsvp-script text-[2.4rem] text-[var(--rsvp-teal)]">Brunch</h2>
             <div className="mt-4 grid gap-3">
               {restaurants.brunch.map((item) => (
-                <RestaurantCard key={item.id} item={item} kind="brunch" />
+                <RestaurantCard key={item.id} item={item} />
               ))}
             </div>
           </div>
@@ -69,7 +64,7 @@ export default function RestaurantsPage() {
             <h2 className="rsvp-script text-[2.4rem] text-[var(--rsvp-pink-soft)]">Dinner</h2>
             <div className="mt-4 grid gap-3">
               {restaurants.dinner.map((item) => (
-                <RestaurantCard key={item.id} item={item} kind="dinner" />
+                <RestaurantCard key={item.id} item={item} />
               ))}
             </div>
           </div>

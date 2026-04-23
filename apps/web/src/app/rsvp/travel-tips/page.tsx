@@ -1,14 +1,11 @@
-import type { Metadata } from "next";
+"use client";
 
+import { useEventStore } from "@/components/rsvp/event-store";
 import { PageShell, SectionHeading, SectionPanel } from "@/components/rsvp/ui";
-import { DALLAS_EVENT_CONTENT } from "@/lib/rsvp/event-content";
-
-export const metadata: Metadata = {
-  title: "Travel Tips",
-};
 
 export default function TravelTipsPage() {
-  const { travelTips } = DALLAS_EVENT_CONTENT;
+  const { content } = useEventStore();
+  const { travelTips } = content;
 
   return (
     <PageShell>

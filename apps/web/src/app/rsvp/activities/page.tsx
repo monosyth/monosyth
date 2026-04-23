@@ -1,17 +1,15 @@
+"use client";
+
 import Link from "next/link";
-import type { Metadata } from "next";
 
 import { DepositStatusToggle } from "@/components/rsvp/deposit-status";
+import { useEventStore } from "@/components/rsvp/event-store";
 import { QuickRSVP } from "@/components/rsvp/quick-rsvp";
 import { PageShell, SectionHeading, SectionPanel, Tag } from "@/components/rsvp/ui";
-import { DALLAS_EVENT_CONTENT } from "@/lib/rsvp/event-content";
-
-export const metadata: Metadata = {
-  title: "Activities & Shows",
-};
 
 export default function ActivitiesPage() {
-  const { activities } = DALLAS_EVENT_CONTENT;
+  const { content } = useEventStore();
+  const { activities } = content;
 
   return (
     <PageShell>

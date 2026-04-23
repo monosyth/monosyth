@@ -1,17 +1,15 @@
+"use client";
+
 import Link from "next/link";
-import type { Metadata } from "next";
 
 import { DepositStatusToggle } from "@/components/rsvp/deposit-status";
+import { useEventStore } from "@/components/rsvp/event-store";
 import { QuickRSVP } from "@/components/rsvp/quick-rsvp";
 import { PageShell, SectionPanel } from "@/components/rsvp/ui";
-import { DALLAS_EVENT_CONTENT } from "@/lib/rsvp/event-content";
-
-export const metadata: Metadata = {
-  title: "RSVPs & Deposits",
-};
 
 export default function DepositsPage() {
-  const { deposits, activities, restaurants } = DALLAS_EVENT_CONTENT;
+  const { content } = useEventStore();
+  const { deposits, activities, restaurants } = content;
   const paidActivities = activities.items.filter((a) => (a.pricePerPerson ?? 0) > 0);
 
   return (
@@ -51,16 +49,14 @@ export default function DepositsPage() {
         </div>
       </SectionPanel>
 
-      {/* Payment Payees */}
       <SectionPanel>
         <div className="flex flex-col items-center text-center">
           <span className="rsvp-eyebrow rsvp-eyebrow--gold">Send your deposit to</span>
           <h2 className="mt-5 rsvp-neon rsvp-neon--teal text-3xl sm:text-4xl">
-            Scott or Dallas
+            {deposits.payees.map((p) => p.name).join(" or ")}
           </h2>
           <p className="mt-4 max-w-xl text-sm text-[var(--rsvp-ink-dim)]">
-            Deep links below. (Payment handles are placeholders for now — an admin will swap in the
-            real ones.)
+            Tap any handle to open the payment app.
           </p>
         </div>
         <div className="mt-8 grid gap-4 lg:grid-cols-2">
@@ -73,9 +69,9 @@ export default function DepositsPage() {
                 Pay <span className="text-[var(--rsvp-pink-soft)]">{payee.name}</span>
               </h3>
               <div className="mt-4 grid gap-2">
-                {payee.paymentLinks.map((link) => (
+                {payee.paymentLinks.map((link, index) => (
                   <a
-                    key={link.url}
+                    key={`${link.url}-${index}`}
                     href={link.url}
                     target="_blank"
                     rel="noreferrer"
@@ -91,7 +87,6 @@ export default function DepositsPage() {
         </div>
       </SectionPanel>
 
-      {/* Shows & Activities pricing summary */}
       <SectionPanel>
         <div className="flex flex-col gap-2">
           <span className="rsvp-eyebrow rsvp-eyebrow--pink">Shows &amp; Activities</span>
@@ -130,7 +125,6 @@ export default function DepositsPage() {
         </div>
       </SectionPanel>
 
-      {/* Restaurants summary */}
       <SectionPanel>
         <div className="flex flex-col gap-2">
           <span className="rsvp-eyebrow">Brunches &amp; Dinners</span>

@@ -1,7 +1,9 @@
+"use client";
+
 import Link from "next/link";
 
+import { useEventStore } from "@/components/rsvp/event-store";
 import { SectionPanel } from "@/components/rsvp/ui";
-import { DALLAS_EVENT_CONTENT } from "@/lib/rsvp/event-content";
 
 const QUICK_LINKS: Array<{
   label: string;
@@ -24,7 +26,7 @@ const QUICK_LINKS: Array<{
 ];
 
 export default function RSVPHomePage() {
-  const content = DALLAS_EVENT_CONTENT;
+  const { content } = useEventStore();
 
   return (
     <div className="mx-auto flex w-full max-w-[78rem] flex-col gap-10 px-4 pb-16 pt-8 sm:px-8 lg:px-12">

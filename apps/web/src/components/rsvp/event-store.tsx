@@ -18,6 +18,10 @@ import {
   type RSVPQuestion,
   type RSVPStudio,
 } from "@/lib/rsvp/form-data";
+import {
+  DALLAS_EVENT_CONTENT,
+  type EventContent,
+} from "@/lib/rsvp/event-content";
 import { readRsvpStudioFromClient } from "@/lib/rsvp/client";
 
 type Answers = Record<string, RSVPAnswer | undefined>;
@@ -26,6 +30,8 @@ type DepositStatus = Record<string, boolean>; // activityId -> sent?
 type EventStore = {
   /** Current event (Dallas). */
   event: RSVPEvent;
+  /** Rich guidebook content for the active event. */
+  content: EventContent;
   /** Draft answers keyed by questionId. */
   answers: Answers;
   /** Set an answer by question slug (preferred — stable across edits). */
@@ -51,6 +57,7 @@ const noop = () => undefined;
 
 const EventStoreContext = createContext<EventStore>({
   event: createSeededStudio().events[0]!,
+  content: DALLAS_EVENT_CONTENT,
   answers: {},
   setAnswerBySlug: noop,
   setAnswerById: noop,
@@ -241,9 +248,13 @@ export function EventStoreProvider({
     return { answered, total, percent };
   }, [event, answers]);
 
+  const resolvedEvent = event ?? seeded.events[0]!;
+  const content = resolvedEvent.content ?? DALLAS_EVENT_CONTENT;
+
   const value = useMemo<EventStore>(
     () => ({
-      event: event ?? seeded.events[0]!,
+      event: resolvedEvent,
+      content,
       answers,
       setAnswerBySlug,
       setAnswerById,
@@ -256,8 +267,8 @@ export function EventStoreProvider({
       ready,
     }),
     [
-      event,
-      seeded,
+      resolvedEvent,
+      content,
       answers,
       setAnswerBySlug,
       setAnswerById,

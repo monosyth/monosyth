@@ -1,3 +1,5 @@
+import { DALLAS_EVENT_CONTENT, type EventContent } from "./event-content";
+
 export type RSVPQuestionType =
   | "short_text"
   | "email"
@@ -79,6 +81,13 @@ export function getRsvpImageByUrl(url: string | undefined) {
   return RSVP_IMAGE_LIBRARY.find((asset) => asset.url === url);
 }
 
+/**
+ * Rich guidebook content attached to an event. Full shape defined in
+ * @/lib/rsvp/event-content. We declare it as an optional `unknown` here so
+ * the two modules can stay decoupled (event-content imports RSVPEvent-related
+ * types from this file; RSVPEvent.content is typed as EventContent via
+ * module augmentation below).
+ */
 export type RSVPEvent = {
   id: string;
   slug: string;
@@ -91,6 +100,8 @@ export type RSVPEvent = {
   intro: string;
   notes: string[];
   questions: RSVPQuestion[];
+  /** Rich content sections (overview, hotel, days, etc). */
+  content?: EventContent;
 };
 
 export type RSVPStudio = {
@@ -634,6 +645,7 @@ const vegasStudio: RSVPEvent = {
       },
     ),
   ],
+  content: DALLAS_EVENT_CONTENT,
 };
 
 const salonStudio: RSVPEvent = {
@@ -1029,6 +1041,38 @@ function normalizeQuestion(
   return baseQuestion;
 }
 
+/**
+ * Conservative normalizer for EventContent: returns the stored content if it
+ * has the right shape, otherwise falls back to the code-seeded Dallas content.
+ * This lets Firestore docs be partial (missing sections fall through to the
+ * seed) and the guest routes stay robust against bad admin edits.
+ */
+function normalizeContent(input: unknown): EventContent | undefined {
+  if (!input || typeof input !== "object") {
+    return DALLAS_EVENT_CONTENT;
+  }
+  // Trust stored content structurally; the admin editor below enforces shape
+  // at write time. If a required root section is missing, merge with the
+  // seed so guest pages never crash.
+  const seed = DALLAS_EVENT_CONTENT;
+  const stored = input as Partial<EventContent>;
+  return {
+    ...seed,
+    ...stored,
+    overview: { ...seed.overview, ...(stored.overview ?? {}) },
+    hotel: { ...seed.hotel, ...(stored.hotel ?? {}) },
+    travelTips: { ...seed.travelTips, ...(stored.travelTips ?? {}) },
+    schedule: {
+      days: stored.schedule?.days ?? seed.schedule.days,
+    },
+    dressBoards: stored.dressBoards ?? seed.dressBoards,
+    activities: { ...seed.activities, ...(stored.activities ?? {}) },
+    restaurants: { ...seed.restaurants, ...(stored.restaurants ?? {}) },
+    deposits: { ...seed.deposits, ...(stored.deposits ?? {}) },
+    nextSteps: { ...seed.nextSteps, ...(stored.nextSteps ?? {}) },
+  };
+}
+
 function normalizeEvent(
   input: Partial<RSVPEvent> | undefined,
   index: number,
@@ -1062,6 +1106,7 @@ function normalizeEvent(
           .filter(Boolean)
       : [],
     questions,
+    content: normalizeContent(input?.content),
   };
 }
 
