@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
+import { DepositStatusToggle } from "@/components/rsvp/deposit-status";
+import { QuickRSVP } from "@/components/rsvp/quick-rsvp";
 import { PageShell, SectionHeading, SectionPanel, Tag } from "@/components/rsvp/ui";
 import { DALLAS_EVENT_CONTENT } from "@/lib/rsvp/event-content";
 
@@ -65,22 +67,31 @@ export default function ActivitiesPage() {
                 </ul>
               ) : null}
 
-              <footer className="mt-2 flex flex-wrap items-center gap-2">
-                {a.depositsDueBy ? (
-                  <Tag tone="hot">Deposit due {a.depositsDueBy}</Tag>
+              <footer className="mt-2 flex flex-col gap-3 border-t border-[var(--rsvp-border-soft)] pt-4">
+                {a.rsvpQuestionSlug ? (
+                  <div>
+                    <p className="mb-2 font-mono text-[0.62rem] uppercase tracking-[0.3em] text-[var(--rsvp-ink-dim)]">
+                      RSVP
+                    </p>
+                    <QuickRSVP slug={a.rsvpQuestionSlug} />
+                  </div>
                 ) : null}
-                <Link
-                  href={`/rsvp/rsvp${a.rsvpQuestionSlug ? `?q=${a.rsvpQuestionSlug}` : ""}`}
-                  className="rsvp-btn rsvp-btn-primary px-4 py-2 text-xs"
-                >
-                  RSVP
-                </Link>
-                <Link
-                  href="/rsvp/deposits"
-                  className="rsvp-btn rsvp-btn-neon px-4 py-2 text-xs"
-                >
-                  Pay deposit
-                </Link>
+                {(a.pricePerPerson ?? 0) > 0 ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {a.depositsDueBy ? (
+                        <Tag tone="hot">Due {a.depositsDueBy}</Tag>
+                      ) : null}
+                      <DepositStatusToggle activityId={a.id} />
+                    </div>
+                    <Link
+                      href="/rsvp/deposits"
+                      className="rsvp-btn rsvp-btn-neon px-4 py-2 text-xs"
+                    >
+                      Pay deposit
+                    </Link>
+                  </div>
+                ) : null}
               </footer>
             </article>
           ))}

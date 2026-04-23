@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
+import { DepositStatusToggle } from "@/components/rsvp/deposit-status";
+import { QuickRSVP } from "@/components/rsvp/quick-rsvp";
 import { PageShell, SectionPanel } from "@/components/rsvp/ui";
 import { DALLAS_EVENT_CONTENT } from "@/lib/rsvp/event-content";
 
@@ -118,12 +120,10 @@ export default function DepositsPage() {
               </div>
               <div className="flex flex-col items-end gap-2">
                 <span className="rsvp-tag rsvp-tag-gold">{a.priceLabel}</span>
-                <Link
-                  href={`/rsvp/rsvp${a.rsvpQuestionSlug ? `?q=${a.rsvpQuestionSlug}` : ""}`}
-                  className="rsvp-btn rsvp-btn-primary px-3 py-1.5 text-xs"
-                >
-                  RSVP
-                </Link>
+                {a.rsvpQuestionSlug ? (
+                  <QuickRSVP slug={a.rsvpQuestionSlug} showOpenWizard={false} />
+                ) : null}
+                <DepositStatusToggle activityId={a.id} />
               </div>
             </div>
           ))}
@@ -151,12 +151,9 @@ export default function DepositsPage() {
                 <p className="mt-1 text-base font-semibold text-[var(--rsvp-ink)]">{r.name}</p>
                 <p className="text-xs text-[var(--rsvp-ink-dim)]">{r.venue} · {r.time}</p>
               </div>
-              <Link
-                href={`/rsvp/rsvp${r.rsvpQuestionSlug ? `?q=${r.rsvpQuestionSlug}` : ""}`}
-                className="rsvp-btn rsvp-btn-ghost px-3 py-1.5 text-xs"
-              >
-                RSVP
-              </Link>
+              {r.rsvpQuestionSlug ? (
+                <QuickRSVP slug={r.rsvpQuestionSlug} showOpenWizard={false} />
+              ) : null}
             </div>
           ))}
         </div>

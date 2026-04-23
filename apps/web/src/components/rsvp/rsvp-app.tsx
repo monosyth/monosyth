@@ -688,10 +688,30 @@ type RSVPAppProps = Readonly<{
    * internal poster view (back-compat for the old landing page).
    */
   onExitToHome?: () => void;
+  /**
+   * Seed the wizard draft with externally-managed answers (from the shared
+   * cross-page event store). Keyed by question id.
+   */
+  initialAnswers?: Record<string, RSVPAnswer | undefined>;
+  /**
+   * If provided, the wizard jumps to the question with this slug on mount.
+   */
+  initialQuestionSlug?: string;
+  /**
+   * Notified whenever the guest changes an answer so the outer store can
+   * mirror it. Keyed by question id.
+   */
+  onAnswerChange?: (questionId: string, value: RSVPAnswer | undefined) => void;
 }>;
 
 export function RSVPApp(props: RSVPAppProps = {}) {
-  const { initialView = "poster", onExitToHome } = props;
+  const {
+    initialView = "poster",
+    onExitToHome,
+    initialAnswers,
+    initialQuestionSlug,
+    onAnswerChange: onAnswerChangeExt,
+  } = props;
   const {
     error: authError,
     isConfigured,
@@ -772,7 +792,32 @@ export function RSVPApp(props: RSVPAppProps = {}) {
         if (cancelled) return;
         setStudio(nextStudio);
         setSavedStudio(nextStudio);
-        setDrafts((c) => normalizeDrafts(c, nextStudio));
+        setDrafts((c) => {
+          const normalized = normalizeDrafts(c, nextStudio);
+          // Merge in externally-supplied initial answers for the first event.
+          const firstEvent = nextStudio.events[0];
+          if (firstEvent && initialAnswers) {
+            const draft =
+              normalized[firstEvent.id] ?? createDraftForEvent(firstEvent);
+            // Compute the step index if a target slug was provided.
+            const visible = getVisibleQuestions(firstEvent, {
+              ...draft.answers,
+              ...initialAnswers,
+            });
+            let nextStep = draft.currentStep;
+            if (initialQuestionSlug) {
+              const targetIdx = visible.findIndex(
+                (q) => q.slug === initialQuestionSlug,
+              );
+              if (targetIdx >= 0) nextStep = targetIdx;
+            }
+            normalized[firstEvent.id] = {
+              currentStep: nextStep,
+              answers: { ...draft.answers, ...initialAnswers },
+            };
+          }
+          return normalized;
+        });
         setSelectedEventId((id) =>
           nextStudio.events.some((e) => e.id === id)
             ? id
@@ -804,6 +849,10 @@ export function RSVPApp(props: RSVPAppProps = {}) {
     return () => {
       cancelled = true;
     };
+    // `initialAnswers` and `initialQuestionSlug` are intentionally mount-only:
+    // they seed the wizard on first load, after which the outer event store
+    // is the source of truth and pushes updates via `onAnswerChange`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -1001,6 +1050,7 @@ export function RSVPApp(props: RSVPAppProps = {}) {
       ...d,
       answers: { ...d.answers, [question.id]: value },
     }));
+    onAnswerChangeExt?.(question.id, value);
   };
 
   const handleNext = () => {

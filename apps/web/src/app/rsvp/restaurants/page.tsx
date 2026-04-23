@@ -1,6 +1,6 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 
+import { QuickRSVP } from "@/components/rsvp/quick-rsvp";
 import { PageShell, SectionHeading, SectionPanel } from "@/components/rsvp/ui";
 import {
   DALLAS_EVENT_CONTENT,
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   title: "Restaurants",
 };
 
-function RestaurantCard({ item, kind }: Readonly<{ item: RestaurantItem; kind: "brunch" | "dinner" }>) {
+function RestaurantCard({ item }: Readonly<{ item: RestaurantItem; kind: "brunch" | "dinner" }>) {
   return (
     <article className="flex flex-col gap-3 rounded-2xl border border-[var(--rsvp-border-soft)] bg-[rgba(10,4,18,0.55)] px-5 py-5">
       <header>
@@ -31,14 +31,14 @@ function RestaurantCard({ item, kind }: Readonly<{ item: RestaurantItem; kind: "
           <span className="rsvp-tag rsvp-tag-hot">{item.theme}</span>
         ) : null}
       </div>
-      <div className="mt-auto flex flex-wrap gap-2">
-        <Link
-          href={`/rsvp/rsvp${item.rsvpQuestionSlug ? `?q=${item.rsvpQuestionSlug}` : ""}`}
-          className={`rsvp-btn ${kind === "dinner" ? "rsvp-btn-primary" : "rsvp-btn-neon"} px-3 py-1.5 text-xs`}
-        >
-          RSVP for this {kind === "dinner" ? "dinner" : "brunch"}
-        </Link>
-      </div>
+      {item.rsvpQuestionSlug ? (
+        <div className="mt-2 border-t border-[var(--rsvp-border-soft)] pt-3">
+          <p className="mb-2 font-mono text-[0.62rem] uppercase tracking-[0.3em] text-[var(--rsvp-ink-dim)]">
+            RSVP
+          </p>
+          <QuickRSVP slug={item.rsvpQuestionSlug} />
+        </div>
+      ) : null}
     </article>
   );
 }
