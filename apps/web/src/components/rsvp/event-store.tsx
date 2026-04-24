@@ -10,6 +10,8 @@ import {
   useState,
 } from "react";
 
+import { useAuth } from "@/components/auth/auth-provider";
+import { isMonosythAdminEmail } from "@/lib/auth/admin";
 import {
   createSeededStudio,
   normalizeStudio,
@@ -22,7 +24,10 @@ import {
   DALLAS_EVENT_CONTENT,
   type EventContent,
 } from "@/lib/rsvp/event-content";
-import { readRsvpStudioFromClient } from "@/lib/rsvp/client";
+import {
+  readRsvpStudioFromClient,
+  writeRsvpStudioFromClient,
+} from "@/lib/rsvp/client";
 
 type Answers = Record<string, RSVPAnswer | undefined>;
 type DepositStatus = Record<string, boolean>; // activityId -> sent?
@@ -51,6 +56,19 @@ type EventStore = {
   reset: () => void;
   /** True once studio has been loaded (hydrated from storage and server). */
   ready: boolean;
+  /**
+   * True when the current user is signed in as a Monosyth admin and can
+   * edit the guidebook content in place. Guests get `false`.
+   */
+  canEditContent: boolean;
+  /**
+   * Patch a field in the rich EventContent tree and persist to Firestore.
+   * `path` is a dot/bracket notation string (e.g. `overview.title`,
+   * `schedule.days[2].heroImageUrl`, `activities.items[0].priceLabel`).
+   * Writes are debounced — the UI updates synchronously; the server call
+   * happens ~400ms after the last edit settles.
+   */
+  setContentAtPath: (path: string, value: unknown) => void;
 };
 
 const noop = () => undefined;
@@ -68,10 +86,61 @@ const EventStoreContext = createContext<EventStore>({
   setDepositStatus: noop,
   reset: noop,
   ready: false,
+  canEditContent: false,
+  setContentAtPath: noop,
 });
 
 function storageKey(eventId: string, bucket: "answers" | "deposits") {
   return `rsvp:${eventId}:${bucket}:v1`;
+}
+
+/**
+ * Immutably set a value inside a nested object / array tree using a
+ * dotted-and-bracketed path like `schedule.days[2].heroImageUrl` or
+ * `activities.items[0].priceLabel`. Array indices are preserved, objects
+ * are shallow-cloned along the path so React sees new references.
+ */
+type PathToken = { kind: "key"; key: string } | { kind: "index"; index: number };
+
+function parsePath(path: string): PathToken[] {
+  const tokens: PathToken[] = [];
+  const re = /([^.[\]]+)|\[(\d+)\]/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(path)) !== null) {
+    if (match[1] !== undefined) {
+      tokens.push({ kind: "key", key: match[1] });
+    } else if (match[2] !== undefined) {
+      tokens.push({ kind: "index", index: Number(match[2]) });
+    }
+  }
+  return tokens;
+}
+
+function setAtPath<T>(root: T, path: string, value: unknown): T {
+  const tokens = parsePath(path);
+  if (tokens.length === 0) return root;
+
+  function recurse(node: unknown, depth: number): unknown {
+    const token = tokens[depth];
+    const last = depth === tokens.length - 1;
+    if (token.kind === "index") {
+      const arr = Array.isArray(node) ? [...node] : [];
+      arr[token.index] = last
+        ? value
+        : recurse(arr[token.index] ?? {}, depth + 1);
+      return arr;
+    }
+    const obj =
+      node && typeof node === "object" && !Array.isArray(node)
+        ? { ...(node as Record<string, unknown>) }
+        : {};
+    (obj as Record<string, unknown>)[token.key] = last
+      ? value
+      : recurse((obj as Record<string, unknown>)[token.key], depth + 1);
+    return obj;
+  }
+
+  return recurse(root, 0) as T;
 }
 
 function loadFromStorage<T>(key: string, fallback: T): T {
@@ -251,6 +320,71 @@ export function EventStoreProvider({
   const resolvedEvent = event ?? seeded.events[0]!;
   const content = resolvedEvent.content ?? DALLAS_EVENT_CONTENT;
 
+  /* ----- Admin content editing ----- */
+  const auth = useAuth();
+  const canEditContent =
+    auth.status === "signed_in" &&
+    isMonosythAdminEmail(auth.user?.email);
+
+  // Debounced server write so rapid blur events (e.g. admin is tab-hopping
+  // across fields) batch into one PUT.
+  const writeTimerRef = useRef<number | null>(null);
+  const latestStudioRef = useRef<RSVPStudio>(studio);
+  latestStudioRef.current = studio;
+
+  const scheduleServerWrite = useCallback(() => {
+    if (!canEditContent) return;
+    if (writeTimerRef.current !== null) {
+      window.clearTimeout(writeTimerRef.current);
+    }
+    writeTimerRef.current = window.setTimeout(async () => {
+      writeTimerRef.current = null;
+      const currentUser = auth.user;
+      if (!currentUser) return;
+      const snapshot = latestStudioRef.current;
+      try {
+        const token = await currentUser.getIdToken();
+        const res = await fetch("/api/rsvp/studio", {
+          method: "PUT",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ studio: snapshot }),
+        });
+        if (!res.ok) throw new Error("api failed");
+      } catch {
+        // Fallback to direct Firestore write for local dev.
+        try {
+          await writeRsvpStudioFromClient(snapshot, {
+            email: currentUser.email ?? "",
+            uid: currentUser.uid,
+          });
+        } catch (err) {
+          console.error("Inline edit write failed", err);
+        }
+      }
+    }, 450);
+  }, [auth.user, canEditContent]);
+
+  const setContentAtPath = useCallback(
+    (path: string, nextValue: unknown) => {
+      if (!canEditContent) return;
+      setStudio((current) => {
+        const events = current.events.map((e, idx) => {
+          if (idx !== 0) return e;
+          const currentContent: EventContent =
+            e.content ?? DALLAS_EVENT_CONTENT;
+          const updatedContent = setAtPath(currentContent, path, nextValue);
+          return { ...e, content: updatedContent };
+        });
+        return { ...current, events };
+      });
+      scheduleServerWrite();
+    },
+    [canEditContent, scheduleServerWrite],
+  );
+
   const value = useMemo<EventStore>(
     () => ({
       event: resolvedEvent,
@@ -265,6 +399,8 @@ export function EventStoreProvider({
       setDepositStatus,
       reset,
       ready,
+      canEditContent,
+      setContentAtPath,
     }),
     [
       resolvedEvent,
@@ -279,6 +415,8 @@ export function EventStoreProvider({
       setDepositStatus,
       reset,
       ready,
+      canEditContent,
+      setContentAtPath,
     ],
   );
 

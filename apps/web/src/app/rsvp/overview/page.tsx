@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 
+import { EditableText } from "@/components/rsvp/editable";
 import { useEventStore } from "@/components/rsvp/event-store";
 import { TocPager } from "@/components/rsvp/toc";
-import { DayChip, PageShell, SectionHeading, SectionPanel } from "@/components/rsvp/ui";
+import { DayChip, PageShell, SectionPanel } from "@/components/rsvp/ui";
 
 export default function OverviewPage() {
   const { content } = useEventStore();
@@ -13,15 +14,30 @@ export default function OverviewPage() {
   return (
     <PageShell>
       <SectionPanel>
-        <SectionHeading
-          eyebrow={overview.eyebrow}
-          title={overview.title}
-          subtitle={overview.intro}
-          tone="teal"
-        />
+        <div className="flex flex-col items-center gap-5 text-center">
+          <EditableText
+            path="overview.eyebrow"
+            value={overview.eyebrow}
+            className="rsvp-eyebrow"
+          />
+          <EditableText
+            path="overview.title"
+            value={overview.title}
+            as="h1"
+            className="rsvp-neon rsvp-neon--teal text-4xl leading-[0.95] sm:text-5xl"
+          />
+          <EditableText
+            path="overview.intro"
+            value={overview.intro}
+            as="p"
+            multiline
+            className="max-w-2xl text-sm leading-7 text-[var(--rsvp-ink-dim)] sm:text-base"
+          />
+          <span className="rsvp-divider" aria-hidden="true" />
+        </div>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-2">
-          {overview.days.map((day) => {
+          {overview.days.map((day, i) => {
             const matchingDay = schedule.days.find(
               (d) => d.dayLabel.toLowerCase() === day.label.toLowerCase(),
             );
@@ -31,17 +47,31 @@ export default function OverviewPage() {
                 className="relative flex flex-col rounded-[1.4rem] border border-[var(--rsvp-border-soft)] bg-[rgba(10,4,18,0.55)] p-6 transition hover:border-[var(--rsvp-pink)]/40"
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <DayChip tone="gold">{day.label}</DayChip>
-                  <span className="font-mono text-[0.68rem] uppercase tracking-[0.28em] text-[var(--rsvp-ink-dim)]">
-                    {day.dateLabel}
-                  </span>
+                  <DayChip tone="gold">
+                    <EditableText
+                      path={`overview.days[${i}].label`}
+                      value={day.label}
+                    />
+                  </DayChip>
+                  <EditableText
+                    path={`overview.days[${i}].dateLabel`}
+                    value={day.dateLabel}
+                    className="font-mono text-[0.68rem] uppercase tracking-[0.28em] text-[var(--rsvp-ink-dim)]"
+                  />
                 </div>
-                <h3 className="mt-6 font-[var(--font-playfair-display)] text-2xl text-[var(--rsvp-pink-soft)]">
-                  {day.title}
-                </h3>
-                <p className="mt-3 flex-1 text-sm leading-7 text-[var(--rsvp-ink-dim)]">
-                  {day.body}
-                </p>
+                <EditableText
+                  path={`overview.days[${i}].title`}
+                  value={day.title}
+                  as="h3"
+                  className="mt-6 font-[var(--font-playfair-display)] text-2xl text-[var(--rsvp-pink-soft)]"
+                />
+                <EditableText
+                  path={`overview.days[${i}].body`}
+                  value={day.body}
+                  as="p"
+                  multiline
+                  className="mt-3 flex-1 text-sm leading-7 text-[var(--rsvp-ink-dim)]"
+                />
                 {matchingDay ? (
                   <Link
                     href={`/rsvp/day/${matchingDay.id}`}

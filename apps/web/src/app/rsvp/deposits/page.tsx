@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { DepositStatusToggle } from "@/components/rsvp/deposit-status";
+import { EditableText } from "@/components/rsvp/editable";
 import { useEventStore } from "@/components/rsvp/event-store";
 import { QuickRSVP } from "@/components/rsvp/quick-rsvp";
 import { TocPager } from "@/components/rsvp/toc";
@@ -29,23 +30,44 @@ export default function DepositsPage() {
             To secure your spot for all shows, activities, restaurants, brunches and dinners — please
             RSVP and submit your deposit by
           </p>
-          <p className="mt-4 rsvp-neon rsvp-neon--pink rsvp-flicker text-[3.4rem] leading-[0.9] sm:text-[5rem]">
-            {deposits.dueDate}
-          </p>
+          <EditableText
+            path="deposits.dueDate"
+            value={deposits.dueDate}
+            as="p"
+            className="mt-4 rsvp-neon rsvp-neon--pink rsvp-flicker text-[3.4rem] leading-[0.9] sm:text-[5rem]"
+          />
         </div>
 
         <div className="mt-10 grid gap-4 md:grid-cols-2">
           <div className="rounded-[1.4rem] border border-[var(--rsvp-teal)]/40 bg-[rgba(77,225,255,0.08)] px-5 py-5">
-            <p className="font-[var(--font-bebas-neue)] text-lg tracking-[0.22em] text-[var(--rsvp-teal)]">
-              {deposits.whyTitle}
-            </p>
-            <p className="mt-3 text-sm leading-7 text-[var(--rsvp-ink)]">{deposits.whyBody}</p>
+            <EditableText
+              path="deposits.whyTitle"
+              value={deposits.whyTitle}
+              as="p"
+              className="font-[var(--font-bebas-neue)] text-lg tracking-[0.22em] text-[var(--rsvp-teal)]"
+            />
+            <EditableText
+              path="deposits.whyBody"
+              value={deposits.whyBody}
+              as="p"
+              multiline
+              className="mt-3 text-sm leading-7 text-[var(--rsvp-ink)]"
+            />
           </div>
           <div className="rounded-[1.4rem] border border-[var(--rsvp-pink)]/40 bg-[rgba(255,61,154,0.08)] px-5 py-5">
-            <p className="font-[var(--font-bebas-neue)] text-lg tracking-[0.22em] text-[var(--rsvp-pink-soft)]">
-              {deposits.paymentTitle}
-            </p>
-            <p className="mt-3 text-sm leading-7 text-[var(--rsvp-ink)]">{deposits.paymentBody}</p>
+            <EditableText
+              path="deposits.paymentTitle"
+              value={deposits.paymentTitle}
+              as="p"
+              className="font-[var(--font-bebas-neue)] text-lg tracking-[0.22em] text-[var(--rsvp-pink-soft)]"
+            />
+            <EditableText
+              path="deposits.paymentBody"
+              value={deposits.paymentBody}
+              as="p"
+              multiline
+              className="mt-3 text-sm leading-7 text-[var(--rsvp-ink)]"
+            />
           </div>
         </div>
       </SectionPanel>
@@ -164,9 +186,13 @@ export default function DepositsPage() {
 
       <SectionPanel>
         <div className="text-center">
-          <p className="font-[var(--font-playfair-display)] text-xl italic text-[var(--rsvp-pink-soft)]">
-            {deposits.closingCallout}
-          </p>
+          <EditableText
+            path="deposits.closingCallout"
+            value={deposits.closingCallout}
+            as="p"
+            multiline
+            className="font-[var(--font-playfair-display)] text-xl italic text-[var(--rsvp-pink-soft)]"
+          />
           <Link href="/rsvp/rsvp" className="rsvp-btn rsvp-btn-primary mt-6">
             Fill out the RSVP →
           </Link>
