@@ -60,71 +60,135 @@ export function DayView({ dayId }: Readonly<{ dayId: string }>) {
     </nav>
   );
 
+  const hasHero = Boolean(day.heroImageUrl);
+
   return (
     <PageShell>
       {dayNav}
-      <SectionPanel>
-        <div className="flex flex-col items-center text-center">
-          <span className="rsvp-eyebrow">Daily Schedule</span>
-          <div className="mt-5 flex flex-col items-center gap-4">
-            <DayChip tone="gold">{day.dayLabel}</DayChip>
-            <h1 className="font-[var(--font-bebas-neue)] text-[3rem] leading-[0.9] tracking-[0.04em] text-[var(--rsvp-gold)] sm:text-[4rem]">
-              {day.dayName}
-            </h1>
-          </div>
-          <span className="mt-5 rsvp-divider" aria-hidden="true" />
-          <h2 className="mt-6 font-[var(--font-playfair-display)] text-2xl text-[var(--rsvp-pink-soft)] sm:text-3xl">
-            {day.headline}
-          </h2>
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--rsvp-ink)] sm:text-base">
-            {day.intro}
-          </p>
-        </div>
 
-        <div className="mt-10 grid gap-3">
-          {day.rows.map((row) => (
-            <div
-              key={row.id}
-              className="grid grid-cols-[auto_1fr] items-start gap-4 rounded-2xl border border-[var(--rsvp-border-soft)] bg-[rgba(10,4,18,0.5)] px-4 py-4 sm:grid-cols-[8rem_1fr]"
-            >
-              <span className="font-[var(--font-bebas-neue)] text-lg tracking-[0.18em] text-[var(--rsvp-teal)]">
-                {row.time}
-              </span>
-              <div>
-                <p className="text-base font-semibold text-[var(--rsvp-ink)]">
-                  {row.title}
-                </p>
-                {row.note ? (
-                  <p className="mt-1 text-xs uppercase tracking-[0.22em] text-[var(--rsvp-gold)]">
-                    {row.note}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-10 rounded-[1.4rem] border border-[var(--rsvp-pink)]/30 bg-[rgba(255,61,154,0.08)] px-6 py-6">
-          <p className="font-[var(--font-bebas-neue)] text-lg tracking-[0.22em] text-[var(--rsvp-pink-soft)]">
-            {day.tipTitle}
-          </p>
-          <p className="mt-3 text-sm leading-7 text-[var(--rsvp-ink)]">
-            {day.tipBody}
-          </p>
-        </div>
-
-        {day.heroImageUrl ? (
-          <div className="mt-10 overflow-hidden rounded-[1.6rem] border border-[var(--rsvp-border-soft)]">
+      {/* Hero header: photo above the schedule, with title overlaid.
+          Falls back to the original centered title when no image is set. */}
+      {hasHero ? (
+        <section className="rsvp-panel rounded-[2rem] p-0 overflow-hidden">
+          <div className="relative isolate">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={day.heroImageUrl}
+              src={day.heroImageUrl!}
               alt={day.heroImageAlt ?? day.dayName}
-              className="h-64 w-full object-cover sm:h-80"
-              loading="lazy"
+              className="h-72 w-full object-cover sm:h-[22rem] lg:h-[26rem]"
+              loading="eager"
             />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(180deg, rgba(7,4,10,0.35) 0%, rgba(7,4,10,0.15) 45%, rgba(7,4,10,0.95) 100%)",
+              }}
+            />
+            <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-3 px-6 pb-8 text-center sm:gap-4 sm:pb-10">
+              <span className="rsvp-eyebrow">Daily Schedule</span>
+              <DayChip tone="gold">{day.dayLabel}</DayChip>
+              <h1 className="font-[var(--font-bebas-neue)] text-[2.6rem] leading-[0.9] tracking-[0.04em] text-[var(--rsvp-gold)] sm:text-[4rem]"
+                style={{ textShadow: "0 2px 18px rgba(0,0,0,0.85)" }}>
+                {day.dayName}
+              </h1>
+            </div>
           </div>
-        ) : null}
-      </SectionPanel>
+          <div className="px-6 pt-8 pb-2 text-center sm:px-10">
+            <span className="rsvp-divider mx-auto" aria-hidden="true" />
+            <h2 className="mt-6 font-[var(--font-playfair-display)] text-2xl text-[var(--rsvp-pink-soft)] sm:text-3xl">
+              {day.headline}
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[var(--rsvp-ink)] sm:text-base">
+              {day.intro}
+            </p>
+          </div>
+
+          <div className="mt-8 grid gap-3 px-6 pb-6 sm:px-10 sm:pb-8">
+            {day.rows.map((row) => (
+              <div
+                key={row.id}
+                className="grid grid-cols-[auto_1fr] items-start gap-4 rounded-2xl border border-[var(--rsvp-border-soft)] bg-[rgba(10,4,18,0.5)] px-4 py-4 sm:grid-cols-[8rem_1fr]"
+              >
+                <span className="font-[var(--font-bebas-neue)] text-lg tracking-[0.18em] text-[var(--rsvp-teal)]">
+                  {row.time}
+                </span>
+                <div>
+                  <p className="text-base font-semibold text-[var(--rsvp-ink)]">
+                    {row.title}
+                  </p>
+                  {row.note ? (
+                    <p className="mt-1 text-xs uppercase tracking-[0.22em] text-[var(--rsvp-gold)]">
+                      {row.note}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mx-6 mb-8 rounded-[1.4rem] border border-[var(--rsvp-pink)]/30 bg-[rgba(255,61,154,0.08)] px-6 py-6 sm:mx-10">
+            <p className="font-[var(--font-bebas-neue)] text-lg tracking-[0.22em] text-[var(--rsvp-pink-soft)]">
+              {day.tipTitle}
+            </p>
+            <p className="mt-3 text-sm leading-7 text-[var(--rsvp-ink)]">
+              {day.tipBody}
+            </p>
+          </div>
+        </section>
+      ) : (
+        <SectionPanel>
+          <div className="flex flex-col items-center text-center">
+            <span className="rsvp-eyebrow">Daily Schedule</span>
+            <div className="mt-5 flex flex-col items-center gap-4">
+              <DayChip tone="gold">{day.dayLabel}</DayChip>
+              <h1 className="font-[var(--font-bebas-neue)] text-[3rem] leading-[0.9] tracking-[0.04em] text-[var(--rsvp-gold)] sm:text-[4rem]">
+                {day.dayName}
+              </h1>
+            </div>
+            <span className="mt-5 rsvp-divider" aria-hidden="true" />
+            <h2 className="mt-6 font-[var(--font-playfair-display)] text-2xl text-[var(--rsvp-pink-soft)] sm:text-3xl">
+              {day.headline}
+            </h2>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--rsvp-ink)] sm:text-base">
+              {day.intro}
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-3">
+            {day.rows.map((row) => (
+              <div
+                key={row.id}
+                className="grid grid-cols-[auto_1fr] items-start gap-4 rounded-2xl border border-[var(--rsvp-border-soft)] bg-[rgba(10,4,18,0.5)] px-4 py-4 sm:grid-cols-[8rem_1fr]"
+              >
+                <span className="font-[var(--font-bebas-neue)] text-lg tracking-[0.18em] text-[var(--rsvp-teal)]">
+                  {row.time}
+                </span>
+                <div>
+                  <p className="text-base font-semibold text-[var(--rsvp-ink)]">
+                    {row.title}
+                  </p>
+                  {row.note ? (
+                    <p className="mt-1 text-xs uppercase tracking-[0.22em] text-[var(--rsvp-gold)]">
+                      {row.note}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-10 rounded-[1.4rem] border border-[var(--rsvp-pink)]/30 bg-[rgba(255,61,154,0.08)] px-6 py-6">
+            <p className="font-[var(--font-bebas-neue)] text-lg tracking-[0.22em] text-[var(--rsvp-pink-soft)]">
+              {day.tipTitle}
+            </p>
+            <p className="mt-3 text-sm leading-7 text-[var(--rsvp-ink)]">
+              {day.tipBody}
+            </p>
+          </div>
+        </SectionPanel>
+      )}
 
       {dressBoard ? <DressBoardView board={dressBoard} /> : null}
 

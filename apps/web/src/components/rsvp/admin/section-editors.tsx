@@ -266,20 +266,46 @@ export function ScheduleEditor({
         addLabel="Add day"
         renderItem={(day, update) => (
           <div className="grid gap-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <AdminField label="Day label">
-                <AdminInput
-                  value={day.dayLabel}
-                  onChange={(v) => update({ ...day, dayLabel: v })}
+            {/* Header photo + title group — sits at the top because this is
+                exactly how the guest page shows them (photo with day label &
+                name overlaid). */}
+            <div className="rounded-2xl border border-[var(--rsvp-pink)]/25 bg-[rgba(255,61,154,0.05)] p-4">
+              <p className="mb-3 font-[var(--font-bebas-neue)] text-sm tracking-[0.22em] text-[var(--rsvp-pink-soft)]">
+                Header photo &amp; title
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <AdminField label="Day label">
+                  <AdminInput
+                    value={day.dayLabel}
+                    onChange={(v) => update({ ...day, dayLabel: v })}
+                  />
+                </AdminField>
+                <AdminField label="Day name">
+                  <AdminInput
+                    value={day.dayName}
+                    onChange={(v) => update({ ...day, dayName: v })}
+                  />
+                </AdminField>
+              </div>
+              <div className="mt-3">
+                <ImagePickerField
+                  label="Header photo (appears above the schedule)"
+                  value={day.heroImageUrl}
+                  onChange={(url) => update({ ...day, heroImageUrl: url })}
                 />
-              </AdminField>
-              <AdminField label="Day name">
-                <AdminInput
-                  value={day.dayName}
-                  onChange={(v) => update({ ...day, dayName: v })}
-                />
-              </AdminField>
+              </div>
+              {day.heroImageUrl ? (
+                <div className="mt-3">
+                  <AdminField label="Header photo alt text (for screen readers)">
+                    <AdminInput
+                      value={day.heroImageAlt ?? ""}
+                      onChange={(v) => update({ ...day, heroImageAlt: v })}
+                    />
+                  </AdminField>
+                </div>
+              ) : null}
             </div>
+
             <AdminField label="URL slug (lowercase, e.g. thursday)">
               <AdminInput value={day.id} onChange={(v) => update({ ...day, id: v })} />
             </AdminField>
@@ -325,20 +351,6 @@ export function ScheduleEditor({
                 onChange={(v) => update({ ...day, tipBody: v })}
               />
             </AdminField>
-
-            <ImagePickerField
-              label="Hero image"
-              value={day.heroImageUrl}
-              onChange={(url) => update({ ...day, heroImageUrl: url })}
-            />
-            {day.heroImageUrl ? (
-              <AdminField label="Hero image alt text">
-                <AdminInput
-                  value={day.heroImageAlt ?? ""}
-                  onChange={(v) => update({ ...day, heroImageAlt: v })}
-                />
-              </AdminField>
-            ) : null}
 
             <AdminField label="Dress board">
               <select
