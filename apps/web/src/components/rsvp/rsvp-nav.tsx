@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { useIdentity } from "@/components/rsvp/identity";
 import { isMonosythAdminEmail } from "@/lib/auth/admin";
 
 type NavItem = {
@@ -54,11 +55,12 @@ export function RsvpNav() {
     isConfigured,
     isWorking,
     signInWithGoogle,
-    signOut,
     status,
     user,
   } = useAuth();
-  const canEdit = status === "signed_in" && isMonosythAdminEmail(user?.email);
+  const identity = useIdentity();
+  const canEdit =
+    status === "signed_in" && isMonosythAdminEmail(user?.email);
   const [daysOpen, setDaysOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -137,7 +139,7 @@ export function RsvpNav() {
 
         {/* Auth cluster */}
         <div className="hidden shrink-0 items-center gap-2 lg:flex">
-          {status === "signed_in" && user ? (
+          {identity.status === "signed_in" ? (
             <>
               {canEdit ? (
                 <>
@@ -156,10 +158,10 @@ export function RsvpNav() {
                 </>
               ) : null}
               <span className="hidden items-center gap-2 rounded-full border border-[var(--rsvp-border-soft)] bg-[rgba(10,4,18,0.55)] px-3 py-1.5 text-xs text-[var(--rsvp-ink-dim)] md:inline-flex">
-                {user.photoURL ? (
+                {identity.identity.photoUrl ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img
-                    src={user.photoURL}
+                    src={identity.identity.photoUrl}
                     alt=""
                     className="h-5 w-5 rounded-full"
                   />
@@ -168,23 +170,22 @@ export function RsvpNav() {
                     aria-hidden="true"
                     className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--rsvp-pink)] text-[0.6rem] font-bold text-white"
                   >
-                    {(user.displayName ?? user.email ?? "?")
+                    {(identity.identity.name || identity.identity.email || "?")
                       .trim()
                       .charAt(0)
                       .toUpperCase()}
                   </span>
                 )}
                 <span className="max-w-[9rem] truncate text-[var(--rsvp-ink)]">
-                  {(user.displayName ?? user.email ?? "Guest").split(" ")[0]}
+                  {(identity.identity.name || identity.identity.email || "Guest").split(" ")[0]}
                 </span>
               </span>
               <button
                 type="button"
-                onClick={() => void signOut()}
-                disabled={isWorking}
+                onClick={() => void identity.signOutIdentity()}
                 className="rsvp-btn rsvp-btn-ghost px-3 py-1.5 text-xs"
               >
-                {isWorking ? "…" : "Sign out"}
+                Sign out
               </button>
             </>
           ) : (
@@ -194,7 +195,7 @@ export function RsvpNav() {
               disabled={!isConfigured || isWorking}
               className="rsvp-btn rsvp-btn-primary px-3 py-1.5 text-xs"
             >
-              {isWorking ? "…" : "Sign in with Google"}
+              {isWorking ? "…" : "Sign in"}
             </button>
           )}
         </div>
@@ -274,13 +275,13 @@ export function RsvpNav() {
               </div>
             ))}
             <div className="mt-3 border-t border-[var(--rsvp-border-soft)] pt-3">
-              {status === "signed_in" && user ? (
+              {identity.status === "signed_in" ? (
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-2 text-sm text-[var(--rsvp-ink)]">
-                    {user.photoURL ? (
+                    {identity.identity.photoUrl ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
-                        src={user.photoURL}
+                        src={identity.identity.photoUrl}
                         alt=""
                         className="h-6 w-6 rounded-full"
                       />
@@ -289,14 +290,14 @@ export function RsvpNav() {
                         aria-hidden="true"
                         className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--rsvp-pink)] text-[0.65rem] font-bold text-white"
                       >
-                        {(user.displayName ?? user.email ?? "?")
+                        {(identity.identity.name || identity.identity.email || "?")
                           .trim()
                           .charAt(0)
                           .toUpperCase()}
                       </span>
                     )}
                     <span className="truncate">
-                      {user.displayName ?? user.email ?? "Guest"}
+                      {identity.identity.name || identity.identity.email || "Guest"}
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -321,25 +322,23 @@ export function RsvpNav() {
                     <button
                       type="button"
                       onClick={() => {
-                        void signOut();
+                        void identity.signOutIdentity();
                         setMobileOpen(false);
                       }}
-                      disabled={isWorking}
                       className="rsvp-btn rsvp-btn-ghost px-3 py-1.5 text-xs"
                     >
-                      {isWorking ? "…" : "Sign out"}
+                      Sign out
                     </button>
                   </div>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => void signInWithGoogle()}
-                  disabled={!isConfigured || isWorking}
+                <Link
+                  href="/rsvp/rsvp"
+                  onClick={() => setMobileOpen(false)}
                   className="rsvp-btn rsvp-btn-primary w-full px-3 py-2 text-xs"
                 >
-                  {isWorking ? "…" : "Sign in with Google"}
-                </button>
+                  Sign in to RSVP
+                </Link>
               )}
             </div>
           </div>

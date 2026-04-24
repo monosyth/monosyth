@@ -3,34 +3,36 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef } from "react";
 
-import { useAuth } from "@/components/auth/auth-provider";
 import { useEventStore } from "@/components/rsvp/event-store";
 import { GuestAuthGate } from "@/components/rsvp/guest-auth-gate";
+import { useIdentity } from "@/components/rsvp/identity";
 import { RSVPApp } from "@/components/rsvp/rsvp-app";
 
 function RSVPFormInner() {
   const router = useRouter();
   const params = useSearchParams();
   const slug = params.get("q") ?? undefined;
-  const { user } = useAuth();
+  const identity = useIdentity();
   const { answers, setAnswerById, setAnswerBySlug, getAnswerBySlug, ready } =
     useEventStore();
 
-  // Pre-fill guest-name + guest-email from the signed-in user's Google
-  // profile if the guest hasn't already typed something in.
+  // Pre-fill guest-name + guest-email from the signed-in identity (Google
+  // profile or the name+email the guest typed into the gate) if the guest
+  // hasn't already typed something in.
   const prefilledRef = useRef(false);
   useEffect(() => {
-    if (!ready || !user || prefilledRef.current) return;
+    if (!ready || identity.status !== "signed_in" || prefilledRef.current) return;
     prefilledRef.current = true;
+    const { name, email } = identity.identity;
     const currentName = getAnswerBySlug("guest-name");
     if (!currentName || (typeof currentName === "string" && !currentName.trim())) {
-      if (user.displayName) setAnswerBySlug("guest-name", user.displayName);
+      if (name) setAnswerBySlug("guest-name", name);
     }
     const currentEmail = getAnswerBySlug("guest-email");
     if (!currentEmail || (typeof currentEmail === "string" && !currentEmail.trim())) {
-      if (user.email) setAnswerBySlug("guest-email", user.email);
+      if (email) setAnswerBySlug("guest-email", email);
     }
-  }, [ready, user, getAnswerBySlug, setAnswerBySlug]);
+  }, [ready, identity, getAnswerBySlug, setAnswerBySlug]);
 
   return (
     <RSVPApp

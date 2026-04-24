@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { isMonosythAdminEmail } from "@/lib/auth/admin";
 import { getFirebaseAdminAuth } from "@/lib/firebase/admin";
 import {
+  GUEST_COOKIE_NAME,
+  verifyGuestSession,
+} from "@/lib/rsvp/guest-session";
+import {
   listRsvpResponses,
   listRsvpResponsesDetailed,
   submitRsvpResponse,
@@ -107,11 +111,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify the guest's Google sign-in. The token lets us tag the submission
-    // with their uid so a resubmit upserts their previous answers. We do NOT
-    // require admin-level privileges here — any signed-in Google user may
-    // RSVP. When the token is missing or invalid we still accept anonymous
-    // submissions (back-compat for older clients / testing).
+    // Identify the guest. We accept three tiers:
+    //   1. Firebase ID token (Bearer) from a Google sign-in.
+    //   2. A signed guest-session cookie (name + email sign-in).
+    //   3. Anonymous fallback — no identity attached.
+    // Either of 1 or 2 lets us tag the submission with a uid and upsert on
+    // resubmit.
     const bearer =
       request.headers
         .get("authorization")
@@ -131,7 +136,19 @@ export async function POST(request: NextRequest) {
             (decoded.email ? decoded.email.split("@")[0] : null),
         };
       } catch {
-        // Fall through to anonymous submission.
+        // Fall through to cookie / anonymous.
+      }
+    }
+    if (!guest) {
+      const guestCookie =
+        request.cookies.get(GUEST_COOKIE_NAME)?.value ?? null;
+      const session = verifyGuestSession(guestCookie);
+      if (session) {
+        guest = {
+          uid: session.uid,
+          email: session.email,
+          displayName: session.name,
+        };
       }
     }
 
