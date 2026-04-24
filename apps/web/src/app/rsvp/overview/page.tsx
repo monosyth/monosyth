@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { useEventStore } from "@/components/rsvp/event-store";
+import { TocPager } from "@/components/rsvp/toc";
 import { DayChip, PageShell, SectionHeading, SectionPanel } from "@/components/rsvp/ui";
 
 export default function OverviewPage() {
@@ -76,6 +77,7 @@ export default function OverviewPage() {
           </div>
         </div>
       </SectionPanel>
+      <TocPager />
     </PageShell>
   );
 }

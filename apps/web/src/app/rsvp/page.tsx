@@ -3,33 +3,8 @@
 import Link from "next/link";
 
 import { useEventStore } from "@/components/rsvp/event-store";
+import { TOC_ENTRIES } from "@/components/rsvp/toc";
 import { SectionPanel } from "@/components/rsvp/ui";
-
-const QUICK_LINKS: Array<{
-  label: string;
-  href: string;
-  hint: string;
-  /**
-   * Tone system:
-   *   teal — informational / context sections (Overview, Hotel, Tips, Restaurants)
-   *   gold — trip days (all five share one color to match the gold day chips)
-   *   pink — action / headline items (Activities, RSVP, Deposits)
-   */
-  tone: "pink" | "teal" | "gold";
-}> = [
-  { label: "Overview", href: "/rsvp/overview", hint: "Day-by-day narrative", tone: "teal" },
-  { label: "Hotel", href: "/rsvp/hotel", hint: "Where to stay", tone: "teal" },
-  { label: "Travel Tips", href: "/rsvp/travel-tips", hint: "Weather, Uber, budget", tone: "teal" },
-  { label: "Thursday · Day 1", href: "/rsvp/day/thursday", hint: "Arrive & prepare", tone: "gold" },
-  { label: "Friday · Day 2", href: "/rsvp/day/friday", hint: "Cabana + Sinners Dinner", tone: "gold" },
-  { label: "Saturday · Day 3", href: "/rsvp/day/saturday", hint: "Brunch + Kelly", tone: "gold" },
-  { label: "Sunday · Day 4", href: "/rsvp/day/sunday", hint: "Speed Vegas + Last Supper", tone: "gold" },
-  { label: "Monday · Day 5", href: "/rsvp/day/monday", hint: "Spa + Gymkhana", tone: "gold" },
-  { label: "Activities & Shows", href: "/rsvp/activities", hint: "Absinthe, Kelly, Speed", tone: "pink" },
-  { label: "Restaurants", href: "/rsvp/restaurants", hint: "Brunches & dinners", tone: "teal" },
-  { label: "RSVP", href: "/rsvp/rsvp", hint: "Fill out the full form", tone: "pink" },
-  { label: "Deposits", href: "/rsvp/deposits", hint: "Due June 10 · pay Scott or Dallas", tone: "pink" },
-];
 
 export default function RSVPHomePage() {
   const { content } = useEventStore();
@@ -148,7 +123,7 @@ export default function RSVPHomePage() {
         </div>
 
         <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {QUICK_LINKS.map((link) => (
+          {TOC_ENTRIES.map((link) => (
             <Link
               key={link.href}
               href={link.href}

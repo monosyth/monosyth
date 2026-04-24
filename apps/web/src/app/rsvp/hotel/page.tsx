@@ -1,6 +1,7 @@
 "use client";
 
 import { useEventStore } from "@/components/rsvp/event-store";
+import { TocPager } from "@/components/rsvp/toc";
 import { PageShell, SectionPanel } from "@/components/rsvp/ui";
 
 export default function HotelPage() {
@@ -91,6 +92,7 @@ export default function HotelPage() {
           </div>
         </div>
       </SectionPanel>
+      <TocPager />
     </PageShell>
   );
 }

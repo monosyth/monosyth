@@ -1,6 +1,7 @@
 "use client";
 
 import { useEventStore } from "@/components/rsvp/event-store";
+import { TocPager } from "@/components/rsvp/toc";
 import { PageShell, SectionHeading, SectionPanel } from "@/components/rsvp/ui";
 
 export default function TravelTipsPage() {
@@ -48,6 +49,7 @@ export default function TravelTipsPage() {
           </p>
         </div>
       </SectionPanel>
+      <TocPager />
     </PageShell>
   );
 }

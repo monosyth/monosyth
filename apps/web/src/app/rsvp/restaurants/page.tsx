@@ -2,6 +2,7 @@
 
 import { useEventStore } from "@/components/rsvp/event-store";
 import { QuickRSVP } from "@/components/rsvp/quick-rsvp";
+import { TocPager } from "@/components/rsvp/toc";
 import { PageShell, SectionHeading, SectionPanel } from "@/components/rsvp/ui";
 import type { RestaurantItem } from "@/lib/rsvp/event-content";
 
@@ -113,6 +114,7 @@ export default function RestaurantsPage() {
           {restaurants.note}
         </p>
       </SectionPanel>
+      <TocPager />
     </PageShell>
   );
 }

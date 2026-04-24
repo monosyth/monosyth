@@ -5,6 +5,7 @@ import Link from "next/link";
 import { DepositStatusToggle } from "@/components/rsvp/deposit-status";
 import { useEventStore } from "@/components/rsvp/event-store";
 import { QuickRSVP } from "@/components/rsvp/quick-rsvp";
+import { TocPager } from "@/components/rsvp/toc";
 import { PageShell, SectionPanel } from "@/components/rsvp/ui";
 
 export default function DepositsPage() {
@@ -171,6 +172,7 @@ export default function DepositsPage() {
           </Link>
         </div>
       </SectionPanel>
+      <TocPager />
     </PageShell>
   );
 }

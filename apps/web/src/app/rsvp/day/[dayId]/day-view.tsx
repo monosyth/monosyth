@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import { DressBoardView } from "@/components/rsvp/dress-board";
 import { useEventStore } from "@/components/rsvp/event-store";
+import { TocPager } from "@/components/rsvp/toc";
 import { DayChip, PageShell, SectionPanel } from "@/components/rsvp/ui";
 
 export function DayView({ dayId }: Readonly<{ dayId: string }>) {
@@ -192,7 +193,7 @@ export function DayView({ dayId }: Readonly<{ dayId: string }>) {
 
       {dressBoard ? <DressBoardView board={dressBoard} /> : null}
 
-      {dayNav}
+      <TocPager />
     </PageShell>
   );
 }
