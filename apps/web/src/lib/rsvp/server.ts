@@ -34,6 +34,22 @@ export type RSVPResponseRecord = {
   answersCount: number;
 };
 
+export type RSVPStoredAnswer = {
+  questionId: string;
+  slug: string;
+  title: string;
+  type: string;
+  value: RSVPAnswer | null;
+  formattedValue: string;
+};
+
+export type RSVPResponseDetail = RSVPResponseRecord & {
+  eventId: string;
+  eventSlug: string;
+  eventTitle: string;
+  answers: RSVPStoredAnswer[];
+};
+
 function toIsoString(value: unknown) {
   if (value instanceof Timestamp) {
     return value.toDate().toISOString();
@@ -447,5 +463,81 @@ export async function listRsvpResponses(eventId: string) {
       createdAt: toIsoString(data.createdAt),
       answersCount: Array.isArray(data.answers) ? data.answers.length : 0,
     } satisfies RSVPResponseRecord;
+  });
+}
+
+/**
+ * Admin-only detailed listing: returns the full answer array per response,
+ * ordered newest-first. Defaults to 200 entries per call.
+ */
+export async function listRsvpResponsesDetailed(
+  eventId: string,
+  options: { limit?: number } = {},
+): Promise<RSVPResponseDetail[]> {
+  const db = getFirebaseAdminDb();
+  const limit =
+    typeof options.limit === "number" && Number.isFinite(options.limit)
+      ? Math.max(1, Math.min(options.limit, 500))
+      : 200;
+  const snapshot = await db
+    .collection(RESPONSE_PARENT_COLLECTION)
+    .doc(eventId)
+    .collection("responses")
+    .orderBy("createdAt", "desc")
+    .limit(limit)
+    .get();
+
+  return snapshot.docs.map((document) => {
+    const data = document.data();
+    const rawAnswers = Array.isArray(data.answers) ? data.answers : [];
+    const answers: RSVPStoredAnswer[] = rawAnswers
+      .map((entry) => {
+        if (!entry || typeof entry !== "object") return null;
+        const record = entry as Record<string, unknown>;
+        const questionId =
+          typeof record.questionId === "string" ? record.questionId : null;
+        const slug = typeof record.slug === "string" ? record.slug : null;
+        if (!questionId || !slug) return null;
+        return {
+          questionId,
+          slug,
+          title: typeof record.title === "string" ? record.title : "",
+          type: typeof record.type === "string" ? record.type : "short_text",
+          value:
+            typeof record.value === "string" || Array.isArray(record.value)
+              ? (record.value as RSVPAnswer)
+              : null,
+          formattedValue:
+            typeof record.formattedValue === "string"
+              ? record.formattedValue
+              : "",
+        } satisfies RSVPStoredAnswer;
+      })
+      .filter((a): a is RSVPStoredAnswer => a !== null);
+
+    return {
+      id: document.id,
+      guestName:
+        typeof data.guestName === "string" && data.guestName.trim()
+          ? data.guestName
+          : "Unnamed guest",
+      guestEmail:
+        typeof data.guestEmail === "string" && data.guestEmail.trim()
+          ? data.guestEmail
+          : "No email captured",
+      summaryText:
+        typeof data.summaryText === "string"
+          ? data.summaryText
+          : "No summary saved.",
+      createdAt: toIsoString(data.createdAt),
+      answersCount: answers.length,
+      eventId:
+        typeof data.eventId === "string" ? data.eventId : eventId,
+      eventSlug:
+        typeof data.eventSlug === "string" ? data.eventSlug : "",
+      eventTitle:
+        typeof data.eventTitle === "string" ? data.eventTitle : "",
+      answers,
+    };
   });
 }

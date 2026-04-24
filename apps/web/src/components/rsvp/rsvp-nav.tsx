@@ -139,8 +139,14 @@ export function RsvpNav() {
           {canEdit ? (
             <>
               <Link
-                href="/rsvp/admin"
+                href="/rsvp/admin/rsvps"
                 className="rsvp-btn rsvp-btn-neon px-3 py-1.5 text-xs"
+              >
+                RSVPs
+              </Link>
+              <Link
+                href="/rsvp/admin"
+                className="rsvp-btn rsvp-btn-ghost px-3 py-1.5 text-xs"
               >
                 Admin
               </Link>
@@ -239,9 +245,16 @@ export function RsvpNav() {
               {canEdit ? (
                 <div className="flex flex-wrap gap-2">
                   <Link
-                    href="/rsvp/admin"
+                    href="/rsvp/admin/rsvps"
                     onClick={() => setMobileOpen(false)}
                     className="rsvp-btn rsvp-btn-neon px-3 py-1.5 text-xs"
+                  >
+                    My RSVPs
+                  </Link>
+                  <Link
+                    href="/rsvp/admin"
+                    onClick={() => setMobileOpen(false)}
+                    className="rsvp-btn rsvp-btn-ghost px-3 py-1.5 text-xs"
                   >
                     Admin studio
                   </Link>

@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { isMonosythAdminEmail } from "@/lib/auth/admin";
 import { getFirebaseAdminAuth } from "@/lib/firebase/admin";
-import { listRsvpResponses, submitRsvpResponse } from "@/lib/rsvp/server";
+import {
+  listRsvpResponses,
+  listRsvpResponsesDetailed,
+  submitRsvpResponse,
+} from "@/lib/rsvp/server";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +57,12 @@ export async function GET(request: NextRequest) {
   }
 
   const eventId = request.nextUrl.searchParams.get("eventId")?.trim() ?? "";
+  const detailed =
+    request.nextUrl.searchParams.get("detailed") === "1" ||
+    request.nextUrl.searchParams.get("detailed") === "true";
+  const limitRaw = request.nextUrl.searchParams.get("limit");
+  const limit =
+    limitRaw && Number.isFinite(Number(limitRaw)) ? Number(limitRaw) : undefined;
 
   if (!eventId) {
     return NextResponse.json(
@@ -62,7 +72,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const responses = await listRsvpResponses(eventId);
+    const responses = detailed
+      ? await listRsvpResponsesDetailed(eventId, { limit })
+      : await listRsvpResponses(eventId);
 
     return NextResponse.json({
       responses,

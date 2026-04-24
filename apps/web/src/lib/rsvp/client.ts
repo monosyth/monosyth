@@ -230,3 +230,94 @@ export async function listRsvpResponsesFromClient(eventId: string) {
     } satisfies RSVPClientResponseRecord;
   });
 }
+
+export type RSVPClientStoredAnswer = {
+  questionId: string;
+  slug: string;
+  title: string;
+  type: string;
+  value: RSVPAnswer | null;
+  formattedValue: string;
+};
+
+export type RSVPClientResponseDetail = RSVPClientResponseRecord & {
+  eventId: string;
+  eventSlug: string;
+  eventTitle: string;
+  answers: RSVPClientStoredAnswer[];
+};
+
+/**
+ * Client-side fallback for the admin 'My RSVPs' page. Used when the server
+ * API isn't reachable (local dev without Firebase admin creds).
+ */
+export async function listRsvpResponsesDetailedFromClient(
+  eventId: string,
+  options: { limit?: number } = {},
+): Promise<RSVPClientResponseDetail[]> {
+  const db = getClientDb();
+  const capped = Math.max(
+    1,
+    Math.min(
+      typeof options.limit === "number" && Number.isFinite(options.limit)
+        ? options.limit
+        : 200,
+      500,
+    ),
+  );
+  const snapshot = await getDocs(
+    query(
+      collection(db, RESPONSE_PARENT_COLLECTION, eventId, "responses"),
+      orderBy("createdAt", "desc"),
+      limit(capped),
+    ),
+  );
+
+  return snapshot.docs.map((document) => {
+    const value = document.data();
+    const rawAnswers = Array.isArray(value.answers) ? value.answers : [];
+    const answers: RSVPClientStoredAnswer[] = rawAnswers
+      .map((entry) => {
+        if (!entry || typeof entry !== "object") return null;
+        const r = entry as Record<string, unknown>;
+        const questionId = typeof r.questionId === "string" ? r.questionId : null;
+        const slug = typeof r.slug === "string" ? r.slug : null;
+        if (!questionId || !slug) return null;
+        return {
+          questionId,
+          slug,
+          title: typeof r.title === "string" ? r.title : "",
+          type: typeof r.type === "string" ? r.type : "short_text",
+          value:
+            typeof r.value === "string" || Array.isArray(r.value)
+              ? (r.value as RSVPAnswer)
+              : null,
+          formattedValue:
+            typeof r.formattedValue === "string" ? r.formattedValue : "",
+        } satisfies RSVPClientStoredAnswer;
+      })
+      .filter((a): a is RSVPClientStoredAnswer => a !== null);
+
+    return {
+      id: document.id,
+      guestName:
+        typeof value.guestName === "string" && value.guestName.trim()
+          ? value.guestName
+          : "Unnamed guest",
+      guestEmail:
+        typeof value.guestEmail === "string" && value.guestEmail.trim()
+          ? value.guestEmail
+          : "No email captured",
+      summaryText:
+        typeof value.summaryText === "string"
+          ? value.summaryText
+          : "No summary saved.",
+      createdAt: toIsoString(value.createdAt),
+      answersCount: answers.length,
+      eventId: typeof value.eventId === "string" ? value.eventId : eventId,
+      eventSlug: typeof value.eventSlug === "string" ? value.eventSlug : "",
+      eventTitle: typeof value.eventTitle === "string" ? value.eventTitle : "",
+      answers,
+    };
+  });
+}
