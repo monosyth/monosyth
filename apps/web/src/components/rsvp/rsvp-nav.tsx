@@ -63,15 +63,16 @@ export function RsvpNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-[100] isolate border-b border-[var(--rsvp-border-soft)] bg-[rgba(7,4,10,0.82)] backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-[78rem] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-10">
-        {/* Brand */}
+    <header className="sticky top-0 z-[100] isolate border-b border-[var(--rsvp-border-soft)] bg-[rgba(7,4,10,0.92)] backdrop-blur-md">
+      <div className="mx-auto flex w-full max-w-[78rem] items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-10">
+        {/* Brand — compact on mobile */}
         <Link
           href="/rsvp"
-          className="rsvp-brand-mark shrink-0 text-[0.85rem]"
+          className="rsvp-brand-mark shrink-0 !px-3 !py-2 !text-[0.72rem] !tracking-[0.2em] sm:!px-4 sm:!py-2.5 sm:!text-[0.85rem] sm:!tracking-[0.28em]"
           aria-label="Back to event home"
         >
-          Dallas · Sin City
+          <span className="sm:hidden">Sin City</span>
+          <span className="hidden sm:inline">Dallas · Sin City</span>
         </Link>
 
         {/* Desktop tabs */}
@@ -174,17 +175,21 @@ export function RsvpNav() {
         {/* Mobile hamburger */}
         <button
           type="button"
-          aria-label="Toggle menu"
+          aria-label={mobileOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileOpen}
           onClick={() => setMobileOpen((v) => !v)}
-          className="rsvp-btn rsvp-btn-ghost flex h-10 w-10 shrink-0 items-center justify-center p-0 lg:hidden"
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 p-0 transition lg:hidden ${
+            mobileOpen
+              ? "border-[var(--rsvp-pink)] bg-[var(--rsvp-pink)]/15 text-[var(--rsvp-pink)] shadow-[0_0_14px_rgba(255,61,154,0.5)]"
+              : "border-[var(--rsvp-teal)] bg-[rgba(77,225,255,0.12)] text-[var(--rsvp-teal)] shadow-[0_0_10px_rgba(77,225,255,0.35)]"
+          }`}
         >
           <svg
             viewBox="0 0 24 24"
             className="h-5 w-5"
             fill="none"
             stroke="currentColor"
-            strokeWidth={2}
+            strokeWidth={2.5}
             strokeLinecap="round"
             aria-hidden="true"
           >

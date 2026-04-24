@@ -22,8 +22,47 @@ export function DayView({ dayId }: Readonly<{ dayId: string }>) {
   const prev = idx > 0 ? days[idx - 1] : null;
   const next = idx >= 0 && idx < days.length - 1 ? days[idx + 1] : null;
 
+  const dayNav = (
+    <nav
+      aria-label="Day navigation"
+      className="flex flex-wrap items-center justify-between gap-3"
+    >
+      {prev ? (
+        <Link
+          href={`/rsvp/day/${prev.id}`}
+          className="rsvp-btn rsvp-btn-ghost text-xs sm:text-sm"
+        >
+          ← {prev.dayLabel} · {prev.dayName}
+        </Link>
+      ) : (
+        <Link
+          href="/rsvp/overview"
+          className="rsvp-btn rsvp-btn-ghost text-xs sm:text-sm"
+        >
+          ← Back to overview
+        </Link>
+      )}
+      {next ? (
+        <Link
+          href={`/rsvp/day/${next.id}`}
+          className="rsvp-btn rsvp-btn-neon text-xs sm:text-sm"
+        >
+          {next.dayLabel} · {next.dayName} →
+        </Link>
+      ) : (
+        <Link
+          href="/rsvp/rsvp"
+          className="rsvp-btn rsvp-btn-primary text-xs sm:text-sm"
+        >
+          Fill out the RSVP →
+        </Link>
+      )}
+    </nav>
+  );
+
   return (
     <PageShell>
+      {dayNav}
       <SectionPanel>
         <div className="flex flex-col items-center text-center">
           <span className="rsvp-eyebrow">Daily Schedule</span>
@@ -89,32 +128,7 @@ export function DayView({ dayId }: Readonly<{ dayId: string }>) {
 
       {dressBoard ? <DressBoardView board={dressBoard} /> : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {prev ? (
-          <Link
-            href={`/rsvp/day/${prev.id}`}
-            className="rsvp-btn rsvp-btn-ghost"
-          >
-            ← {prev.dayLabel} · {prev.dayName}
-          </Link>
-        ) : (
-          <Link href="/rsvp/overview" className="rsvp-btn rsvp-btn-ghost">
-            ← Back to overview
-          </Link>
-        )}
-        {next ? (
-          <Link
-            href={`/rsvp/day/${next.id}`}
-            className="rsvp-btn rsvp-btn-neon"
-          >
-            {next.dayLabel} · {next.dayName} →
-          </Link>
-        ) : (
-          <Link href="/rsvp/rsvp" className="rsvp-btn rsvp-btn-primary">
-            Fill out the RSVP →
-          </Link>
-        )}
-      </div>
+      {dayNav}
     </PageShell>
   );
 }
