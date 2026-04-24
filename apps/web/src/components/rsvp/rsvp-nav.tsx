@@ -63,7 +63,7 @@ export function RsvpNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[var(--rsvp-border-soft)] bg-[rgba(7,4,10,0.82)] backdrop-blur-md">
+    <header className="sticky top-0 z-[100] isolate border-b border-[var(--rsvp-border-soft)] bg-[rgba(7,4,10,0.82)] backdrop-blur-md">
       <div className="mx-auto flex w-full max-w-[78rem] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-10">
         {/* Brand */}
         <Link
@@ -98,13 +98,13 @@ export function RsvpNav() {
                     {item.label} ▾
                   </button>
                   {daysOpen ? (
-                    <div className="absolute left-1/2 top-full w-56 -translate-x-1/2 rounded-2xl border border-[var(--rsvp-border-soft)] bg-[rgba(10,4,18,0.96)] p-2 shadow-[0_20px_48px_rgba(0,0,0,0.6)]">
+                    <div className="absolute left-1/2 top-full z-[110] mt-2 w-64 -translate-x-1/2 rounded-2xl border border-[var(--rsvp-border-soft)] bg-[rgba(10,4,18,0.98)] p-2 shadow-[0_20px_48px_rgba(0,0,0,0.6)] backdrop-blur-md">
                       {item.children.map((c) => (
                         <Link
                           key={c.href}
                           href={c.href}
                           onClick={() => setDaysOpen(false)}
-                          className={`block rounded-xl px-3 py-2 text-sm transition ${
+                          className={`block whitespace-nowrap rounded-xl px-3 py-2 text-sm transition ${
                             pathname === c.href
                               ? "bg-[var(--rsvp-pink)]/15 text-[var(--rsvp-pink-soft)]"
                               : "text-[var(--rsvp-ink-dim)] hover:bg-white/5 hover:text-[var(--rsvp-ink)]"

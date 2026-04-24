@@ -318,6 +318,13 @@ a {
   z-index: 1;
 }
 
+/* The sticky nav is a direct child of .rsvp-shell and its dropdown must
+   paint above every content panel below it. Keep the z-index above the
+   forced z=1 from the rule above. */
+.rsvp-shell > header {
+  z-index: 100;
+}
+
 .rsvp-panel {
   background: var(--rsvp-panel-background);
   backdrop-filter: blur(16px) saturate(1.1);
