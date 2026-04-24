@@ -112,16 +112,16 @@ export default function RSVPHomePage() {
             </div>
 
             <div
-              className="mx-auto mt-6 w-fit rounded-[1rem] border-2 border-[var(--rsvp-gold)] bg-[#0e0815] px-5 py-3 text-center"
+              className="mx-auto mt-6 w-fit rounded-[1.2rem] border-2 border-[var(--rsvp-gold)] bg-[#0e0815] px-8 py-5 text-center sm:px-12 sm:py-6"
               style={{
                 boxShadow:
-                  "0 0 24px rgba(244,201,93,0.25), inset 0 0 0 4px rgba(0,0,0,0.35)",
+                  "0 0 32px rgba(244,201,93,0.3), inset 0 0 0 4px rgba(0,0,0,0.35)",
               }}
             >
-              <p className="rsvp-script text-[1.4rem] leading-none text-[var(--rsvp-teal)]">
+              <p className="rsvp-script text-[2.4rem] leading-none text-[var(--rsvp-teal)] sm:text-[3rem]">
                 July 30<span className="mx-2 text-[var(--rsvp-ink)]">–</span>Aug 4
               </p>
-              <p className="mt-1 font-mono text-[0.68rem] uppercase tracking-[0.4em] text-[var(--rsvp-pink)]">
+              <p className="mt-3 font-mono text-sm uppercase tracking-[0.4em] text-[var(--rsvp-pink)] sm:text-base">
                 Las Vegas, NV
               </p>
             </div>

@@ -79,23 +79,14 @@ export function SectionHeading({
   );
 }
 
+/**
+ * Gold neon "DAY 1" style chip used on overview cards and day hero headers.
+ * The `tone` prop is kept for back-compat but every variant renders the same
+ * gold chip so fonts + sizing stay consistent across pages.
+ */
 export function DayChip({
   children,
-  tone = "gold",
 }: Readonly<{ children: React.ReactNode; tone?: "gold" | "teal" }>) {
-  if (tone === "teal") {
-    return (
-      <span
-        className="inline-flex items-center justify-center rounded-md border-2 border-[var(--rsvp-teal)] bg-black/30 px-8 py-2 font-[var(--font-bebas-neue)] text-xl tracking-[0.28em] text-[var(--rsvp-teal)]"
-        style={{
-          boxShadow: "0 0 18px rgba(77,225,255,0.25), inset 0 0 0 4px rgba(0,0,0,0.35)",
-          textShadow: "0 0 10px rgba(77,225,255,0.55)",
-        }}
-      >
-        {children}
-      </span>
-    );
-  }
   return <span className="rsvp-day-chip">{children}</span>;
 }
 

@@ -20,7 +20,7 @@ export default function OverviewPage() {
         />
 
         <div className="mt-12 grid gap-6 lg:grid-cols-2">
-          {overview.days.map((day, i) => {
+          {overview.days.map((day) => {
             const matchingDay = schedule.days.find(
               (d) => d.dayLabel.toLowerCase() === day.label.toLowerCase(),
             );
@@ -30,7 +30,7 @@ export default function OverviewPage() {
                 className="relative flex flex-col rounded-[1.4rem] border border-[var(--rsvp-border-soft)] bg-[rgba(10,4,18,0.55)] p-6 transition hover:border-[var(--rsvp-pink)]/40"
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <DayChip tone={i % 2 === 0 ? "gold" : "teal"}>{day.label}</DayChip>
+                  <DayChip tone="gold">{day.label}</DayChip>
                   <span className="font-mono text-[0.68rem] uppercase tracking-[0.28em] text-[var(--rsvp-ink-dim)]">
                     {day.dateLabel}
                   </span>
