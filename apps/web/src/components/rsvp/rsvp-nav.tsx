@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { useIdentity } from "@/components/rsvp/identity";
@@ -64,6 +64,26 @@ export function RsvpNav() {
   const [daysOpen, setDaysOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // Small close delay so a stray mouseleave while moving between the Days
+  // button and its panel doesn't immediately collapse the menu.
+  const daysCloseTimer = useRef<number | null>(null);
+  const openDays = () => {
+    if (daysCloseTimer.current !== null) {
+      window.clearTimeout(daysCloseTimer.current);
+      daysCloseTimer.current = null;
+    }
+    setDaysOpen(true);
+  };
+  const scheduleDaysClose = () => {
+    if (daysCloseTimer.current !== null) {
+      window.clearTimeout(daysCloseTimer.current);
+    }
+    daysCloseTimer.current = window.setTimeout(() => {
+      setDaysOpen(false);
+      daysCloseTimer.current = null;
+    }, 150);
+  };
+
   return (
     <header className="sticky top-0 z-[100] isolate border-b border-[var(--rsvp-border-soft)] bg-[rgba(7,4,10,0.92)] backdrop-blur-md">
       <div className="mx-auto flex w-full max-w-[78rem] items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-10">
@@ -86,12 +106,13 @@ export function RsvpNav() {
                 <div
                   key={item.label}
                   className="relative"
-                  onMouseEnter={() => setDaysOpen(true)}
-                  onMouseLeave={() => setDaysOpen(false)}
+                  onMouseEnter={openDays}
+                  onMouseLeave={scheduleDaysClose}
                 >
                   <button
                     type="button"
                     onClick={() => setDaysOpen((v) => !v)}
+                    aria-expanded={daysOpen}
                     className={`rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] transition ${
                       active
                         ? "bg-gradient-to-r from-[var(--rsvp-pink)] to-[#d3278b] text-white shadow-[0_0_14px_rgba(255,61,154,0.45)]"
@@ -101,21 +122,30 @@ export function RsvpNav() {
                     {item.label} ▾
                   </button>
                   {daysOpen ? (
-                    <div className="absolute left-1/2 top-full z-[110] mt-2 w-64 -translate-x-1/2 rounded-2xl border border-[var(--rsvp-border-soft)] bg-[rgba(10,4,18,0.98)] p-2 shadow-[0_20px_48px_rgba(0,0,0,0.6)] backdrop-blur-md">
-                      {item.children.map((c) => (
-                        <Link
-                          key={c.href}
-                          href={c.href}
-                          onClick={() => setDaysOpen(false)}
-                          className={`block whitespace-nowrap rounded-xl px-3 py-2 text-sm transition ${
-                            pathname === c.href
-                              ? "bg-[var(--rsvp-pink)]/15 text-[var(--rsvp-pink-soft)]"
-                              : "text-[var(--rsvp-ink-dim)] hover:bg-white/5 hover:text-[var(--rsvp-ink)]"
-                          }`}
-                        >
-                          {c.label}
-                        </Link>
-                      ))}
+                    // Outer wrapper includes a transparent top-padding strip
+                    // so there's no dead zone between the button and the
+                    // panel — hovering into the gap keeps the menu open.
+                    <div
+                      className="absolute left-1/2 top-full z-[110] -translate-x-1/2 pt-2"
+                      onMouseEnter={openDays}
+                      onMouseLeave={scheduleDaysClose}
+                    >
+                      <div className="flex w-60 flex-col gap-0.5 rounded-2xl border border-[var(--rsvp-border-soft)] bg-[rgba(10,4,18,0.98)] p-2 shadow-[0_20px_48px_rgba(0,0,0,0.6)] backdrop-blur-md">
+                        {item.children.map((c) => (
+                          <Link
+                            key={c.href}
+                            href={c.href}
+                            onClick={() => setDaysOpen(false)}
+                            className={`block whitespace-nowrap rounded-xl px-3 py-2 text-sm leading-5 transition ${
+                              pathname === c.href
+                                ? "bg-[var(--rsvp-pink)]/15 text-[var(--rsvp-pink-soft)]"
+                                : "text-[var(--rsvp-ink-dim)] hover:bg-white/5 hover:text-[var(--rsvp-ink)]"
+                            }`}
+                          >
+                            {c.label}
+                          </Link>
+                        ))}
+                      </div>
                     </div>
                   ) : null}
                 </div>
