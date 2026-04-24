@@ -87,7 +87,10 @@ export type Activity = {
   priceLabel: string;      // human label ("$154 per person" or "Choose your activity")
   description: string;
   rsvpQuestionSlug?: string; // links to the matching wizard question
-  icon: string;            // emoji
+  icon: string;            // emoji fallback when no image is set
+  /** Optional header photo rendered at the top of the card. */
+  imageUrl?: string;
+  imageAlt?: string;
   /** Extra options (e.g. SpeedVegas: go-kart / exotic / drift). */
   options?: string[];
   depositsDueBy?: string;  // "June 10th"
@@ -525,6 +528,8 @@ export const DALLAS_EVENT_CONTENT: EventContent = {
           "Group seating next to Dallas. Deposits hold your seat by June 10th, or buy your own ticket elsewhere.",
         rsvpQuestionSlug: "kelly-clarkson",
         icon: "🎤",
+        imageUrl: "/rsvp-images/kelly.jpg",
+        imageAlt: "Kelly Clarkson performing",
         depositsDueBy: "June 10th",
       },
       {
@@ -539,6 +544,8 @@ export const DALLAS_EVENT_CONTENT: EventContent = {
           "Go-karts, exotic car racing, passenger drifting. Dallas will contact the venue — please indicate which experiences interest you.",
         rsvpQuestionSlug: "speed-vegas",
         icon: "🏎",
+        imageUrl: "/rsvp-images/speedway.jpg",
+        imageAlt: "SpeedVegas exotic car",
         options: ["Go-Karts (from $35)", "Exotic Car Racing ($299+)", "Passenger Drifting ($99)"],
         depositsDueBy: "June 10th",
       },

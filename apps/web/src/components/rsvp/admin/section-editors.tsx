@@ -520,8 +520,31 @@ export function ActivitiesEditor({
             <AdminField label="Description">
               <AdminTextarea rows={3} value={a.description} onChange={(v) => update({ ...a, description: v })} />
             </AdminField>
+
+            {/* Header photo picker — overrides the emoji icon when set. */}
+            <div className="rounded-2xl border border-[var(--rsvp-teal)]/25 bg-[rgba(77,225,255,0.05)] p-4">
+              <p className="mb-3 font-[var(--font-bebas-neue)] text-sm tracking-[0.22em] text-[var(--rsvp-teal)]">
+                Header photo
+              </p>
+              <ImagePickerField
+                label="Card image (overrides the emoji when set)"
+                value={a.imageUrl}
+                onChange={(url) => update({ ...a, imageUrl: url })}
+              />
+              {a.imageUrl ? (
+                <div className="mt-3">
+                  <AdminField label="Image alt text (for screen readers)">
+                    <AdminInput
+                      value={a.imageAlt ?? ""}
+                      onChange={(v) => update({ ...a, imageAlt: v })}
+                    />
+                  </AdminField>
+                </div>
+              ) : null}
+            </div>
+
             <div className="grid gap-3 sm:grid-cols-2">
-              <AdminField label="Icon (emoji)">
+              <AdminField label="Icon (emoji — fallback when no image set)">
                 <AdminInput value={a.icon} onChange={(v) => update({ ...a, icon: v })} />
               </AdminField>
               <AdminField label="Deposits due by">
