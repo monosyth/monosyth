@@ -100,7 +100,7 @@ export function GuestAuthGate({
             onChange={(e) => setName(e.target.value)}
             required
             className="rsvp-input"
-            placeholder="Scott Waite"
+            placeholder="Jane Doe"
           />
         </label>
         <label className="mb-4 flex flex-col gap-1.5">
