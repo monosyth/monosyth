@@ -2,3 +2,8 @@
 .env
 .env.local
 .env.*.local
+
+# Local-only secrets used by Claude sessions to authenticate to GitHub.
+# Committing this would leak your token. Only secrets.env.example is
+# tracked.
+.claude/secrets.env
