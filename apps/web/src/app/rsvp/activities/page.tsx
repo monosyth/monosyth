@@ -64,12 +64,6 @@ export default function ActivitiesPage() {
                 </div>
               ) : (
                 <header className="flex items-start justify-between gap-4 p-6 pb-0">
-                  <div
-                    className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-[var(--rsvp-teal)]/40 bg-[rgba(77,225,255,0.08)] text-2xl"
-                    aria-hidden="true"
-                  >
-                    {a.icon}
-                  </div>
                   <div className="flex-1">
                     <p className="font-mono text-[0.68rem] uppercase tracking-[0.28em] text-[var(--rsvp-teal)]">
                       {a.dayLabel} · {a.dayDate}

@@ -105,6 +105,9 @@ export type RestaurantItem = {
   priceRange: string;      // "$35-$50 est"
   theme?: string;          // "Themed: CEO of Sin"
   rsvpQuestionSlug?: string;
+  /** Optional header photo rendered at the top of the restaurant card. */
+  imageUrl?: string;
+  imageAlt?: string;
 };
 
 export type RestaurantsSection = {
@@ -606,6 +609,8 @@ export const DALLAS_EVENT_CONTENT: EventContent = {
         priceRange: "$80–$150 est",
         theme: "Themed: CEO of Sin",
         rsvpQuestionSlug: "sinners-dinner",
+        imageUrl: "/rsvp-images/bavettes.webp",
+        imageAlt: "Bavette's Steakhouse dining room",
       },
       {
         id: "hells-kitchen",

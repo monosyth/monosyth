@@ -368,7 +368,11 @@ export async function writeRsvpStudio(
   return readRsvpStudio();
 }
 
-export async function submitRsvpResponse(eventId: string, rawAnswers: unknown) {
+export async function submitRsvpResponse(
+  eventId: string,
+  rawAnswers: unknown,
+  guest?: { uid: string; email: string | null; displayName: string | null },
+) {
   const db = getFirebaseAdminDb();
   const studioSnapshot = await readRsvpStudio();
   const event = studioSnapshot.studio.events.find((entry) => entry.id === eventId);
@@ -398,31 +402,57 @@ export async function submitRsvpResponse(eventId: string, rawAnswers: unknown) {
   }
 
   const summaryText = buildSummaryText(event, answers);
-  const guestName = findTextAnswerBySlug(event, answers, "guest-name");
-  const guestEmail = findTextAnswerBySlug(event, answers, "guest-email");
-  const responseRef = db
-    .collection(RESPONSE_PARENT_COLLECTION)
-    .doc(event.id)
-    .collection("responses")
-    .doc();
+  // Prefer the verified Google profile name/email when available; fall back
+  // to whatever the guest typed into the wizard.
+  const typedName = findTextAnswerBySlug(event, answers, "guest-name");
+  const typedEmail = findTextAnswerBySlug(event, answers, "guest-email");
+  const guestName = guest?.displayName?.trim() || typedName;
+  const guestEmail = guest?.email?.trim().toLowerCase() || typedEmail;
 
-  await responseRef.set({
-    eventId: event.id,
-    eventSlug: event.slug,
-    eventTitle: event.title,
-    guestName,
-    guestEmail,
-    summaryText,
-    answers: visibleQuestions.map((question) => ({
-      questionId: question.id,
-      slug: question.slug,
-      title: question.title,
-      type: question.type,
-      value: answers[question.id] ?? null,
-      formattedValue: formatAnswerValue(question, answers[question.id]),
-    })),
-    createdAt: FieldValue.serverTimestamp(),
-  });
+  // When the guest is signed in, use their Firebase uid as the document id
+  // so a resubmit upserts over their previous response instead of appending.
+  // Anonymous submissions (no uid passed) keep the old auto-id behaviour.
+  const responseRef = guest?.uid
+    ? db
+        .collection(RESPONSE_PARENT_COLLECTION)
+        .doc(event.id)
+        .collection("responses")
+        .doc(guest.uid)
+    : db
+        .collection(RESPONSE_PARENT_COLLECTION)
+        .doc(event.id)
+        .collection("responses")
+        .doc();
+
+  const existing = guest?.uid ? await responseRef.get() : null;
+  const isUpdate = Boolean(existing?.exists);
+
+  await responseRef.set(
+    {
+      eventId: event.id,
+      eventSlug: event.slug,
+      eventTitle: event.title,
+      guestName,
+      guestEmail,
+      guestUid: guest?.uid ?? null,
+      summaryText,
+      answers: visibleQuestions.map((question) => ({
+        questionId: question.id,
+        slug: question.slug,
+        title: question.title,
+        type: question.type,
+        value: answers[question.id] ?? null,
+        formattedValue: formatAnswerValue(question, answers[question.id]),
+      })),
+      updatedAt: FieldValue.serverTimestamp(),
+      ...(isUpdate
+        ? {}
+        : {
+            createdAt: FieldValue.serverTimestamp(),
+          }),
+    },
+    { merge: true },
+  );
 
   const storedResponse = await responseRef.get();
 
@@ -431,7 +461,10 @@ export async function submitRsvpResponse(eventId: string, rawAnswers: unknown) {
     guestName,
     guestEmail,
     summaryText,
-    createdAt: toIsoString(storedResponse.data()?.createdAt),
+    createdAt: toIsoString(
+      storedResponse.data()?.createdAt ?? storedResponse.data()?.updatedAt,
+    ),
+    isUpdate,
   };
 }
 

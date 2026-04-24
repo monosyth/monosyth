@@ -634,6 +634,28 @@ export function RestaurantsEditor({
           onChange={(v) => update({ ...r, rsvpQuestionSlug: v || undefined })}
         />
       </AdminField>
+
+      {/* Header photo */}
+      <div className="rounded-2xl border border-[var(--rsvp-teal)]/25 bg-[rgba(77,225,255,0.05)] p-3">
+        <p className="mb-3 font-[var(--font-bebas-neue)] text-sm tracking-[0.22em] text-[var(--rsvp-teal)]">
+          Header photo
+        </p>
+        <ImagePickerField
+          label="Card image"
+          value={r.imageUrl}
+          onChange={(url) => update({ ...r, imageUrl: url })}
+        />
+        {r.imageUrl ? (
+          <div className="mt-3">
+            <AdminField label="Image alt text">
+              <AdminInput
+                value={r.imageAlt ?? ""}
+                onChange={(v) => update({ ...r, imageAlt: v })}
+              />
+            </AdminField>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 

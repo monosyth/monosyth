@@ -100,12 +100,20 @@ export default function DepositsPage() {
               key={a.id}
               className="grid items-center gap-3 rounded-2xl border border-[var(--rsvp-pink)]/30 bg-[rgba(255,61,154,0.05)] px-4 py-4 sm:grid-cols-[auto_1fr_auto]"
             >
-              <div
-                aria-hidden="true"
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[var(--rsvp-pink)]/40 bg-[rgba(255,61,154,0.08)] text-xl"
-              >
-                {a.icon}
-              </div>
+              {a.imageUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={a.imageUrl}
+                  alt={a.imageAlt ?? a.name}
+                  className="h-14 w-14 shrink-0 rounded-xl border border-[var(--rsvp-pink)]/40 object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div
+                  aria-hidden="true"
+                  className="h-14 w-14 shrink-0 rounded-xl border border-[var(--rsvp-pink)]/30 bg-[rgba(255,61,154,0.08)]"
+                />
+              )}
               <div>
                 <p className="font-mono text-[0.65rem] uppercase tracking-[0.28em] text-[var(--rsvp-teal)]">
                   {a.dayLabel} · {a.dayDate}

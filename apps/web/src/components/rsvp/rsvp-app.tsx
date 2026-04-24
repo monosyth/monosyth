@@ -1190,12 +1190,26 @@ export function RSVPApp(props: RSVPAppProps = {}) {
       }));
       let submission: Record<string, unknown> | null;
       try {
+        // Include the guest's bearer token so the server can tag the
+        // submission with their verified uid and upsert over any
+        // previous response.
+        const headers: Record<string, string> = {
+          "content-type": "application/json",
+        };
+        if (user) {
+          try {
+            const token = await user.getIdToken();
+            headers.authorization = `Bearer ${token}`;
+          } catch {
+            // fall through anonymous
+          }
+        }
         const response = await fetch("/api/rsvp/responses", {
           body: JSON.stringify({
             answers: currentDraft.answers,
             eventId: currentEvent.id,
           }),
-          headers: { "content-type": "application/json" },
+          headers,
           method: "POST",
         });
         const payload = await getJsonPayload(response);
@@ -1815,7 +1829,7 @@ function PosterView({
       {/* BRUNCHES / DINNERS */}
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="rsvp-panel rounded-[2rem] px-6 py-8 sm:px-8">
-          <span className="rsvp-eyebrow rsvp-eyebrow--gold">Brunches 🍳</span>
+          <span className="rsvp-eyebrow rsvp-eyebrow--gold">Brunches</span>
           <h2 className="mt-5 rsvp-display text-3xl">Slow mornings.</h2>
           <div className="mt-6 grid gap-3">
             {BRUNCHES.map((b) => (
@@ -1840,7 +1854,7 @@ function PosterView({
         </div>
 
         <div className="rsvp-panel rounded-[2rem] px-6 py-8 sm:px-8">
-          <span className="rsvp-eyebrow rsvp-eyebrow--pink">Dinners 🍷</span>
+          <span className="rsvp-eyebrow rsvp-eyebrow--pink">Dinners</span>
           <h2 className="mt-5 rsvp-display text-3xl">Loud nights.</h2>
           <div className="mt-6 grid gap-3">
             {DINNERS.map((d) => (

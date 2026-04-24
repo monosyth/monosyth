@@ -137,20 +137,47 @@ export function RsvpNav() {
 
         {/* Auth cluster */}
         <div className="hidden shrink-0 items-center gap-2 lg:flex">
-          {canEdit ? (
+          {status === "signed_in" && user ? (
             <>
-              <Link
-                href="/rsvp/admin/rsvps"
-                className="rsvp-btn rsvp-btn-neon px-3 py-1.5 text-xs"
-              >
-                RSVPs
-              </Link>
-              <Link
-                href="/rsvp/admin"
-                className="rsvp-btn rsvp-btn-ghost px-3 py-1.5 text-xs"
-              >
-                Admin
-              </Link>
+              {canEdit ? (
+                <>
+                  <Link
+                    href="/rsvp/admin/rsvps"
+                    className="rsvp-btn rsvp-btn-neon px-3 py-1.5 text-xs"
+                  >
+                    RSVPs
+                  </Link>
+                  <Link
+                    href="/rsvp/admin"
+                    className="rsvp-btn rsvp-btn-ghost px-3 py-1.5 text-xs"
+                  >
+                    Admin
+                  </Link>
+                </>
+              ) : null}
+              <span className="hidden items-center gap-2 rounded-full border border-[var(--rsvp-border-soft)] bg-[rgba(10,4,18,0.55)] px-3 py-1.5 text-xs text-[var(--rsvp-ink-dim)] md:inline-flex">
+                {user.photoURL ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={user.photoURL}
+                    alt=""
+                    className="h-5 w-5 rounded-full"
+                  />
+                ) : (
+                  <span
+                    aria-hidden="true"
+                    className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--rsvp-pink)] text-[0.6rem] font-bold text-white"
+                  >
+                    {(user.displayName ?? user.email ?? "?")
+                      .trim()
+                      .charAt(0)
+                      .toUpperCase()}
+                  </span>
+                )}
+                <span className="max-w-[9rem] truncate text-[var(--rsvp-ink)]">
+                  {(user.displayName ?? user.email ?? "Guest").split(" ")[0]}
+                </span>
+              </span>
               <button
                 type="button"
                 onClick={() => void signOut()}
@@ -165,9 +192,9 @@ export function RsvpNav() {
               type="button"
               onClick={() => void signInWithGoogle()}
               disabled={!isConfigured || isWorking}
-              className="rsvp-btn rsvp-btn-ghost px-3 py-1.5 text-xs"
+              className="rsvp-btn rsvp-btn-primary px-3 py-1.5 text-xs"
             >
-              {isWorking ? "…" : "Admin sign in"}
+              {isWorking ? "…" : "Sign in with Google"}
             </button>
           )}
         </div>
@@ -247,42 +274,71 @@ export function RsvpNav() {
               </div>
             ))}
             <div className="mt-3 border-t border-[var(--rsvp-border-soft)] pt-3">
-              {canEdit ? (
-                <div className="flex flex-wrap gap-2">
-                  <Link
-                    href="/rsvp/admin/rsvps"
-                    onClick={() => setMobileOpen(false)}
-                    className="rsvp-btn rsvp-btn-neon px-3 py-1.5 text-xs"
-                  >
-                    My RSVPs
-                  </Link>
-                  <Link
-                    href="/rsvp/admin"
-                    onClick={() => setMobileOpen(false)}
-                    className="rsvp-btn rsvp-btn-ghost px-3 py-1.5 text-xs"
-                  >
-                    Admin studio
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void signOut();
-                      setMobileOpen(false);
-                    }}
-                    disabled={isWorking}
-                    className="rsvp-btn rsvp-btn-ghost px-3 py-1.5 text-xs"
-                  >
-                    {isWorking ? "…" : "Sign out"}
-                  </button>
+              {status === "signed_in" && user ? (
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-2 text-sm text-[var(--rsvp-ink)]">
+                    {user.photoURL ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={user.photoURL}
+                        alt=""
+                        className="h-6 w-6 rounded-full"
+                      />
+                    ) : (
+                      <span
+                        aria-hidden="true"
+                        className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--rsvp-pink)] text-[0.65rem] font-bold text-white"
+                      >
+                        {(user.displayName ?? user.email ?? "?")
+                          .trim()
+                          .charAt(0)
+                          .toUpperCase()}
+                      </span>
+                    )}
+                    <span className="truncate">
+                      {user.displayName ?? user.email ?? "Guest"}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {canEdit ? (
+                      <>
+                        <Link
+                          href="/rsvp/admin/rsvps"
+                          onClick={() => setMobileOpen(false)}
+                          className="rsvp-btn rsvp-btn-neon px-3 py-1.5 text-xs"
+                        >
+                          My RSVPs
+                        </Link>
+                        <Link
+                          href="/rsvp/admin"
+                          onClick={() => setMobileOpen(false)}
+                          className="rsvp-btn rsvp-btn-ghost px-3 py-1.5 text-xs"
+                        >
+                          Admin studio
+                        </Link>
+                      </>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void signOut();
+                        setMobileOpen(false);
+                      }}
+                      disabled={isWorking}
+                      className="rsvp-btn rsvp-btn-ghost px-3 py-1.5 text-xs"
+                    >
+                      {isWorking ? "…" : "Sign out"}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <button
                   type="button"
                   onClick={() => void signInWithGoogle()}
                   disabled={!isConfigured || isWorking}
-                  className="rsvp-btn rsvp-btn-ghost px-3 py-1.5 text-xs"
+                  className="rsvp-btn rsvp-btn-primary w-full px-3 py-2 text-xs"
                 >
-                  {isWorking ? "…" : "Admin sign in"}
+                  {isWorking ? "…" : "Sign in with Google"}
                 </button>
               )}
             </div>

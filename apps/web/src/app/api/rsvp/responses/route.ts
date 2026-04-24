@@ -107,7 +107,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = await submitRsvpResponse(eventId, payload.answers);
+    // Verify the guest's Google sign-in. The token lets us tag the submission
+    // with their uid so a resubmit upserts their previous answers. We do NOT
+    // require admin-level privileges here — any signed-in Google user may
+    // RSVP. When the token is missing or invalid we still accept anonymous
+    // submissions (back-compat for older clients / testing).
+    const bearer =
+      request.headers
+        .get("authorization")
+        ?.replace(/^Bearer\s+/i, "")
+        .trim() ?? "";
+    let guest:
+      | { uid: string; email: string | null; displayName: string | null }
+      | undefined;
+    if (bearer) {
+      try {
+        const decoded = await getFirebaseAdminAuth().verifyIdToken(bearer);
+        guest = {
+          uid: decoded.uid,
+          email: decoded.email ?? null,
+          displayName:
+            (decoded.name as string | undefined) ??
+            (decoded.email ? decoded.email.split("@")[0] : null),
+        };
+      } catch {
+        // Fall through to anonymous submission.
+      }
+    }
+
+    const response = await submitRsvpResponse(eventId, payload.answers, guest);
 
     return NextResponse.json({
       ok: true,
