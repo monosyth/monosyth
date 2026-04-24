@@ -51,13 +51,7 @@ function isActive(pathname: string, item: NavItem) {
 
 export function RsvpNav() {
   const pathname = usePathname() ?? "/rsvp";
-  const {
-    isConfigured,
-    isWorking,
-    signInWithGoogle,
-    status,
-    user,
-  } = useAuth();
+  const { status, user } = useAuth();
   const identity = useIdentity();
   const canEdit =
     status === "signed_in" && isMonosythAdminEmail(user?.email);
@@ -219,14 +213,12 @@ export function RsvpNav() {
               </button>
             </>
           ) : (
-            <button
-              type="button"
-              onClick={() => void signInWithGoogle()}
-              disabled={!isConfigured || isWorking}
+            <Link
+              href="/rsvp/rsvp"
               className="rsvp-btn rsvp-btn-primary px-3 py-1.5 text-xs"
             >
-              {isWorking ? "…" : "Sign in"}
-            </button>
+              Sign in
+            </Link>
           )}
         </div>
 
