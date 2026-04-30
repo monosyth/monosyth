@@ -1,11 +1,21 @@
 import { buildWeatherOverview } from "@/lib/weather/overview";
 import {
   persistWeatherHistory,
+  readStoredArchiveSummary,
   readStoredWeatherObservations,
   readStoredWeatherObservationsBetween,
   readStoredWeatherStationMeta,
+  writeStoredArchiveSummary,
 } from "@/lib/weather/history";
+import {
+  applyDailyRollupsForObservations,
+  readAllDailyRollups,
+} from "@/lib/weather/rollups";
 import { getHourlyForecast } from "@/lib/weather/nws";
+import {
+  buildWeatherSummaryArchive,
+  buildWeatherSummaryArchiveFromRollups,
+} from "@/lib/weather/summary";
 import type { WeatherObservation, WeatherPageData } from "@/lib/weather/types";
 
 const API_BASE_URL = "https://api.ambientweather.net/v1";
@@ -324,6 +334,19 @@ async function getCurrentWeatherPageData(): Promise<WeatherPageData> {
       observations,
       source: "page",
     }).catch(() => null);
+
+    // Update daily rollup docs alongside raw observations. This is what
+    // keeps the summaries fast — each render reads ~365 daily docs instead
+    // of paging through hundreds of thousands of minute-resolution rows.
+    if (device.macAddress) {
+      await applyDailyRollupsForObservations({
+        macAddress: device.macAddress,
+        observations: observations.map((observation) => ({
+          ...observation,
+          timestamp: normalizeObservationTimestamp(observation),
+        })),
+      }).catch(() => null);
+    }
     const latestObservationTimestamp =
       pickNumber(observations.at(-1) ?? null, ["dateutc", "timestamp"]) ?? Date.now();
     const normalizedLatestTimestamp =
@@ -545,6 +568,87 @@ export async function getWeatherPageData(
   }
 }
 
+// Reads the full station history once, computes the summary archive, and
+// persists it at weatherStations/{id}/archives/summary so page renders only
+// need a single Firestore read instead of paging through tens of thousands
+// of observation docs.
+export async function rebuildStoredWeatherArchive(options: { limit?: number } = {}) {
+  const env = readEnv();
+
+  if (!env.macAddress) {
+    throw new Error("AMBIENT_MAC_ADDRESS is required to rebuild the archive.");
+  }
+
+  // Try the rollups-only fast path first. A year of rollups is ~365 reads;
+  // a year of raw observations is ~525,000.
+  const rollups = await readAllDailyRollups({ macAddress: env.macAddress });
+
+  if (rollups.length) {
+    const archive = buildWeatherSummaryArchiveFromRollups(rollups);
+    const latestObservationAt =
+      rollups.at(-1)?.latestObservationAt ?? Date.now();
+
+    if (archive) {
+      await writeStoredArchiveSummary({
+        macAddress: env.macAddress,
+        archive,
+        latestObservationAt,
+      });
+    }
+
+    return {
+      macAddress: env.macAddress,
+      source: "rollups" as const,
+      observationCount: rollups.reduce((sum, rollup) => sum + rollup.observationCount, 0),
+      dailyRollupCount: rollups.length,
+      latestObservationAt: new Date(latestObservationAt).toISOString(),
+      archiveStored: Boolean(archive),
+    };
+  }
+
+  // Fallback: no rollups stored yet. Walk raw observations once, persist
+  // per-day rollups so this stays cheap forever after, then build the
+  // archive from the freshly written rollups.
+  const observations = await readStoredWeatherObservationsBetween({
+    macAddress: env.macAddress,
+    startMs: 0,
+    endMs: Date.now() + 24 * 60 * 60 * 1000,
+    limit: options.limit ?? 100_000,
+  });
+
+  if (observations.length) {
+    await applyDailyRollupsForObservations({
+      macAddress: env.macAddress,
+      observations,
+    }).catch(() => null);
+  }
+
+  const archive = buildWeatherSummaryArchive(observations);
+  const latestObservationAt = observations.at(-1)?.timestamp ?? Date.now();
+
+  if (archive) {
+    await writeStoredArchiveSummary({
+      macAddress: env.macAddress,
+      archive,
+      latestObservationAt,
+    });
+  }
+
+  return {
+    macAddress: env.macAddress,
+    source: "observations-backfill" as const,
+    observationCount: observations.length,
+    dailyRollupCount: 0,
+    latestObservationAt: new Date(latestObservationAt).toISOString(),
+    archiveStored: Boolean(archive),
+  };
+}
+
+// The logger cron may run every few minutes, but rebuilding the archive
+// every time would be wasteful. Refresh it at most once per hour from this
+// path — the page itself also schedules background rebuilds via after().
+const ARCHIVE_REFRESH_MIN_INTERVAL_MS = 60 * 60 * 1000;
+
 export async function captureWeatherHistorySnapshot() {
   const missing = getMissingVars();
 
@@ -559,10 +663,55 @@ export async function captureWeatherHistorySnapshot() {
     source: "scheduler",
   });
 
+  // Fold the new observations into per-day rollup docs so the summary tab
+  // can read 31/365 daily docs instead of paging through thousands of
+  // minute-resolution rows.
+  if (device.macAddress) {
+    await applyDailyRollupsForObservations({
+      macAddress: device.macAddress,
+      observations: observations.map((observation) => ({
+        ...observation,
+        timestamp: normalizeObservationTimestamp(observation),
+      })),
+    }).catch(() => null);
+  }
+
+  let archiveRefreshed = false;
+
+  if (device.macAddress) {
+    try {
+      const stored = await readStoredArchiveSummary({ macAddress: device.macAddress });
+      const isStale =
+        !stored || Date.now() - stored.builtAt > ARCHIVE_REFRESH_MIN_INTERVAL_MS;
+
+      if (isStale) {
+        await rebuildStoredWeatherArchive();
+        archiveRefreshed = true;
+      }
+    } catch {
+      // Don't fail the snapshot if the archive rebuild misbehaves —
+      // observations are already persisted, and the page can self-heal.
+    }
+  }
+
   return {
     ...persisted,
     observationCount: observations.length,
+    archiveRefreshed,
   };
+}
+
+function normalizeObservationTimestamp(observation: WeatherObservation) {
+  const raw =
+    typeof observation.timestamp === "number"
+      ? observation.timestamp
+      : pickNumber(observation, ["timestamp", "dateutc"]);
+
+  if (raw === null) {
+    return 0;
+  }
+
+  return raw > 1e12 ? raw : raw * 1000;
 }
 
 function mergeObservations(primary: WeatherObservation[], secondary: WeatherObservation[]) {

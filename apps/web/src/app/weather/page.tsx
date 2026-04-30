@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { after } from "next/server";
 import type { ReactNode } from "react";
 import { getTimes } from "suncalc";
 
@@ -16,17 +17,29 @@ import {
 import { buildWeatherAlmanac } from "@/lib/weather/almanac";
 import { nearbyWeatherCameras, type WeatherCamera } from "@/lib/weather/cameras";
 import {
-  readStoredWeatherObservations,
+  readStoredArchiveSummary,
   readStoredWeatherObservationsBetween,
   readStoredWeatherObservationsForDay,
+  writeStoredArchiveSummary,
 } from "@/lib/weather/history";
 import {
+  applyDailyRollupsForObservations,
+  readAllDailyRollups,
+  readDailyRollupsBetween,
+  type WeatherDailyRollup,
+} from "@/lib/weather/rollups";
+import {
+  buildMonthViewFromRollups,
   buildWeatherDayDetail,
   buildWeatherMonthView,
   buildWeatherSummaryArchive,
+  buildWeatherSummaryArchiveFromRollups,
+  buildWeatherWeekStory,
   buildWeatherWeekView,
+  buildWeekViewFromRollups,
   getCurrentDayKey,
   WEATHER_SUMMARY_MONTH_LABELS,
+  type WeatherDayCondition,
   type WeatherDayDetail,
   type WeatherMonthCalendar,
   type WeatherMonthCalendarDay,
@@ -36,6 +49,7 @@ import {
   type WeatherMonthlyReportRow,
   type WeatherSummaryArchive,
   type WeatherSummarySection,
+  type WeatherWeekStory,
 } from "@/lib/weather/summary";
 import {
   formatWeatherDateTime,
@@ -249,26 +263,23 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
     ? getHistoricalComparisonPanels(data, activeView)
     : Promise.resolve<ComparisonPanel[]>([]);
 
-  // The Summaries tab needs three slices of history. Reading them in parallel
-  // (and reusing cached results inside readStoredWeatherObservations) keeps
-  // the page TTFB down even on the first cold render. When we already have a
-  // wide enough archive for the active view, we just slice it locally rather
-  // than hitting Firestore again — this was the duplicate-read bug.
   const summaryNeedsWeekWindow =
     isSummariesTab && (activeView === "current" || activeView === "week");
   const summaryNeedsMonthWindow = isSummariesTab && activeView === "month";
-  const summaryWeekObservationsPromise = summaryNeedsWeekWindow
-    ? readStoredWeatherObservations({
-        macAddress: data.station.macAddress,
-        range: weekOffset === 0 ? "week" : "month",
-      }).catch(() => data.observations)
-    : Promise.resolve<WeatherObservation[]>(data.observations);
-  const summaryMonthObservationsPromise = summaryNeedsMonthWindow
-    ? readStoredWeatherObservations({
-        macAddress: data.station.macAddress,
-        range: monthOffset === 0 ? "month" : "year",
-      }).catch(() => data.observations)
-    : Promise.resolve<WeatherObservation[]>([]);
+
+  // The current week / month is rendered from observations the page already
+  // loaded above (`data.observations`). For previous weeks/months we read
+  // pre-aggregated daily rollup docs instead of paging through raw
+  // observations — that's the win that keeps the summary tab snappy when
+  // someone navigates back through history.
+  const summaryHistoryRollupsPromise =
+    isSummariesTab && ((summaryNeedsWeekWindow && weekOffset !== 0) || (summaryNeedsMonthWindow && monthOffset !== 0))
+      ? loadHistoryRollupsForView(
+          data.station.macAddress,
+          summaryNeedsWeekWindow ? "week" : "month",
+          summaryNeedsWeekWindow ? weekOffset : monthOffset,
+        ).catch(() => [] as WeatherDailyRollup[])
+      : Promise.resolve<WeatherDailyRollup[]>([]);
   const summaryArchivePromise = isSummariesTab
     ? loadWeatherSummaryArchive(data.station.macAddress)
     : Promise.resolve<WeatherSummaryArchive | null>(null);
@@ -295,27 +306,34 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
     : [];
   const [
     comparisonPanels,
-    summaryWeekObservations,
-    summaryMonthObservations,
+    summaryHistoryRollups,
     summaryArchive,
     dayDetailObservations,
   ] = await Promise.all([
     comparisonPanelsPromise,
-    summaryWeekObservationsPromise,
-    summaryMonthObservationsPromise,
+    summaryHistoryRollupsPromise,
     summaryArchivePromise,
     dayDetailPromise,
   ]);
 
-  const weekView =
-    summaryNeedsWeekWindow && summaryWeekObservations.length
-      ? buildWeatherWeekView(summaryWeekObservations, weekOffset)
-      : null;
+  // Build the active week/month view. For the *current* slot we use the
+  // observations already loaded by getWeatherPageData; for past slots we use
+  // the rollup docs we just read. Either path produces the same view shape.
+  const weekView = summaryNeedsWeekWindow
+    ? weekOffset === 0
+      ? data.observations.length
+        ? buildWeatherWeekView(data.observations, weekOffset)
+        : null
+      : summaryHistoryRollups.length
+        ? buildWeekViewFromRollups(summaryHistoryRollups, weekOffset)
+        : null
+    : null;
   const monthView = summaryNeedsMonthWindow
-    ? buildWeatherMonthView(
-        summaryMonthObservations.length ? summaryMonthObservations : data.observations,
-        monthOffset,
-      )
+    ? monthOffset === 0
+      ? buildWeatherMonthView(data.observations, monthOffset)
+      : summaryHistoryRollups.length
+        ? buildMonthViewFromRollups(summaryHistoryRollups, monthOffset)
+        : buildWeatherMonthView(data.observations, monthOffset)
     : null;
   const periodMatrices = weekView?.matrices ?? monthView?.matrices ?? [];
   const monthCalendar = monthView?.calendar ?? null;
@@ -324,6 +342,26 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
       ? buildWeatherDayDetail(dayDetailObservations, selectedDayKey)
       : null;
   const todayKey = isSummariesTab ? getCurrentDayKey() : "";
+
+  // Plain-language story for the week (and a similar month version). We
+  // compute it here on the server so the page ships ready-rendered prose.
+  const weekStory: WeatherWeekStory | null = weekView
+    ? buildWeatherWeekStory(
+        weekView.days,
+        [],
+        weekView.navigation.rangeLabel,
+        weekView.navigation.isCurrent,
+      )
+    : null;
+  const monthStory: WeatherWeekStory | null =
+    monthView && monthCalendar
+      ? buildWeatherWeekStory(
+          monthCalendar.weeks.flat().filter((day) => day.dayNumber !== null),
+          [],
+          monthCalendar.monthLabel,
+          monthCalendar.navigation.isCurrent,
+        )
+      : null;
   const pageMeta = getPageMeta(
     activeView,
     activeDocumentTab,
@@ -454,6 +492,8 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
             todayKey={todayKey}
             dayDetail={dayDetail}
             selectedDayKey={selectedDayKey}
+            weekStory={weekStory}
+            monthStory={monthStory}
           />
         ) : isDashboardTab ? (
           <SummariesTabContent
@@ -908,6 +948,8 @@ function SummaryArchiveTabContent({
   todayKey,
   dayDetail,
   selectedDayKey,
+  weekStory,
+  monthStory,
 }: {
   activeView: WeatherDashboardView;
   monthCalendar: WeatherMonthCalendar | null;
@@ -918,6 +960,8 @@ function SummaryArchiveTabContent({
   todayKey: string;
   dayDetail: WeatherDayDetail | null;
   selectedDayKey: string | null;
+  weekStory: WeatherWeekStory | null;
+  monthStory: WeatherWeekStory | null;
 }) {
   const showWeekBoard = activeView === "week" || activeView === "current";
   const showMonthCalendar = activeView === "month" && monthCalendar;
@@ -929,12 +973,20 @@ function SummaryArchiveTabContent({
 
   if (!hasContent) {
     return (
-      <PanelState message="Summary tables will appear after enough archived station history has been collected." />
+      <div className={styles.summariesCanvas}>
+        <div className={styles.emptySoft}>
+          The summary will sparkle to life once a few days of station data are stored. Hang tight!
+        </div>
+      </div>
     );
   }
 
+  const heroStory = showMonthCalendar ? monthStory : weekStory;
+
   return (
-    <div className="space-y-4">
+    <div className={styles.summariesCanvas}>
+      {heroStory ? <WeekStoryHero story={heroStory} /> : null}
+
       {dayDetail && selectedDayKey ? (
         <DayDetailPanel
           detail={dayDetail}
@@ -977,29 +1029,37 @@ function SummaryArchiveTabContent({
 
       {!summaryArchive ? null : (
         <>
-          <TablePanel
-            id="summary-records-section"
-            title={`All Time Records (Since ${summaryArchive.stationStartLabel})`}
-            subtitle="Archive-wide station records built from stored observations."
-            compact
-          >
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <section className={styles.softCard} id="summary-records-section">
+            <header className={styles.softCardHead}>
+              <div>
+                <h2 className={styles.softCardTitle}>
+                  All-Time Records
+                </h2>
+                <p className={styles.softCardSubtitle}>
+                  Since {summaryArchive.stationStartLabel} — built from your stored archive.
+                </p>
+              </div>
+            </header>
+            <div className={styles.recordsGrid}>
               {summaryArchive.recordSections.map((section) => (
                 <SummarySectionCard key={section.title} section={section} />
               ))}
             </div>
-          </TablePanel>
+          </section>
 
-          <TablePanel
-            id="monthly-reports-section"
-            title="Monthly Reports"
-            subtitle="Months with stored station archive data."
-            compact
-          >
-            <MonthlyReportAvailabilityTable rows={summaryArchive.monthlyReportRows} />
-          </TablePanel>
+          <section className={styles.softCard} id="monthly-reports-section">
+            <header className={styles.softCardHead}>
+              <div>
+                <h2 className={styles.softCardTitle}>Months on Record</h2>
+                <p className={styles.softCardSubtitle}>Months that have at least one stored observation.</p>
+              </div>
+            </header>
+            <div className={styles.softCardBody}>
+              <MonthlyReportAvailabilityTable rows={summaryArchive.monthlyReportRows} />
+            </div>
+          </section>
 
-          <div className="grid gap-4">
+          <div className="grid gap-3">
             {summaryArchive.monthlyMatrices.map((matrix) => (
               <MonthlyClimateTable key={matrix.title} matrix={matrix} />
             ))}
@@ -1007,6 +1067,33 @@ function SummaryArchiveTabContent({
         </>
       )}
     </div>
+  );
+}
+
+function WeekStoryHero({ story }: { story: WeatherWeekStory }) {
+  return (
+    <section className={styles.storyHero}>
+      <span className={styles.storyEyebrow}>
+        <ConditionGlyph condition="sunny" size={14} />
+        {story.eyebrow}
+      </span>
+      <h1 className={styles.storyTitle}>{story.title}</h1>
+      <p
+        className={styles.storyBody}
+        // story.body is composed from numbers + a small allow-list of tags
+        // (<strong>, <em>) we generate in summary.ts — no user input.
+        dangerouslySetInnerHTML={{ __html: story.body }}
+      />
+      <div className={styles.storyStats}>
+        {story.stats.map((stat) => (
+          <div key={stat.label} className={styles.storyStat}>
+            <span className={styles.storyStatLabel}>{stat.label}</span>
+            <span className={styles.storyStatValue}>{stat.value}</span>
+            <span className={styles.storyStatNote}>{stat.note}</span>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -1066,51 +1153,43 @@ function PeriodNavigation({
   const todayHref = buildSummaryHref({ activeView, tab: "summaries" });
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-200 bg-stone-50 px-4 py-2.5">
-      <div className="flex items-center gap-2">
+    <div className={styles.periodNav}>
+      <div className={styles.periodNavGroup}>
         {prevHref ? (
           <Link
             href={prevHref}
             scroll={false}
-            className="inline-flex items-center justify-center border border-stone-300 bg-white px-3 py-1 text-sm font-medium text-stone-700 transition hover:border-stone-500 hover:text-stone-900"
+            className={styles.periodNavButton}
             aria-label={rangeKind === "week" ? "Previous week" : "Previous month"}
           >
-            ← Prev
+            ←
           </Link>
         ) : (
-          <span className="inline-flex cursor-not-allowed items-center justify-center border border-stone-200 bg-stone-100 px-3 py-1 text-sm text-stone-300">
-            ← Prev
+          <span className={styles.periodNavButton} aria-disabled="true">
+            ←
           </span>
         )}
         {nextHref ? (
           <Link
             href={nextHref}
             scroll={false}
-            className="inline-flex items-center justify-center border border-stone-300 bg-white px-3 py-1 text-sm font-medium text-stone-700 transition hover:border-stone-500 hover:text-stone-900"
+            className={styles.periodNavButton}
             aria-label={rangeKind === "week" ? "Next week" : "Next month"}
           >
-            Next →
+            →
           </Link>
         ) : (
-          <span className="inline-flex cursor-not-allowed items-center justify-center border border-stone-200 bg-stone-100 px-3 py-1 text-sm text-stone-300">
-            Next →
+          <span className={styles.periodNavButton} aria-disabled="true">
+            →
           </span>
         )}
       </div>
-      <div className="flex flex-1 items-center justify-center text-sm font-medium text-stone-700">
-        {rangeLabel}
-      </div>
+      <div className={styles.periodNavLabel}>{rangeLabel}</div>
       <div>
         {navigation.isCurrent ? (
-          <span className="inline-flex items-center justify-center border border-transparent px-3 py-1 text-xs uppercase tracking-[0.16em] text-stone-400">
-            Current {rangeKind}
-          </span>
+          <span className={styles.periodNavTodayBadge}>This {rangeKind}</span>
         ) : (
-          <Link
-            href={todayHref}
-            scroll={false}
-            className="inline-flex items-center justify-center border border-stone-300 bg-white px-3 py-1 text-xs uppercase tracking-[0.16em] text-stone-600 transition hover:border-stone-500 hover:text-stone-900"
-          >
+          <Link href={todayHref} scroll={false} className={styles.periodNavTodayLink}>
             Jump to today
           </Link>
         )}
@@ -1119,105 +1198,281 @@ function PeriodNavigation({
   );
 }
 
+function ConditionGlyph({
+  condition,
+  size = 28,
+}: {
+  condition: WeatherDayCondition;
+  size?: number;
+}) {
+  const dim = `${size}px`;
+  const common = {
+    width: dim,
+    height: dim,
+    viewBox: "0 0 64 64",
+    "aria-hidden": true as const,
+  };
+
+  switch (condition) {
+    case "sunny":
+      return (
+        <svg {...common}>
+          <defs>
+            <radialGradient id="sun-grad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#fef08a" />
+              <stop offset="100%" stopColor="#fb923c" />
+            </radialGradient>
+          </defs>
+          <g stroke="#f59e0b" strokeWidth="3" strokeLinecap="round">
+            <line x1="32" y1="6" x2="32" y2="14" />
+            <line x1="32" y1="50" x2="32" y2="58" />
+            <line x1="6" y1="32" x2="14" y2="32" />
+            <line x1="50" y1="32" x2="58" y2="32" />
+            <line x1="13" y1="13" x2="19" y2="19" />
+            <line x1="45" y1="45" x2="51" y2="51" />
+            <line x1="13" y1="51" x2="19" y2="45" />
+            <line x1="45" y1="19" x2="51" y2="13" />
+          </g>
+          <circle cx="32" cy="32" r="13" fill="url(#sun-grad)" stroke="#f59e0b" strokeWidth="2" />
+        </svg>
+      );
+    case "partly-cloudy":
+      return (
+        <svg {...common}>
+          <defs>
+            <radialGradient id="psun-grad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#fef08a" />
+              <stop offset="100%" stopColor="#fb923c" />
+            </radialGradient>
+          </defs>
+          <circle cx="22" cy="24" r="10" fill="url(#psun-grad)" stroke="#f59e0b" strokeWidth="2" />
+          <path
+            d="M48 38c0-5.5-4.5-10-10-10-3.6 0-6.7 1.9-8.5 4.7-1-.5-2.2-.7-3.5-.7-4.4 0-8 3.6-8 8 0 4.4 3.6 8 8 8h22c3.9 0 7-3.1 7-7 0-1.6-.5-3-1.5-4.1-1.6-1.7-3.6-2.6-5.5-2.9z"
+            fill="#fff"
+            stroke="#94a3b8"
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+        </svg>
+      );
+    case "cloudy":
+      return (
+        <svg {...common}>
+          <path
+            d="M48 30c0-6-5-11-11-11-4 0-7.5 2.2-9.5 5.4-1.2-.5-2.6-.7-4-.7-5 0-9 4-9 9s4 9 9 9h25c4.4 0 8-3.6 8-8 0-1.8-.6-3.4-1.6-4.7-1.7-1.9-4.1-3-6.4-3z"
+            fill="#fff"
+            stroke="#64748b"
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+        </svg>
+      );
+    case "rainy":
+      return (
+        <svg {...common}>
+          <path
+            d="M48 26c0-6-5-11-11-11-4 0-7.5 2.2-9.5 5.4-1.2-.5-2.6-.7-4-.7-5 0-9 4-9 9s4 9 9 9h25c4.4 0 8-3.6 8-8 0-1.8-.6-3.4-1.6-4.7-1.7-1.9-4.1-3-6.4-3z"
+            fill="#e0f2fe"
+            stroke="#0284c7"
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+          <g stroke="#0ea5e9" strokeWidth="3" strokeLinecap="round">
+            <line x1="20" y1="44" x2="17" y2="54" />
+            <line x1="32" y1="44" x2="29" y2="54" />
+            <line x1="44" y1="44" x2="41" y2="54" />
+          </g>
+        </svg>
+      );
+    case "stormy":
+      return (
+        <svg {...common}>
+          <path
+            d="M48 26c0-6-5-11-11-11-4 0-7.5 2.2-9.5 5.4-1.2-.5-2.6-.7-4-.7-5 0-9 4-9 9s4 9 9 9h25c4.4 0 8-3.6 8-8 0-1.8-.6-3.4-1.6-4.7-1.7-1.9-4.1-3-6.4-3z"
+            fill="#ddd6fe"
+            stroke="#6d28d9"
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+          <path d="M30 42l-6 10h6l-3 8 9-12h-6l3-6z" fill="#facc15" stroke="#a16207" strokeWidth="1.5" strokeLinejoin="round" />
+        </svg>
+      );
+    case "snowy":
+      return (
+        <svg {...common}>
+          <path
+            d="M48 26c0-6-5-11-11-11-4 0-7.5 2.2-9.5 5.4-1.2-.5-2.6-.7-4-.7-5 0-9 4-9 9s4 9 9 9h25c4.4 0 8-3.6 8-8 0-1.8-.6-3.4-1.6-4.7-1.7-1.9-4.1-3-6.4-3z"
+            fill="#fff"
+            stroke="#94a3b8"
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+          <g fill="#bae6fd" stroke="#0284c7" strokeWidth="1">
+            <circle cx="20" cy="50" r="2.5" />
+            <circle cx="32" cy="54" r="2.5" />
+            <circle cx="44" cy="50" r="2.5" />
+          </g>
+        </svg>
+      );
+    case "windy":
+      return (
+        <svg {...common}>
+          <g stroke="#0f172a" strokeWidth="3" strokeLinecap="round" fill="none">
+            <path d="M10 22h28a6 6 0 1 0-6-6" />
+            <path d="M10 32h36a8 8 0 1 0-8-8" />
+            <path d="M10 42h22a4 4 0 1 1-4 4" />
+          </g>
+        </svg>
+      );
+    default:
+      return (
+        <svg {...common}>
+          <circle cx="32" cy="32" r="14" fill="none" stroke="#cbd5e1" strokeWidth="2" strokeDasharray="3 4" />
+        </svg>
+      );
+  }
+}
+
+// Map a temperature in °F to a vibrant fill color. Cool blues for cold,
+// saturated reds/oranges for hot. Each cell gets two of these — one for
+// the high (top half) and one for the low (bottom half).
+function temperatureFill(value: number | null): string {
+  if (value === null || !Number.isFinite(value)) {
+    return "#e2e8f0";
+  }
+
+  // Pin known stops along the gradient. Linear interpolation between them
+  // so transitions read smoothly.
+  const stops: Array<{ at: number; rgb: [number, number, number] }> = [
+    { at: 0, rgb: [76, 0, 153] },        // deep purple — frigid
+    { at: 20, rgb: [37, 99, 235] },      // royal blue
+    { at: 35, rgb: [56, 189, 248] },     // sky
+    { at: 50, rgb: [110, 231, 183] },    // mint
+    { at: 60, rgb: [254, 240, 138] },    // butter yellow
+    { at: 70, rgb: [251, 146, 60] },     // tangerine
+    { at: 80, rgb: [239, 68, 68] },      // tomato
+    { at: 95, rgb: [190, 24, 93] },      // hot pink
+    { at: 110, rgb: [88, 28, 135] },     // scorched purple
+  ];
+
+  const v = Math.max(stops[0].at, Math.min(stops[stops.length - 1].at, value));
+
+  for (let i = 0; i < stops.length - 1; i += 1) {
+    const a = stops[i];
+    const b = stops[i + 1];
+    if (v >= a.at && v <= b.at) {
+      const t = (v - a.at) / (b.at - a.at);
+      const r = Math.round(a.rgb[0] + (b.rgb[0] - a.rgb[0]) * t);
+      const g = Math.round(a.rgb[1] + (b.rgb[1] - a.rgb[1]) * t);
+      const bl = Math.round(a.rgb[2] + (b.rgb[2] - a.rgb[2]) * t);
+      return `rgb(${r}, ${g}, ${bl})`;
+    }
+  }
+  return "#e2e8f0";
+}
+
+function calendarDayInkClass(value: number | null): string {
+  if (value === null) return styles.calendarDayInk;
+  // Light text reads better on the deepest cool blues and the hot reds.
+  return value <= 35 || value >= 80
+    ? styles.calendarDayInkInverse
+    : styles.calendarDayInk;
+}
+
 function CalendarDayCell({
   day,
   todayKey,
   selectedDayKey,
   activeView,
-  size,
+  variant = "default",
 }: {
   day: WeatherMonthCalendarDay;
   todayKey: string;
   selectedDayKey: string | null;
   activeView: WeatherDashboardView;
-  size: "compact" | "tall";
+  variant?: "default" | "week";
 }) {
+  if (day.dayNumber === null) {
+    return <div className={styles.calendarDayEmpty} aria-hidden="true" />;
+  }
+
   const isSelected = selectedDayKey === day.key;
   const isToday = day.key === todayKey;
   const dayHref =
-    day.dayNumber !== null && day.isInRange && !day.isFuture
+    day.isInRange && !day.isFuture
       ? buildSummaryHref({ activeView, tab: "summaries" }, { date: day.key })
       : null;
-  const heatmapStyle = day.isFuture
-    ? { backgroundColor: "#fafaf9" }
-    : day.highValue !== null
-      ? resolveSingleClimateValueStyle(day.highValue, "temperature")
-      : undefined;
-  const minHeight = size === "tall" ? "min-h-[8.75rem]" : "min-h-[6.25rem]";
-  const baseClass = `relative border-r border-b border-stone-200 px-2.5 py-2 transition-colors ${minHeight}`;
-  const stateClass = isSelected
-    ? "outline outline-2 outline-offset-[-2px] outline-amber-500 z-10"
-    : isToday
-      ? "outline outline-2 outline-offset-[-2px] outline-stone-700"
-      : "";
-  const textColor =
-    !day.isFuture && day.highValue !== null && day.highValue >= 75 ? "text-white" : "text-stone-900";
+
+  const hiColor = temperatureFill(day.highValue);
+  const loColor = temperatureFill(day.lowValue);
+
+  const cellClasses = [
+    styles.calendarDay,
+    variant === "week" ? styles.weekStripDay : "",
+    day.isFuture ? styles.calendarDayFuture : "",
+    isSelected ? styles.calendarDaySelected : "",
+    isToday ? styles.calendarDayToday : "",
+    dayHref ? styles.calendarDayClickable : "",
+    // High temperature drives readable ink contrast for the upper half.
+    !day.isFuture ? calendarDayInkClass(day.highValue) : styles.calendarDayInk,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const cellStyle = day.isFuture
+    ? undefined
+    : ({
+        // The CSS layer reads these to draw the split-color fill.
+        "--hi-color": hiColor,
+        "--lo-color": loColor,
+      } as React.CSSProperties);
 
   const inner = (
     <>
-      <div className="flex items-start justify-between gap-2">
-        <span
-          className={`text-sm font-semibold ${
-            day.isCurrentMonth ? textColor : "text-stone-400"
-          }`}
-        >
-          {day.dayNumber}
-        </span>
-        <div className="flex flex-col items-end gap-0.5">
-          {isToday ? (
-            <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-[0.14em] text-white">
-              Today
-            </span>
-          ) : null}
-          {day.isFuture ? (
-            <span className="text-[0.6rem] uppercase tracking-[0.14em] text-stone-400">
-              —
-            </span>
-          ) : null}
-        </div>
-      </div>
+      <header className={styles.calendarDayHeader}>
+        <span className={styles.calendarDayNumber}>{day.dayNumber}</span>
+        {isToday ? <span className={styles.calendarDayBadge}>Today</span> : null}
+        {day.isFuture && !isToday ? (
+          <span className={styles.calendarDayBadge}>Soon</span>
+        ) : null}
+      </header>
 
       {day.isFuture ? (
-        <p className="mt-3 text-[0.7rem] uppercase tracking-[0.14em] text-stone-400">
-          Awaiting data
-        </p>
+        <div className={styles.calendarDayEmptyState}>Awaiting data</div>
       ) : day.hasObservations ? (
-        <div className={`mt-1.5 grid gap-0.5 text-[0.78rem] leading-tight ${textColor}`}>
-          <div className="flex items-baseline justify-between">
-            <span className="text-[0.6rem] uppercase tracking-[0.14em] opacity-75">Hi</span>
-            <span className="font-semibold">{day.highDisplay}°</span>
+        <>
+          <div className={styles.calendarDayCondition}>
+            <ConditionGlyph
+              condition={day.condition}
+              size={32}
+            />
           </div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-[0.6rem] uppercase tracking-[0.14em] opacity-75">Lo</span>
-            <span className="font-medium">{day.lowDisplay}°</span>
+          <div className={styles.calendarDayTemps}>
+            <span className={styles.calendarDayHi}>
+              <span>Hi</span>
+              <b>{day.highDisplay}°</b>
+            </span>
+            {day.rainValue && day.rainValue > 0 ? (
+              <span className={styles.calendarDayRain}>
+                <ConditionGlyph condition="rainy" size={14} />
+                {day.rainDisplay}″
+              </span>
+            ) : null}
+            <span className={styles.calendarDayLo}>
+              <b>{day.lowDisplay}°</b>
+              <span>Lo</span>
+            </span>
           </div>
-          {day.rainValue && day.rainValue > 0 ? (
-            <div className="flex items-baseline justify-between">
-              <span className="text-[0.6rem] uppercase tracking-[0.14em] opacity-75">Rain</span>
-              <span className="font-medium">{day.rainDisplay}″</span>
-            </div>
-          ) : null}
-        </div>
+        </>
       ) : (
-        <p className="mt-3 text-[0.7rem] uppercase tracking-[0.14em] text-stone-400">
-          No data
-        </p>
+        <div className={styles.calendarDayEmptyState}>No data</div>
       )}
     </>
   );
 
-  if (day.dayNumber === null) {
-    return (
-      <div
-        className={`${baseClass} bg-stone-50`}
-        aria-hidden="true"
-      />
-    );
-  }
-
   if (!dayHref) {
     return (
-      <div className={`${baseClass} ${stateClass}`} style={heatmapStyle}>
+      <div className={cellClasses} style={cellStyle}>
         {inner}
       </div>
     );
@@ -1227,9 +1482,9 @@ function CalendarDayCell({
     <Link
       href={dayHref}
       scroll={false}
-      className={`${baseClass} ${stateClass} cursor-pointer hover:brightness-95 focus:outline focus:outline-2 focus:outline-amber-500`}
-      style={heatmapStyle}
-      aria-label={`View detail for ${day.longDateLabel}`}
+      className={cellClasses}
+      style={cellStyle}
+      aria-label={`Open ${day.longDateLabel}`}
     >
       {inner}
     </Link>
@@ -1249,15 +1504,15 @@ function WeekClimateBoard({
   selectedDayKey: string | null;
   activeView: WeatherDashboardView;
 }) {
-  const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
   return (
-    <TablePanel
-      id="week-climate-board"
-      title="Weekly Calendar"
-      subtitle="Tap any day to drill into station observations for that date."
-      compact
-    >
+    <section className={styles.softCard} id="week-climate-board">
+      <header className={styles.softCardHead}>
+        <div>
+          <h2 className={styles.softCardTitle}>Your Week, At A Glance</h2>
+          <p className={styles.softCardSubtitle}>Tap any day to dive in.</p>
+        </div>
+      </header>
+
       <PeriodNavigation
         navigation={navigation}
         rangeKind="week"
@@ -1265,31 +1520,23 @@ function WeekClimateBoard({
         rangeLabel={navigation.rangeLabel}
       />
 
-      <div className="overflow-x-auto">
-        <div className="min-w-[44rem]">
-          <div className="grid grid-cols-7 border-l border-t border-stone-200">
-            {weekdayLabels.map((label) => (
-              <div
-                key={label}
-                className="border-r border-b border-stone-200 bg-stone-50 px-3 py-2 text-center text-[0.7rem] font-medium uppercase tracking-[0.14em] text-stone-500"
-              >
-                {label}
-              </div>
-            ))}
-            {days.map((day) => (
-              <CalendarDayCell
-                key={day.key}
-                day={day}
-                todayKey={todayKey}
-                selectedDayKey={selectedDayKey}
-                activeView={activeView}
-                size="tall"
-              />
-            ))}
-          </div>
+      <TemperatureLegend />
+
+      <div className={styles.weekStrip}>
+        <div className={styles.weekStripGrid}>
+          {days.map((day) => (
+            <CalendarDayCell
+              key={day.key}
+              day={day}
+              todayKey={todayKey}
+              selectedDayKey={selectedDayKey}
+              activeView={activeView}
+              variant="week"
+            />
+          ))}
         </div>
       </div>
-    </TablePanel>
+    </section>
   );
 }
 
@@ -1305,33 +1552,25 @@ function DayDetailPanel({
   const closeHref = buildSummaryHref({ activeView, tab: "summaries" });
 
   return (
-    <section className="border border-amber-300 bg-amber-50">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-200 px-4 py-3">
+    <section className={styles.dayDetail}>
+      <header className={styles.dayDetailHead}>
         <div>
-          <p className="text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-amber-700">
-            Day Detail
-          </p>
-          <h2 className="mt-0.5 text-2xl font-light tracking-[-0.02em] text-stone-800">
-            {detail.longDateLabel}
-          </h2>
+          <span className={styles.dayDetailEyebrow}>Day Detail</span>
+          <h2 className={styles.dayDetailTitle}>{detail.longDateLabel}</h2>
         </div>
-        <Link
-          href={closeHref}
-          scroll={false}
-          className="inline-flex items-center justify-center border border-amber-300 bg-white px-3 py-1 text-xs uppercase tracking-[0.16em] text-amber-700 transition hover:border-amber-500 hover:text-amber-900"
-        >
-          Close detail
+        <Link href={closeHref} scroll={false} className={styles.dayDetailClose}>
+          Close
         </Link>
-      </div>
+      </header>
 
-      <div className="grid gap-px bg-amber-200 sm:grid-cols-2 lg:grid-cols-4">
-        <DayDetailStat label="High" value={detail.highDisplay} note="Daily peak temperature" />
-        <DayDetailStat label="Low" value={detail.lowDisplay} note="Daily minimum temperature" />
-        <DayDetailStat label="Average" value={detail.averageDisplay} note="Mean of all readings" />
+      <div className={styles.dayDetailGrid}>
+        <DayDetailStat label="High" value={detail.highDisplay} note="Peak temperature" />
+        <DayDetailStat label="Low" value={detail.lowDisplay} note="Coldest reading" />
+        <DayDetailStat label="Average" value={detail.averageDisplay} note="Across the day" />
         <DayDetailStat label="Rainfall" value={detail.rainDisplay} note="Total accumulation" />
       </div>
 
-      <div className="border-t border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-800">
+      <div className={styles.dayDetailFootnote}>
         {detail.hasObservations
           ? `Built from ${detail.observationCount.toLocaleString()} stored observations on ${selectedDayKey}.`
           : `No stored observations are available for ${selectedDayKey} yet.`}
@@ -1342,34 +1581,26 @@ function DayDetailPanel({
 
 function DayDetailStat({ label, value, note }: { label: string; value: string; note: string }) {
   return (
-    <div className="bg-amber-50 px-4 py-3">
-      <p className="text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-amber-700">{label}</p>
-      <p className="mt-1 text-2xl font-light tracking-[-0.02em] text-stone-800">{value}</p>
-      <p className="mt-1 text-xs text-amber-800">{note}</p>
+    <div className={styles.dayDetailStat}>
+      <span className={styles.dayDetailStatLabel}>{label}</span>
+      <span className={styles.dayDetailStatValue}>{value}</span>
+      <span className={styles.dayDetailStatNote}>{note}</span>
     </div>
   );
 }
 
 function SummarySectionCard({ section }: { section: WeatherSummarySection }) {
   return (
-    <section className="border border-stone-200 bg-white">
-      <div className="border-b border-stone-200 px-4 py-3">
-        <h3 className="text-[1.1rem] font-light text-stone-800">{section.title}</h3>
-      </div>
-      <div className="px-4 py-3">
-        <table className="w-full border-collapse">
-          <tbody>
-            {section.rows.map((row) => (
-              <tr key={`${section.title}-${row.label}`} className="border-b border-stone-200 last:border-b-0">
-                <th className="w-[42%] px-2 py-2 text-left font-normal text-stone-700">{row.label}</th>
-                <td className="px-2 py-2 text-stone-800">{row.value}</td>
-                <td className="px-2 py-2 text-stone-500">{row.detail}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
+    <article className={styles.recordCardModern}>
+      <h3 className={styles.recordCardTitle}>{section.title}</h3>
+      {section.rows.map((row) => (
+        <div key={`${section.title}-${row.label}`} className={styles.recordCardRow}>
+          <span className={styles.recordCardLabel}>{row.label}</span>
+          <span className={styles.recordCardValue}>{row.value}</span>
+          <span className={styles.recordCardDetail}>{row.detail}</span>
+        </div>
+      ))}
+    </article>
   );
 }
 
@@ -1379,28 +1610,39 @@ function MonthlyReportAvailabilityTable({
   rows: WeatherMonthlyReportRow[];
 }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full border-collapse">
+    <div className={styles.matrixTableWrap}>
+      <table className={styles.matrixTable}>
         <thead>
-          <tr className="border-b border-stone-300 text-left text-[0.68rem] uppercase tracking-[0.16em] text-stone-500">
-            <th className="px-2 py-2.5 font-medium">Year</th>
+          <tr>
+            <th>Year</th>
             {WEATHER_SUMMARY_MONTH_LABELS.map((month) => (
-              <th key={month} className="px-2 py-2.5 text-center font-medium">{month}</th>
+              <th key={month} style={{ textAlign: "center" }}>{month}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.year} className="border-b border-stone-200 last:border-b-0">
-              <th className="px-2 py-2.5 text-left font-normal text-stone-700">{row.year}</th>
+            <tr key={row.year}>
+              <th>{row.year}</th>
               {row.months.map((hasData, index) => (
-                <td key={`${row.year}-${index + 1}`} className="px-2 py-2.5 text-center text-stone-700">
+                <td key={`${row.year}-${index + 1}`} style={{ textAlign: "center" }}>
                   {hasData ? (
-                    <span className="inline-flex min-w-[3.4rem] justify-center border border-stone-300 bg-stone-50 px-2 py-1 text-xs">
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        padding: "0.15rem 0.55rem",
+                        borderRadius: "999px",
+                        background:
+                          "linear-gradient(135deg, #fde68a 0%, #fb923c 100%)",
+                        color: "#7c2d12",
+                        fontSize: "0.7rem",
+                        fontWeight: 700,
+                      }}
+                    >
                       {String(index + 1).padStart(2, "0")}-{String(row.year).slice(-2)}
                     </span>
                   ) : (
-                    <span className="text-stone-400">-</span>
+                    <span style={{ color: "#cbd5e1" }}>—</span>
                   )}
                 </td>
               ))}
@@ -1414,39 +1656,36 @@ function MonthlyReportAvailabilityTable({
 
 function MonthlyClimateTable({ matrix }: { matrix: WeatherMonthlyMatrix }) {
   return (
-    <TablePanel
-      id={`matrix-${matrix.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
-      title={matrix.title}
-      subtitle={matrix.unitLabel}
-      compact
-    >
-      <div className="overflow-x-auto">
-        <table className="min-w-full border-collapse">
+    <section className={styles.matrixCard}>
+      <header className={styles.matrixCardHead}>
+        <h3 className={styles.matrixCardTitle}>{matrix.title}</h3>
+        <span className={styles.matrixCardUnit}>{matrix.unitLabel}</span>
+      </header>
+      <div className={styles.matrixTableWrap}>
+        <table className={styles.matrixTable}>
           <thead>
-            <tr className="border-b border-stone-300 text-left text-[0.68rem] uppercase tracking-[0.16em] text-stone-500">
-              <th className="px-2 py-2.5 font-medium">{matrix.unitLabel}</th>
+            <tr>
+              <th>{matrix.unitLabel}</th>
               {WEATHER_SUMMARY_MONTH_LABELS.map((month) => (
-                <th key={month} className="px-2 py-2.5 text-right font-medium">{month}</th>
+                <th key={month}>{month}</th>
               ))}
-              <th className="px-2 py-2.5 text-right font-medium">Total</th>
+              <th>Total</th>
             </tr>
           </thead>
           <tbody>
             {matrix.rows.map((row) => (
-              <tr key={`${matrix.title}-${row.year}`} className="border-b border-stone-200 last:border-b-0">
-                <th className="px-2 py-2.5 text-left font-normal text-stone-700">{row.year}</th>
+              <tr key={`${matrix.title}-${row.year}`}>
+                <th>{row.year}</th>
                 {row.months.map((value, index) => (
-                  <td key={`${row.year}-${index + 1}`} className="px-2 py-2.5 text-right text-stone-800">
-                    {value}
-                  </td>
+                  <td key={`${row.year}-${index + 1}`}>{value}</td>
                 ))}
-                <td className="px-2 py-2.5 text-right font-medium text-stone-800">{row.total}</td>
+                <td className={styles.matrixTotal}>{row.total}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-    </TablePanel>
+    </section>
   );
 }
 
@@ -1460,92 +1699,104 @@ function DailyPeriodClimateTable({
   selectedDayKey: string | null;
 }) {
   return (
-    <TablePanel
-      id={`period-${matrix.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
-      title={matrix.title}
-      subtitle={matrix.subtitle}
-      compact
-    >
-      <div className="overflow-x-auto">
-        <table className="min-w-full border-collapse">
+    <section className={styles.dailyClimateCard}>
+      <header className={styles.dailyClimateHead}>
+        <h3 className={styles.dailyClimateTitle}>{matrix.title}</h3>
+        <p className={styles.dailyClimateSubtitle}>{matrix.subtitle}</p>
+      </header>
+      <div className={styles.dailyClimateTableWrap}>
+        <table className={styles.dailyClimateTable}>
           <thead>
-            <tr className="border-b border-stone-300 text-left text-[0.68rem] uppercase tracking-[0.16em] text-stone-500">
-              <th className="sticky left-0 z-10 bg-white px-2 py-2.5 font-medium">{matrix.unitLabel}</th>
+            <tr>
+              <th>{matrix.unitLabel}</th>
               {matrix.columns.map((column) => {
-                const isSelected = selectedDayKey === column.key;
                 const dayHref = !column.isFuture
                   ? buildSummaryHref({ activeView, tab: "summaries" }, { date: column.key })
                   : null;
 
                 return (
-                  <th
-                    key={column.key}
-                    className={`min-w-[4.4rem] px-1 py-2 text-center font-medium ${
-                      isSelected ? "bg-amber-50" : ""
-                    }`}
-                  >
+                  <th key={column.key}>
                     {dayHref ? (
-                      <Link
-                        href={dayHref}
-                        scroll={false}
-                        className="block hover:text-stone-900"
-                      >
-                        <span className="block text-[0.74rem] text-stone-700">{column.label}</span>
-                        <span className="mt-0.5 block text-[0.64rem] font-normal uppercase tracking-[0.08em] text-stone-500">
-                          {column.detail}
-                        </span>
+                      <Link href={dayHref} scroll={false} style={{ color: "inherit", textDecoration: "none" }}>
+                        <span style={{ display: "block" }}>{column.label}</span>
+                        <span style={{ display: "block", fontSize: "0.6rem", opacity: 0.7 }}>{column.detail}</span>
                       </Link>
                     ) : (
                       <>
-                        <span className="block text-[0.74rem] text-stone-400">{column.label}</span>
-                        <span className="mt-0.5 block text-[0.64rem] font-normal uppercase tracking-[0.08em] text-stone-300">
-                          {column.detail}
-                        </span>
+                        <span style={{ display: "block", opacity: 0.45 }}>{column.label}</span>
+                        <span style={{ display: "block", fontSize: "0.6rem", opacity: 0.4 }}>{column.detail}</span>
                       </>
                     )}
                   </th>
                 );
               })}
-              <th className="sticky right-0 z-10 bg-white px-2 py-2.5 text-right font-medium">
-                {matrix.summaryLabel}
-              </th>
+              <th>{matrix.summaryLabel}</th>
             </tr>
           </thead>
           <tbody>
             {matrix.rows.map((row) => (
-              <tr key={`${matrix.title}-${row.label}`} className="border-b border-stone-200 last:border-b-0">
-                <th className="sticky left-0 z-10 bg-white px-2 py-2.5 text-left font-normal text-stone-700">
-                  {row.label}
-                </th>
+              <tr key={`${matrix.title}-${row.label}`}>
+                <th>{row.label}</th>
                 {row.cells.map((cell, index) => {
                   const column = matrix.columns[index];
                   const isSelected = column ? selectedDayKey === column.key : false;
+                  const cellClass = [
+                    cell.isFuture ? "future" : "",
+                    !cell.hasObservation && !cell.isFuture ? "empty" : "",
+                    isSelected ? "selected" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ");
+                  // Use the temperature gradient for temperature rows; for
+                  // rain we tint with a calmer turquoise scale so the
+                  // matrix doesn't shout in two unrelated palettes at once.
+                  const cellStyle =
+                    cell.numericValue === null
+                      ? undefined
+                      : matrix.colorScale === "temperature"
+                        ? {
+                            background: temperatureFill(cell.numericValue),
+                            color:
+                              cell.numericValue <= 35 || cell.numericValue >= 80
+                                ? "#fff"
+                                : "#0f172a",
+                          }
+                        : {
+                            background: rainfallFill(cell.numericValue, row.cells),
+                            color: "#0f172a",
+                          };
+
                   return (
                     <td
                       key={`${row.label}-${column?.key ?? index}`}
-                      className={`px-1 py-2 text-center text-sm ${
-                        cell.hasObservation
-                          ? "text-stone-900"
-                          : cell.isFuture
-                            ? "text-stone-300"
-                            : "text-stone-400"
-                      } ${isSelected ? "outline outline-2 outline-offset-[-2px] outline-amber-400" : ""}`}
-                      style={resolveClimateCellStyle(row.cells, cell, matrix.colorScale)}
+                      className={cellClass}
+                      style={cellStyle}
                     >
                       {cell.displayValue}
                     </td>
                   );
                 })}
-                <td className="sticky right-0 z-10 bg-white px-2 py-2.5 text-right font-medium text-stone-800">
-                  {row.summaryValue}
-                </td>
+                <td className="summary">{row.summaryValue}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-    </TablePanel>
+    </section>
   );
+}
+
+function rainfallFill(value: number, rowCells: WeatherPeriodMatrix["rows"][number]["cells"]) {
+  const numbers = rowCells
+    .map((cell) => cell.numericValue)
+    .filter((entry): entry is number => entry !== null);
+  if (!numbers.length) {
+    return "rgba(94, 234, 212, 0.15)";
+  }
+  const max = Math.max(...numbers, 0.5);
+  const ratio = Math.min(1, value / max);
+  const lightness = 96 - ratio * 38;
+  return `hsl(195 78% ${lightness}%)`;
 }
 
 function MonthClimateCalendar({
@@ -1562,12 +1813,14 @@ function MonthClimateCalendar({
   const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   return (
-    <TablePanel
-      id={`month-calendar-${calendar.monthLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
-      title={calendar.title}
-      subtitle={calendar.subtitle}
-      compact
-    >
+    <section className={styles.softCard} id={`month-calendar-${calendar.monthLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>
+      <header className={styles.softCardHead}>
+        <div>
+          <h2 className={styles.softCardTitle}>{calendar.title}</h2>
+          <p className={styles.softCardSubtitle}>{calendar.subtitle}</p>
+        </div>
+      </header>
+
       <PeriodNavigation
         navigation={calendar.navigation}
         rangeKind="month"
@@ -1575,62 +1828,49 @@ function MonthClimateCalendar({
         rangeLabel={calendar.monthLabel}
       />
 
-      <div className="border-b border-stone-200 bg-white px-4 py-2 text-[0.7rem] uppercase tracking-[0.14em] text-stone-500">
-        Cell color reflects the day&apos;s high temperature — cool blues to warm reds. High / Low / Rain shown inside each cell.
-      </div>
+      <TemperatureLegend />
 
-      <div className="overflow-x-auto">
-        <div className="min-w-[52rem]">
-          <div className="grid grid-cols-7 border-l border-t border-stone-200">
-            {weekdayLabels.map((label) => (
-              <div
-                key={label}
-                className="border-b border-r border-stone-200 bg-stone-50 px-3 py-2 text-center text-[0.7rem] font-medium uppercase tracking-[0.14em] text-stone-500"
-              >
-                {label}
-              </div>
-            ))}
-            {calendar.weeks.flat().map((day) => (
-              <CalendarDayCell
-                key={day.key}
-                day={day}
-                todayKey={todayKey}
-                selectedDayKey={selectedDayKey}
-                activeView={activeView}
-                size="tall"
-              />
-            ))}
-          </div>
+      <div className={styles.calendarShell}>
+        <div className={styles.calendarGrid}>
+          {weekdayLabels.map((label) => (
+            <div key={label} className={styles.calendarHeader}>
+              {label}
+            </div>
+          ))}
+          {calendar.weeks.flat().map((day) => (
+            <CalendarDayCell
+              key={day.key}
+              day={day}
+              todayKey={todayKey}
+              selectedDayKey={selectedDayKey}
+              activeView={activeView}
+            />
+          ))}
         </div>
       </div>
-
-      <TemperatureLegend />
-    </TablePanel>
+    </section>
   );
 }
 
 function TemperatureLegend() {
-  const stops = [25, 35, 45, 55, 65, 75, 85, 95];
+  // Build a dense gradient strip from the same palette used in cells so
+  // the legend reads as a continuous transition rather than a stepped scale.
+  const samples = Array.from({ length: 18 }, (_, index) => 10 + index * 6);
 
   return (
-    <div className="border-t border-stone-200 bg-white px-4 py-2.5">
-      <div className="flex flex-wrap items-center gap-3 text-[0.66rem] uppercase tracking-[0.14em] text-stone-500">
-        <span>Cool</span>
-        <div className="flex h-4 flex-1 min-w-[10rem] overflow-hidden border border-stone-200">
-          {stops.map((temp) => (
-            <div
-              key={temp}
-              className="flex-1"
-              style={resolveSingleClimateValueStyle(temp, "temperature")}
-              aria-hidden="true"
-            />
-          ))}
-        </div>
-        <span>Warm</span>
-        <span className="ml-3 text-[0.65rem] font-normal text-stone-400">
-          {stops[0]}°F → {stops[stops.length - 1]}°F
-        </span>
+    <div className={styles.calendarLegend}>
+      <span className={styles.calendarLegendCaption}>Cool</span>
+      <div className={styles.calendarLegendStrip}>
+        {samples.map((temp) => (
+          <span
+            key={temp}
+            style={{ background: temperatureFill(temp) }}
+            aria-hidden="true"
+          />
+        ))}
       </div>
+      <span className={styles.calendarLegendCaption}>Warm</span>
+      <span style={{ fontSize: "0.66rem", color: "#94a3b8" }}>10°F → 110°F</span>
     </div>
   );
 }
@@ -3086,6 +3326,85 @@ function buildTrendValue(
   return `${sign}${formatCompact(delta, decimals)} ${unit}`.trim();
 }
 
+async function loadHistoryRollupsForView(
+  macAddress: string,
+  rangeKind: "week" | "month",
+  offset: number,
+): Promise<WeatherDailyRollup[]> {
+  if (!macAddress) {
+    return [];
+  }
+
+  // Compute the calendar day range we need rollups for, then ask Firestore
+  // for just that slice. No pagination, no raw observations — typically 7
+  // docs for a week or 31 for a month.
+  const today = new Date();
+  const tzNow = todayInWeatherZone(today);
+  let startDate: { year: number; month: number; day: number };
+  let endDate: { year: number; month: number; day: number };
+
+  if (rangeKind === "week") {
+    const weekdayIndex = utcWeekdayIndex(tzNow.year, tzNow.month, tzNow.day);
+    const baseStart = shiftDay(tzNow.year, tzNow.month, tzNow.day, -weekdayIndex);
+    startDate = shiftDay(baseStart.year, baseStart.month, baseStart.day, offset * 7);
+    endDate = shiftDay(startDate.year, startDate.month, startDate.day, 6);
+  } else {
+    const anchor = shiftMonth(tzNow.year, tzNow.month, offset);
+    const daysInMonth = new Date(Date.UTC(anchor.year, anchor.month, 0, 12)).getUTCDate();
+    startDate = { year: anchor.year, month: anchor.month, day: 1 };
+    endDate = { year: anchor.year, month: anchor.month, day: daysInMonth };
+  }
+
+  const startDayKey = formatDayKeyParts(startDate.year, startDate.month, startDate.day);
+  const endDayKey = formatDayKeyParts(endDate.year, endDate.month, endDate.day);
+
+  return readDailyRollupsBetween({
+    macAddress,
+    startDayKey,
+    endDayKey,
+  });
+}
+
+function todayInWeatherZone(date: Date) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  });
+  const parts = formatter.formatToParts(date);
+  return {
+    year: Number(parts.find((part) => part.type === "year")?.value ?? "0"),
+    month: Number(parts.find((part) => part.type === "month")?.value ?? "0"),
+    day: Number(parts.find((part) => part.type === "day")?.value ?? "0"),
+  };
+}
+
+function utcWeekdayIndex(year: number, month: number, day: number) {
+  return new Date(Date.UTC(year, month - 1, day, 12)).getUTCDay();
+}
+
+function shiftDay(year: number, month: number, day: number, offsetDays: number) {
+  const date = new Date(Date.UTC(year, month - 1, day + offsetDays, 12));
+  return {
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth() + 1,
+    day: date.getUTCDate(),
+  };
+}
+
+function shiftMonth(year: number, month: number, monthOffset: number) {
+  const date = new Date(Date.UTC(year, month - 1 + monthOffset, 1, 12));
+  return {
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth() + 1,
+  };
+}
+
+function formatDayKeyParts(year: number, month: number, day: number) {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
 async function loadDayDetailObservations(macAddress: string, dayKey: string) {
   if (!macAddress || !DAY_KEY_PATTERN.test(dayKey)) {
     return [] as WeatherObservation[];
@@ -3097,6 +3416,23 @@ async function loadDayDetailObservations(macAddress: string, dayKey: string) {
   const day = Number(dayStr);
   return readStoredWeatherObservationsForDay({ macAddress, year, month, day });
 }
+
+// The archive used to be rebuilt from raw observations on every cache miss
+// — up to 100k Firestore docs paginated 1000 at a time = 100 sequential
+// round-trips, which timed out the page on cold serverless instances.
+// Now the prebuilt archive is persisted at
+//   weatherStations/{id}/archives/summary
+// and the page only reads that one document on the hot path. If the doc is
+// stale (older than the freshness window) we still return what we have
+// immediately and trigger a background rebuild via Next's `after()` so the
+// next page render gets fresh data without blocking the current one.
+const ARCHIVE_FRESH_WINDOW_MS = 60 * 60 * 1000; // an hour
+// Bound the worst-case rebuild — if a station is brand new with no archive
+// doc, only scan up to a year of history so the first page hit can never
+// time out.
+const ARCHIVE_FIRST_BUILD_WINDOW_MS = 365 * 24 * 60 * 60 * 1000;
+const ARCHIVE_FIRST_BUILD_MAX_DOCS = 25_000;
+const ARCHIVE_FIRST_BUILD_DEADLINE_MS = 4_000;
 
 async function loadWeatherSummaryArchive(macAddress: string) {
   if (!macAddress) {
@@ -3111,26 +3447,144 @@ async function loadWeatherSummaryArchive(macAddress: string) {
     return cached.value;
   }
 
+  // 1) Hot path — read the persisted archive doc (1 Firestore read).
+  let stored: Awaited<ReturnType<typeof readStoredArchiveSummary>> = null;
+  try {
+    stored = await readStoredArchiveSummary({ macAddress });
+  } catch {
+    stored = null;
+  }
+
+  const storedArchive = (stored?.archive as WeatherSummaryArchive | null) ?? null;
+  const isFresh = stored ? now - stored.builtAt < ARCHIVE_FRESH_WINDOW_MS : false;
+
+  if (storedArchive) {
+    summaryArchiveCache.set(cacheKey, {
+      expiresAt: now + SUMMARY_ARCHIVE_CACHE_TTL_MS,
+      value: storedArchive,
+    });
+
+    if (!isFresh) {
+      // Schedule a rebuild after we've returned the response. The next page
+      // hit will pick up the fresh archive — this one stays fast.
+      after(rebuildWeatherSummaryArchive(macAddress));
+    }
+
+    return storedArchive;
+  }
+
+  // 2) Cold path — try to build the archive from rollup docs first. With a
+  // populated rollup collection this is ~365 reads and finishes quickly.
+  try {
+    const rollups = await readAllDailyRollups({ macAddress });
+
+    if (rollups.length) {
+      const archive = buildWeatherSummaryArchiveFromRollups(rollups);
+
+      if (archive) {
+        const latestObservationAt = rollups.at(-1)?.latestObservationAt ?? Date.now();
+        // Persist the prebuilt archive so subsequent renders skip even the
+        // rollup pass and go straight to a single doc read.
+        after(
+          writeStoredArchiveSummary({
+            macAddress,
+            archive,
+            latestObservationAt,
+          }).catch(() => null),
+        );
+
+        summaryArchiveCache.set(cacheKey, {
+          expiresAt: now + SUMMARY_ARCHIVE_CACHE_TTL_MS,
+          value: archive,
+        });
+        return archive;
+      }
+    }
+  } catch {
+    // Fall through to the observation-walking fallback below.
+  }
+
+  // 3) Last resort — no archive doc and no rollups yet (brand-new station).
+  // Run a bounded first build, persist the rollups it sees so this path
+  // never has to run again, and hand any remainder to a background task.
+  const firstBuild = buildAndStoreArchive(macAddress, {
+    startMs: now - ARCHIVE_FIRST_BUILD_WINDOW_MS,
+    endMs: now + 24 * 60 * 60 * 1000,
+    limit: ARCHIVE_FIRST_BUILD_MAX_DOCS,
+  });
+  const deadline = new Promise<null>((resolve) =>
+    setTimeout(() => resolve(null), ARCHIVE_FIRST_BUILD_DEADLINE_MS),
+  );
+
+  let archive: WeatherSummaryArchive | null = null;
+  try {
+    archive = await Promise.race([firstBuild, deadline]);
+  } catch {
+    archive = null;
+  }
+
+  if (!archive) {
+    // Build is still running — let it finish and persist after the response.
+    after(firstBuild.catch(() => null));
+  }
+
+  summaryArchiveCache.set(cacheKey, {
+    expiresAt: now + (archive ? SUMMARY_ARCHIVE_CACHE_TTL_MS : 60_000),
+    value: archive,
+  });
+
+  return archive;
+}
+
+async function buildAndStoreArchive(
+  macAddress: string,
+  window: { startMs: number; endMs: number; limit: number },
+): Promise<WeatherSummaryArchive | null> {
   try {
     const observations = await readStoredWeatherObservationsBetween({
       macAddress,
-      startMs: 0,
-      endMs: Date.now() + 24 * 60 * 60 * 1000,
-      limit: 100_000,
+      startMs: window.startMs,
+      endMs: window.endMs,
+      limit: window.limit,
     });
+
+    if (observations.length) {
+      // Backfill the rollup collection so future archive rebuilds skip the
+      // raw-observation walk entirely.
+      await applyDailyRollupsForObservations({
+        macAddress,
+        observations,
+      }).catch(() => null);
+    }
+
     const archive = buildWeatherSummaryArchive(observations);
-    summaryArchiveCache.set(cacheKey, {
-      expiresAt: now + SUMMARY_ARCHIVE_CACHE_TTL_MS,
-      value: archive,
-    });
+
+    if (archive) {
+      const latestObservationAt =
+        observations.at(-1)?.timestamp ?? Date.now();
+      await writeStoredArchiveSummary({
+        macAddress,
+        archive,
+        latestObservationAt,
+      }).catch(() => null);
+    }
+
     return archive;
   } catch {
-    summaryArchiveCache.set(cacheKey, {
-      expiresAt: now + 60_000,
-      value: null,
-    });
     return null;
   }
+}
+
+async function rebuildWeatherSummaryArchive(macAddress: string) {
+  // Background rebuild — kicked off via after(), so this runs after the
+  // current response is sent. We pull a wider history window than the cold
+  // first-build path because there's no user waiting on it.
+  const now = Date.now();
+  await buildAndStoreArchive(macAddress, {
+    startMs: 0,
+    endMs: now + 24 * 60 * 60 * 1000,
+    limit: 100_000,
+  });
 }
 
 function getPageMeta(
@@ -3220,67 +3674,6 @@ function formatCompact(value: number, decimals: number) {
     minimumFractionDigits: 0,
     maximumFractionDigits: decimals,
   });
-}
-
-function resolveClimateCellStyle(
-  rowCells: Array<{ numericValue: number | null; hasObservation: boolean; isFuture: boolean }>,
-  cell: { numericValue: number | null; hasObservation: boolean; isFuture: boolean },
-  colorScale: "temperature" | "rain",
-) {
-  if (!cell.hasObservation || cell.numericValue === null) {
-    if (cell.isFuture) {
-      return {
-        backgroundColor: "#fafaf9",
-      };
-    }
-
-    return undefined;
-  }
-
-  if (colorScale === "temperature") {
-    return resolveSingleClimateValueStyle(cell.numericValue, colorScale);
-  }
-
-  const values = rowCells
-    .map((entry) => entry.numericValue)
-    .filter((value): value is number => value !== null);
-
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const ratio = min === max ? 0.58 : (cell.numericValue - min) / (max - min);
-
-  return {
-    backgroundColor: `hsl(116 86% ${95 - ratio * 42}%)`,
-    color: "#111827",
-  };
-}
-
-function resolveSingleClimateValueStyle(
-  value: number,
-  colorScale: "temperature" | "rain",
-) {
-  if (colorScale === "rain") {
-    const ratio = clamp01(value / 2);
-
-    return {
-      backgroundColor: `hsl(116 86% ${96 - ratio * 40}%)`,
-      color: "#111827",
-    };
-  }
-
-  const ratio = clamp01((value - 20) / 70);
-  const hue = 218 - ratio * 218;
-  const saturation = 92;
-  const lightness = 94 - ratio * 44;
-
-  return {
-    backgroundColor: `hsl(${hue} ${saturation}% ${lightness}%)`,
-    color: ratio > 0.72 ? "#ffffff" : "#111827",
-  };
-}
-
-function clamp01(value: number) {
-  return Math.max(0, Math.min(1, value));
 }
 
 function formatWind(

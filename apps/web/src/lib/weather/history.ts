@@ -239,6 +239,81 @@ export async function readStoredWeatherObservationsBetween(input: {
   return value;
 }
 
+// Persisted archive summary lives at weatherStations/{id}/archives/summary.
+// We write a compact JSON blob (the prebuilt WeatherSummaryArchive) plus a
+// watermark of the latest observation it includes, so we can rebuild
+// incrementally instead of re-reading the whole history on every request.
+export type StoredArchiveSummary = {
+  archive: unknown;
+  latestObservationAt: number;
+  builtAt: number;
+};
+
+export async function readStoredArchiveSummary(input: {
+  macAddress?: string;
+}): Promise<StoredArchiveSummary | null> {
+  const stationId = buildStationId(input.macAddress);
+  const db = getFirebaseAdminDb();
+  const snapshot = await db
+    .collection("weatherStations")
+    .doc(stationId)
+    .collection("archives")
+    .doc("summary")
+    .get();
+
+  if (!snapshot.exists) {
+    return null;
+  }
+
+  const raw = snapshot.data();
+
+  if (!raw) {
+    return null;
+  }
+
+  const archive = raw.archive;
+  const latestObservationAt =
+    raw.latestObservationAt instanceof Timestamp
+      ? raw.latestObservationAt.toMillis()
+      : typeof raw.latestObservationAt === "number"
+        ? raw.latestObservationAt
+        : 0;
+  const builtAt =
+    raw.builtAt instanceof Timestamp
+      ? raw.builtAt.toMillis()
+      : typeof raw.builtAt === "number"
+        ? raw.builtAt
+        : 0;
+
+  if (!archive) {
+    return null;
+  }
+
+  return { archive, latestObservationAt, builtAt };
+}
+
+export async function writeStoredArchiveSummary(input: {
+  macAddress?: string;
+  archive: unknown;
+  latestObservationAt: number;
+}): Promise<void> {
+  const stationId = buildStationId(input.macAddress);
+  const db = getFirebaseAdminDb();
+  await db
+    .collection("weatherStations")
+    .doc(stationId)
+    .collection("archives")
+    .doc("summary")
+    .set(
+      {
+        archive: input.archive,
+        latestObservationAt: Timestamp.fromMillis(input.latestObservationAt),
+        builtAt: FieldValue.serverTimestamp(),
+      },
+      { merge: false },
+    );
+}
+
 export async function readStoredWeatherStationMeta(input: {
   macAddress?: string;
 }): Promise<StoredWeatherStationMeta | null> {

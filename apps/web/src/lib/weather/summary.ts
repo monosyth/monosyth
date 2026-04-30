@@ -1,3 +1,4 @@
+import type { WeatherDailyRollup } from "@/lib/weather/rollups";
 import type { WeatherObservation } from "@/lib/weather/types";
 
 const WEATHER_TIME_ZONE = "America/Los_Angeles";
@@ -133,6 +134,16 @@ export type WeatherPeriodNavigation = {
   isCurrent: boolean;
 };
 
+export type WeatherDayCondition =
+  | "sunny"
+  | "partly-cloudy"
+  | "cloudy"
+  | "rainy"
+  | "stormy"
+  | "snowy"
+  | "windy"
+  | "unknown";
+
 export type WeatherMonthCalendarDay = {
   key: string;
   dayNumber: number | null;
@@ -149,6 +160,14 @@ export type WeatherMonthCalendarDay = {
   hasObservations: boolean;
   weekdayLabel: string;
   longDateLabel: string;
+  condition: WeatherDayCondition;
+};
+
+export type WeatherWeekStory = {
+  eyebrow: string;
+  title: string;
+  body: string;
+  stats: Array<{ label: string; value: string; note: string }>;
 };
 
 export type WeatherMonthCalendar = {
@@ -187,6 +206,8 @@ type DayAggregate = {
   minTemp: MetricRecord | null;
   tempSum: number;
   tempCount: number;
+  maxSolar?: MetricRecord | null;
+  avgHumidity?: number | null;
   dailyRainTotal: MetricRecord | null;
   maxLightning: MetricRecord | null;
   observationCount: number;
@@ -305,6 +326,8 @@ function aggregateObservations(observations: WeatherObservation[]): AggregationR
         minTemp: null,
         tempSum: 0,
         tempCount: 0,
+        maxSolar: null,
+        avgHumidity: null,
         dailyRainTotal: null,
         maxLightning: null,
         observationCount: 0,
@@ -312,6 +335,20 @@ function aggregateObservations(observations: WeatherObservation[]): AggregationR
       dayMap.set(dayKey, day);
     }
     day.observationCount += 1;
+
+    const solarSample = pickObservationRecord(observation, ["solarradiation"], timestamp);
+    if (solarSample) {
+      day.maxSolar = pickHighRecord(day.maxSolar ?? null, solarSample);
+    }
+    const humidityRaw = pickNumber(observation, ["humidity"]);
+    if (humidityRaw !== null) {
+      const previousAvg = day.avgHumidity ?? null;
+      const previousCount = day.observationCount - 1;
+      day.avgHumidity =
+        previousAvg === null || previousCount <= 0
+          ? humidityRaw
+          : (previousAvg * previousCount + humidityRaw) / (previousCount + 1);
+    }
 
     const yearAggregate = getYearAggregate(yearMap, parts.year);
     const monthAggregate = getMonthAggregate(yearAggregate, parts.month);
@@ -485,6 +522,224 @@ export function buildWeatherSummaryArchive(observations: WeatherObservation[]): 
   };
 }
 
+// Builds the same WeatherSummaryArchive shape, but from pre-aggregated daily
+// rollup docs instead of raw observations. The rollups already have
+// per-metric extremes baked in, so we don't need to walk a year of minute
+// resolution data — one linear pass over ~365 docs is plenty.
+export function buildWeatherSummaryArchiveFromRollups(
+  rollups: WeatherDailyRollup[],
+): WeatherSummaryArchive | null {
+  if (!rollups.length) {
+    return null;
+  }
+
+  const { dayMap, yearMap, extremes, earliestTimestamp, latestTimestamp } =
+    aggregateRollups(rollups);
+  const years = [...yearMap.keys()].sort((left, right) => left - right);
+
+  return {
+    stationStartLabel: earliestTimestamp ? formatSummaryMonthYear(earliestTimestamp) : "Unknown",
+    lastUpdatedLabel: latestTimestamp ? formatSummaryDateTime(latestTimestamp) : "Unknown",
+    monthlyReportRows: years.map((year) => ({
+      year,
+      months: WEATHER_SUMMARY_MONTH_LABELS.map(
+        (_, monthIndex) => yearMap.get(year)?.months.has(monthIndex + 1) ?? false,
+      ),
+    })),
+    recordSections: buildRecordSectionsFromExtremes(extremes, dayMap),
+    monthlyMatrices: [
+      buildMonthlyMatrix(
+        yearMap,
+        "Average Monthly Temperature",
+        "°F",
+        (month) => (month.tempCount ? formatNumber(month.tempSum / month.tempCount, 1) : "-"),
+        (year) => (year.tempCount ? formatNumber(year.tempSum / year.tempCount, 1) : "-"),
+      ),
+      buildMonthlyMatrix(
+        yearMap,
+        "Total Monthly Rainfall",
+        "in",
+        (month) => (month.observationDays ? formatNumber(month.rainTotal, 2) : "-"),
+        (year) =>
+          formatNumber(
+            [...year.months.values()].reduce((sum, month) => sum + month.rainTotal, 0),
+            2,
+          ),
+      ),
+      buildMonthlyMatrix(
+        yearMap,
+        "Number of Days it Rained",
+        "Days",
+        (month) => (month.observationDays ? String(month.rainyDays) : "-"),
+        (year) =>
+          String([...year.months.values()].reduce((sum, month) => sum + month.rainyDays, 0)),
+      ),
+      buildMonthlyMatrix(
+        yearMap,
+        "Total Lightning Strikes",
+        "Strikes",
+        (month) => (month.observationDays ? String(month.lightningTotal) : "-"),
+        (year) =>
+          String(
+            [...year.months.values()].reduce((sum, month) => sum + month.lightningTotal, 0),
+          ),
+      ),
+      buildMonthlyMatrix(
+        yearMap,
+        "Number of Days with Observations",
+        "Days",
+        (month) => (month.observationDays ? String(month.observationDays) : "-"),
+        (year) =>
+          String(
+            [...year.months.values()].reduce((sum, month) => sum + month.observationDays, 0),
+          ),
+      ),
+    ],
+  };
+}
+
+function aggregateRollups(rollups: WeatherDailyRollup[]) {
+  const dayMap = new Map<string, DayAggregate>();
+  const yearMap = new Map<number, YearAggregate>();
+  const extremes: RecordExtremes = {
+    tempMax: null,
+    tempMin: null,
+    dewpointMax: null,
+    dewpointMin: null,
+    rainRateMax: null,
+    heatIndexMax: null,
+    baromMax: null,
+    baromMin: null,
+    windMax: null,
+    gustMax: null,
+    windChillMin: null,
+    solarMax: null,
+    brightnessMax: null,
+  };
+  let earliestTimestamp = 0;
+  let latestTimestamp = 0;
+
+  for (const rollup of rollups) {
+    const humidityHigh = rollup.humidityMax?.value ?? null;
+    const humidityLow = rollup.humidityMin?.value ?? null;
+    const avgHumidity =
+      humidityHigh !== null && humidityLow !== null
+        ? (humidityHigh + humidityLow) / 2
+        : humidityHigh ?? humidityLow;
+
+    const day: DayAggregate = {
+      year: rollup.year,
+      month: rollup.month,
+      day: rollup.day,
+      label: `${rollup.month}/${rollup.day}/${rollup.year}`,
+      maxTemp: rollup.tempMax,
+      minTemp: rollup.tempMin,
+      tempSum: rollup.tempSum,
+      tempCount: rollup.tempCount,
+      maxSolar: rollup.solarMax,
+      avgHumidity,
+      dailyRainTotal:
+        rollup.rainTotal > 0
+          ? { value: rollup.rainTotal, timestamp: rollup.latestObservationAt }
+          : null,
+      maxLightning: rollup.lightningMax,
+      observationCount: rollup.observationCount,
+    };
+    dayMap.set(rollup.dayKey, day);
+
+    const yearAggregate = getYearAggregate(yearMap, rollup.year);
+    const monthAggregate = getMonthAggregate(yearAggregate, rollup.month);
+
+    if (rollup.tempCount > 0) {
+      yearAggregate.tempSum += rollup.tempSum;
+      yearAggregate.tempCount += rollup.tempCount;
+      monthAggregate.tempSum += rollup.tempSum;
+      monthAggregate.tempCount += rollup.tempCount;
+    }
+    monthAggregate.observationDays += 1;
+    monthAggregate.rainTotal += rollup.rainTotal;
+    monthAggregate.rainyDays += rollup.rainTotal > 0 ? 1 : 0;
+    monthAggregate.lightningTotal += Math.round(rollup.lightningMax?.value ?? 0);
+
+    extremes.tempMax = pickHighRecord(extremes.tempMax, rollup.tempMax);
+    extremes.tempMin = pickLowRecord(extremes.tempMin, rollup.tempMin);
+    extremes.dewpointMax = pickHighRecord(extremes.dewpointMax, rollup.dewpointMax);
+    extremes.dewpointMin = pickLowRecord(extremes.dewpointMin, rollup.dewpointMin);
+    extremes.rainRateMax = pickHighRecord(extremes.rainRateMax, rollup.rainRateMax);
+    extremes.heatIndexMax = pickHighRecord(extremes.heatIndexMax, rollup.heatIndexMax);
+    extremes.baromMax = pickHighRecord(extremes.baromMax, rollup.pressureMax);
+    extremes.baromMin = pickLowRecord(extremes.baromMin, rollup.pressureMin);
+    extremes.windMax = pickHighRecord(extremes.windMax, rollup.windMax);
+    extremes.gustMax = pickHighRecord(extremes.gustMax, rollup.gustMax);
+    extremes.windChillMin = pickLowRecord(extremes.windChillMin, rollup.windChillMin);
+    extremes.solarMax = pickHighRecord(extremes.solarMax, rollup.solarMax);
+    extremes.brightnessMax = pickHighRecord(extremes.brightnessMax, rollup.brightnessMax);
+
+    const dayStart = rollup.tempMax?.timestamp ?? rollup.latestObservationAt;
+    if (dayStart) {
+      if (!earliestTimestamp || dayStart < earliestTimestamp) {
+        earliestTimestamp = dayStart;
+      }
+      if (rollup.latestObservationAt > latestTimestamp) {
+        latestTimestamp = rollup.latestObservationAt;
+      }
+    }
+  }
+
+  return { dayMap, yearMap, extremes, earliestTimestamp, latestTimestamp };
+}
+
+// Same shape as buildWeatherWeekView/MonthView but seeded from rollups.
+// Used by the page's history-aware paths so navigating to a previous week
+// or month doesn't trigger a fresh raw-observation scan.
+export function buildWeekViewFromRollups(
+  rollups: WeatherDailyRollup[],
+  weekOffset = 0,
+): WeatherWeekView {
+  const dayMap = rollupsToDayMap(rollups);
+  return buildWeekViewWithDayMap(dayMap, weekOffset);
+}
+
+export function buildMonthViewFromRollups(
+  rollups: WeatherDailyRollup[],
+  monthOffset = 0,
+): WeatherMonthView {
+  const dayMap = rollupsToDayMap(rollups);
+  return buildMonthViewWithDayMap(dayMap, monthOffset);
+}
+
+function rollupsToDayMap(rollups: WeatherDailyRollup[]) {
+  const dayMap = new Map<string, DayAggregate>();
+  for (const rollup of rollups) {
+    const humidityHigh = rollup.humidityMax?.value ?? null;
+    const humidityLow = rollup.humidityMin?.value ?? null;
+    const avgHumidity =
+      humidityHigh !== null && humidityLow !== null
+        ? (humidityHigh + humidityLow) / 2
+        : humidityHigh ?? humidityLow;
+
+    dayMap.set(rollup.dayKey, {
+      year: rollup.year,
+      month: rollup.month,
+      day: rollup.day,
+      label: `${rollup.month}/${rollup.day}/${rollup.year}`,
+      maxTemp: rollup.tempMax,
+      minTemp: rollup.tempMin,
+      tempSum: rollup.tempSum,
+      tempCount: rollup.tempCount,
+      maxSolar: rollup.solarMax,
+      avgHumidity,
+      dailyRainTotal:
+        rollup.rainTotal > 0
+          ? { value: rollup.rainTotal, timestamp: rollup.latestObservationAt }
+          : null,
+      maxLightning: rollup.lightningMax,
+      observationCount: rollup.observationCount,
+    });
+  }
+  return dayMap;
+}
+
 export type WeatherWeekView = {
   matrices: WeatherPeriodMatrix[];
   navigation: WeatherPeriodNavigation;
@@ -496,6 +751,14 @@ export function buildWeatherWeekView(
   observations: WeatherObservation[],
   weekOffset = 0,
 ): WeatherWeekView {
+  const { dayMap } = aggregateObservations(observations);
+  return buildWeekViewWithDayMap(dayMap, weekOffset);
+}
+
+function buildWeekViewWithDayMap(
+  dayMap: Map<string, DayAggregate>,
+  weekOffset: number,
+): WeatherWeekView {
   const today = getCalendarParts(Date.now());
   const todayKey = buildDayKey(today.year, today.month, today.day);
   const weekdayIndex = getWeekdayIndex(today.year, today.month, today.day);
@@ -504,7 +767,6 @@ export function buildWeatherWeekView(
   const startKey = buildDayKey(start.year, start.month, start.day);
   const end = shiftCalendarDay(start.year, start.month, start.day, 6);
 
-  const { dayMap } = aggregateObservations(observations);
   const columns = Array.from({ length: 7 }, (_, index) => {
     const day = shiftCalendarDay(start.year, start.month, start.day, index);
     const key = buildDayKey(day.year, day.month, day.day);
@@ -602,20 +864,20 @@ export function buildWeatherMonthView(
   observations: WeatherObservation[],
   monthOffset = 0,
 ): WeatherMonthView {
-  const calendar = buildWeatherMonthCalendar(observations, monthOffset) ?? {
-    title: "",
-    subtitle: "",
-    monthLabel: "",
-    weeks: [],
-    navigation: { rangeLabel: "", prevAnchor: null, nextAnchor: null, isCurrent: true },
-  };
+  const { dayMap } = aggregateObservations(observations);
+  return buildMonthViewWithDayMap(dayMap, monthOffset);
+}
 
+function buildMonthViewWithDayMap(
+  dayMap: Map<string, DayAggregate>,
+  monthOffset: number,
+): WeatherMonthView {
+  const calendar = buildMonthCalendarWithDayMap(dayMap, monthOffset);
   const today = getCalendarParts(Date.now());
   const todayKey = buildDayKey(today.year, today.month, today.day);
   const anchor = shiftToMonth(today.year, today.month, monthOffset);
   const daysInMonth = getDaysInMonth(anchor.year, anchor.month);
 
-  const { dayMap } = aggregateObservations(observations);
   const columns = Array.from({ length: daysInMonth }, (_, index) => {
     const dayNumber = index + 1;
     const key = buildDayKey(anchor.year, anchor.month, dayNumber);
@@ -640,13 +902,20 @@ export function buildWeatherMonthCalendar(
     return null;
   }
 
+  const { dayMap } = aggregateObservations(observations);
+  return buildMonthCalendarWithDayMap(dayMap, monthOffset);
+}
+
+function buildMonthCalendarWithDayMap(
+  dayMap: Map<string, DayAggregate>,
+  monthOffset: number,
+): WeatherMonthCalendar {
   const today = getCalendarParts(Date.now());
   const todayKey = buildDayKey(today.year, today.month, today.day);
   const anchor = shiftToMonth(today.year, today.month, monthOffset);
   const firstWeekday = getWeekdayIndex(anchor.year, anchor.month, 1);
   const daysInMonth = getDaysInMonth(anchor.year, anchor.month);
   const totalCells = Math.ceil((firstWeekday + daysInMonth) / 7) * 7;
-  const { dayMap } = aggregateObservations(observations);
 
   const days: WeatherMonthCalendarDay[] = Array.from({ length: totalCells }, (_, index) => {
     const dayNumber = index - firstWeekday + 1;
@@ -668,6 +937,7 @@ export function buildWeatherMonthCalendar(
         hasObservations: false,
         weekdayLabel: "",
         longDateLabel: "",
+        condition: "unknown",
       } satisfies WeatherMonthCalendarDay;
     }
 
@@ -725,6 +995,176 @@ function buildCalendarDay(
     hasObservations: !!aggregate && aggregate.observationCount > 0,
     weekdayLabel: formatShortWeekday(year, month, dayNumber),
     longDateLabel: formatLongDate(year, month, dayNumber),
+    condition: inferDayCondition(aggregate),
+  };
+}
+
+// Friendly icon picker that walks down a priority list — storms beat rain,
+// rain beats clouds, clouds beat sun, etc. Solar radiation tells us how
+// sunny it actually was; humidity is a tiebreaker for overcast vs clear.
+export function inferDayCondition(
+  aggregate: DayAggregate | null | undefined,
+): WeatherDayCondition {
+  if (!aggregate || aggregate.observationCount === 0) {
+    return "unknown";
+  }
+
+  const lightning = aggregate.maxLightning?.value ?? 0;
+  if (lightning >= 1) {
+    return "stormy";
+  }
+
+  const lowTemp = aggregate.minTemp?.value ?? null;
+  const rainTotal = aggregate.dailyRainTotal?.value ?? 0;
+  if (rainTotal >= 0.05 && lowTemp !== null && lowTemp <= 32) {
+    return "snowy";
+  }
+
+  if (rainTotal >= 0.1) {
+    return "rainy";
+  }
+
+  const solarPeak = aggregate.maxSolar?.value ?? null;
+  const humidity = aggregate.avgHumidity ?? null;
+
+  // Strong daytime solar signal → mostly sunny.
+  if (solarPeak !== null && solarPeak >= 700 && (humidity === null || humidity < 75)) {
+    return "sunny";
+  }
+
+  if (solarPeak !== null && solarPeak >= 350) {
+    return "partly-cloudy";
+  }
+
+  if (humidity !== null && humidity >= 85) {
+    return "cloudy";
+  }
+
+  if (solarPeak !== null && solarPeak < 200) {
+    return "cloudy";
+  }
+
+  return "partly-cloudy";
+}
+
+// Plain-language paragraph describing the selected week. We compare against
+// the same calendar window from a week earlier (when both windows have at
+// least a couple of observed days) so the summary feels like a real story
+// rather than just a stat dump.
+export function buildWeatherWeekStory(
+  weekDays: WeatherMonthCalendarDay[],
+  priorWeekDays: WeatherMonthCalendarDay[] = [],
+  rangeLabel: string,
+  isCurrent: boolean,
+): WeatherWeekStory | null {
+  const observedDays = weekDays.filter((day) => day.hasObservations);
+
+  if (!observedDays.length) {
+    return null;
+  }
+
+  const highs = observedDays
+    .map((day) => day.highValue)
+    .filter((value): value is number => value !== null);
+  const lows = observedDays
+    .map((day) => day.lowValue)
+    .filter((value): value is number => value !== null);
+  const totalRain = observedDays.reduce(
+    (sum, day) => sum + (day.rainValue ?? 0),
+    0,
+  );
+  const rainyDays = observedDays.filter((day) => (day.rainValue ?? 0) >= 0.01).length;
+  const peakDay = observedDays.reduce<WeatherMonthCalendarDay | null>((best, day) => {
+    if (day.highValue === null) return best;
+    if (!best || (best.highValue ?? -Infinity) < day.highValue) return day;
+    return best;
+  }, null);
+  const coldestDay = observedDays.reduce<WeatherMonthCalendarDay | null>((best, day) => {
+    if (day.lowValue === null) return best;
+    if (!best || (best.lowValue ?? Infinity) > day.lowValue) return day;
+    return best;
+  }, null);
+
+  const avgHigh = highs.length ? highs.reduce((s, v) => s + v, 0) / highs.length : null;
+  const avgLow = lows.length ? lows.reduce((s, v) => s + v, 0) / lows.length : null;
+
+  const priorObserved = priorWeekDays.filter((day) => day.hasObservations);
+  const priorHighs = priorObserved
+    .map((day) => day.highValue)
+    .filter((v): v is number => v !== null);
+  const priorAvgHigh = priorHighs.length
+    ? priorHighs.reduce((s, v) => s + v, 0) / priorHighs.length
+    : null;
+
+  const tempDirection =
+    avgHigh !== null && priorAvgHigh !== null
+      ? avgHigh - priorAvgHigh
+      : null;
+
+  const sentences: string[] = [];
+
+  if (avgHigh !== null && avgLow !== null) {
+    sentences.push(
+      `${isCurrent ? "This week so far" : "That week"}, the daily high averaged <strong>${formatNumber(avgHigh, 0)}°F</strong> with overnight lows around <em>${formatNumber(avgLow, 0)}°F</em>.`,
+    );
+  }
+
+  if (peakDay && peakDay.highValue !== null) {
+    sentences.push(
+      `The warmest moment was <strong>${peakDay.weekdayLabel} (${formatNumber(peakDay.highValue, 0)}°F)</strong>${coldestDay && coldestDay.key !== peakDay.key && coldestDay.lowValue !== null ? `, and the coldest was <em>${coldestDay.weekdayLabel} morning at ${formatNumber(coldestDay.lowValue, 0)}°F</em>` : ""}.`,
+    );
+  }
+
+  if (rainyDays > 0) {
+    sentences.push(
+      `It rained on <strong>${rainyDays} ${rainyDays === 1 ? "day" : "days"}</strong>, totaling ${formatNumber(totalRain, 2)} inches.`,
+    );
+  } else {
+    sentences.push("There was <strong>no measurable rainfall</strong> across the week.");
+  }
+
+  if (tempDirection !== null && Math.abs(tempDirection) >= 1.5) {
+    sentences.push(
+      tempDirection > 0
+        ? `Overall, things ran <strong>${formatNumber(Math.abs(tempDirection), 0)}° warmer</strong> than the previous week.`
+        : `Overall, things ran <em>${formatNumber(Math.abs(tempDirection), 0)}° cooler</em> than the previous week.`,
+    );
+  }
+
+  const stats = [
+    avgHigh !== null
+      ? {
+          label: "Avg High",
+          value: `${formatNumber(avgHigh, 0)}°`,
+          note: "Daily peak temperature",
+        }
+      : null,
+    avgLow !== null
+      ? {
+          label: "Avg Low",
+          value: `${formatNumber(avgLow, 0)}°`,
+          note: "Overnight minimum",
+        }
+      : null,
+    {
+      label: "Rainfall",
+      value: `${formatNumber(totalRain, 2)}″`,
+      note: `${rainyDays} rainy ${rainyDays === 1 ? "day" : "days"}`,
+    },
+    peakDay && peakDay.highValue !== null
+      ? {
+          label: "Hottest",
+          value: `${formatNumber(peakDay.highValue, 0)}°`,
+          note: peakDay.weekdayLabel,
+        }
+      : null,
+  ].filter((stat): stat is { label: string; value: string; note: string } => stat !== null);
+
+  return {
+    eyebrow: isCurrent ? "This Week's Story" : "Weekly Recap",
+    title: rangeLabel,
+    body: sentences.join(" "),
+    stats,
   };
 }
 
