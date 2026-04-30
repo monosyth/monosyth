@@ -16,6 +16,58 @@ export const WEATHER_SUMMARY_MONTH_LABELS = [
   "Dec",
 ];
 
+// Module-scope cached formatters. Building Intl.DateTimeFormat is expensive
+// (40-100 µs each); previously these were rebuilt inside hot loops, e.g.
+// once per observation for getCalendarParts. Reusing the same instance for
+// every call cuts that overhead to a single allocation.
+const calendarPartsFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: WEATHER_TIME_ZONE,
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+});
+const shortWeekdayFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: WEATHER_TIME_ZONE,
+  weekday: "short",
+});
+const monthDayFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: WEATHER_TIME_ZONE,
+  month: "short",
+  day: "numeric",
+});
+const summaryDateTimeFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: WEATHER_TIME_ZONE,
+  month: "2-digit",
+  day: "2-digit",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  second: "2-digit",
+});
+const summaryDateFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: WEATHER_TIME_ZONE,
+  month: "2-digit",
+  day: "2-digit",
+  year: "numeric",
+});
+const summaryMonthYearFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: WEATHER_TIME_ZONE,
+  month: "short",
+  year: "numeric",
+});
+const longDateFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: WEATHER_TIME_ZONE,
+  weekday: "long",
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+});
+const monthLongYearFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: WEATHER_TIME_ZONE,
+  month: "long",
+  year: "numeric",
+});
+
 export type WeatherSummaryRecordRow = {
   label: string;
   value: string;
@@ -74,17 +126,29 @@ export type WeatherPeriodMatrix = {
   rows: WeatherPeriodMatrixRow[];
 };
 
+export type WeatherPeriodNavigation = {
+  rangeLabel: string;
+  prevAnchor: string | null;
+  nextAnchor: string | null;
+  isCurrent: boolean;
+};
+
 export type WeatherMonthCalendarDay = {
   key: string;
   dayNumber: number | null;
   isCurrentMonth: boolean;
   isFuture: boolean;
+  isToday: boolean;
+  isInRange: boolean;
   highValue: number | null;
   highDisplay: string;
   lowValue: number | null;
   lowDisplay: string;
   rainValue: number | null;
   rainDisplay: string;
+  hasObservations: boolean;
+  weekdayLabel: string;
+  longDateLabel: string;
 };
 
 export type WeatherMonthCalendar = {
@@ -92,6 +156,7 @@ export type WeatherMonthCalendar = {
   subtitle: string;
   monthLabel: string;
   weeks: WeatherMonthCalendarDay[][];
+  navigation: WeatherPeriodNavigation;
 };
 
 export type WeatherSummaryArchive = {
@@ -102,6 +167,17 @@ export type WeatherSummaryArchive = {
   monthlyMatrices: WeatherMonthlyMatrix[];
 };
 
+export type WeatherDayDetail = {
+  dayKey: string;
+  longDateLabel: string;
+  hasObservations: boolean;
+  highDisplay: string;
+  lowDisplay: string;
+  averageDisplay: string;
+  rainDisplay: string;
+  observationCount: number;
+};
+
 type DayAggregate = {
   year: number;
   month: number;
@@ -109,8 +185,11 @@ type DayAggregate = {
   label: string;
   maxTemp: MetricRecord | null;
   minTemp: MetricRecord | null;
+  tempSum: number;
+  tempCount: number;
   dailyRainTotal: MetricRecord | null;
   maxLightning: MetricRecord | null;
+  observationCount: number;
 };
 
 type MonthAggregate = {
@@ -133,27 +212,228 @@ type MetricRecord = {
   timestamp: number;
 };
 
+type RecordExtremes = {
+  tempMax: MetricRecord | null;
+  tempMin: MetricRecord | null;
+  dewpointMax: MetricRecord | null;
+  dewpointMin: MetricRecord | null;
+  rainRateMax: MetricRecord | null;
+  heatIndexMax: MetricRecord | null;
+  baromMax: MetricRecord | null;
+  baromMin: MetricRecord | null;
+  windMax: MetricRecord | null;
+  gustMax: MetricRecord | null;
+  windChillMin: MetricRecord | null;
+  solarMax: MetricRecord | null;
+  brightnessMax: MetricRecord | null;
+};
+
+type AggregationResult = {
+  dayMap: Map<string, DayAggregate>;
+  yearMap: Map<number, YearAggregate>;
+  extremes: RecordExtremes;
+  earliestTimestamp: number;
+  latestTimestamp: number;
+};
+
+// Reads-and-aggregates ALL observations in a single pass instead of running
+// separate passes for day map / year map / each metric extreme. This was
+// previously O(N * 12+) — now it's O(N).
+function aggregateObservations(observations: WeatherObservation[]): AggregationResult {
+  const dayMap = new Map<string, DayAggregate>();
+  const yearMap = new Map<number, YearAggregate>();
+  const extremes: RecordExtremes = {
+    tempMax: null,
+    tempMin: null,
+    dewpointMax: null,
+    dewpointMin: null,
+    rainRateMax: null,
+    heatIndexMax: null,
+    baromMax: null,
+    baromMin: null,
+    windMax: null,
+    gustMax: null,
+    windChillMin: null,
+    solarMax: null,
+    brightnessMax: null,
+  };
+  let earliestTimestamp = 0;
+  let latestTimestamp = 0;
+
+  // Caller may not have sorted observations; persistence layer normally does
+  // but the daily-rain-difference logic depends on sequence order. We sort
+  // in-place on a shallow copy to avoid mutating caller state.
+  const sorted = [...observations].sort(
+    (left, right) => (left.timestamp ?? 0) - (right.timestamp ?? 0),
+  );
+  let previousDailyRain: number | null = null;
+  let previousDayKey: string | null = null;
+
+  for (const observation of sorted) {
+    const timestamp = observation.timestamp ?? 0;
+
+    if (!timestamp) {
+      continue;
+    }
+
+    if (!earliestTimestamp || timestamp < earliestTimestamp) {
+      earliestTimestamp = timestamp;
+    }
+
+    if (timestamp > latestTimestamp) {
+      latestTimestamp = timestamp;
+    }
+
+    const parts = getCalendarParts(timestamp);
+    const dayKey = buildDayKey(parts.year, parts.month, parts.day);
+
+    // Reset the running daily-rain delta when we cross into a new day —
+    // Ambient resets dailyrainin at midnight local time.
+    if (previousDayKey !== null && previousDayKey !== dayKey) {
+      previousDailyRain = null;
+    }
+
+    let day = dayMap.get(dayKey);
+
+    if (!day) {
+      day = {
+        year: parts.year,
+        month: parts.month,
+        day: parts.day,
+        label: `${parts.month}/${parts.day}/${parts.year}`,
+        maxTemp: null,
+        minTemp: null,
+        tempSum: 0,
+        tempCount: 0,
+        dailyRainTotal: null,
+        maxLightning: null,
+        observationCount: 0,
+      };
+      dayMap.set(dayKey, day);
+    }
+    day.observationCount += 1;
+
+    const yearAggregate = getYearAggregate(yearMap, parts.year);
+    const monthAggregate = getMonthAggregate(yearAggregate, parts.month);
+
+    const tempRecord = pickObservationRecord(observation, ["tempf"], timestamp);
+    if (tempRecord) {
+      day.maxTemp = pickHighRecord(day.maxTemp, tempRecord);
+      day.minTemp = pickLowRecord(day.minTemp, tempRecord);
+      day.tempSum += tempRecord.value;
+      day.tempCount += 1;
+      yearAggregate.tempSum += tempRecord.value;
+      yearAggregate.tempCount += 1;
+      monthAggregate.tempSum += tempRecord.value;
+      monthAggregate.tempCount += 1;
+      extremes.tempMax = pickHighRecord(extremes.tempMax, tempRecord);
+      extremes.tempMin = pickLowRecord(extremes.tempMin, tempRecord);
+    }
+
+    const dewpointRecord = pickObservationRecord(observation, ["dewPoint", "dewpointf"], timestamp);
+    if (dewpointRecord) {
+      extremes.dewpointMax = pickHighRecord(extremes.dewpointMax, dewpointRecord);
+      extremes.dewpointMin = pickLowRecord(extremes.dewpointMin, dewpointRecord);
+    }
+
+    const rainRateRecord = pickObservationRecord(observation, ["hourlyrainin"], timestamp);
+    if (rainRateRecord) {
+      extremes.rainRateMax = pickHighRecord(extremes.rainRateMax, rainRateRecord);
+    }
+
+    const heatIndexRecord = pickObservationRecord(observation, ["heatindexf"], timestamp);
+    if (heatIndexRecord) {
+      extremes.heatIndexMax = pickHighRecord(extremes.heatIndexMax, heatIndexRecord);
+    }
+
+    const baromRecord = pickObservationRecord(observation, ["baromrelin", "baromabsin"], timestamp);
+    if (baromRecord) {
+      extremes.baromMax = pickHighRecord(extremes.baromMax, baromRecord);
+      extremes.baromMin = pickLowRecord(extremes.baromMin, baromRecord);
+    }
+
+    const windRecord = pickObservationRecord(observation, ["windspeedmph"], timestamp);
+    if (windRecord) {
+      extremes.windMax = pickHighRecord(extremes.windMax, windRecord);
+    }
+
+    const gustRecord = pickObservationRecord(observation, ["windgustmph"], timestamp);
+    if (gustRecord) {
+      extremes.gustMax = pickHighRecord(extremes.gustMax, gustRecord);
+    }
+
+    const chillRecord = pickObservationRecord(observation, ["windchillf"], timestamp);
+    if (chillRecord) {
+      extremes.windChillMin = pickLowRecord(extremes.windChillMin, chillRecord);
+    }
+
+    const solarRecord = pickObservationRecord(observation, ["solarradiation"], timestamp);
+    if (solarRecord) {
+      extremes.solarMax = pickHighRecord(extremes.solarMax, solarRecord);
+    }
+
+    const brightnessRecord = pickObservationRecord(observation, ["brightness", "lux"], timestamp);
+    if (brightnessRecord) {
+      extremes.brightnessMax = pickHighRecord(extremes.brightnessMax, brightnessRecord);
+    }
+
+    const dailyRain = pickNumber(observation, ["dailyrainin"]);
+    if (dailyRain !== null) {
+      const rainIncrement =
+        previousDailyRain === null
+          ? dailyRain
+          : dailyRain + 1e-6 >= previousDailyRain
+            ? Math.max(dailyRain - previousDailyRain, 0)
+            : dailyRain;
+
+      day.dailyRainTotal = {
+        value: roundMetric((day.dailyRainTotal?.value ?? 0) + rainIncrement, 4),
+        timestamp,
+      };
+      previousDailyRain = dailyRain;
+    }
+
+    const lightningRecord = pickObservationRecord(observation, ["lightning_day", "lightning"], timestamp);
+    if (lightningRecord) {
+      day.maxLightning = pickHighRecord(day.maxLightning, lightningRecord);
+    }
+
+    previousDayKey = dayKey;
+  }
+
+  // Roll daily totals up into per-month aggregates.
+  for (const day of dayMap.values()) {
+    const yearAggregate = getYearAggregate(yearMap, day.year);
+    const monthAggregate = getMonthAggregate(yearAggregate, day.month);
+
+    monthAggregate.observationDays += 1;
+    monthAggregate.rainTotal += day.dailyRainTotal?.value ?? 0;
+    monthAggregate.rainyDays += (day.dailyRainTotal?.value ?? 0) > 0 ? 1 : 0;
+    monthAggregate.lightningTotal += Math.round(day.maxLightning?.value ?? 0);
+  }
+
+  return { dayMap, yearMap, extremes, earliestTimestamp, latestTimestamp };
+}
+
 export function buildWeatherSummaryArchive(observations: WeatherObservation[]): WeatherSummaryArchive | null {
   if (!observations.length) {
     return null;
   }
 
-  const earliestTimestamp = observations[0]?.timestamp ?? 0;
-  const latestTimestamp = observations.at(-1)?.timestamp ?? Date.now();
-  const dayMap = buildDayAggregates(observations);
-  const yearMap = buildYearAggregates(observations, dayMap);
+  const { dayMap, yearMap, extremes, earliestTimestamp, latestTimestamp } =
+    aggregateObservations(observations);
   const years = [...yearMap.keys()].sort((left, right) => left - right);
 
   return {
     stationStartLabel: earliestTimestamp ? formatSummaryMonthYear(earliestTimestamp) : "Unknown",
-    lastUpdatedLabel: formatSummaryDateTime(latestTimestamp),
+    lastUpdatedLabel: latestTimestamp ? formatSummaryDateTime(latestTimestamp) : "Unknown",
     monthlyReportRows: years.map((year) => ({
       year,
       months: WEATHER_SUMMARY_MONTH_LABELS.map(
         (_, monthIndex) => yearMap.get(year)?.months.has(monthIndex + 1) ?? false,
       ),
     })),
-    recordSections: buildRecordSections(observations, dayMap),
+    recordSections: buildRecordSectionsFromExtremes(extremes, dayMap),
     monthlyMatrices: [
       buildMonthlyMatrix(
         yearMap,
@@ -205,29 +485,75 @@ export function buildWeatherSummaryArchive(observations: WeatherObservation[]): 
   };
 }
 
-export function buildWeatherPeriodMatrices(
+export type WeatherWeekView = {
+  matrices: WeatherPeriodMatrix[];
+  navigation: WeatherPeriodNavigation;
+  days: WeatherMonthCalendarDay[];
+  weekStartKey: string;
+};
+
+export function buildWeatherWeekView(
   observations: WeatherObservation[],
+  weekOffset = 0,
+): WeatherWeekView {
+  const today = getCalendarParts(Date.now());
+  const todayKey = buildDayKey(today.year, today.month, today.day);
+  const weekdayIndex = getWeekdayIndex(today.year, today.month, today.day);
+  const currentWeekStart = shiftCalendarDay(today.year, today.month, today.day, -weekdayIndex);
+  const start = shiftCalendarDay(currentWeekStart.year, currentWeekStart.month, currentWeekStart.day, weekOffset * 7);
+  const startKey = buildDayKey(start.year, start.month, start.day);
+  const end = shiftCalendarDay(start.year, start.month, start.day, 6);
+
+  const { dayMap } = aggregateObservations(observations);
+  const columns = Array.from({ length: 7 }, (_, index) => {
+    const day = shiftCalendarDay(start.year, start.month, start.day, index);
+    const key = buildDayKey(day.year, day.month, day.day);
+    return {
+      key,
+      label: formatShortWeekday(day.year, day.month, day.day),
+      detail: formatMonthDay(day.year, day.month, day.day),
+      isFuture: key > todayKey,
+    } satisfies WeatherPeriodMatrixColumn;
+  });
+
+  const matrices = buildPeriodMatricesFromDayMap(dayMap, columns, "week");
+  const days = columns.map((column) => buildCalendarDay(column.key, dayMap, todayKey, true));
+
+  const startLabel = formatMonthDay(start.year, start.month, start.day);
+  const endLabel = formatMonthDay(end.year, end.month, end.day);
+  const yearLabel = start.year === end.year ? `, ${end.year}` : `, ${start.year}–${end.year}`;
+  const navigation: WeatherPeriodNavigation = {
+    rangeLabel: `${startLabel} – ${endLabel}${yearLabel}`,
+    prevAnchor: String(weekOffset - 1),
+    nextAnchor: weekOffset >= 0 ? null : String(weekOffset + 1),
+    isCurrent: weekOffset === 0,
+  };
+
+  return {
+    matrices,
+    navigation,
+    days,
+    weekStartKey: startKey,
+  };
+}
+
+function buildPeriodMatricesFromDayMap(
+  dayMap: Map<string, DayAggregate>,
+  columns: WeatherPeriodMatrixColumn[],
   view: "week" | "month",
 ): WeatherPeriodMatrix[] {
-  if (!observations.length) {
-    return [];
-  }
-
-  const dayMap = buildDayAggregates(observations);
-  const columns = buildPeriodColumns(view);
-
   if (!columns.length) {
     return [];
   }
 
+  const periodLabel = view === "week" ? "week" : "month";
   const temperatureRows = buildTemperatureRows(columns, dayMap);
   const rainfallRows = buildRainfallRows(columns, dayMap);
-  const periodLabel = view === "week" ? "week" : "month";
 
   const matrices: WeatherPeriodMatrix[] = [
     {
-      title: view === "week" ? "Current Week Daily Temperatures" : "Current Month Daily Temperatures",
-      subtitle: `Daily highs and lows recorded so far this ${periodLabel}.`,
+      title: view === "week" ? "Daily Temperatures" : "Daily Temperatures",
+      subtitle: `Daily highs and lows for the selected ${periodLabel}.`,
       unitLabel: "°F",
       summaryLabel: "Avg",
       colorScale: "temperature",
@@ -235,8 +561,8 @@ export function buildWeatherPeriodMatrices(
       rows: temperatureRows,
     },
     {
-      title: view === "week" ? "Current Week Daily Rainfall" : "Current Month Daily Rainfall",
-      subtitle: `Daily rainfall totals recorded so far this ${periodLabel}.`,
+      title: view === "week" ? "Daily Rainfall" : "Daily Rainfall",
+      subtitle: `Daily rainfall totals for the selected ${periodLabel}.`,
       unitLabel: "in",
       summaryLabel: "Total",
       colorScale: "rain",
@@ -246,24 +572,83 @@ export function buildWeatherPeriodMatrices(
   ];
 
   return matrices.filter((matrix) =>
-    matrix.rows.some((row) => row.cells.some((cell) => cell.hasObservation)),
+    matrix.rows.some((row) => row.cells.some((cell) => cell.hasObservation || !cell.isFuture)),
   );
+}
+
+// Backwards-compatible API used elsewhere in the page; just delegates to the
+// week/month view builders so the single aggregation pass is shared.
+export function buildWeatherPeriodMatrices(
+  observations: WeatherObservation[],
+  view: "week" | "month",
+): WeatherPeriodMatrix[] {
+  if (!observations.length) {
+    return [];
+  }
+
+  if (view === "week") {
+    return buildWeatherWeekView(observations, 0).matrices;
+  }
+
+  return buildWeatherMonthView(observations, 0).matrices;
+}
+
+export type WeatherMonthView = {
+  matrices: WeatherPeriodMatrix[];
+  calendar: WeatherMonthCalendar;
+};
+
+export function buildWeatherMonthView(
+  observations: WeatherObservation[],
+  monthOffset = 0,
+): WeatherMonthView {
+  const calendar = buildWeatherMonthCalendar(observations, monthOffset) ?? {
+    title: "",
+    subtitle: "",
+    monthLabel: "",
+    weeks: [],
+    navigation: { rangeLabel: "", prevAnchor: null, nextAnchor: null, isCurrent: true },
+  };
+
+  const today = getCalendarParts(Date.now());
+  const todayKey = buildDayKey(today.year, today.month, today.day);
+  const anchor = shiftToMonth(today.year, today.month, monthOffset);
+  const daysInMonth = getDaysInMonth(anchor.year, anchor.month);
+
+  const { dayMap } = aggregateObservations(observations);
+  const columns = Array.from({ length: daysInMonth }, (_, index) => {
+    const dayNumber = index + 1;
+    const key = buildDayKey(anchor.year, anchor.month, dayNumber);
+    return {
+      key,
+      label: String(dayNumber),
+      detail: formatShortWeekday(anchor.year, anchor.month, dayNumber),
+      isFuture: key > todayKey,
+    } satisfies WeatherPeriodMatrixColumn;
+  });
+
+  const matrices = buildPeriodMatricesFromDayMap(dayMap, columns, "month");
+
+  return { matrices, calendar };
 }
 
 export function buildWeatherMonthCalendar(
   observations: WeatherObservation[],
+  monthOffset = 0,
 ): WeatherMonthCalendar | null {
-  if (!observations.length) {
+  if (!observations.length && monthOffset === 0) {
     return null;
   }
 
   const today = getCalendarParts(Date.now());
   const todayKey = buildDayKey(today.year, today.month, today.day);
-  const firstWeekday = getWeekdayIndex(today.year, today.month, 1);
-  const daysInMonth = getDaysInMonth(today.year, today.month);
+  const anchor = shiftToMonth(today.year, today.month, monthOffset);
+  const firstWeekday = getWeekdayIndex(anchor.year, anchor.month, 1);
+  const daysInMonth = getDaysInMonth(anchor.year, anchor.month);
   const totalCells = Math.ceil((firstWeekday + daysInMonth) / 7) * 7;
-  const dayMap = buildDayAggregates(observations);
-  const days = Array.from({ length: totalCells }, (_, index) => {
+  const { dayMap } = aggregateObservations(observations);
+
+  const days: WeatherMonthCalendarDay[] = Array.from({ length: totalCells }, (_, index) => {
     const dayNumber = index - firstWeekday + 1;
 
     if (dayNumber < 1 || dayNumber > daysInMonth) {
@@ -272,107 +657,139 @@ export function buildWeatherMonthCalendar(
         dayNumber: null,
         isCurrentMonth: false,
         isFuture: false,
+        isToday: false,
+        isInRange: false,
         highValue: null,
         highDisplay: "-",
         lowValue: null,
         lowDisplay: "-",
         rainValue: null,
         rainDisplay: "-",
+        hasObservations: false,
+        weekdayLabel: "",
+        longDateLabel: "",
       } satisfies WeatherMonthCalendarDay;
     }
 
-    const key = buildDayKey(today.year, today.month, dayNumber);
-    const aggregate = dayMap.get(key);
-
-    return {
-      key,
-      dayNumber,
-      isCurrentMonth: true,
-      isFuture: key > todayKey,
-      highValue: aggregate?.maxTemp?.value ?? null,
-      highDisplay: aggregate?.maxTemp ? formatNumber(aggregate.maxTemp.value, 1) : "-",
-      lowValue: aggregate?.minTemp?.value ?? null,
-      lowDisplay: aggregate?.minTemp ? formatNumber(aggregate.minTemp.value, 1) : "-",
-      rainValue: aggregate?.dailyRainTotal?.value ?? null,
-      rainDisplay: aggregate?.dailyRainTotal ? formatNumber(aggregate.dailyRainTotal.value, 2) : "-",
-    } satisfies WeatherMonthCalendarDay;
+    const key = buildDayKey(anchor.year, anchor.month, dayNumber);
+    return buildCalendarDay(key, dayMap, todayKey, true);
   });
 
-  const weeks = Array.from({ length: days.length / 7 }, (_, index) => days.slice(index * 7, index * 7 + 7));
+  const weeks = Array.from({ length: days.length / 7 }, (_, index) =>
+    days.slice(index * 7, index * 7 + 7),
+  );
+
+  const monthLabel = formatLongMonthYear(anchor.year, anchor.month, 1);
+  const isCurrent = monthOffset === 0;
+  const navigation: WeatherPeriodNavigation = {
+    rangeLabel: monthLabel,
+    prevAnchor: String(monthOffset - 1),
+    nextAnchor: monthOffset >= 0 ? null : String(monthOffset + 1),
+    isCurrent,
+  };
 
   return {
-    title: "Current Month Daily Calendar",
-    subtitle: "Daily highs, lows, and rainfall laid out in calendar order for the current month.",
-    monthLabel: formatSummaryMonthYear(
-      Date.UTC(today.year, today.month - 1, 1, 12, 0, 0, 0),
-    ),
+    title: "Monthly Calendar",
+    subtitle: "Tap any day to drill into station observations for that date.",
+    monthLabel,
     weeks,
+    navigation,
   };
 }
 
-function buildDayAggregates(observations: WeatherObservation[]) {
-  const dayMap = new Map<string, DayAggregate>();
-  const sortedObservations = [...observations].sort(
-    (left, right) => (left.timestamp ?? 0) - (right.timestamp ?? 0),
-  );
-  let previousDailyRain: number | null = null;
+function buildCalendarDay(
+  key: string,
+  dayMap: Map<string, DayAggregate>,
+  todayKey: string,
+  isCurrentMonth: boolean,
+): WeatherMonthCalendarDay {
+  const aggregate = dayMap.get(key);
+  const [yearStr, monthStr, dayStr] = key.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const dayNumber = Number(dayStr);
 
-  for (const observation of sortedObservations) {
-    const timestamp = observation.timestamp ?? 0;
+  return {
+    key,
+    dayNumber,
+    isCurrentMonth,
+    isFuture: key > todayKey,
+    isToday: key === todayKey,
+    isInRange: true,
+    highValue: aggregate?.maxTemp?.value ?? null,
+    highDisplay: aggregate?.maxTemp ? formatNumber(aggregate.maxTemp.value, 0) : "-",
+    lowValue: aggregate?.minTemp?.value ?? null,
+    lowDisplay: aggregate?.minTemp ? formatNumber(aggregate.minTemp.value, 0) : "-",
+    rainValue: aggregate?.dailyRainTotal?.value ?? null,
+    rainDisplay: aggregate?.dailyRainTotal ? formatNumber(aggregate.dailyRainTotal.value, 2) : "-",
+    hasObservations: !!aggregate && aggregate.observationCount > 0,
+    weekdayLabel: formatShortWeekday(year, month, dayNumber),
+    longDateLabel: formatLongDate(year, month, dayNumber),
+  };
+}
 
-    if (!timestamp) {
-      continue;
-    }
+export function buildWeatherDayDetail(
+  observations: WeatherObservation[],
+  dayKey: string,
+): WeatherDayDetail {
+  const [yearStr, monthStr, dayStr] = dayKey.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  const longDateLabel = formatLongDate(year, month, day);
 
-    const parts = getCalendarParts(timestamp);
-    const key = buildDayKey(parts.year, parts.month, parts.day);
-    const aggregate = dayMap.get(key) ?? {
-      year: parts.year,
-      month: parts.month,
-      day: parts.day,
-      label: `${parts.month}/${parts.day}/${parts.year}`,
-      maxTemp: null,
-      minTemp: null,
-      dailyRainTotal: null,
-      maxLightning: null,
+  if (!observations.length) {
+    return {
+      dayKey,
+      longDateLabel,
+      hasObservations: false,
+      highDisplay: "-",
+      lowDisplay: "-",
+      averageDisplay: "-",
+      rainDisplay: "-",
+      observationCount: 0,
     };
-
-    aggregate.maxTemp = pickHighRecord(aggregate.maxTemp, pickObservationRecord(observation, ["tempf"]));
-    aggregate.minTemp = pickLowRecord(aggregate.minTemp, pickObservationRecord(observation, ["tempf"]));
-    const dailyRain = pickNumber(observation, ["dailyrainin"]);
-
-    if (dailyRain !== null) {
-      const rainIncrement =
-        previousDailyRain === null
-          ? dailyRain
-          : dailyRain + 1e-6 >= previousDailyRain
-            ? Math.max(dailyRain - previousDailyRain, 0)
-            : dailyRain;
-
-      aggregate.dailyRainTotal = {
-        value: roundMetric((aggregate.dailyRainTotal?.value ?? 0) + rainIncrement, 4),
-        timestamp,
-      };
-      previousDailyRain = dailyRain;
-    }
-
-    aggregate.maxLightning = pickHighRecord(
-      aggregate.maxLightning,
-      pickObservationRecord(observation, ["lightning_day", "lightning"]),
-    );
-
-    dayMap.set(key, aggregate);
   }
 
-  return dayMap;
+  const { dayMap } = aggregateObservations(observations);
+  const aggregate = dayMap.get(dayKey);
+
+  if (!aggregate) {
+    return {
+      dayKey,
+      longDateLabel,
+      hasObservations: false,
+      highDisplay: "-",
+      lowDisplay: "-",
+      averageDisplay: "-",
+      rainDisplay: "-",
+      observationCount: 0,
+    };
+  }
+
+  return {
+    dayKey,
+    longDateLabel,
+    hasObservations: true,
+    highDisplay: aggregate.maxTemp ? `${formatNumber(aggregate.maxTemp.value, 1)} °F` : "-",
+    lowDisplay: aggregate.minTemp ? `${formatNumber(aggregate.minTemp.value, 1)} °F` : "-",
+    averageDisplay:
+      aggregate.tempCount > 0
+        ? `${formatNumber(aggregate.tempSum / aggregate.tempCount, 1)} °F`
+        : "-",
+    rainDisplay: aggregate.dailyRainTotal
+      ? `${formatNumber(aggregate.dailyRainTotal.value, 2)} in`
+      : "0 in",
+    observationCount: aggregate.observationCount,
+  };
 }
 
 function buildTemperatureRows(
   columns: WeatherPeriodMatrixColumn[],
   dayMap: Map<string, DayAggregate>,
 ): WeatherPeriodMatrixRow[] {
-  const highs = columns.map((column) => buildMetricCell(dayMap.get(column.key)?.maxTemp, 1, column.isFuture));
-  const lows = columns.map((column) => buildMetricCell(dayMap.get(column.key)?.minTemp, 1, column.isFuture));
+  const highs = columns.map((column) => buildMetricCell(dayMap.get(column.key)?.maxTemp, 0, column.isFuture));
+  const lows = columns.map((column) => buildMetricCell(dayMap.get(column.key)?.minTemp, 0, column.isFuture));
 
   return [
     {
@@ -405,44 +822,8 @@ function buildRainfallRows(
   ];
 }
 
-function buildYearAggregates(observations: WeatherObservation[], dayMap: Map<string, DayAggregate>) {
-  const yearMap = new Map<number, YearAggregate>();
-
-  for (const observation of observations) {
-    const timestamp = observation.timestamp ?? 0;
-
-    if (!timestamp) {
-      continue;
-    }
-
-    const temperature = pickNumber(observation, ["tempf"]);
-    const parts = getCalendarParts(timestamp);
-    const yearAggregate = getYearAggregate(yearMap, parts.year);
-    const monthAggregate = getMonthAggregate(yearAggregate, parts.month);
-
-    if (temperature !== null) {
-      yearAggregate.tempSum += temperature;
-      yearAggregate.tempCount += 1;
-      monthAggregate.tempSum += temperature;
-      monthAggregate.tempCount += 1;
-    }
-  }
-
-  for (const day of dayMap.values()) {
-    const yearAggregate = getYearAggregate(yearMap, day.year);
-    const monthAggregate = getMonthAggregate(yearAggregate, day.month);
-
-    monthAggregate.observationDays += 1;
-    monthAggregate.rainTotal += day.dailyRainTotal?.value ?? 0;
-    monthAggregate.rainyDays += (day.dailyRainTotal?.value ?? 0) > 0 ? 1 : 0;
-    monthAggregate.lightningTotal += Math.round(day.maxLightning?.value ?? 0);
-  }
-
-  return yearMap;
-}
-
-function buildRecordSections(
-  observations: WeatherObservation[],
+function buildRecordSectionsFromExtremes(
+  extremes: RecordExtremes,
   dayMap: Map<string, DayAggregate>,
 ): WeatherSummarySection[] {
   const dayAggregates = [...dayMap.values()];
@@ -451,8 +832,8 @@ function buildRecordSections(
     {
       title: "Outside Temperatures",
       rows: [
-        buildMetricRow("Highest", findExtremeObservation(observations, ["tempf"], "max"), 1, "°F"),
-        buildMetricRow("Lowest", findExtremeObservation(observations, ["tempf"], "min"), 1, "°F"),
+        buildMetricRow("Highest", extremes.tempMax, 1, "°F"),
+        buildMetricRow("Lowest", extremes.tempMin, 1, "°F"),
         buildMetricRow("Min Max", pickMinMax(dayAggregates), 1, "°F"),
         buildMetricRow("Max Min", pickMaxMin(dayAggregates), 1, "°F"),
       ].filter((row): row is WeatherSummaryRecordRow => row !== null),
@@ -460,54 +841,60 @@ function buildRecordSections(
     {
       title: "Dewpoint",
       rows: [
-        buildMetricRow("Highest", findExtremeObservation(observations, ["dewPoint", "dewpointf"], "max"), 1, "°F"),
-        buildMetricRow("Lowest", findExtremeObservation(observations, ["dewPoint", "dewpointf"], "min"), 1, "°F"),
+        buildMetricRow("Highest", extremes.dewpointMax, 1, "°F"),
+        buildMetricRow("Lowest", extremes.dewpointMin, 1, "°F"),
       ].filter((row): row is WeatherSummaryRecordRow => row !== null),
     },
     {
       title: "Precipitation",
       rows: [
-        buildMetricRow("Highest Daily Rainfall", findExtremeDay(dayAggregates, "dailyRainTotal", "max"), 2, "in", true),
-        buildMetricRow("Highest Rain Rate", findExtremeObservation(observations, ["hourlyrainin"], "max"), 2, "in/h"),
+        buildMetricRow(
+          "Highest Daily Rainfall",
+          findExtremeDay(dayAggregates, "dailyRainTotal", "max"),
+          2,
+          "in",
+          true,
+        ),
+        buildMetricRow("Highest Rain Rate", extremes.rainRateMax, 2, "in/h"),
       ].filter((row): row is WeatherSummaryRecordRow => row !== null),
     },
     {
       title: "Heat Index",
-      rows: [
-        buildMetricRow("Highest", findExtremeObservation(observations, ["heatindexf"], "max"), 1, "°F"),
-      ].filter((row): row is WeatherSummaryRecordRow => row !== null),
+      rows: [buildMetricRow("Highest", extremes.heatIndexMax, 1, "°F")].filter(
+        (row): row is WeatherSummaryRecordRow => row !== null,
+      ),
     },
     {
       title: "Barometer",
       rows: [
-        buildMetricRow("Highest", findExtremeObservation(observations, ["baromrelin", "baromabsin"], "max"), 3, "inHg"),
-        buildMetricRow("Lowest", findExtremeObservation(observations, ["baromrelin", "baromabsin"], "min"), 3, "inHg"),
+        buildMetricRow("Highest", extremes.baromMax, 3, "inHg"),
+        buildMetricRow("Lowest", extremes.baromMin, 3, "inHg"),
       ].filter((row): row is WeatherSummaryRecordRow => row !== null),
     },
     {
       title: "Wind",
       rows: [
-        buildMetricRow("Highest Sustained", findExtremeObservation(observations, ["windspeedmph"], "max"), 1, "mph"),
-        buildMetricRow("Highest Gust", findExtremeObservation(observations, ["windgustmph"], "max"), 1, "mph"),
+        buildMetricRow("Highest Sustained", extremes.windMax, 1, "mph"),
+        buildMetricRow("Highest Gust", extremes.gustMax, 1, "mph"),
       ].filter((row): row is WeatherSummaryRecordRow => row !== null),
     },
     {
       title: "Wind Chill",
-      rows: [
-        buildMetricRow("Lowest", findExtremeObservation(observations, ["windchillf"], "min"), 1, "°F"),
-      ].filter((row): row is WeatherSummaryRecordRow => row !== null),
+      rows: [buildMetricRow("Lowest", extremes.windChillMin, 1, "°F")].filter(
+        (row): row is WeatherSummaryRecordRow => row !== null,
+      ),
     },
     {
       title: "Solar Radiation",
-      rows: [
-        buildMetricRow("Highest", findExtremeObservation(observations, ["solarradiation"], "max"), 0, "W/m²"),
-      ].filter((row): row is WeatherSummaryRecordRow => row !== null),
+      rows: [buildMetricRow("Highest", extremes.solarMax, 0, "W/m²")].filter(
+        (row): row is WeatherSummaryRecordRow => row !== null,
+      ),
     },
     {
       title: "Brightness",
-      rows: [
-        buildMetricRow("Highest", findExtremeObservation(observations, ["brightness", "lux"], "max"), 0, "lx"),
-      ].filter((row): row is WeatherSummaryRecordRow => row !== null),
+      rows: [buildMetricRow("Highest", extremes.brightnessMax, 0, "lx")].filter(
+        (row): row is WeatherSummaryRecordRow => row !== null,
+      ),
     },
     {
       title: "Lightning",
@@ -541,42 +928,6 @@ function buildMonthlyMatrix(
     unitLabel,
     rows,
   };
-}
-
-function buildPeriodColumns(view: "week" | "month"): WeatherPeriodMatrixColumn[] {
-  const today = getCalendarParts(Date.now());
-  const todayKey = buildDayKey(today.year, today.month, today.day);
-
-  if (view === "week") {
-    const weekdayIndex = getWeekdayIndex(today.year, today.month, today.day);
-    const weekStart = shiftCalendarDay(today.year, today.month, today.day, -weekdayIndex);
-
-    return Array.from({ length: 7 }, (_, index) => {
-      const day = shiftCalendarDay(weekStart.year, weekStart.month, weekStart.day, index);
-      const key = buildDayKey(day.year, day.month, day.day);
-
-      return {
-        key,
-        label: formatShortWeekday(day.year, day.month, day.day),
-        detail: formatMonthDay(day.year, day.month, day.day),
-        isFuture: key > todayKey,
-      };
-    });
-  }
-
-  const daysInMonth = getDaysInMonth(today.year, today.month);
-
-  return Array.from({ length: daysInMonth }, (_, index) => {
-    const dayNumber = index + 1;
-    const key = buildDayKey(today.year, today.month, dayNumber);
-
-    return {
-      key,
-      label: String(dayNumber),
-      detail: formatShortWeekday(today.year, today.month, dayNumber),
-      isFuture: key > todayKey,
-    };
-  });
 }
 
 function getYearAggregate(yearMap: Map<number, YearAggregate>, year: number) {
@@ -654,33 +1005,6 @@ function buildMetricCell(
   };
 }
 
-function findExtremeObservation(
-  observations: WeatherObservation[],
-  keys: string[],
-  mode: "min" | "max",
-) {
-  let winner: MetricRecord | null = null;
-
-  for (const observation of observations) {
-    const candidate = pickObservationRecord(observation, keys);
-
-    if (!candidate) {
-      continue;
-    }
-
-    if (!winner) {
-      winner = candidate;
-      continue;
-    }
-
-    if (mode === "max" ? candidate.value > winner.value : candidate.value < winner.value) {
-      winner = candidate;
-    }
-  }
-
-  return winner;
-}
-
 function findExtremeDay(
   days: DayAggregate[],
   key: "dailyRainTotal" | "maxLightning",
@@ -740,9 +1064,8 @@ function pickMaxMin(days: DayAggregate[]) {
   return winner;
 }
 
-function pickObservationRecord(observation: WeatherObservation, keys: string[]) {
+function pickObservationRecord(observation: WeatherObservation, keys: string[], timestamp: number) {
   const value = pickNumber(observation, keys);
-  const timestamp = observation.timestamp ?? 0;
 
   if (value === null || !timestamp) {
     return null;
@@ -796,13 +1119,7 @@ function pickNumber(source: WeatherObservation, keys: string[]) {
 }
 
 function getCalendarParts(timestamp: number) {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: WEATHER_TIME_ZONE,
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-  });
-  const parts = formatter.formatToParts(new Date(timestamp));
+  const parts = calendarPartsFormatter.formatToParts(new Date(timestamp));
 
   return {
     year: Number(parts.find((part) => part.type === "year")?.value ?? "0"),
@@ -811,8 +1128,13 @@ function getCalendarParts(timestamp: number) {
   };
 }
 
-function buildDayKey(year: number, month: number, day: number) {
+export function buildDayKey(year: number, month: number, day: number) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+export function getCurrentDayKey() {
+  const today = getCalendarParts(Date.now());
+  return buildDayKey(today.year, today.month, today.day);
 }
 
 function getWeekdayIndex(year: number, month: number, day: number) {
@@ -829,23 +1151,32 @@ function shiftCalendarDay(year: number, month: number, day: number, offsetDays: 
   };
 }
 
+function shiftToMonth(year: number, month: number, monthOffset: number) {
+  const date = new Date(Date.UTC(year, month - 1 + monthOffset, 1, 12, 0, 0, 0));
+  return {
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth() + 1,
+  };
+}
+
 function getDaysInMonth(year: number, month: number) {
   return new Date(Date.UTC(year, month, 0, 12, 0, 0, 0)).getUTCDate();
 }
 
 function formatShortWeekday(year: number, month: number, day: number) {
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: WEATHER_TIME_ZONE,
-    weekday: "short",
-  }).format(new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0)));
+  return shortWeekdayFormatter.format(new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0)));
 }
 
 function formatMonthDay(year: number, month: number, day: number) {
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: WEATHER_TIME_ZONE,
-    month: "short",
-    day: "numeric",
-  }).format(new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0)));
+  return monthDayFormatter.format(new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0)));
+}
+
+function formatLongDate(year: number, month: number, day: number) {
+  return longDateFormatter.format(new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0)));
+}
+
+function formatLongMonthYear(year: number, month: number, day: number) {
+  return monthLongYearFormatter.format(new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0)));
 }
 
 function formatAverageSummary(cells: WeatherPeriodMatrixCell[], decimals: number) {
@@ -886,30 +1217,13 @@ function roundMetric(value: number, decimals: number) {
 }
 
 function formatSummaryDateTime(timestamp: number) {
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: WEATHER_TIME_ZONE,
-    month: "2-digit",
-    day: "2-digit",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-  }).format(new Date(timestamp));
+  return summaryDateTimeFormatter.format(new Date(timestamp));
 }
 
 function formatSummaryDate(timestamp: number) {
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: WEATHER_TIME_ZONE,
-    month: "2-digit",
-    day: "2-digit",
-    year: "numeric",
-  }).format(new Date(timestamp));
+  return summaryDateFormatter.format(new Date(timestamp));
 }
 
 function formatSummaryMonthYear(timestamp: number) {
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: WEATHER_TIME_ZONE,
-    month: "short",
-    year: "numeric",
-  }).format(new Date(timestamp));
+  return summaryMonthYearFormatter.format(new Date(timestamp));
 }

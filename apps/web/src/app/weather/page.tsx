@@ -21,12 +21,17 @@ import {
   readStoredWeatherObservationsForDay,
 } from "@/lib/weather/history";
 import {
-  buildWeatherMonthCalendar,
-  buildWeatherPeriodMatrices,
+  buildWeatherDayDetail,
+  buildWeatherMonthView,
   buildWeatherSummaryArchive,
+  buildWeatherWeekView,
+  getCurrentDayKey,
   WEATHER_SUMMARY_MONTH_LABELS,
+  type WeatherDayDetail,
   type WeatherMonthCalendar,
+  type WeatherMonthCalendarDay,
   type WeatherPeriodMatrix,
+  type WeatherPeriodNavigation,
   type WeatherMonthlyMatrix,
   type WeatherMonthlyReportRow,
   type WeatherSummaryArchive,
@@ -101,8 +106,35 @@ type WeatherPageProps = {
   searchParams?: Promise<{
     view?: string;
     tab?: string;
+    weekOffset?: string;
+    monthOffset?: string;
+    date?: string;
   }>;
 };
+
+const DAY_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+function parseOffset(value: string | undefined): number {
+  if (!value) {
+    return 0;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  // Clamp to a sane range so a hostile URL can't try to scroll a hundred
+  // years backwards and trigger a giant Firestore read.
+  if (!Number.isFinite(parsed)) {
+    return 0;
+  }
+
+  return Math.max(-260, Math.min(0, parsed));
+}
+
+function parseDayKey(value: string | undefined): string | null {
+  if (!value || !DAY_KEY_PATTERN.test(value)) {
+    return null;
+  }
+  return value;
+}
 
 type WeatherDocumentTab = "dashboard" | "summaries" | "radar" | "cameras" | "graphs" | "about";
 
@@ -187,6 +219,9 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const resolvedSearchParams = (await searchParams) ?? {};
   const activeView = normalizeWeatherDashboardView(resolvedSearchParams.view);
   const activeDocumentTab = normalizeWeatherDocumentTab(resolvedSearchParams.tab);
+  const weekOffset = parseOffset(resolvedSearchParams.weekOffset);
+  const monthOffset = parseOffset(resolvedSearchParams.monthOffset);
+  const selectedDayKey = parseDayKey(resolvedSearchParams.date);
   const isDashboardTab = activeDocumentTab === "dashboard";
   const isSummariesTab = activeDocumentTab === "summaries";
   const isRadarTab = activeDocumentTab === "radar";
@@ -213,16 +248,36 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const comparisonPanelsPromise = isDashboardTab
     ? getHistoricalComparisonPanels(data, activeView)
     : Promise.resolve<ComparisonPanel[]>([]);
-  const summaryMatrixObservationsPromise =
-    isSummariesTab && activeView === "current"
-      ? readStoredWeatherObservations({
-          macAddress: data.station.macAddress,
-          range: "week",
-        }).catch(() => data.observations)
-      : Promise.resolve(data.observations);
+
+  // The Summaries tab needs three slices of history. Reading them in parallel
+  // (and reusing cached results inside readStoredWeatherObservations) keeps
+  // the page TTFB down even on the first cold render. When we already have a
+  // wide enough archive for the active view, we just slice it locally rather
+  // than hitting Firestore again — this was the duplicate-read bug.
+  const summaryNeedsWeekWindow =
+    isSummariesTab && (activeView === "current" || activeView === "week");
+  const summaryNeedsMonthWindow = isSummariesTab && activeView === "month";
+  const summaryWeekObservationsPromise = summaryNeedsWeekWindow
+    ? readStoredWeatherObservations({
+        macAddress: data.station.macAddress,
+        range: weekOffset === 0 ? "week" : "month",
+      }).catch(() => data.observations)
+    : Promise.resolve<WeatherObservation[]>(data.observations);
+  const summaryMonthObservationsPromise = summaryNeedsMonthWindow
+    ? readStoredWeatherObservations({
+        macAddress: data.station.macAddress,
+        range: monthOffset === 0 ? "month" : "year",
+      }).catch(() => data.observations)
+    : Promise.resolve<WeatherObservation[]>([]);
   const summaryArchivePromise = isSummariesTab
     ? loadWeatherSummaryArchive(data.station.macAddress)
     : Promise.resolve<WeatherSummaryArchive | null>(null);
+  const dayDetailPromise =
+    isSummariesTab && selectedDayKey
+      ? loadDayDetailObservations(data.station.macAddress, selectedDayKey).catch(
+          () => [] as WeatherObservation[],
+        )
+      : Promise.resolve<WeatherObservation[]>([]);
   const currentRows = isDashboardTab ? buildCurrentConditionRows(data.observations) : [];
   const periodRows = isDashboardTab ? buildPeriodSummaryRows(data, activeView) : [];
   const rangeRows = isDashboardTab ? buildRecentSummaryRows(data) : [];
@@ -238,23 +293,37 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
         value: item.value,
       }))
     : [];
-  const summaryPeriodMatrixView =
-    activeView === "current" || activeView === "week"
-        ? "week"
-        : null;
-  const [comparisonPanels, summaryMatrixObservations, summaryArchive] = await Promise.all([
+  const [
+    comparisonPanels,
+    summaryWeekObservations,
+    summaryMonthObservations,
+    summaryArchive,
+    dayDetailObservations,
+  ] = await Promise.all([
     comparisonPanelsPromise,
-    summaryMatrixObservationsPromise,
+    summaryWeekObservationsPromise,
+    summaryMonthObservationsPromise,
     summaryArchivePromise,
+    dayDetailPromise,
   ]);
-  const periodMatrices =
-    isSummariesTab && summaryPeriodMatrixView
-      ? buildWeatherPeriodMatrices(summaryMatrixObservations, summaryPeriodMatrixView)
-      : [];
-  const monthCalendar =
-    isSummariesTab && activeView === "month"
-      ? buildWeatherMonthCalendar(data.observations)
+
+  const weekView =
+    summaryNeedsWeekWindow && summaryWeekObservations.length
+      ? buildWeatherWeekView(summaryWeekObservations, weekOffset)
       : null;
+  const monthView = summaryNeedsMonthWindow
+    ? buildWeatherMonthView(
+        summaryMonthObservations.length ? summaryMonthObservations : data.observations,
+        monthOffset,
+      )
+    : null;
+  const periodMatrices = weekView?.matrices ?? monthView?.matrices ?? [];
+  const monthCalendar = monthView?.calendar ?? null;
+  const dayDetail =
+    isSummariesTab && selectedDayKey
+      ? buildWeatherDayDetail(dayDetailObservations, selectedDayKey)
+      : null;
+  const todayKey = isSummariesTab ? getCurrentDayKey() : "";
   const pageMeta = getPageMeta(
     activeView,
     activeDocumentTab,
@@ -380,6 +449,11 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
             monthCalendar={monthCalendar}
             periodMatrices={periodMatrices}
             summaryArchive={summaryArchive}
+            weekDays={weekView?.days ?? []}
+            weekNavigation={weekView?.navigation ?? null}
+            todayKey={todayKey}
+            dayDetail={dayDetail}
+            selectedDayKey={selectedDayKey}
           />
         ) : isDashboardTab ? (
           <SummariesTabContent
@@ -829,13 +903,31 @@ function SummaryArchiveTabContent({
   monthCalendar,
   periodMatrices,
   summaryArchive,
+  weekDays,
+  weekNavigation,
+  todayKey,
+  dayDetail,
+  selectedDayKey,
 }: {
   activeView: WeatherDashboardView;
   monthCalendar: WeatherMonthCalendar | null;
   periodMatrices: WeatherPeriodMatrix[];
   summaryArchive: WeatherSummaryArchive | null;
+  weekDays: WeatherMonthCalendarDay[];
+  weekNavigation: WeatherPeriodNavigation | null;
+  todayKey: string;
+  dayDetail: WeatherDayDetail | null;
+  selectedDayKey: string | null;
 }) {
-  if (!summaryArchive && !periodMatrices.length && !monthCalendar) {
+  const showWeekBoard = activeView === "week" || activeView === "current";
+  const showMonthCalendar = activeView === "month" && monthCalendar;
+  const hasContent =
+    summaryArchive ||
+    periodMatrices.length ||
+    monthCalendar ||
+    (showWeekBoard && weekDays.length);
+
+  if (!hasContent) {
     return (
       <PanelState message="Summary tables will appear after enough archived station history has been collected." />
     );
@@ -843,14 +935,41 @@ function SummaryArchiveTabContent({
 
   return (
     <div className="space-y-4">
-      {monthCalendar ? <MonthClimateCalendar calendar={monthCalendar} /> : null}
+      {dayDetail && selectedDayKey ? (
+        <DayDetailPanel
+          detail={dayDetail}
+          selectedDayKey={selectedDayKey}
+          activeView={activeView}
+        />
+      ) : null}
 
-      {activeView !== "month" && periodMatrices.length ? (
+      {showWeekBoard && weekDays.length && weekNavigation ? (
+        <WeekClimateBoard
+          days={weekDays}
+          navigation={weekNavigation}
+          todayKey={todayKey}
+          selectedDayKey={selectedDayKey}
+          activeView={activeView}
+        />
+      ) : null}
+
+      {showMonthCalendar ? (
+        <MonthClimateCalendar
+          calendar={monthCalendar}
+          todayKey={todayKey}
+          selectedDayKey={selectedDayKey}
+          activeView={activeView}
+        />
+      ) : null}
+
+      {periodMatrices.length ? (
         <div className="grid gap-4">
           {periodMatrices.map((matrix) => (
             <DailyPeriodClimateTable
               key={`${activeView}-${matrix.title}`}
               matrix={matrix}
+              activeView={activeView}
+              selectedDayKey={selectedDayKey}
             />
           ))}
         </div>
@@ -887,6 +1006,346 @@ function SummaryArchiveTabContent({
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function buildSummaryHref(
+  base: { activeView: WeatherDashboardView; tab: "summaries" },
+  overrides: { date?: string | null; weekOffset?: string | null; monthOffset?: string | null } = {},
+) {
+  const params = new URLSearchParams();
+  params.set("tab", base.tab);
+
+  if (base.activeView !== "current") {
+    params.set("view", base.activeView);
+  }
+
+  if (overrides.weekOffset && overrides.weekOffset !== "0") {
+    params.set("weekOffset", overrides.weekOffset);
+  }
+
+  if (overrides.monthOffset && overrides.monthOffset !== "0") {
+    params.set("monthOffset", overrides.monthOffset);
+  }
+
+  if (overrides.date) {
+    params.set("date", overrides.date);
+  }
+
+  return `/weather?${params.toString()}`;
+}
+
+function PeriodNavigation({
+  navigation,
+  rangeKind,
+  activeView,
+  rangeLabel,
+}: {
+  navigation: WeatherPeriodNavigation;
+  rangeKind: "week" | "month";
+  activeView: WeatherDashboardView;
+  rangeLabel: string;
+}) {
+  const prevHref = navigation.prevAnchor
+    ? buildSummaryHref(
+        { activeView, tab: "summaries" },
+        rangeKind === "week"
+          ? { weekOffset: navigation.prevAnchor }
+          : { monthOffset: navigation.prevAnchor },
+      )
+    : null;
+  const nextHref = navigation.nextAnchor
+    ? buildSummaryHref(
+        { activeView, tab: "summaries" },
+        rangeKind === "week"
+          ? { weekOffset: navigation.nextAnchor }
+          : { monthOffset: navigation.nextAnchor },
+      )
+    : null;
+  const todayHref = buildSummaryHref({ activeView, tab: "summaries" });
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-200 bg-stone-50 px-4 py-2.5">
+      <div className="flex items-center gap-2">
+        {prevHref ? (
+          <Link
+            href={prevHref}
+            scroll={false}
+            className="inline-flex items-center justify-center border border-stone-300 bg-white px-3 py-1 text-sm font-medium text-stone-700 transition hover:border-stone-500 hover:text-stone-900"
+            aria-label={rangeKind === "week" ? "Previous week" : "Previous month"}
+          >
+            ← Prev
+          </Link>
+        ) : (
+          <span className="inline-flex cursor-not-allowed items-center justify-center border border-stone-200 bg-stone-100 px-3 py-1 text-sm text-stone-300">
+            ← Prev
+          </span>
+        )}
+        {nextHref ? (
+          <Link
+            href={nextHref}
+            scroll={false}
+            className="inline-flex items-center justify-center border border-stone-300 bg-white px-3 py-1 text-sm font-medium text-stone-700 transition hover:border-stone-500 hover:text-stone-900"
+            aria-label={rangeKind === "week" ? "Next week" : "Next month"}
+          >
+            Next →
+          </Link>
+        ) : (
+          <span className="inline-flex cursor-not-allowed items-center justify-center border border-stone-200 bg-stone-100 px-3 py-1 text-sm text-stone-300">
+            Next →
+          </span>
+        )}
+      </div>
+      <div className="flex flex-1 items-center justify-center text-sm font-medium text-stone-700">
+        {rangeLabel}
+      </div>
+      <div>
+        {navigation.isCurrent ? (
+          <span className="inline-flex items-center justify-center border border-transparent px-3 py-1 text-xs uppercase tracking-[0.16em] text-stone-400">
+            Current {rangeKind}
+          </span>
+        ) : (
+          <Link
+            href={todayHref}
+            scroll={false}
+            className="inline-flex items-center justify-center border border-stone-300 bg-white px-3 py-1 text-xs uppercase tracking-[0.16em] text-stone-600 transition hover:border-stone-500 hover:text-stone-900"
+          >
+            Jump to today
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CalendarDayCell({
+  day,
+  todayKey,
+  selectedDayKey,
+  activeView,
+  size,
+}: {
+  day: WeatherMonthCalendarDay;
+  todayKey: string;
+  selectedDayKey: string | null;
+  activeView: WeatherDashboardView;
+  size: "compact" | "tall";
+}) {
+  const isSelected = selectedDayKey === day.key;
+  const isToday = day.key === todayKey;
+  const dayHref =
+    day.dayNumber !== null && day.isInRange && !day.isFuture
+      ? buildSummaryHref({ activeView, tab: "summaries" }, { date: day.key })
+      : null;
+  const heatmapStyle = day.isFuture
+    ? { backgroundColor: "#fafaf9" }
+    : day.highValue !== null
+      ? resolveSingleClimateValueStyle(day.highValue, "temperature")
+      : undefined;
+  const minHeight = size === "tall" ? "min-h-[8.75rem]" : "min-h-[6.25rem]";
+  const baseClass = `relative border-r border-b border-stone-200 px-2.5 py-2 transition-colors ${minHeight}`;
+  const stateClass = isSelected
+    ? "outline outline-2 outline-offset-[-2px] outline-amber-500 z-10"
+    : isToday
+      ? "outline outline-2 outline-offset-[-2px] outline-stone-700"
+      : "";
+  const textColor =
+    !day.isFuture && day.highValue !== null && day.highValue >= 75 ? "text-white" : "text-stone-900";
+
+  const inner = (
+    <>
+      <div className="flex items-start justify-between gap-2">
+        <span
+          className={`text-sm font-semibold ${
+            day.isCurrentMonth ? textColor : "text-stone-400"
+          }`}
+        >
+          {day.dayNumber}
+        </span>
+        <div className="flex flex-col items-end gap-0.5">
+          {isToday ? (
+            <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-[0.14em] text-white">
+              Today
+            </span>
+          ) : null}
+          {day.isFuture ? (
+            <span className="text-[0.6rem] uppercase tracking-[0.14em] text-stone-400">
+              —
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      {day.isFuture ? (
+        <p className="mt-3 text-[0.7rem] uppercase tracking-[0.14em] text-stone-400">
+          Awaiting data
+        </p>
+      ) : day.hasObservations ? (
+        <div className={`mt-1.5 grid gap-0.5 text-[0.78rem] leading-tight ${textColor}`}>
+          <div className="flex items-baseline justify-between">
+            <span className="text-[0.6rem] uppercase tracking-[0.14em] opacity-75">Hi</span>
+            <span className="font-semibold">{day.highDisplay}°</span>
+          </div>
+          <div className="flex items-baseline justify-between">
+            <span className="text-[0.6rem] uppercase tracking-[0.14em] opacity-75">Lo</span>
+            <span className="font-medium">{day.lowDisplay}°</span>
+          </div>
+          {day.rainValue && day.rainValue > 0 ? (
+            <div className="flex items-baseline justify-between">
+              <span className="text-[0.6rem] uppercase tracking-[0.14em] opacity-75">Rain</span>
+              <span className="font-medium">{day.rainDisplay}″</span>
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <p className="mt-3 text-[0.7rem] uppercase tracking-[0.14em] text-stone-400">
+          No data
+        </p>
+      )}
+    </>
+  );
+
+  if (day.dayNumber === null) {
+    return (
+      <div
+        className={`${baseClass} bg-stone-50`}
+        aria-hidden="true"
+      />
+    );
+  }
+
+  if (!dayHref) {
+    return (
+      <div className={`${baseClass} ${stateClass}`} style={heatmapStyle}>
+        {inner}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={dayHref}
+      scroll={false}
+      className={`${baseClass} ${stateClass} cursor-pointer hover:brightness-95 focus:outline focus:outline-2 focus:outline-amber-500`}
+      style={heatmapStyle}
+      aria-label={`View detail for ${day.longDateLabel}`}
+    >
+      {inner}
+    </Link>
+  );
+}
+
+function WeekClimateBoard({
+  days,
+  navigation,
+  todayKey,
+  selectedDayKey,
+  activeView,
+}: {
+  days: WeatherMonthCalendarDay[];
+  navigation: WeatherPeriodNavigation;
+  todayKey: string;
+  selectedDayKey: string | null;
+  activeView: WeatherDashboardView;
+}) {
+  const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  return (
+    <TablePanel
+      id="week-climate-board"
+      title="Weekly Calendar"
+      subtitle="Tap any day to drill into station observations for that date."
+      compact
+    >
+      <PeriodNavigation
+        navigation={navigation}
+        rangeKind="week"
+        activeView={activeView}
+        rangeLabel={navigation.rangeLabel}
+      />
+
+      <div className="overflow-x-auto">
+        <div className="min-w-[44rem]">
+          <div className="grid grid-cols-7 border-l border-t border-stone-200">
+            {weekdayLabels.map((label) => (
+              <div
+                key={label}
+                className="border-r border-b border-stone-200 bg-stone-50 px-3 py-2 text-center text-[0.7rem] font-medium uppercase tracking-[0.14em] text-stone-500"
+              >
+                {label}
+              </div>
+            ))}
+            {days.map((day) => (
+              <CalendarDayCell
+                key={day.key}
+                day={day}
+                todayKey={todayKey}
+                selectedDayKey={selectedDayKey}
+                activeView={activeView}
+                size="tall"
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </TablePanel>
+  );
+}
+
+function DayDetailPanel({
+  detail,
+  selectedDayKey,
+  activeView,
+}: {
+  detail: WeatherDayDetail;
+  selectedDayKey: string;
+  activeView: WeatherDashboardView;
+}) {
+  const closeHref = buildSummaryHref({ activeView, tab: "summaries" });
+
+  return (
+    <section className="border border-amber-300 bg-amber-50">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-200 px-4 py-3">
+        <div>
+          <p className="text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-amber-700">
+            Day Detail
+          </p>
+          <h2 className="mt-0.5 text-2xl font-light tracking-[-0.02em] text-stone-800">
+            {detail.longDateLabel}
+          </h2>
+        </div>
+        <Link
+          href={closeHref}
+          scroll={false}
+          className="inline-flex items-center justify-center border border-amber-300 bg-white px-3 py-1 text-xs uppercase tracking-[0.16em] text-amber-700 transition hover:border-amber-500 hover:text-amber-900"
+        >
+          Close detail
+        </Link>
+      </div>
+
+      <div className="grid gap-px bg-amber-200 sm:grid-cols-2 lg:grid-cols-4">
+        <DayDetailStat label="High" value={detail.highDisplay} note="Daily peak temperature" />
+        <DayDetailStat label="Low" value={detail.lowDisplay} note="Daily minimum temperature" />
+        <DayDetailStat label="Average" value={detail.averageDisplay} note="Mean of all readings" />
+        <DayDetailStat label="Rainfall" value={detail.rainDisplay} note="Total accumulation" />
+      </div>
+
+      <div className="border-t border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-800">
+        {detail.hasObservations
+          ? `Built from ${detail.observationCount.toLocaleString()} stored observations on ${selectedDayKey}.`
+          : `No stored observations are available for ${selectedDayKey} yet.`}
+      </div>
+    </section>
+  );
+}
+
+function DayDetailStat({ label, value, note }: { label: string; value: string; note: string }) {
+  return (
+    <div className="bg-amber-50 px-4 py-3">
+      <p className="text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-amber-700">{label}</p>
+      <p className="mt-1 text-2xl font-light tracking-[-0.02em] text-stone-800">{value}</p>
+      <p className="mt-1 text-xs text-amber-800">{note}</p>
     </div>
   );
 }
@@ -991,7 +1450,15 @@ function MonthlyClimateTable({ matrix }: { matrix: WeatherMonthlyMatrix }) {
   );
 }
 
-function DailyPeriodClimateTable({ matrix }: { matrix: WeatherPeriodMatrix }) {
+function DailyPeriodClimateTable({
+  matrix,
+  activeView,
+  selectedDayKey,
+}: {
+  matrix: WeatherPeriodMatrix;
+  activeView: WeatherDashboardView;
+  selectedDayKey: string | null;
+}) {
   return (
     <TablePanel
       id={`period-${matrix.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
@@ -1004,14 +1471,41 @@ function DailyPeriodClimateTable({ matrix }: { matrix: WeatherPeriodMatrix }) {
           <thead>
             <tr className="border-b border-stone-300 text-left text-[0.68rem] uppercase tracking-[0.16em] text-stone-500">
               <th className="sticky left-0 z-10 bg-white px-2 py-2.5 font-medium">{matrix.unitLabel}</th>
-              {matrix.columns.map((column) => (
-                <th key={column.key} className="min-w-[4.4rem] px-1 py-2 text-center font-medium">
-                  <span className="block text-[0.74rem] text-stone-700">{column.label}</span>
-                  <span className="mt-0.5 block text-[0.64rem] font-normal uppercase tracking-[0.08em] text-stone-400">
-                    {column.detail}
-                  </span>
-                </th>
-              ))}
+              {matrix.columns.map((column) => {
+                const isSelected = selectedDayKey === column.key;
+                const dayHref = !column.isFuture
+                  ? buildSummaryHref({ activeView, tab: "summaries" }, { date: column.key })
+                  : null;
+
+                return (
+                  <th
+                    key={column.key}
+                    className={`min-w-[4.4rem] px-1 py-2 text-center font-medium ${
+                      isSelected ? "bg-amber-50" : ""
+                    }`}
+                  >
+                    {dayHref ? (
+                      <Link
+                        href={dayHref}
+                        scroll={false}
+                        className="block hover:text-stone-900"
+                      >
+                        <span className="block text-[0.74rem] text-stone-700">{column.label}</span>
+                        <span className="mt-0.5 block text-[0.64rem] font-normal uppercase tracking-[0.08em] text-stone-500">
+                          {column.detail}
+                        </span>
+                      </Link>
+                    ) : (
+                      <>
+                        <span className="block text-[0.74rem] text-stone-400">{column.label}</span>
+                        <span className="mt-0.5 block text-[0.64rem] font-normal uppercase tracking-[0.08em] text-stone-300">
+                          {column.detail}
+                        </span>
+                      </>
+                    )}
+                  </th>
+                );
+              })}
               <th className="sticky right-0 z-10 bg-white px-2 py-2.5 text-right font-medium">
                 {matrix.summaryLabel}
               </th>
@@ -1023,21 +1517,25 @@ function DailyPeriodClimateTable({ matrix }: { matrix: WeatherPeriodMatrix }) {
                 <th className="sticky left-0 z-10 bg-white px-2 py-2.5 text-left font-normal text-stone-700">
                   {row.label}
                 </th>
-                {row.cells.map((cell, index) => (
-                  <td
-                    key={`${row.label}-${matrix.columns[index]?.key ?? index}`}
-                    className={`px-1 py-2 text-center text-sm ${
-                      cell.hasObservation
-                        ? "text-stone-900"
-                        : cell.isFuture
-                          ? "text-stone-300"
-                          : "text-stone-400"
-                    }`}
-                    style={resolveClimateCellStyle(row.cells, cell, matrix.colorScale)}
-                  >
-                    {cell.displayValue}
-                  </td>
-                ))}
+                {row.cells.map((cell, index) => {
+                  const column = matrix.columns[index];
+                  const isSelected = column ? selectedDayKey === column.key : false;
+                  return (
+                    <td
+                      key={`${row.label}-${column?.key ?? index}`}
+                      className={`px-1 py-2 text-center text-sm ${
+                        cell.hasObservation
+                          ? "text-stone-900"
+                          : cell.isFuture
+                            ? "text-stone-300"
+                            : "text-stone-400"
+                      } ${isSelected ? "outline outline-2 outline-offset-[-2px] outline-amber-400" : ""}`}
+                      style={resolveClimateCellStyle(row.cells, cell, matrix.colorScale)}
+                    >
+                      {cell.displayValue}
+                    </td>
+                  );
+                })}
                 <td className="sticky right-0 z-10 bg-white px-2 py-2.5 text-right font-medium text-stone-800">
                   {row.summaryValue}
                 </td>
@@ -1050,7 +1548,17 @@ function DailyPeriodClimateTable({ matrix }: { matrix: WeatherPeriodMatrix }) {
   );
 }
 
-function MonthClimateCalendar({ calendar }: { calendar: WeatherMonthCalendar }) {
+function MonthClimateCalendar({
+  calendar,
+  todayKey,
+  selectedDayKey,
+  activeView,
+}: {
+  calendar: WeatherMonthCalendar;
+  todayKey: string;
+  selectedDayKey: string | null;
+  activeView: WeatherDashboardView;
+}) {
   const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   return (
@@ -1060,104 +1568,69 @@ function MonthClimateCalendar({ calendar }: { calendar: WeatherMonthCalendar }) 
       subtitle={calendar.subtitle}
       compact
     >
-      <div className="overflow-x-auto">
-        <div className="min-w-[54rem]">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-lg font-medium text-stone-700">{calendar.monthLabel}</h3>
-            <p className="text-[0.72rem] uppercase tracking-[0.16em] text-stone-500">High / Low / Rain</p>
-          </div>
+      <PeriodNavigation
+        navigation={calendar.navigation}
+        rangeKind="month"
+        activeView={activeView}
+        rangeLabel={calendar.monthLabel}
+      />
 
-          <div className="grid grid-cols-7 border border-stone-200 bg-stone-100">
+      <div className="border-b border-stone-200 bg-white px-4 py-2 text-[0.7rem] uppercase tracking-[0.14em] text-stone-500">
+        Cell color reflects the day&apos;s high temperature — cool blues to warm reds. High / Low / Rain shown inside each cell.
+      </div>
+
+      <div className="overflow-x-auto">
+        <div className="min-w-[52rem]">
+          <div className="grid grid-cols-7 border-l border-t border-stone-200">
             {weekdayLabels.map((label) => (
               <div
                 key={label}
-                className="border-b border-r border-stone-200 bg-stone-50 px-3 py-2 text-center text-[0.72rem] font-medium uppercase tracking-[0.14em] text-stone-500 last:border-r-0"
+                className="border-b border-r border-stone-200 bg-stone-50 px-3 py-2 text-center text-[0.7rem] font-medium uppercase tracking-[0.14em] text-stone-500"
               >
                 {label}
               </div>
             ))}
-
             {calendar.weeks.flat().map((day) => (
-              <div
+              <CalendarDayCell
                 key={day.key}
-                className={`min-h-[8.5rem] border-r border-b border-stone-200 px-3 py-2 ${
-                  day.isCurrentMonth ? "bg-white" : "bg-stone-50"
-                }`}
-              >
-                {day.dayNumber === null ? null : (
-                  <>
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className={`text-sm font-medium ${day.isFuture ? "text-stone-400" : "text-stone-700"}`}>
-                        {day.dayNumber}
-                      </span>
-                      {day.isFuture ? (
-                        <span className="text-[0.68rem] uppercase tracking-[0.14em] text-stone-300">Future</span>
-                      ) : null}
-                    </div>
-
-                    <div className="grid gap-1.5">
-                      <ClimateStatPill
-                        label="High"
-                        value={day.highDisplay}
-                        numericValue={day.highValue}
-                        colorScale="temperature"
-                        muted={day.isFuture}
-                      />
-                      <ClimateStatPill
-                        label="Low"
-                        value={day.lowDisplay}
-                        numericValue={day.lowValue}
-                        colorScale="temperature"
-                        muted={day.isFuture}
-                      />
-                      <ClimateStatPill
-                        label="Rain"
-                        value={day.rainDisplay}
-                        numericValue={day.rainValue}
-                        colorScale="rain"
-                        muted={day.isFuture}
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
+                day={day}
+                todayKey={todayKey}
+                selectedDayKey={selectedDayKey}
+                activeView={activeView}
+                size="tall"
+              />
             ))}
           </div>
         </div>
       </div>
+
+      <TemperatureLegend />
     </TablePanel>
   );
 }
 
-function ClimateStatPill({
-  label,
-  value,
-  numericValue,
-  colorScale,
-  muted = false,
-}: {
-  label: string;
-  value: string;
-  numericValue: number | null;
-  colorScale: "temperature" | "rain";
-  muted?: boolean;
-}) {
-  const hasValue = numericValue !== null && value !== "-";
-  const style = muted || !hasValue ? undefined : resolveSingleClimateValueStyle(numericValue, colorScale);
+function TemperatureLegend() {
+  const stops = [25, 35, 45, 55, 65, 75, 85, 95];
 
   return (
-    <div
-      className={`flex items-center justify-between rounded-sm border px-2 py-1.5 text-sm ${
-        muted
-          ? "border-stone-200 bg-stone-50 text-stone-400"
-          : hasValue
-            ? "border-transparent text-stone-900"
-            : "border-stone-200 bg-stone-50 text-stone-400"
-      }`}
-      style={style}
-    >
-      <span className="text-[0.68rem] font-medium uppercase tracking-[0.14em]">{label}</span>
-      <span className="font-medium">{value}</span>
+    <div className="border-t border-stone-200 bg-white px-4 py-2.5">
+      <div className="flex flex-wrap items-center gap-3 text-[0.66rem] uppercase tracking-[0.14em] text-stone-500">
+        <span>Cool</span>
+        <div className="flex h-4 flex-1 min-w-[10rem] overflow-hidden border border-stone-200">
+          {stops.map((temp) => (
+            <div
+              key={temp}
+              className="flex-1"
+              style={resolveSingleClimateValueStyle(temp, "temperature")}
+              aria-hidden="true"
+            />
+          ))}
+        </div>
+        <span>Warm</span>
+        <span className="ml-3 text-[0.65rem] font-normal text-stone-400">
+          {stops[0]}°F → {stops[stops.length - 1]}°F
+        </span>
+      </div>
     </div>
   );
 }
@@ -2611,6 +3084,18 @@ function buildTrendValue(
   const sign = delta > 0 ? "+" : "";
 
   return `${sign}${formatCompact(delta, decimals)} ${unit}`.trim();
+}
+
+async function loadDayDetailObservations(macAddress: string, dayKey: string) {
+  if (!macAddress || !DAY_KEY_PATTERN.test(dayKey)) {
+    return [] as WeatherObservation[];
+  }
+
+  const [yearStr, monthStr, dayStr] = dayKey.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  return readStoredWeatherObservationsForDay({ macAddress, year, month, day });
 }
 
 async function loadWeatherSummaryArchive(macAddress: string) {

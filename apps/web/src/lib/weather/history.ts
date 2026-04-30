@@ -32,6 +32,26 @@ export type StoredWeatherStationMeta = {
   lastObservationAt: string | null;
 };
 
+// Process-level cache for Firestore reads. Reading the full year archive can
+// pull tens of thousands of documents; caching for a few minutes prevents
+// every page render from re-fetching everything.
+type RangeCacheKey = `${string}|${WeatherHistoryRange}`;
+type RangeCacheEntry = {
+  expiresAt: number;
+  value: WeatherObservation[];
+  inflight: Promise<WeatherObservation[]> | null;
+};
+const RANGE_CACHE_TTL_MS = 60_000;
+const observationsRangeCache = new Map<RangeCacheKey, RangeCacheEntry>();
+
+type BetweenCacheKey = string;
+type BetweenCacheEntry = {
+  expiresAt: number;
+  value: WeatherObservation[];
+};
+const BETWEEN_CACHE_TTL_MS = 60_000;
+const observationsBetweenCache = new Map<BetweenCacheKey, BetweenCacheEntry>();
+
 export async function persistWeatherHistory(
   input: PersistWeatherHistoryInput,
 ): Promise<PersistWeatherHistoryResult> {
@@ -111,16 +131,53 @@ export async function readStoredWeatherObservations(input: {
   range: WeatherHistoryRange;
 }): Promise<WeatherObservation[]> {
   const stationId = buildStationId(input.macAddress);
-  const db = getFirebaseAdminDb();
-  const sinceMs = Date.now() - pickRangeDurationMs(input.range);
-  return readObservationQuery(
-    db
-      .collection("weatherStations")
-      .doc(stationId)
-      .collection("observations")
-      .where("observedAt", ">=", Timestamp.fromMillis(sinceMs))
-      .orderBy("observedAt", "asc"),
-  );
+  const cacheKey: RangeCacheKey = `${stationId}|${input.range}`;
+  const now = Date.now();
+  const cached = observationsRangeCache.get(cacheKey);
+
+  if (cached) {
+    if (cached.expiresAt > now) {
+      return cached.value;
+    }
+
+    // If a fetch is already in flight, share it instead of starting a new one.
+    if (cached.inflight) {
+      return cached.inflight;
+    }
+  }
+
+  const inflight = (async () => {
+    const db = getFirebaseAdminDb();
+    const sinceMs = Date.now() - pickRangeDurationMs(input.range);
+    const value = await readObservationQuery(
+      db
+        .collection("weatherStations")
+        .doc(stationId)
+        .collection("observations")
+        .where("observedAt", ">=", Timestamp.fromMillis(sinceMs))
+        .orderBy("observedAt", "asc"),
+    );
+    observationsRangeCache.set(cacheKey, {
+      expiresAt: Date.now() + RANGE_CACHE_TTL_MS,
+      value,
+      inflight: null,
+    });
+    return value;
+  })();
+
+  observationsRangeCache.set(cacheKey, {
+    expiresAt: cached?.expiresAt ?? 0,
+    value: cached?.value ?? [],
+    inflight,
+  });
+
+  try {
+    return await inflight;
+  } catch (error) {
+    // Drop the inflight marker so the next call can retry.
+    observationsRangeCache.delete(cacheKey);
+    throw error;
+  }
 }
 
 export async function readStoredWeatherObservationsForDay(input: {
@@ -151,8 +208,20 @@ export async function readStoredWeatherObservationsBetween(input: {
   limit?: number;
 }): Promise<WeatherObservation[]> {
   const stationId = buildStationId(input.macAddress);
+  // Round window ends to the minute so calls within the same minute share
+  // a cache entry; otherwise Date.now() defeats memoization on every render.
+  const startBucket = Math.floor(input.startMs / 60_000) * 60_000;
+  const endBucket = Math.floor(input.endMs / 60_000) * 60_000;
+  const cacheKey: BetweenCacheKey = `${stationId}|${startBucket}|${endBucket}|${input.limit ?? "max"}`;
+  const now = Date.now();
+  const cached = observationsBetweenCache.get(cacheKey);
+
+  if (cached && cached.expiresAt > now) {
+    return cached.value;
+  }
+
   const db = getFirebaseAdminDb();
-  return readObservationQuery(
+  const value = await readObservationQuery(
     db
       .collection("weatherStations")
       .doc(stationId)
@@ -162,6 +231,12 @@ export async function readStoredWeatherObservationsBetween(input: {
       .orderBy("observedAt", "asc"),
     input.limit,
   );
+
+  observationsBetweenCache.set(cacheKey, {
+    expiresAt: Date.now() + BETWEEN_CACHE_TTL_MS,
+    value,
+  });
+  return value;
 }
 
 export async function readStoredWeatherStationMeta(input: {
