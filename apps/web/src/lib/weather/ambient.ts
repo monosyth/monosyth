@@ -495,6 +495,58 @@ function buildViewNotice(view: WeatherDashboardView, count: number) {
   return `Showing stored ${label} history collected from the station logger instead of just the latest Ambient Weather snapshot.`;
 }
 
+// Lightweight path used by the summaries tab — skip the unbounded
+// historical observation read entirely and synthesize a "ready" payload
+// from station meta + the most recent stored observations only. The
+// summary renderer reads from rollup docs anyway, so the heavy raw history
+// would just be thrown away.
+export async function getWeatherStationOverview(): Promise<WeatherPageData> {
+  const missing = getMissingVars();
+
+  if (missing.length > 0) {
+    return {
+      state: "missing-config",
+      missing,
+      message:
+        "Ambient Weather needs both a personal API key and a developer application key before live station data can render.",
+    };
+  }
+
+  const env = readEnv();
+
+  try {
+    const storedMeta = await readStoredWeatherStationMeta({
+      macAddress: env.macAddress,
+    });
+
+    // Pull a small slice of recent observations so the dashboard masthead,
+    // hero temperature, and "current" calendar slot still have data. The
+    // 27-hour window matches the existing current-view path but capped low.
+    const endMs = Date.now() + 60_000;
+    const startMs = endMs - 27 * 60 * 60 * 1000;
+    const recentObservations = env.macAddress
+      ? await readStoredWeatherObservationsBetween({
+          macAddress: env.macAddress,
+          startMs,
+          endMs,
+          limit: 2_000,
+        }).catch(() => [] as WeatherObservation[])
+      : [];
+
+    const device = buildStoredDevice(recentObservations, storedMeta);
+
+    return {
+      state: "ready",
+      data: applyStationOverrides(buildWeatherOverview(device, recentObservations, [])),
+    };
+  } catch (error) {
+    return {
+      state: "error",
+      message: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 export async function getWeatherPageData(
   view: WeatherDashboardView = "current",
 ): Promise<WeatherPageData> {

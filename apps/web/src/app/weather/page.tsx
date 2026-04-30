@@ -11,6 +11,7 @@ import { RadarEmbed } from "@/components/weather/radar-embed";
 import styles from "@/app/weather/weather.module.css";
 import {
   getWeatherPageData,
+  getWeatherStationOverview,
   normalizeWeatherDashboardView,
   type WeatherDashboardView,
 } from "@/lib/weather/ambient";
@@ -242,7 +243,12 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const isCamerasTab = activeDocumentTab === "cameras";
   const isGraphsTab = activeDocumentTab === "graphs";
   const isAboutTab = activeDocumentTab === "about";
-  const result = await getWeatherPageData(activeView);
+  // The summaries tab reads everything from rollup docs and the persisted
+  // archive; it doesn't need a 31-day or 365-day raw observation paginate.
+  // Use the lightweight path so the page can never hang on a cold start.
+  const result = isSummariesTab
+    ? await getWeatherStationOverview()
+    : await getWeatherPageData(activeView);
 
   if (result.state !== "ready") {
     return <WeatherState result={result} />;
@@ -272,21 +278,37 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   // pre-aggregated daily rollup docs instead of paging through raw
   // observations — that's the win that keeps the summary tab snappy when
   // someone navigates back through history.
+  // Every Firestore call on the summaries path is wrapped with a deadline
+  // so the page can't spin if a query sits. Falling back to an empty list
+  // is safe — the renderer treats missing data as "this section just won't
+  // render" and shows the rest of the page immediately.
   const summaryHistoryRollupsPromise =
     isSummariesTab && ((summaryNeedsWeekWindow && weekOffset !== 0) || (summaryNeedsMonthWindow && monthOffset !== 0))
-      ? loadHistoryRollupsForView(
-          data.station.macAddress,
-          summaryNeedsWeekWindow ? "week" : "month",
-          summaryNeedsWeekWindow ? weekOffset : monthOffset,
-        ).catch(() => [] as WeatherDailyRollup[])
+      ? withDeadline(
+          loadHistoryRollupsForView(
+            data.station.macAddress,
+            summaryNeedsWeekWindow ? "week" : "month",
+            summaryNeedsWeekWindow ? weekOffset : monthOffset,
+          ).catch(() => [] as WeatherDailyRollup[]),
+          3_000,
+          [] as WeatherDailyRollup[],
+        )
       : Promise.resolve<WeatherDailyRollup[]>([]);
   const summaryArchivePromise = isSummariesTab
-    ? loadWeatherSummaryArchive(data.station.macAddress)
+    ? withDeadline(
+        loadWeatherSummaryArchive(data.station.macAddress),
+        4_500,
+        null as WeatherSummaryArchive | null,
+      )
     : Promise.resolve<WeatherSummaryArchive | null>(null);
   const dayDetailPromise =
     isSummariesTab && selectedDayKey
-      ? loadDayDetailObservations(data.station.macAddress, selectedDayKey).catch(
-          () => [] as WeatherObservation[],
+      ? withDeadline(
+          loadDayDetailObservations(data.station.macAddress, selectedDayKey).catch(
+            () => [] as WeatherObservation[],
+          ),
+          2_500,
+          [] as WeatherObservation[],
         )
       : Promise.resolve<WeatherObservation[]>([]);
   const currentRows = isDashboardTab ? buildCurrentConditionRows(data.observations) : [];
@@ -3324,6 +3346,23 @@ function buildTrendValue(
   const sign = delta > 0 ? "+" : "";
 
   return `${sign}${formatCompact(delta, decimals)} ${unit}`.trim();
+}
+
+// Race a promise against a timeout so a slow Firestore query never blocks
+// the page response. Falls back to the supplied default if the deadline
+// fires; the original promise keeps running and its result quietly
+// populates the in-process cache for the next request.
+function withDeadline<T>(
+  promise: Promise<T>,
+  deadlineMs: number,
+  fallback: T,
+): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => {
+      setTimeout(() => resolve(fallback), deadlineMs);
+    }),
+  ]);
 }
 
 async function loadHistoryRollupsForView(

@@ -126,6 +126,22 @@ export async function persistWeatherHistory(
   };
 }
 
+// Per-range hard caps. The summaries tab now reads pre-aggregated rollup
+// docs for anything historical, so the page never actually needs more than
+// a few thousand minute-resolution observations to render the *current*
+// view. Capping the range read keeps a cold serverless instance from
+// paginating a year of data on a misclick.
+const RANGE_MAX_DOCUMENTS: Record<WeatherHistoryRange, number> = {
+  week: 4_000,
+  month: 6_000,
+  year: 8_000,
+};
+const RANGE_DEADLINE_MS: Record<WeatherHistoryRange, number> = {
+  week: 2_500,
+  month: 3_500,
+  year: 4_500,
+};
+
 export async function readStoredWeatherObservations(input: {
   macAddress?: string;
   range: WeatherHistoryRange;
@@ -156,6 +172,8 @@ export async function readStoredWeatherObservations(input: {
         .collection("observations")
         .where("observedAt", ">=", Timestamp.fromMillis(sinceMs))
         .orderBy("observedAt", "asc"),
+      RANGE_MAX_DOCUMENTS[input.range],
+      RANGE_DEADLINE_MS[input.range],
     );
     observationsRangeCache.set(cacheKey, {
       expiresAt: Date.now() + RANGE_CACHE_TTL_MS,
@@ -349,12 +367,21 @@ export function buildStationId(macAddress?: string) {
 async function readObservationQuery(
   query: FirebaseFirestore.Query,
   maxDocuments = 50_000,
+  deadlineMs?: number,
 ) {
   const pageSize = 1000;
   const rows: Array<Record<string, unknown>> = [];
   let cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+  const deadline =
+    typeof deadlineMs === "number" ? Date.now() + deadlineMs : null;
 
   while (rows.length < maxDocuments) {
+    if (deadline !== null && Date.now() > deadline) {
+      // Soft cap: we'd rather return what we have than block the request.
+      // The page degrades gracefully when observations come back partial.
+      break;
+    }
+
     let pageQuery = query.limit(Math.min(pageSize, maxDocuments - rows.length));
 
     if (cursor) {
