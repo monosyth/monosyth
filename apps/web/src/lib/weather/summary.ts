@@ -1283,9 +1283,31 @@ function buildRainfallRows(
   columns: WeatherPeriodMatrixColumn[],
   dayMap: Map<string, DayAggregate>,
 ): WeatherPeriodMatrixRow[] {
-  const rain = columns.map((column) =>
-    buildMetricCell(dayMap.get(column.key)?.dailyRainTotal, 2, column.isFuture),
-  );
+  // Rainfall is treated specially — a day that we observed but didn't see
+  // rain on should show "0", not "—". A literally absent rain reading
+  // means the day has no observations at all (or only observations from
+  // before we started tracking dailyrainin). We use the day's
+  // observationCount as the "did we observe this day?" signal.
+  const rain = columns.map((column) => {
+    const day = dayMap.get(column.key);
+    const record = day?.dailyRainTotal;
+
+    if (record) {
+      return buildMetricCell(record, 2, column.isFuture);
+    }
+
+    // Day has observations but no measurable rain → real "0".
+    if (day && day.observationCount > 0 && !column.isFuture) {
+      return {
+        displayValue: formatNumber(0, 2),
+        numericValue: 0,
+        hasObservation: true,
+        isFuture: column.isFuture,
+      } satisfies WeatherPeriodMatrixCell;
+    }
+
+    return buildMetricCell(null, 2, column.isFuture);
+  });
 
   return [
     {
