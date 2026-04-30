@@ -30,13 +30,14 @@ import {
   type WeatherDailyRollup,
 } from "@/lib/weather/rollups";
 import {
+  buildMonthViewFromMixed,
   buildMonthViewFromRollups,
   buildWeatherDayDetail,
   buildWeatherMonthView,
   buildWeatherSummaryArchive,
   buildWeatherSummaryArchiveFromRollups,
   buildWeatherWeekStory,
-  buildWeatherWeekView,
+  buildWeekViewFromMixed,
   buildWeekViewFromRollups,
   getCurrentDayKey,
   WEATHER_SUMMARY_MONTH_LABELS,
@@ -282,8 +283,13 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   // so the page can't spin if a query sits. Falling back to an empty list
   // is safe — the renderer treats missing data as "this section just won't
   // render" and shows the rest of the page immediately.
+  // Always read the rollups for the visible week/month — even at offset 0,
+  // because `getWeatherStationOverview` only loads the most recent ~27 hours
+  // of observations and the calendar still needs the earlier days of the
+  // current week. Rollups are 7 docs (week) or ~31 docs (month), so the
+  // read is essentially free.
   const summaryHistoryRollupsPromise =
-    isSummariesTab && ((summaryNeedsWeekWindow && weekOffset !== 0) || (summaryNeedsMonthWindow && monthOffset !== 0))
+    isSummariesTab && (summaryNeedsWeekWindow || summaryNeedsMonthWindow)
       ? withDeadline(
           loadHistoryRollupsForView(
             data.station.macAddress,
@@ -338,21 +344,20 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
     dayDetailPromise,
   ]);
 
-  // Build the active week/month view. For the *current* slot we use the
-  // observations already loaded by getWeatherPageData; for past slots we use
-  // the rollup docs we just read. Either path produces the same view shape.
+  // Build the active week/month view. Current slot merges live observations
+  // (today + yesterday at minute resolution) with rollup docs (older days
+  // in the same window) so every cell has data. Past slots use rollups
+  // alone — the live observations don't reach back that far.
   const weekView = summaryNeedsWeekWindow
     ? weekOffset === 0
-      ? data.observations.length
-        ? buildWeatherWeekView(data.observations, weekOffset)
-        : null
+      ? buildWeekViewFromMixed(summaryHistoryRollups, data.observations, weekOffset)
       : summaryHistoryRollups.length
         ? buildWeekViewFromRollups(summaryHistoryRollups, weekOffset)
         : null
     : null;
   const monthView = summaryNeedsMonthWindow
     ? monthOffset === 0
-      ? buildWeatherMonthView(data.observations, monthOffset)
+      ? buildMonthViewFromMixed(summaryHistoryRollups, data.observations, monthOffset)
       : summaryHistoryRollups.length
         ? buildMonthViewFromRollups(summaryHistoryRollups, monthOffset)
         : buildWeatherMonthView(data.observations, monthOffset)

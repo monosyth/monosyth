@@ -708,6 +708,40 @@ export function buildMonthViewFromRollups(
   return buildMonthViewWithDayMap(dayMap, monthOffset);
 }
 
+// Merge rollups (the older days of the visible window) with live
+// observations (the most recent day or two we have minute-resolution data
+// for). Live data wins for any day both sources cover — observations are
+// fresher and include readings the rollup hasn't picked up yet.
+export function buildWeekViewFromMixed(
+  rollups: WeatherDailyRollup[],
+  observations: WeatherObservation[],
+  weekOffset = 0,
+): WeatherWeekView {
+  const dayMap = rollupsToDayMap(rollups);
+  if (observations.length) {
+    const observed = aggregateObservations(observations).dayMap;
+    for (const [key, day] of observed) {
+      dayMap.set(key, day);
+    }
+  }
+  return buildWeekViewWithDayMap(dayMap, weekOffset);
+}
+
+export function buildMonthViewFromMixed(
+  rollups: WeatherDailyRollup[],
+  observations: WeatherObservation[],
+  monthOffset = 0,
+): WeatherMonthView {
+  const dayMap = rollupsToDayMap(rollups);
+  if (observations.length) {
+    const observed = aggregateObservations(observations).dayMap;
+    for (const [key, day] of observed) {
+      dayMap.set(key, day);
+    }
+  }
+  return buildMonthViewWithDayMap(dayMap, monthOffset);
+}
+
 function rollupsToDayMap(rollups: WeatherDailyRollup[]) {
   const dayMap = new Map<string, DayAggregate>();
   for (const rollup of rollups) {
