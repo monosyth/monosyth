@@ -624,43 +624,51 @@ export async function getWeatherPageData(
 // persists it at weatherStations/{id}/archives/summary so page renders only
 // need a single Firestore read instead of paging through tens of thousands
 // of observation docs.
-export async function rebuildStoredWeatherArchive(options: { limit?: number } = {}) {
+//
+// When `force` is true (manual backfill from the studio) we always walk the
+// raw observations and (re)write rollup docs for every day. Without it the
+// rollups-only fast path skips reaching back through history — fine for the
+// cron, wrong for the first manual backfill on a new deployment.
+export async function rebuildStoredWeatherArchive(
+  options: { limit?: number; force?: boolean } = {},
+) {
   const env = readEnv();
 
   if (!env.macAddress) {
     throw new Error("AMBIENT_MAC_ADDRESS is required to rebuild the archive.");
   }
 
-  // Try the rollups-only fast path first. A year of rollups is ~365 reads;
-  // a year of raw observations is ~525,000.
-  const rollups = await readAllDailyRollups({ macAddress: env.macAddress });
+  if (!options.force) {
+    // Fast path — just rebuild the archive from existing rollup docs.
+    const rollups = await readAllDailyRollups({ macAddress: env.macAddress });
 
-  if (rollups.length) {
-    const archive = buildWeatherSummaryArchiveFromRollups(rollups);
-    const latestObservationAt =
-      rollups.at(-1)?.latestObservationAt ?? Date.now();
+    if (rollups.length) {
+      const archive = buildWeatherSummaryArchiveFromRollups(rollups);
+      const latestObservationAt =
+        rollups.at(-1)?.latestObservationAt ?? Date.now();
 
-    if (archive) {
-      await writeStoredArchiveSummary({
+      if (archive) {
+        await writeStoredArchiveSummary({
+          macAddress: env.macAddress,
+          archive,
+          latestObservationAt,
+        });
+      }
+
+      return {
         macAddress: env.macAddress,
-        archive,
-        latestObservationAt,
-      });
+        source: "rollups" as const,
+        observationCount: rollups.reduce((sum, rollup) => sum + rollup.observationCount, 0),
+        dailyRollupCount: rollups.length,
+        latestObservationAt: new Date(latestObservationAt).toISOString(),
+        archiveStored: Boolean(archive),
+      };
     }
-
-    return {
-      macAddress: env.macAddress,
-      source: "rollups" as const,
-      observationCount: rollups.reduce((sum, rollup) => sum + rollup.observationCount, 0),
-      dailyRollupCount: rollups.length,
-      latestObservationAt: new Date(latestObservationAt).toISOString(),
-      archiveStored: Boolean(archive),
-    };
   }
 
-  // Fallback: no rollups stored yet. Walk raw observations once, persist
-  // per-day rollups so this stays cheap forever after, then build the
-  // archive from the freshly written rollups.
+  // Full backfill: walk every stored observation, write a rollup doc for
+  // every day we see, then build the archive from the union of pre-existing
+  // and freshly-written rollups.
   const observations = await readStoredWeatherObservationsBetween({
     macAddress: env.macAddress,
     startMs: 0,
@@ -675,8 +683,22 @@ export async function rebuildStoredWeatherArchive(options: { limit?: number } = 
     }).catch(() => null);
   }
 
-  const archive = buildWeatherSummaryArchive(observations);
-  const latestObservationAt = observations.at(-1)?.timestamp ?? Date.now();
+  // Re-read after writing so the archive sees the fresh rollups (plus any
+  // older rollups that were already there). If the rollup read fails for
+  // any reason we fall back to building the archive from the raw observations
+  // we already pulled.
+  const rollupsAfter = await readAllDailyRollups({
+    macAddress: env.macAddress,
+  }).catch(() => [] as Awaited<ReturnType<typeof readAllDailyRollups>>);
+
+  const archive = rollupsAfter.length
+    ? buildWeatherSummaryArchiveFromRollups(rollupsAfter)
+    : buildWeatherSummaryArchive(observations);
+
+  const latestObservationAt =
+    rollupsAfter.at(-1)?.latestObservationAt ??
+    observations.at(-1)?.timestamp ??
+    Date.now();
 
   if (archive) {
     await writeStoredArchiveSummary({
@@ -688,9 +710,11 @@ export async function rebuildStoredWeatherArchive(options: { limit?: number } = 
 
   return {
     macAddress: env.macAddress,
-    source: "observations-backfill" as const,
+    source: options.force
+      ? ("forced-backfill" as const)
+      : ("observations-backfill" as const),
     observationCount: observations.length,
-    dailyRollupCount: 0,
+    dailyRollupCount: rollupsAfter.length,
     latestObservationAt: new Date(latestObservationAt).toISOString(),
     archiveStored: Boolean(archive),
   };

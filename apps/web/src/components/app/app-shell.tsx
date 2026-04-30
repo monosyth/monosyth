@@ -447,7 +447,10 @@ function WeatherBackfillTool() {
 
     try {
       const token = await user.getIdToken();
-      const response = await fetch("/api/weather/backfill", {
+      // force=1 makes the server walk every stored observation (instead of
+      // taking the rollup-only fast path), so manual backfills always
+      // rewrite each day's rollup doc — even days that already have one.
+      const response = await fetch("/api/weather/backfill?force=1", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

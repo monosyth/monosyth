@@ -56,8 +56,16 @@ export async function POST(request: NextRequest) {
     return actor;
   }
 
+  // The studio button passes ?force=1 so we always walk raw observations
+  // and rewrite every day's rollup. Cron callers can omit the flag to use
+  // the cheaper rollup-only refresh path.
+  const url = new URL(request.url);
+  const force =
+    url.searchParams.get("force") === "1" ||
+    url.searchParams.get("force") === "true";
+
   try {
-    const result = await rebuildStoredWeatherArchive();
+    const result = await rebuildStoredWeatherArchive({ force });
 
     return NextResponse.json({
       ok: true,
