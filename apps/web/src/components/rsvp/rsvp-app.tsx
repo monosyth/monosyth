@@ -609,7 +609,7 @@ const SHOWS_AND_ACTIVITIES = [
     title: "Poolside Cabana",
     time: "9:00 AM – 5:00 PM",
     price: "$70 per person",
-    note: "Check-in by 11 AM · 6-person capacity · Food & beverage service",
+    note: "Check-in by 11 AM · 8-person occupancy · Food & beverage service",
     icon: "🏊",
   },
   {
@@ -621,21 +621,12 @@ const SHOWS_AND_ACTIVITIES = [
     note: "Caesar's Colosseum",
     icon: "🎤",
   },
-  {
-    date: "Sunday",
-    dateDetail: "August 2nd",
-    title: "Speed Vegas",
-    time: "1:30 PM",
-    price: "Choose your activity",
-    note: "Go-karts · Exotic car racing · Passenger drifting",
-    icon: "🏎",
-  },
 ] as const;
 
 const BRUNCHES = [
-  { date: "Saturday, Aug 2", venue: "Toca Madera · Aria", time: "11:00 AM" },
-  { date: "Sunday, Aug 3", venue: "Sadelle's · Bellagio", time: "11:00 AM" },
-  { date: "Monday, Aug 4", venue: "Salt & Ivy · Aria", time: "11:30 AM" },
+  { date: "Saturday, Aug 1", venue: "Toca Madera · Aria", time: "11:00 AM" },
+  { date: "Sunday, Aug 2", venue: "Sadelle's · Bellagio", time: "11:00 AM" },
+  { date: "Monday, Aug 3", venue: "Salt & Ivy · Aria", time: "11:30 AM" },
 ] as const;
 
 const DINNERS = [

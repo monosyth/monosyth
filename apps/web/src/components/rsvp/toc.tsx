@@ -62,7 +62,7 @@ export const TOC_ENTRIES: TocEntry[] = [
     label: "Sunday · Day 4",
     longLabel: "Sunday · Day 4",
     href: "/rsvp/day/sunday",
-    hint: "Speed Vegas + Last Supper",
+    hint: "Brunch + Last Supper",
     tone: "gold",
   },
   {
@@ -75,7 +75,7 @@ export const TOC_ENTRIES: TocEntry[] = [
   {
     label: "Activities & Shows",
     href: "/rsvp/activities",
-    hint: "Absinthe, Kelly, Speed",
+    hint: "Absinthe, cabana, Kelly",
     tone: "pink",
   },
   {

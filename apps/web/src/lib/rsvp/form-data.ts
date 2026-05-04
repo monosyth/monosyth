@@ -71,7 +71,7 @@ export const RSVP_IMAGE_LIBRARY: RSVPImageAsset[] = [
   },
   {
     id: "speedway",
-    label: "SpeedVegas racing",
+    label: "Las Vegas speedway",
     url: "/rsvp-images/speedway.jpg",
   },
 ];
@@ -379,7 +379,7 @@ const vegasStudio: RSVPEvent = {
   summary:
     "Six nights of dinners, shows, pool time, themed dinners, and just enough redemption.",
   intro:
-    "Join Dallas in Sin City for the birthday long weekend — dinners at Zuma, Bavette's, Hell's Kitchen and LAGO; shows, cabana, Kelly Clarkson, and Speed Vegas; plus brunch every morning we manage to open our eyes.",
+    "Join Dallas in Sin City for the birthday long weekend — dinners at Zuma, Bavette's, Hell's Kitchen and LAGO; shows, cabana, Kelly Clarkson, and brunch every morning we manage to open our eyes.",
   notes: [
     "RSVP and submit deposits by June 10th to secure your seat at shows, cabanas, dinners, and brunches.",
     "Deposits hold group seating for paid events. RSVPs hold your chair at each table.",
@@ -534,67 +534,6 @@ const vegasStudio: RSVPEvent = {
         equalsAny: ["attending"],
       },
     ),
-    {
-      ...createSelectQuestion(
-        "vegas-speed",
-        "speed-vegas",
-        "Adrenaline",
-        "Speed Vegas: Sun. Aug 2 Racing + Go-Karts!",
-        "Choose between exotic car racing, passenger drifting, or go-karts. Dallas will contact the venue based on what everyone wants to do.",
-        [
-          createOption("vegas-speed-attending", "attending", "Attending"),
-          createOption(
-            "vegas-speed-maybe",
-            "might-attend",
-            "Might Attend",
-            "Decide by June 10th.",
-          ),
-          createOption(
-            "vegas-speed-no",
-            "cant-make-it",
-            "Can't Make It",
-            "Too butch for me!",
-          ),
-        ],
-        {
-          questionId: "vegas-weekend-status",
-          equalsAny: ["attending"],
-        },
-      ),
-      imageUrl: "/rsvp-images/speedway.jpg",
-      imageAlt: "SpeedVegas exotic car racing track",
-    },
-    createMultiSelectQuestion(
-      "vegas-speed-interests",
-      "speed-vegas-interests",
-      "Activity details",
-      "Which Speed Vegas activity interests you?",
-      "Exotic car racing starts at $299 for 5 laps, passenger drifting is $99, and go-karts start at $35.",
-      [
-        createOption(
-          "vegas-exotic-racing",
-          "exotic-racing",
-          "Exotic Racing",
-          "$299+, depends on car selection and laps.",
-        ),
-        createOption(
-          "vegas-passenger-drifting",
-          "passenger-drifting",
-          "Passenger Drifting",
-          "$99.",
-        ),
-        createOption(
-          "vegas-go-karts",
-          "go-karts",
-          "Go-Karts",
-          "$35+, depends on how many races.",
-        ),
-      ],
-      {
-        questionId: "vegas-speed",
-        equalsAny: ["attending", "might-attend"],
-      },
-    ),
     createSelectQuestion(
       "vegas-last-supper",
       "last-supper",
@@ -611,7 +550,7 @@ const vegasStudio: RSVPEvent = {
       "vegas-salt-ivy",
       "salt-ivy-brunch",
       "Brunch tradition",
-      "Brunch Bitch Tradition! Mon. Aug 2, Salt & Ivy",
+      "Brunch Bitch Tradition! Mon. Aug 3, Salt & Ivy",
       "The final brunch of the trip for anyone still sinfully straggling. Located in Aria at 11:30am.",
       createAttendanceOptions("Will be added to the reservation."),
       {

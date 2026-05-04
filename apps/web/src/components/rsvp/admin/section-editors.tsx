@@ -562,7 +562,7 @@ export function ActivitiesEditor({
                 }
               />
             </AdminField>
-            <AdminField label="Options — one per line (used for Speed Vegas etc)">
+            <AdminField label="Options — one per line (used for multi-option activities)">
               <AdminTextarea
                 rows={3}
                 value={(a.options ?? []).join("\n")}

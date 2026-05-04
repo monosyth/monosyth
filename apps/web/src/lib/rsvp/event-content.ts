@@ -91,7 +91,7 @@ export type Activity = {
   /** Optional header photo rendered at the top of the card. */
   imageUrl?: string;
   imageAlt?: string;
-  /** Extra options (e.g. SpeedVegas: go-kart / exotic / drift). */
+  /** Extra options for activities that branch into multiple choices. */
   options?: string[];
   depositsDueBy?: string;  // "June 10th"
 };
@@ -189,7 +189,7 @@ export const DALLAS_EVENT_CONTENT: EventContent = {
     eyebrow: "Trip Overview",
     title: "Six Days in Sin City",
     intro:
-      "Six nights with Dallas — sushi at Zuma, a poolside cabana, the CEO of Sin themed dinner, Kelly Clarkson at Caesar's, Speed Vegas on Sunday, the Last Supper redemption dinner, and a final brunch tradition. Show up, pace yourself, and have a bitchin' time.",
+      "Six nights with Dallas — sushi at Zuma, a poolside cabana, the CEO of Sin themed dinner, Kelly Clarkson at Caesar's, the Last Supper redemption dinner, and a final brunch tradition. Show up, pace yourself, and have a bitchin' time.",
     days: [
       {
         id: "day-1",
@@ -219,9 +219,9 @@ export const DALLAS_EVENT_CONTENT: EventContent = {
         id: "day-4",
         label: "Day 4",
         dateLabel: "Sunday · August 2",
-        title: "Adrenaline & Redemption!",
+        title: "Brunch, Redemption & Jackpots!",
         body:
-          "Let's put the pedal to the metal! Join us for sexy, fast cars! OR cute go-karts handling tight curves! Wanna ride b*tch while drifting at high speeds? Do it! After our Sunday excursion, get ready for The Last Supper.",
+          "Ease into Sunday with brunch at Sadelle's, then take the afternoon for roaming, recovering, or chasing one more jackpot before The Last Supper.",
       },
       {
         id: "day-5",
@@ -398,20 +398,18 @@ export const DALLAS_EVENT_CONTENT: EventContent = {
         id: "sunday",
         dayLabel: "Day 4",
         dayName: "Sunday",
-        headline: "Brunch, Adrenaline, Redemption & Jackpots!",
+        headline: "Brunch, Redemption & Jackpots!",
         intro:
-          "She wanted to be butch and do something different! Join Dallas on the track… “hopefully the instructor is hot!” For dinner, join for The Last Supper. Do you need to repent? Have you accepted the blood of Christ, or another martini?",
+          "Start with brunch at Sadelle's, then keep the afternoon open for recovery, wandering the strip, or one more jackpot run before The Last Supper.",
         rows: [
           { id: "r1", time: "11:00 AM", title: "Brunch — Sadelle's, Bellagio" },
-          { id: "r2", time: "1:30 PM", title: "Speed Vegas, Racing" },
+          { id: "r2", time: "Afternoon", title: "Free Time — Recover, Explore, or Gamble" },
           { id: "r3", time: "7:30 PM", title: "LAGO, Bellagio — Redemption Dinner", note: "THEMED" },
           { id: "r4", time: "LATE", title: "Last Chance to Sin" },
         ],
         tipTitle: "Travel Tip | Dress Code",
         tipBody:
-          "Weather is HOT. We are going into the desert — dress accordingly. For dinner: wear your most angelic, modest, yet glamorous attire! It's okay to be a wittle sexy… whites, creams, neutrals, golds… reborn but… rich!",
-        heroImageUrl: "/rsvp-images/speedway.jpg",
-        heroImageAlt: "SpeedVegas exotic car",
+          "Weather is HOT, even if Sunday stays flexible. For dinner: wear your most angelic, modest, yet glamorous attire! It's okay to be a wittle sexy… whites, creams, neutrals, golds… reborn but… rich!",
         dressBoardId: "last-supper-inspo",
       },
       {
@@ -513,7 +511,7 @@ export const DALLAS_EVENT_CONTENT: EventContent = {
         pricePerPerson: 70,
         priceLabel: "$70 per person",
         description:
-          "Check-in by 11:00 AM. First come, first serve. 6-person capacity. Food & beverage service included.",
+          "Check-in by 11:00 AM. Cabana planning is based on 8-person occupancy, with food and beverage service included.",
         rsvpQuestionSlug: "poolside-cabana",
         icon: "🏊",
         depositsDueBy: "June 10th",
@@ -535,23 +533,6 @@ export const DALLAS_EVENT_CONTENT: EventContent = {
         imageAlt: "Kelly Clarkson performing",
         depositsDueBy: "June 10th",
       },
-      {
-        id: "speed-vegas",
-        dayLabel: "Sunday",
-        dayDate: "August 2nd",
-        name: "Speed Vegas",
-        time: "1:30 PM",
-        venue: "Uber — 15 min drive",
-        priceLabel: "$35 – $599 (choose your activity)",
-        description:
-          "Go-karts, exotic car racing, passenger drifting. Dallas will contact the venue — please indicate which experiences interest you.",
-        rsvpQuestionSlug: "speed-vegas",
-        icon: "🏎",
-        imageUrl: "/rsvp-images/speedway.jpg",
-        imageAlt: "SpeedVegas exotic car",
-        options: ["Go-Karts (from $35)", "Exotic Car Racing ($299+)", "Passenger Drifting ($99)"],
-        depositsDueBy: "June 10th",
-      },
     ],
     closingNote:
       "Sitting next to the birthday boy isn't that important — he doesn't want anyone to miss out on the shows!",
@@ -564,7 +545,7 @@ export const DALLAS_EVENT_CONTENT: EventContent = {
     brunch: [
       {
         id: "toca-madera",
-        dayLabel: "Saturday, Aug 2",
+        dayLabel: "Saturday, Aug 1",
         name: "Toca Madera",
         venue: "Aria",
         time: "11:00 AM",
@@ -573,7 +554,7 @@ export const DALLAS_EVENT_CONTENT: EventContent = {
       },
       {
         id: "sadelles",
-        dayLabel: "Sunday, Aug 3",
+        dayLabel: "Sunday, Aug 2",
         name: "Sadelle's",
         venue: "Bellagio",
         time: "11:00 AM",
@@ -582,7 +563,7 @@ export const DALLAS_EVENT_CONTENT: EventContent = {
       },
       {
         id: "salt-ivy",
-        dayLabel: "Monday, Aug 4",
+        dayLabel: "Monday, Aug 3",
         name: "Salt & Ivy",
         venue: "Aria",
         time: "11:30 AM",
