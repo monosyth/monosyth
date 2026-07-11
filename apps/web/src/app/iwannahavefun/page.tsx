@@ -2,7 +2,7 @@ import styles from "./page.module.css";
 
 const memories = {
   first: {
-    title: "I WANNA HAVE FUN!",
+    title: "TIRED OF WAITE-ING...",
     src: "/videos/iwannahavefun/memory-01.mp4",
   },
 } as const;
