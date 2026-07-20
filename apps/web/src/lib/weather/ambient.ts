@@ -1,4 +1,7 @@
+import { after } from "next/server";
+
 import { buildWeatherOverview } from "@/lib/weather/overview";
+import { buildWeatherSeries } from "@/lib/weather/derive";
 import {
   persistWeatherHistory,
   readStoredArchiveSummary,
@@ -10,8 +13,11 @@ import {
 import {
   applyDailyRollupsForObservations,
   readAllDailyRollups,
+  readDailyRollupsBetween,
+  type WeatherDailyRollup,
 } from "@/lib/weather/rollups";
 import { getHourlyForecast } from "@/lib/weather/nws";
+import { getWeatherDayKey } from "@/lib/weather/time";
 import {
   buildWeatherSummaryArchive,
   buildWeatherSummaryArchiveFromRollups,
@@ -51,6 +57,7 @@ type LiveWeatherSnapshot = {
 export type WeatherDashboardView = "current" | "week" | "month" | "year";
 
 let weatherCache: WeatherCacheEntry | null = null;
+let weatherInflight: Promise<WeatherPageData> | null = null;
 
 function parsePositiveInt(value: string, fallback: number, max: number) {
   const parsed = Number.parseInt(value, 10);
@@ -305,7 +312,7 @@ export function normalizeWeatherDashboardView(
   return "current";
 }
 
-async function getCurrentWeatherPageData(): Promise<WeatherPageData> {
+async function loadCurrentWeatherPageData(): Promise<WeatherPageData> {
   const missing = getMissingVars();
 
   if (missing.length > 0) {
@@ -329,24 +336,29 @@ async function getCurrentWeatherPageData(): Promise<WeatherPageData> {
     }
 
     const { device, observations } = await fetchLiveWeatherSnapshot();
-    await persistWeatherHistory({
-      device,
-      observations,
-      source: "page",
-    }).catch(() => null);
 
-    // Update daily rollup docs alongside raw observations. This is what
-    // keeps the summaries fast — each render reads ~365 daily docs instead
-    // of paging through hundreds of thousands of minute-resolution rows.
-    if (device.macAddress) {
-      await applyDailyRollupsForObservations({
-        macAddress: device.macAddress,
-        observations: observations.map((observation) => ({
-          ...observation,
-          timestamp: normalizeObservationTimestamp(observation),
-        })),
+    // Persisting a page snapshot and folding it into daily rollups are
+    // important bookkeeping, but neither changes what this response renders.
+    // Keep both jobs inside Next's request lifetime without making the user
+    // wait for two Firestore writes before the page can start streaming.
+    after(async () => {
+      await persistWeatherHistory({
+        device,
+        observations,
+        source: "page",
       }).catch(() => null);
-    }
+
+      if (device.macAddress) {
+        await applyDailyRollupsForObservations({
+          macAddress: device.macAddress,
+          observations: observations.map((observation) => ({
+            ...observation,
+            timestamp: normalizeObservationTimestamp(observation),
+          })),
+        }).catch(() => null);
+      }
+    });
+
     const latestObservationTimestamp =
       pickNumber(observations.at(-1) ?? null, ["dateutc", "timestamp"]) ?? Date.now();
     const normalizedLatestTimestamp =
@@ -364,14 +376,13 @@ async function getCurrentWeatherPageData(): Promise<WeatherPageData> {
       currentDayObservations.length ? currentDayObservations : observations,
       observations,
     );
-    const coordinates = resolveForecastCoordinates(mergedObservations);
-    const forecast = await getHourlyForecast(
-      coordinates.latitude,
-      coordinates.longitude,
-    ).catch(() => []);
     const readyResult: Extract<WeatherPageData, { state: "ready" }> = {
       state: "ready",
-      data: applyStationOverrides(buildWeatherOverview(device, mergedObservations, forecast)),
+      data: applyStationOverrides(
+        buildWeatherOverview(device, mergedObservations, [], {
+          includeSeries: false,
+        }),
+      ),
     };
 
     writeCachedWeatherPageData(readyResult);
@@ -403,6 +414,44 @@ async function getCurrentWeatherPageData(): Promise<WeatherPageData> {
       state: "error",
       message,
     };
+  }
+}
+
+async function getCurrentWeatherPageData(
+  options: { includeSeries?: boolean } = {},
+): Promise<WeatherPageData> {
+  const cached = readCachedWeatherPageData();
+
+  if (cached) {
+    return includeSeriesWhenRequested(
+      {
+        ...cached,
+        notice:
+          "Showing a recently cached station snapshot to stay inside Ambient Weather's rate limits.",
+      },
+      options.includeSeries,
+    );
+  }
+
+  if (weatherInflight) {
+    return includeSeriesWhenRequested(
+      await weatherInflight,
+      options.includeSeries,
+    );
+  }
+
+  const inflight = loadCurrentWeatherPageData();
+  weatherInflight = inflight;
+
+  try {
+    return includeSeriesWhenRequested(
+      await inflight,
+      options.includeSeries,
+    );
+  } finally {
+    if (weatherInflight === inflight) {
+      weatherInflight = null;
+    }
   }
 }
 
@@ -463,19 +512,14 @@ async function getStoredCurrentWeatherPageData(
       return null;
     }
 
-    const coordinates = resolveForecastCoordinates(historicalObservations);
-    const forecast = await getHourlyForecast(
-      coordinates.latitude,
-      coordinates.longitude,
-    ).catch(() => []);
-
     return {
       state: "ready",
       data: applyStationOverrides(
         buildWeatherOverview(
           buildStoredDevice(historicalObservations, storedMeta),
           historicalObservations,
-          forecast,
+          [],
+          { includeSeries: false },
         ),
       ),
       notice,
@@ -500,7 +544,9 @@ function buildViewNotice(view: WeatherDashboardView, count: number) {
 // from station meta + the most recent stored observations only. The
 // summary renderer reads from rollup docs anyway, so the heavy raw history
 // would just be thrown away.
-export async function getWeatherStationOverview(): Promise<WeatherPageData> {
+export async function getWeatherStationOverview(
+  options: { includeForecast?: boolean } = {},
+): Promise<WeatherPageData> {
   const missing = getMissingVars();
 
   if (missing.length > 0) {
@@ -515,29 +561,38 @@ export async function getWeatherStationOverview(): Promise<WeatherPageData> {
   const env = readEnv();
 
   try {
-    const storedMeta = await readStoredWeatherStationMeta({
-      macAddress: env.macAddress,
-    });
-
     // Pull a small slice of recent observations so the dashboard masthead,
     // hero temperature, and "current" calendar slot still have data. The
     // 27-hour window matches the existing current-view path but capped low.
     const endMs = Date.now() + 60_000;
     const startMs = endMs - 27 * 60 * 60 * 1000;
-    const recentObservations = env.macAddress
-      ? await readStoredWeatherObservationsBetween({
-          macAddress: env.macAddress,
-          startMs,
-          endMs,
-          limit: 2_000,
-        }).catch(() => [] as WeatherObservation[])
-      : [];
+    const [storedMeta, recentObservations] = await Promise.all([
+      readStoredWeatherStationMeta({
+        macAddress: env.macAddress,
+      }),
+      env.macAddress
+        ? readStoredWeatherObservationsBetween({
+            macAddress: env.macAddress,
+            startMs,
+            endMs,
+            limit: 2_000,
+          }).catch(() => [] as WeatherObservation[])
+        : Promise.resolve([] as WeatherObservation[]),
+    ]);
 
     const device = buildStoredDevice(recentObservations, storedMeta);
+    const coordinates = resolveForecastCoordinates(recentObservations);
+    const forecast = options.includeForecast
+      ? await getHourlyForecast(coordinates.latitude, coordinates.longitude).catch(() => [])
+      : [];
 
     return {
       state: "ready",
-      data: applyStationOverrides(buildWeatherOverview(device, recentObservations, [])),
+      data: applyStationOverrides(
+        buildWeatherOverview(device, recentObservations, forecast, {
+          includeSeries: false,
+        }),
+      ),
     };
   } catch (error) {
     return {
@@ -549,9 +604,20 @@ export async function getWeatherStationOverview(): Promise<WeatherPageData> {
 
 export async function getWeatherPageData(
   view: WeatherDashboardView = "current",
+  options: { includeSeries?: boolean } = {},
 ): Promise<WeatherPageData> {
   if (view === "current") {
-    return getCurrentWeatherPageData();
+    return getCurrentWeatherPageData(options);
+  }
+
+  if (view === "month" || view === "year") {
+    const rollupResult = await getRollupWeatherPageData(view, options).catch(
+      () => null,
+    );
+
+    if (rollupResult) {
+      return rollupResult;
+    }
   }
 
   try {
@@ -573,6 +639,7 @@ export async function getWeatherPageData(
             buildStoredDevice(historicalObservations, storedMeta),
             historicalObservations,
             [],
+            { includeSeries: options.includeSeries },
           ),
         ),
         notice: buildViewNotice(view, historicalObservations.length),
@@ -584,7 +651,7 @@ export async function getWeatherPageData(
     // Fall through to the current snapshot path.
   }
 
-  const currentResult = await getCurrentWeatherPageData();
+  const currentResult = await getCurrentWeatherPageData(options);
 
   if (currentResult.state !== "ready") {
     return currentResult;
@@ -599,17 +666,12 @@ export async function getWeatherPageData(
     const observations = historicalObservations.length
       ? historicalObservations
       : currentResult.data.observations;
-    const coordinates = resolveForecastCoordinates(
-      observations.length ? observations : currentResult.data.observations,
-    );
-    const forecast =
-      currentResult.data.forecast.length
-        ? currentResult.data.forecast
-        : await getHourlyForecast(coordinates.latitude, coordinates.longitude).catch(() => []);
     const readyResult: Extract<WeatherPageData, { state: "ready" }> = {
       state: "ready",
       data: applyStationOverrides(
-        buildWeatherOverview(buildFallbackDevice(observations), observations, forecast),
+        buildWeatherOverview(buildFallbackDevice(observations), observations, [], {
+          includeSeries: options.includeSeries,
+        }),
       ),
       notice: buildViewNotice(view, historicalObservations.length),
     };
@@ -618,6 +680,106 @@ export async function getWeatherPageData(
   } catch {
     return currentResult;
   }
+}
+
+async function getRollupWeatherPageData(
+  view: "month" | "year",
+  options: { includeSeries?: boolean },
+): Promise<Extract<WeatherPageData, { state: "ready" }> | null> {
+  const env = readEnv();
+
+  if (!env.macAddress) {
+    return null;
+  }
+
+  const endDayKey = getWeatherDayKey(new Date());
+  const startDayKey = getWeatherDayKey(
+    new Date(
+      Date.now() -
+        (view === "month" ? 32 : 366) * 24 * 60 * 60 * 1000,
+    ),
+  );
+  const [rollups, storedMeta] = await Promise.all([
+    readDailyRollupsBetween({
+      macAddress: env.macAddress,
+      startDayKey,
+      endDayKey,
+    }),
+    readStoredWeatherStationMeta({ macAddress: env.macAddress }),
+  ]);
+
+  if (!rollups.length) {
+    return null;
+  }
+
+  const observations = dailyRollupsToObservations(rollups);
+  const overview = buildWeatherOverview(
+    buildStoredDevice(observations, storedMeta),
+    observations,
+    [],
+    { includeSeries: options.includeSeries },
+  );
+
+  return {
+    state: "ready",
+    data: applyStationOverrides({
+      ...overview,
+      observationCount: rollups.reduce(
+        (sum, rollup) => sum + rollup.observationCount,
+        0,
+      ),
+    }),
+    notice: `Showing ${rollups.length} daily station rollups for the ${view} view instead of paging through raw minute observations.`,
+  };
+}
+
+function dailyRollupsToObservations(
+  rollups: WeatherDailyRollup[],
+): WeatherObservation[] {
+  const observations: WeatherObservation[] = [];
+
+  for (const rollup of rollups) {
+    const fallbackTimestamp = rollup.latestObservationAt || Date.now();
+    const lowTimestamp =
+      rollup.tempMin?.timestamp ||
+      rollup.pressureMin?.timestamp ||
+      Math.max(fallbackTimestamp - 1, 1);
+    const highTimestamp =
+      rollup.tempMax?.timestamp ||
+      rollup.gustMax?.timestamp ||
+      fallbackTimestamp;
+
+    observations.push({
+      dateutc: lowTimestamp,
+      timestamp: lowTimestamp,
+      tempf: rollup.tempMin?.value,
+      dewPoint: rollup.dewpointMin?.value,
+      humidity: rollup.humidityMin?.value,
+      baromrelin: rollup.pressureMin?.value,
+      windchillf: rollup.windChillMin?.value,
+    });
+    observations.push({
+      dateutc: highTimestamp,
+      timestamp: highTimestamp,
+      tempf: rollup.tempMax?.value,
+      dewPoint: rollup.dewpointMax?.value,
+      humidity: rollup.humidityMax?.value,
+      baromrelin: rollup.pressureMax?.value,
+      heatindexf: rollup.heatIndexMax?.value,
+      windspeedmph: rollup.windMax?.value,
+      windgustmph: rollup.gustMax?.value,
+      hourlyrainin: rollup.rainRateMax?.value,
+      dailyrainin: rollup.rainTotal,
+      solarradiation: rollup.solarMax?.value,
+      brightness: rollup.brightnessMax?.value,
+      lightning_day: rollup.lightningMax?.value,
+    });
+  }
+
+  return observations.sort(
+    (left, right) =>
+      (Number(left.timestamp) || 0) - (Number(right.timestamp) || 0),
+  );
 }
 
 // Reads the full station history once, computes the summary archive, and
@@ -810,4 +972,25 @@ function mergeObservations(primary: WeatherObservation[], secondary: WeatherObse
   return [...byTimestamp.entries()]
     .sort((left, right) => left[0] - right[0])
     .map(([, observation]) => observation);
+}
+
+function includeSeriesWhenRequested(
+  result: WeatherPageData,
+  includeSeries = false,
+): WeatherPageData {
+  if (
+    !includeSeries ||
+    result.state !== "ready" ||
+    result.data.series.length > 0
+  ) {
+    return result;
+  }
+
+  return {
+    ...result,
+    data: {
+      ...result.data,
+      series: buildWeatherSeries(result.data.observations),
+    },
+  };
 }

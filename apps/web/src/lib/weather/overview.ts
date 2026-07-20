@@ -31,6 +31,7 @@ export function buildWeatherOverview(
   device: WeatherDevice,
   observations: WeatherObservation[],
   forecast: WeatherForecastPeriod[] = [],
+  options: { includeSeries?: boolean } = {},
 ): WeatherOverview {
   const chronological = normalizeWeatherObservations(observations);
   const latest = chronological.at(-1) ?? null;
@@ -43,7 +44,7 @@ export function buildWeatherOverview(
     timeRange: buildWeatherTimeRange(chronological),
     metrics: buildWeatherMetrics(latest),
     highlights: buildWeatherHighlights(chronological),
-    series: buildWeatherSeries(chronological),
+    series: options.includeSeries === false ? [] : buildWeatherSeries(chronological),
     snapshot: latest ? flattenWeatherSnapshot(latest) : [],
     forecast,
   };

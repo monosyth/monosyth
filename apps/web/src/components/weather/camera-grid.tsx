@@ -19,7 +19,7 @@ export function WeatherCameraGrid({
 
         return (
           <a
-            key={item.href}
+            key={item.id}
             href={item.href}
             target="_blank"
             rel="noreferrer"
@@ -30,9 +30,12 @@ export function WeatherCameraGrid({
                 {/* Live traffic snapshots come from external camera feeds, so a plain img avoids optimizer rewrites. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={item.imageUrl}
+                  src={`/api/weather/camera?id=${encodeURIComponent(item.id)}`}
                   alt={`${item.label} current traffic camera view`}
+                  width={800}
+                  height={500}
                   loading="lazy"
+                  decoding="async"
                   className={styles.image}
                   onError={() =>
                     setFailedIds((current) => ({

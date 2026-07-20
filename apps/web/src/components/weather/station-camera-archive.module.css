@@ -1,0 +1,276 @@
+.section {
+  border: 1px solid rgb(214 211 209);
+  background: rgb(250 250 249);
+  padding: 1rem;
+}
+
+.headingRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.eyebrow,
+.latestLabel {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgb(120 113 108);
+}
+
+.title {
+  margin: 0.2rem 0 0;
+  font-size: 1.45rem;
+  font-weight: 300;
+  letter-spacing: -0.025em;
+  color: rgb(68 64 60);
+}
+
+.intro {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: rgb(120 113 108);
+}
+
+.dateControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.4rem;
+}
+
+.dateButton,
+.dateInput {
+  min-height: 2.75rem;
+  border: 1px solid rgb(214 211 209);
+  background: #fff;
+  padding: 0.55rem 0.75rem;
+  color: rgb(68 64 60);
+}
+
+.dateButton {
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.dateButton:hover:not(:disabled),
+.dateButton:focus-visible,
+.dateInput:focus-visible {
+  border-color: rgb(13 148 136);
+  outline: 2px solid rgb(13 148 136 / 0.28);
+  outline-offset: 2px;
+}
+
+.dateButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.dateLabel {
+  display: grid;
+  gap: 0.2rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(120 113 108);
+}
+
+.latestGrid {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1rem;
+  border: 1px solid rgb(214 211 209);
+  background: #fff;
+}
+
+.latestImageLink {
+  display: block;
+  overflow: hidden;
+  background: rgb(231 229 228);
+}
+
+.latestImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.latestUnavailable {
+  display: flex;
+  min-height: 12rem;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(120 113 108);
+}
+
+.latestCopy {
+  align-self: center;
+  padding: 0 0.9rem 0.9rem;
+}
+
+.latestTime {
+  margin: 0.3rem 0 0;
+  font-size: 1rem;
+  color: rgb(68 64 60);
+}
+
+.freshNote,
+.staleNote {
+  margin: 0.4rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.freshNote {
+  color: rgb(21 128 61);
+}
+
+.staleNote {
+  color: rgb(180 83 9);
+}
+
+.archiveHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-top: 1rem;
+  border-top: 1px solid rgb(214 211 209);
+  padding-top: 0.9rem;
+}
+
+.archiveTitle,
+.archiveCount {
+  margin: 0;
+}
+
+.archiveTitle {
+  font-size: 1rem;
+  font-weight: 500;
+  color: rgb(68 64 60);
+}
+
+.archiveCount {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgb(120 113 108);
+}
+
+.frameGrid {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.frameCard {
+  display: block;
+  overflow: hidden;
+  border: 1px solid rgb(214 211 209);
+  background: #fff;
+  color: inherit;
+  text-decoration: none;
+}
+
+.frameCard:hover,
+.frameCard:focus-visible {
+  border-color: rgb(13 148 136);
+  outline: 2px solid rgb(13 148 136 / 0.24);
+  outline-offset: 2px;
+}
+
+.frameImageWrap {
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  background: rgb(231 229 228);
+}
+
+.frameImage {
+  display: block;
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  transition: transform 180ms ease;
+}
+
+.frameCard:hover .frameImage {
+  transform: scale(1.02);
+}
+
+.frameTime {
+  display: block;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.72rem;
+  color: rgb(87 83 78);
+}
+
+.state {
+  margin: 0.75rem 0 0;
+  border: 1px dashed rgb(214 211 209);
+  background: #fff;
+  padding: 0.9rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: rgb(120 113 108);
+}
+
+.skeleton {
+  aspect-ratio: 16 / 10;
+  border: 1px solid rgb(231 229 228);
+  background: linear-gradient(100deg, rgb(231 229 228) 20%, rgb(245 245 244) 45%, rgb(231 229 228) 70%);
+  background-size: 220% 100%;
+  animation: archive-shimmer 1.2s linear infinite;
+}
+
+@keyframes archive-shimmer {
+  to {
+    background-position-x: -220%;
+  }
+}
+
+@media (min-width: 700px) {
+  .section {
+    padding: 1.2rem;
+  }
+
+  .latestGrid {
+    grid-template-columns: minmax(0, 1.6fr) minmax(13rem, 0.7fr);
+  }
+
+  .latestCopy {
+    padding: 1rem;
+  }
+
+  .frameGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frameImage {
+    transition: none;
+  }
+
+  .skeleton {
+    animation: none;
+  }
+}

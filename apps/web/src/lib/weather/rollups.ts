@@ -1,4 +1,5 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { unstable_cache } from "next/cache";
 
 import { getFirebaseAdminDb } from "@/lib/firebase/admin";
 import { buildStationId } from "@/lib/weather/history";
@@ -138,20 +139,32 @@ export async function readDailyRollupsBetween(input: {
   }
 
   const stationId = buildStationId(input.macAddress);
-  const db = getFirebaseAdminDb();
-  const snapshot = await db
-    .collection("weatherStations")
-    .doc(stationId)
-    .collection("daily")
-    .where("dayKey", ">=", input.startDayKey)
-    .where("dayKey", "<=", input.endDayKey)
-    .orderBy("dayKey", "asc")
-    .get();
-
-  return snapshot.docs
-    .map((doc) => deserializeRollup(doc.data()))
-    .filter((rollup): rollup is WeatherDailyRollup => rollup !== null);
+  return readDailyRollupsBetweenCached(
+    stationId,
+    input.startDayKey,
+    input.endDayKey,
+  );
 }
+
+const readDailyRollupsBetweenCached = unstable_cache(
+  async (stationId: string, startDayKey: string, endDayKey: string) => {
+    const db = getFirebaseAdminDb();
+    const snapshot = await db
+      .collection("weatherStations")
+      .doc(stationId)
+      .collection("daily")
+      .where("dayKey", ">=", startDayKey)
+      .where("dayKey", "<=", endDayKey)
+      .orderBy("dayKey", "asc")
+      .get();
+
+    return snapshot.docs
+      .map((doc) => deserializeRollup(doc.data()))
+      .filter((rollup): rollup is WeatherDailyRollup => rollup !== null);
+  },
+  ["weather-daily-rollups-between-v1"],
+  { revalidate: 300 },
+);
 
 export async function readAllDailyRollups(input: {
   macAddress: string;
@@ -161,18 +174,26 @@ export async function readAllDailyRollups(input: {
   }
 
   const stationId = buildStationId(input.macAddress);
-  const db = getFirebaseAdminDb();
-  const snapshot = await db
-    .collection("weatherStations")
-    .doc(stationId)
-    .collection("daily")
-    .orderBy("dayKey", "asc")
-    .get();
-
-  return snapshot.docs
-    .map((doc) => deserializeRollup(doc.data()))
-    .filter((rollup): rollup is WeatherDailyRollup => rollup !== null);
+  return readAllDailyRollupsCached(stationId);
 }
+
+const readAllDailyRollupsCached = unstable_cache(
+  async (stationId: string) => {
+    const db = getFirebaseAdminDb();
+    const snapshot = await db
+      .collection("weatherStations")
+      .doc(stationId)
+      .collection("daily")
+      .orderBy("dayKey", "asc")
+      .get();
+
+    return snapshot.docs
+      .map((doc) => deserializeRollup(doc.data()))
+      .filter((rollup): rollup is WeatherDailyRollup => rollup !== null);
+  },
+  ["weather-all-daily-rollups-v1"],
+  { revalidate: 300 },
+);
 
 function mergeObservationsIntoRollup(
   existing: WeatherDailyRollup | null,

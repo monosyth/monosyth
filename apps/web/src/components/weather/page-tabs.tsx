@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import styles from "@/app/weather/weather.module.css";
@@ -57,6 +57,8 @@ export function WeatherPageTabs({
   activeDocumentTab,
 }: WeatherPageTabsProps) {
   const router = useRouter();
+  const primaryTabsRef = useRef<HTMLElement>(null);
+  const secondaryTabsRef = useRef<HTMLElement>(null);
   const [isPending, startTransition] = useTransition();
   const [isManuallyPending, setIsManuallyPending] = useState(false);
   const [optimisticView, setOptimisticView] =
@@ -76,23 +78,17 @@ export function WeatherPageTabs({
     setIsManuallyPending(false);
   }, [activeView, activeDocumentTab]);
 
-  const prefetchHrefs = useMemo(() => {
-    const hrefs = new Set<string>();
-
-    for (const summaryTab of summaryTabs) {
-      for (const documentTab of documentTabs) {
-        hrefs.add(buildWeatherHref(summaryTab.view, documentTab.tab));
-      }
-    }
-
-    return Array.from(hrefs);
-  }, [documentTabs, summaryTabs]);
-
   useEffect(() => {
-    for (const href of prefetchHrefs) {
-      router.prefetch(href);
-    }
-  }, [prefetchHrefs, router]);
+    centerActiveTab(primaryTabsRef.current);
+    centerActiveTab(secondaryTabsRef.current);
+  }, [activeView, activeDocumentTab]);
+
+  function prefetch(
+    nextView: WeatherDashboardView,
+    nextDocumentTab: WeatherDocumentTab,
+  ) {
+    router.prefetch(buildWeatherHref(nextView, nextDocumentTab));
+  }
 
   function navigate(
     nextView: WeatherDashboardView,
@@ -130,7 +126,7 @@ export function WeatherPageTabs({
         className={styles.tabInner}
         aria-busy={isLoading}
       >
-        <div className={styles.primaryTabs}>
+        <nav ref={primaryTabsRef} className={styles.primaryTabs} aria-label="Weather period">
           {summaryTabs.map((tab) => {
             const isActive = tab.view === optimisticView;
             const isPendingTab = isLoading && isActive;
@@ -146,6 +142,12 @@ export function WeatherPageTabs({
                 onPointerDown={() => {
                   setOptimisticView(tab.view);
                 }}
+                onPointerEnter={() => {
+                  prefetch(tab.view, optimisticDocumentTab);
+                }}
+                onFocus={() => {
+                  prefetch(tab.view, optimisticDocumentTab);
+                }}
                 onClick={() => {
                   navigate(tab.view, optimisticDocumentTab);
                 }}
@@ -154,9 +156,9 @@ export function WeatherPageTabs({
               </button>
             );
           })}
-        </div>
+        </nav>
 
-        <div className={styles.secondaryTabs}>
+        <nav ref={secondaryTabsRef} className={styles.secondaryTabs} aria-label="Weather section">
           {documentTabs.map((tab) => {
             const isActive = tab.tab === optimisticDocumentTab;
             const isPendingTab = isLoading && isActive;
@@ -174,6 +176,12 @@ export function WeatherPageTabs({
                 onPointerDown={() => {
                   setOptimisticDocumentTab(tab.tab);
                 }}
+                onPointerEnter={() => {
+                  prefetch(optimisticView, tab.tab);
+                }}
+                onFocus={() => {
+                  prefetch(optimisticView, tab.tab);
+                }}
                 onClick={() => {
                   navigate(optimisticView, tab.tab);
                 }}
@@ -182,7 +190,7 @@ export function WeatherPageTabs({
               </button>
             );
           })}
-        </div>
+        </nav>
 
         {isLoading ? (
           <div
@@ -208,4 +216,22 @@ export function WeatherPageTabs({
       </div>
     </div>
   );
+}
+
+function centerActiveTab(container: HTMLElement | null) {
+  const activeTab = container?.querySelector<HTMLButtonElement>(
+    'button[aria-pressed="true"]',
+  );
+
+  if (!container || !activeTab) {
+    return;
+  }
+
+  const left = activeTab.offsetLeft - (container.clientWidth - activeTab.offsetWidth) / 2;
+  container.scrollTo({
+    left: Math.max(left, 0),
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "auto"
+      : "smooth",
+  });
 }

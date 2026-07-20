@@ -2,21 +2,16 @@
 
 import { useState } from "react";
 
-type RadarEmbedProps = {
-  src: string;
-  title: string;
-};
-
-export function RadarEmbed({ src, title }: RadarEmbedProps) {
+export function TrafficMapEmbed({ title, src }: { title: string; src: string }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInteractive, setIsInteractive] = useState(false);
 
   if (!isLoaded) {
     return (
-      <div className="flex h-[420px] items-center justify-center border border-stone-200 bg-stone-100 px-6 text-center md:h-[640px]">
+      <div className="flex h-[320px] items-center justify-center bg-stone-100 px-6 text-center md:h-[430px]">
         <div>
           <p className="text-sm leading-6 text-stone-600">
-            The live radar is ready on demand. Deferring it keeps the forecast and station readings fast.
+            The live traveler map is deferred so its third-party scripts do not slow the camera photos.
           </p>
           <button
             type="button"
@@ -25,7 +20,7 @@ export function RadarEmbed({ src, title }: RadarEmbedProps) {
               setIsLoaded(true);
             }}
           >
-            Load live radar
+            Load traffic map
           </button>
         </div>
       </div>
@@ -34,31 +29,31 @@ export function RadarEmbed({ src, title }: RadarEmbedProps) {
 
   return (
     <div
-      className="relative overflow-hidden border border-stone-200 bg-white"
+      className="relative h-[320px] md:h-[430px]"
       onPointerLeave={() => {
         setIsInteractive(false);
       }}
     >
-      {isInteractive ? (
-        <div className="pointer-events-none absolute left-4 top-4 z-10 rounded-full bg-stone-950/72 px-3 py-1.5 text-[0.64rem] font-semibold uppercase tracking-[0.18em] text-white shadow-sm">
-          Move off the map to resume page scrolling
-        </div>
-      ) : (
+      {!isInteractive ? (
         <button
           type="button"
           className="absolute inset-0 z-10 flex items-center justify-center bg-stone-950/6 backdrop-blur-[1px] transition hover:bg-stone-950/10"
           onClick={() => {
             setIsInteractive(true);
           }}
-          aria-label="Enable radar map interaction"
+          aria-label={`Enable ${title} interaction`}
         >
           <span className="rounded-full border border-white/80 bg-white/92 px-4 py-2 text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-stone-700 shadow-sm">
-            Click to interact with radar
+            Click to interact
           </span>
         </button>
+      ) : (
+        <div className="pointer-events-none absolute left-4 top-4 z-10 rounded-full bg-stone-950/72 px-3 py-1.5 text-[0.64rem] font-semibold uppercase tracking-[0.18em] text-white shadow-sm">
+          Move off the map to resume page scrolling
+        </div>
       )}
 
-      <iframe title={title} src={src} className="h-[420px] w-full md:h-[640px]" loading="lazy" />
+      <iframe title={title} src={src} loading="lazy" className="h-full w-full" />
     </div>
   );
 }

@@ -8,6 +8,9 @@ import { WeatherCameraGrid } from "@/components/weather/camera-grid";
 import { WeatherHomeLink } from "@/components/weather/home-link";
 import { WeatherPageTabs } from "@/components/weather/page-tabs";
 import { RadarEmbed } from "@/components/weather/radar-embed";
+import { StationCameraArchive } from "@/components/weather/station-camera-archive";
+import { StationCameraPreview } from "@/components/weather/station-camera-preview";
+import { TrafficMapEmbed } from "@/components/weather/traffic-map-embed";
 import styles from "@/app/weather/weather.module.css";
 import {
   getWeatherPageData,
@@ -17,6 +20,7 @@ import {
 } from "@/lib/weather/ambient";
 import { buildWeatherAlmanac } from "@/lib/weather/almanac";
 import { nearbyWeatherCameras, type WeatherCamera } from "@/lib/weather/cameras";
+import { buildDaylightForecastDays } from "@/lib/weather/forecast";
 import {
   readStoredArchiveSummary,
   readStoredWeatherObservationsBetween,
@@ -54,6 +58,7 @@ import {
   type WeatherWeekStory,
 } from "@/lib/weather/summary";
 import {
+  formatWeatherClock,
   formatWeatherDateTime,
   formatWeatherLong,
   formatWeatherWeekdayDateTime,
@@ -204,7 +209,7 @@ const trafficMapUrl = "https://web.seattle.gov/travelers/";
 const SUMMARY_ARCHIVE_CACHE_TTL_MS = 5 * 60 * 1000;
 const skylineWebcamHeaderCard = {
   href: "/weather?tab=cameras",
-  imageUrl: "/api/weather/station-camera",
+  imageUrl: "/api/weather/station-camera?variant=thumbnail",
   title: "Station Camera",
   note: "Latest uploaded frame from the live weather cam",
 };
@@ -215,6 +220,7 @@ const summaryArchiveCache = new Map<
     value: WeatherSummaryArchive | null;
   }
 >();
+const summaryArchiveRebuilds = new Map<string, Promise<void>>();
 
 function normalizeWeatherDocumentTab(value?: string): WeatherDocumentTab {
   if (
@@ -244,12 +250,15 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const isCamerasTab = activeDocumentTab === "cameras";
   const isGraphsTab = activeDocumentTab === "graphs";
   const isAboutTab = activeDocumentTab === "about";
-  // The summaries tab reads everything from rollup docs and the persisted
-  // archive; it doesn't need a 31-day or 365-day raw observation paginate.
-  // Use the lightweight path so the page can never hang on a cold start.
-  const result = isSummariesTab
-    ? await getWeatherStationOverview()
-    : await getWeatherPageData(activeView);
+  // Only the dashboard and graph views need a raw historical series. Camera,
+  // radar, about, and archive pages can render from the compact stored station
+  // overview, which prevents a harmless `view=year` query string from turning
+  // those tabs into an 8,000-document Firestore read.
+  const result = isDashboardTab || isGraphsTab
+    ? await getWeatherPageData(activeView, { includeSeries: isGraphsTab })
+    : await getWeatherStationOverview({
+        includeForecast: isRadarTab || isAboutTab,
+      });
 
   if (result.state !== "ready") {
     return <WeatherState result={result} />;
@@ -266,8 +275,13 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const mapUrl = buildMapUrl(coordinates.latitude, coordinates.longitude);
   const radarUrl = buildRadarEmbedUrl(coordinates.latitude, coordinates.longitude);
   const viewMeta = getViewMeta(activeView);
-  const comparisonPanelsPromise = isDashboardTab
-    ? getHistoricalComparisonPanels(data, activeView)
+  const comparisonPanelsPromise =
+    isDashboardTab && (activeView === "current" || activeView === "week")
+    ? withDeadline(
+        getHistoricalComparisonPanels(data, activeView),
+        2_000,
+        [] as ComparisonPanel[],
+      )
     : Promise.resolve<ComparisonPanel[]>([]);
 
   const summaryNeedsWeekWindow =
@@ -455,19 +469,10 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
               <div className={styles.heroSidebarGrid}>
                 <a
                   href={skylineWebcamHeaderCard.href}
-                  target="_blank"
-                  rel="noreferrer"
                   className={styles.webcamCard}
                 >
                   <div className={styles.webcamFrame}>
-                    {/* External webcam preview is kept as a plain img so we can use the source site directly. */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={skylineWebcamHeaderCard.imageUrl}
-                      alt="Seattle skyline webcam preview"
-                      loading="lazy"
-                      className={styles.webcamImage}
-                    />
+                    <StationCameraPreview src={skylineWebcamHeaderCard.imageUrl} />
                   </div>
                   <div className={styles.webcamCardBody}>
                     <p className={styles.webcamCardEyebrow}>
@@ -538,7 +543,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
         ) : isRadarTab ? (
           <RadarTabContent
             almanac={almanac}
-            forecast={data.forecast.slice(0, 8)}
+            forecast={data.forecast}
             radarUrl={radarUrl}
           />
         ) : isCamerasTab ? (
@@ -553,7 +558,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
         ) : isAboutTab ? (
           <AboutTabContent
             almanac={almanac}
-            forecast={data.forecast.slice(0, 8)}
+            forecast={data.forecast}
             rawRows={rawRows}
             stationRows={stationRows}
           />
@@ -806,7 +811,7 @@ function RadarTabContent({
         <TablePanel
           id="forecast-section"
           title="Forecast Outlook"
-          subtitle="Hourly outlook."
+          subtitle="Daily summary with the next three days of daylight hours."
           compact
         >
           <ForecastTable periods={forecast} />
@@ -844,12 +849,15 @@ function CamerasTabContent() {
     <TablePanel
       id="cameras-section"
       title="Local Cameras"
-      subtitle="Nearby live traffic views with a compact traveler map."
+      subtitle="Station daylight archive and nearby live traffic views."
       compact
     >
-      <div className="grid gap-4 xl:grid-cols-[0.86fr_1.14fr]">
-        <TrafficMapPanel title="Seattle Traffic Map" src={trafficMapUrl} href={trafficMapUrl} />
-        <CameraGrid title="Nearby Camera Views" items={nearbyWeatherCameras} />
+      <div className="grid gap-4">
+        <StationCameraArchive />
+        <div className="grid gap-4 xl:grid-cols-[1.14fr_0.86fr]">
+          <CameraGrid title="Nearby Camera Views" items={nearbyWeatherCameras} />
+          <TrafficMapPanel title="Seattle Traffic Map" src={trafficMapUrl} href={trafficMapUrl} />
+        </div>
       </div>
     </TablePanel>
   );
@@ -955,7 +963,7 @@ function AboutTabContent({
         <TablePanel
           id="forecast-section-about"
           title="Forecast Outlook"
-          subtitle="Hourly outlook."
+          subtitle="Daily summary with the next three days of daylight hours."
           compact
         >
           <ForecastTable periods={forecast} />
@@ -1998,42 +2006,67 @@ function ThreeColumnTable({
 }
 
 function ForecastTable({ periods }: { periods: WeatherForecastPeriod[] }) {
-  if (!periods.length) {
+  const days = buildDaylightForecastDays(periods, { maxDays: 3 });
+
+  if (!days.length) {
     return (
-      <PanelState message="NOAA did not return an hourly forecast for this fetch, so the live station data on this page is the most reliable read for now." />
+      <PanelState message="NOAA did not return any upcoming daylight hours for this fetch, so the live station data on this page is the most reliable read for now." />
     );
   }
 
   return (
-    <table className="w-full border-collapse">
-      <thead>
-        <tr className="border-b border-stone-300 text-left text-[0.68rem] uppercase tracking-[0.16em] text-stone-500">
-          <th className="px-2 py-2.5 font-medium">Period</th>
-          <th className="px-2 py-2.5 font-medium">Temp</th>
-          <th className="px-2 py-2.5 font-medium">Conditions</th>
-          <th className="px-2 py-2.5 font-medium">Wind</th>
-        </tr>
-      </thead>
-      <tbody>
-        {periods.map((period) => (
-          <tr key={period.startTime} className="border-b border-stone-200 last:border-b-0">
-            <td className="px-2 py-2.5 text-stone-700">
-              {formatWeatherDateTime(period.startTime)}
-            </td>
-            <td className="px-2 py-2.5 text-stone-800">
-              {period.temperature === null
-                ? "Not reported"
-                : `${period.temperature} ${period.temperatureUnit}`}
-            </td>
-            <td className="px-2 py-2.5 text-stone-800">{period.shortForecast}</td>
-            <td className="px-2 py-2.5 text-stone-500">
-              {period.windSpeed} {period.windDirection}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div className={styles.daylightForecastDays}>
+      {days.map((day) => (
+        <section key={day.dateKey} className={styles.daylightForecastDay}>
+          <header className={styles.daylightForecastHeader}>
+            <div>
+              <h3 className={styles.daylightForecastTitle}>{day.label}</h3>
+              <p className={styles.daylightForecastCondition}>{day.dominantCondition}</p>
+            </div>
+            <div className={styles.daylightForecastRange}>
+              <span>{formatForecastRange(day.lowTemperature, day.highTemperature, day.temperatureUnit)}</span>
+              <small>{day.periods.length} daylight hours</small>
+            </div>
+          </header>
+
+          <ol className={styles.daylightForecastHours} aria-label={`${day.label} hourly daylight forecast`}>
+            {day.periods.map((period) => (
+              <li key={period.startTime} className={styles.daylightForecastHour}>
+                <p className={styles.daylightForecastTime}>
+                  {formatWeatherClock(period.startTime)}
+                </p>
+                <p className={styles.daylightForecastTemperature}>
+                  {period.temperature === null
+                    ? "--"
+                    : `${period.temperature}°${period.temperatureUnit}`}
+                </p>
+                <p className={styles.daylightForecastSummary}>{period.shortForecast}</p>
+                <p className={styles.daylightForecastWind}>
+                  {period.windSpeed} {period.windDirection}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ))}
+    </div>
   );
+}
+
+function formatForecastRange(
+  lowTemperature: number | null,
+  highTemperature: number | null,
+  unit: string,
+) {
+  if (lowTemperature === null || highTemperature === null) {
+    return "Temperature unavailable";
+  }
+
+  if (lowTemperature === highTemperature) {
+    return `${lowTemperature}°${unit}`;
+  }
+
+  return `${lowTemperature}–${highTemperature}°${unit}`;
 }
 
 function StationTrendPanel({
@@ -2579,12 +2612,7 @@ function TrafficMapPanel({
         </a>
       </div>
       <div className="mt-2 overflow-hidden border border-stone-200 bg-white">
-        <iframe
-          title={title}
-          src={src}
-          loading="lazy"
-          className="h-[430px] w-full"
-        />
+        <TrafficMapEmbed title={title} src={src} />
       </div>
       <p className="mt-2 text-xs leading-5 text-stone-500">
         Live SDOT traveler map for incidents, congestion, and camera context around the station area.
@@ -3619,16 +3647,41 @@ async function buildAndStoreArchive(
   }
 }
 
-async function rebuildWeatherSummaryArchive(macAddress: string) {
-  // Background rebuild — kicked off via after(), so this runs after the
-  // current response is sent. We pull a wider history window than the cold
-  // first-build path because there's no user waiting on it.
-  const now = Date.now();
-  await buildAndStoreArchive(macAddress, {
-    startMs: 0,
-    endMs: now + 24 * 60 * 60 * 1000,
-    limit: 100_000,
+function rebuildWeatherSummaryArchive(macAddress: string) {
+  const cacheKey = macAddress.trim().toLowerCase();
+  const existing = summaryArchiveRebuilds.get(cacheKey);
+
+  if (existing) {
+    return existing;
+  }
+
+  // Daily rollups already contain every field used by the summary archive.
+  // Rebuilding from them avoids a background walk of up to 100,000 raw
+  // observations whenever an otherwise healthy archive is merely an hour old.
+  const rebuild = (async () => {
+    const rollups = await readAllDailyRollups({ macAddress });
+    const archive = buildWeatherSummaryArchiveFromRollups(rollups);
+
+    if (!archive) {
+      return;
+    }
+
+    await writeStoredArchiveSummary({
+      macAddress,
+      archive,
+      latestObservationAt: rollups.at(-1)?.latestObservationAt ?? Date.now(),
+    });
+
+    summaryArchiveCache.set(cacheKey, {
+      expiresAt: Date.now() + SUMMARY_ARCHIVE_CACHE_TTL_MS,
+      value: archive,
+    });
+  })().finally(() => {
+    summaryArchiveRebuilds.delete(cacheKey);
   });
+
+  summaryArchiveRebuilds.set(cacheKey, rebuild);
+  return rebuild;
 }
 
 function getPageMeta(
@@ -3964,8 +4017,14 @@ function buildYearHiLowPanel(temperatureSeries?: WeatherSeries) {
     return null;
   }
 
-  const highPoints = aggregateSeriesPoints(temperatureSeries.points, 24 * 60 * 60 * 1000, "max");
-  const lowPoints = aggregateSeriesPoints(temperatureSeries.points, 24 * 60 * 60 * 1000, "min");
+  const highPoints = condenseSeriesPoints(
+    aggregateSeriesPoints(temperatureSeries.points, 24 * 60 * 60 * 1000, "max"),
+    160,
+  );
+  const lowPoints = condenseSeriesPoints(
+    aggregateSeriesPoints(temperatureSeries.points, 24 * 60 * 60 * 1000, "min"),
+    160,
+  );
 
   if (highPoints.length < 2 || lowPoints.length < 2) {
     return null;
@@ -4098,7 +4157,7 @@ function normalizeSeriesPointsForView(
     mode,
   );
   const maxPoints =
-    view === "current" ? 288 : view === "week" ? 700 : view === "month" ? 1000 : 800;
+    view === "current" ? 120 : view === "week" ? 180 : view === "month" ? 120 : 160;
 
   return condenseSeriesPoints(aggregated, maxPoints);
 }
@@ -4352,20 +4411,10 @@ function formatGraphTimeLabel(value: number, view: WeatherDashboardView) {
 
 function pickDotStride(seriesList: WeatherSeries[]) {
   const maxPoints = Math.max(...seriesList.map((series) => series.points.length));
-
-  if (maxPoints <= 240) {
-    return 1;
-  }
-
-  if (maxPoints <= 720) {
-    return 2;
-  }
-
-  if (maxPoints <= 1440) {
-    return 4;
-  }
-
-  return 8;
+  // The line path already preserves the full shape. A bounded set of dots is
+  // enough to make samples legible without emitting hundreds of SVG circles
+  // per panel into the initial HTML.
+  return Math.max(1, Math.ceil(maxPoints / 24));
 }
 
 function formatTickValue(value: number, decimals: number) {

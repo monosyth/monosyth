@@ -38,6 +38,14 @@ Optional values:
 - `AMBIENT_REQUEST_TIMEOUT_MS`
 - `WEATHER_LOG_SECRET`
 
+Station camera capture also supports:
+
+- `STATION_CAMERA_RTSP_URL`, or the host/username/password/stream variables in `.env.example`
+- `STATION_CAMERA_STORAGE_PATH` for the latest full JPEG
+- `STATION_CAMERA_THUMBNAIL_STORAGE_PATH` for the lightweight hero WebP
+- `STATION_CAMERA_ARCHIVE_PREFIX` for hourly daylight frames
+- `STATION_CAMERA_TIME_ZONE`, `STATION_CAMERA_LATITUDE`, and `STATION_CAMERA_LONGITUDE` for daylight checks
+
 Then enable the Google provider in Firebase Authentication.
 
 ## App Hosting
@@ -64,3 +72,18 @@ committing it to source control.
 - If Firebase keys are missing, the UI shows setup guidance instead of crashing.
 - The weather route reads Ambient keys only on the server.
 - `POST /api/weather/log` is available for a scheduler to persist readings into Firestore when `WEATHER_LOG_SECRET` is configured.
+
+## Station camera archive
+
+`npm run camera:capture` now checks local sunrise and sunset before opening the
+RTSP stream. During daylight it writes the latest JPEG/WebP pair and one
+idempotent archive slot for the current local hour. A five-minute local launch
+agent can therefore keep the latest image fresh without retaining twelve nearly
+identical files per hour; outside daylight the command exits successfully
+without contacting the camera.
+
+The Cameras tab requests only the selected day's small archive listing and
+lazy-loads immutable WebP thumbnails. Full JPEG frames are fetched only when a
+photo is opened. The capture must continue to run on a machine that can reach
+the camera's LAN RTSP address; Firebase App Hosting cannot reach that private
+stream directly.

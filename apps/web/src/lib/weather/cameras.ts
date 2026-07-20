@@ -8,13 +8,6 @@ export type WeatherCamera = {
 
 export const nearbyWeatherCameras: WeatherCamera[] = [
   {
-    id: "i5-195th",
-    label: "I-5 @ NE 195th St",
-    href: "https://images.wsdot.wa.gov/nw/005vc17720.jpg",
-    imageUrl: "https://images.wsdot.wa.gov/nw/005vc17720.jpg",
-    note: "Northern commute approach from Shoreline toward Seattle.",
-  },
-  {
     id: "i5-175th-s",
     label: "I-5 @ NE 175th St, S",
     href: "https://images.wsdot.wa.gov/nw/005vc17603.jpg",

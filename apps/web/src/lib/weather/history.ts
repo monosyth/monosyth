@@ -1,7 +1,7 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
 import { getFirebaseAdminDb } from "@/lib/firebase/admin";
-import { toWeatherTimestamp } from "@/lib/weather/time";
+import { getWeatherDayBoundsUtc, toWeatherTimestamp } from "@/lib/weather/time";
 import type { WeatherObservation } from "@/lib/weather/types";
 
 type WeatherHistoryDevice = {
@@ -48,6 +48,7 @@ type BetweenCacheKey = string;
 type BetweenCacheEntry = {
   expiresAt: number;
   value: WeatherObservation[];
+  inflight: Promise<WeatherObservation[]> | null;
 };
 const BETWEEN_CACHE_TTL_MS = 60_000;
 const observationsBetweenCache = new Map<BetweenCacheKey, BetweenCacheEntry>();
@@ -171,7 +172,10 @@ export async function readStoredWeatherObservations(input: {
         .doc(stationId)
         .collection("observations")
         .where("observedAt", ">=", Timestamp.fromMillis(sinceMs))
-        .orderBy("observedAt", "asc"),
+        // When a safety cap is reached, keep the newest readings rather than
+        // an old slice at the beginning of the requested month/year. The
+        // overview normalizer sorts the returned rows chronologically.
+        .orderBy("observedAt", "desc"),
       RANGE_MAX_DOCUMENTS[input.range],
       RANGE_DEADLINE_MS[input.range],
     );
@@ -206,15 +210,18 @@ export async function readStoredWeatherObservationsForDay(input: {
 }): Promise<WeatherObservation[]> {
   const stationId = buildStationId(input.macAddress);
   const db = getFirebaseAdminDb();
-  const start = new Date(Date.UTC(input.year, input.month - 1, input.day, 0, 0, 0, 0));
-  const end = new Date(Date.UTC(input.year, input.month - 1, input.day + 1, 0, 0, 0, 0));
+  const { startMs, endMs } = getWeatherDayBoundsUtc(
+    input.year,
+    input.month,
+    input.day,
+  );
   return readObservationQuery(
     db
       .collection("weatherStations")
       .doc(stationId)
       .collection("observations")
-      .where("observedAt", ">=", Timestamp.fromMillis(start.getTime()))
-      .where("observedAt", "<", Timestamp.fromMillis(end.getTime()))
+      .where("observedAt", ">=", Timestamp.fromMillis(startMs))
+      .where("observedAt", "<", Timestamp.fromMillis(endMs))
       .orderBy("observedAt", "asc"),
   );
 }
@@ -234,27 +241,49 @@ export async function readStoredWeatherObservationsBetween(input: {
   const now = Date.now();
   const cached = observationsBetweenCache.get(cacheKey);
 
-  if (cached && cached.expiresAt > now) {
-    return cached.value;
+  if (cached) {
+    if (cached.expiresAt > now) {
+      return cached.value;
+    }
+
+    if (cached.inflight) {
+      return cached.inflight;
+    }
   }
 
-  const db = getFirebaseAdminDb();
-  const value = await readObservationQuery(
-    db
-      .collection("weatherStations")
-      .doc(stationId)
-      .collection("observations")
-      .where("observedAt", ">=", Timestamp.fromMillis(input.startMs))
-      .where("observedAt", "<", Timestamp.fromMillis(input.endMs))
-      .orderBy("observedAt", "asc"),
-    input.limit,
-  );
+  const inflight = (async () => {
+    const db = getFirebaseAdminDb();
+    const value = await readObservationQuery(
+      db
+        .collection("weatherStations")
+        .doc(stationId)
+        .collection("observations")
+        .where("observedAt", ">=", Timestamp.fromMillis(input.startMs))
+        .where("observedAt", "<", Timestamp.fromMillis(input.endMs))
+        .orderBy("observedAt", "asc"),
+      input.limit,
+    );
+
+    observationsBetweenCache.set(cacheKey, {
+      expiresAt: Date.now() + BETWEEN_CACHE_TTL_MS,
+      value,
+      inflight: null,
+    });
+    return value;
+  })();
 
   observationsBetweenCache.set(cacheKey, {
-    expiresAt: Date.now() + BETWEEN_CACHE_TTL_MS,
-    value,
+    expiresAt: cached?.expiresAt ?? 0,
+    value: cached?.value ?? [],
+    inflight,
   });
-  return value;
+
+  try {
+    return await inflight;
+  } catch (error) {
+    observationsBetweenCache.delete(cacheKey);
+    throw error;
+  }
 }
 
 // Persisted archive summary lives at weatherStations/{id}/archives/summary.

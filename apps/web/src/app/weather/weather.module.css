@@ -187,6 +187,7 @@
 }
 
 .mastheadTable {
+  display: none;
   width: 100%;
   border-collapse: collapse;
   border: 1px solid rgb(255 255 255 / 0.18);
@@ -217,7 +218,9 @@
 }
 
 .webcamCard {
-  display: block;
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  align-items: stretch;
   overflow: hidden;
   border: 1px solid rgb(255 255 255 / 0.18);
   background: var(--teal-600);
@@ -228,8 +231,14 @@
   border-color: rgb(255 255 255 / 0.3);
 }
 
+.webcamCard:focus-visible {
+  border-color: #fff;
+  outline: 2px solid #f4d24f;
+  outline-offset: 2px;
+}
+
 .webcamFrame {
-  aspect-ratio: 16 / 9.5;
+  min-height: 5rem;
   overflow: hidden;
   background: var(--teal-500);
 }
@@ -240,7 +249,22 @@
   object-fit: cover;
 }
 
+.webcamFallback {
+  display: flex;
+  height: 100%;
+  min-height: inherit;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  text-align: center;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.78);
+}
+
 .webcamCardBody {
+  align-self: center;
   padding: 0.45rem 0.65rem 0.55rem;
   text-align: left;
 }
@@ -293,7 +317,8 @@
   flex: 0 0 auto;
   border-bottom: 3px solid transparent;
   background: transparent;
-  padding-bottom: 0.375rem;
+  min-height: 2.75rem;
+  padding: 0.45rem 0 0.375rem;
   font-family: inherit;
   font-size: 1rem;
   font-weight: 300;
@@ -338,7 +363,8 @@
   flex: 0 0 auto;
   border-bottom: 3px solid transparent;
   background: transparent;
-  padding-bottom: 0.375rem;
+  min-height: 2.75rem;
+  padding: 0.45rem 0 0.375rem;
   font-family: inherit;
   font-size: 0.74rem;
   font-weight: 500;
@@ -347,6 +373,13 @@
   text-transform: uppercase;
   cursor: pointer;
   transition: color 160ms ease, border-color 160ms ease;
+}
+
+.primaryTab:focus-visible,
+.secondaryTab:focus-visible {
+  border-radius: 0.15rem;
+  outline: 2px solid #f4d24f;
+  outline-offset: 2px;
 }
 
 .tabPending {
@@ -719,7 +752,16 @@
   }
 
   .mastheadTable {
+    display: table;
     font-size: 0.88rem;
+  }
+
+  .webcamCard {
+    grid-template-columns: 12rem minmax(0, 1fr);
+  }
+
+  .webcamFrame {
+    min-height: 7rem;
   }
 
   .primaryTab {
@@ -774,6 +816,15 @@
 
   .webcamCardBody {
     text-align: left;
+  }
+
+  .webcamCard {
+    display: block;
+  }
+
+  .webcamFrame {
+    aspect-ratio: 16 / 9.5;
+    min-height: 0;
   }
 }
 
@@ -1768,3 +1819,125 @@
   opacity: 0.7;
 }
 
+/* ---------- Daylight forecast ---------- */
+
+.daylightForecastDays {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.daylightForecastDay {
+  overflow: hidden;
+  border: 1px solid rgb(214 211 209);
+  background: rgb(250 250 249);
+}
+
+.daylightForecastHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.65rem 1rem;
+  border-bottom: 1px solid rgb(214 211 209);
+  background: #fff;
+  padding: 0.8rem 0.9rem;
+}
+
+.daylightForecastTitle,
+.daylightForecastCondition,
+.daylightForecastTime,
+.daylightForecastTemperature,
+.daylightForecastSummary,
+.daylightForecastWind {
+  margin: 0;
+}
+
+.daylightForecastTitle {
+  font-size: 1rem;
+  font-weight: 500;
+  color: rgb(68 64 60);
+}
+
+.daylightForecastCondition {
+  margin-top: 0.18rem;
+  font-size: 0.76rem;
+  color: rgb(120 113 108);
+}
+
+.daylightForecastRange {
+  display: grid;
+  justify-items: end;
+  color: rgb(68 64 60);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.daylightForecastRange small {
+  margin-top: 0.12rem;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgb(120 113 108);
+}
+
+.daylightForecastHours {
+  display: grid;
+  grid-auto-columns: minmax(8.8rem, 1fr);
+  grid-auto-flow: column;
+  gap: 1px;
+  margin: 0;
+  overflow-x: auto;
+  padding: 0;
+  background: rgb(214 211 209);
+  list-style: none;
+  scroll-snap-type: x proximity;
+}
+
+.daylightForecastHour {
+  min-height: 9.5rem;
+  background: #fff;
+  padding: 0.75rem;
+  scroll-snap-align: start;
+}
+
+.daylightForecastTime {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgb(120 113 108);
+}
+
+.daylightForecastTemperature {
+  margin-top: 0.3rem;
+  font-size: 1.35rem;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  color: rgb(41 37 36);
+}
+
+.daylightForecastSummary {
+  margin-top: 0.35rem;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  color: rgb(68 64 60);
+}
+
+.daylightForecastWind {
+  margin-top: 0.4rem;
+  font-size: 0.68rem;
+  color: rgb(120 113 108);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .daylightForecastHours {
+    scroll-behavior: auto;
+  }
+
+  .tabPending,
+  .tabStatusBar,
+  .page :global(.animate-pulse) {
+    animation: none;
+  }
+}
