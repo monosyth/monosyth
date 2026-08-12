@@ -11,7 +11,7 @@
   --line: rgba(157, 170, 202, 0.22);
   --soft-line: rgba(157, 170, 202, 0.12);
   min-height: 100vh;
-  overflow: hidden;
+  overflow-x: clip;
   background:
     radial-gradient(circle at 88% 8%, rgba(86, 91, 255, 0.16), transparent 29rem),
     radial-gradient(circle at 18% 68%, rgba(34, 211, 238, 0.08), transparent 34rem),
@@ -60,7 +60,7 @@
 
 .header {
   display: flex;
-  width: min(100% - 2.5rem, 90rem);
+  width: min(100% - 2.5rem, 80.5rem);
   min-height: 5rem;
   margin: 0 auto;
   align-items: center;
@@ -715,20 +715,20 @@
 }
 
 .productSection {
-  width: min(100% - 2.5rem, 90rem);
+  width: min(100% - 2.5rem, 80.5rem);
   margin: 0 auto;
-  padding: clamp(2.5rem, 3vw, 3.5rem) 0 clamp(3rem, 3.75vw, 4rem);
+  padding: clamp(1.9rem, 2.25vw, 2.5rem) 0 clamp(2.4rem, 3vw, 3rem);
   border-bottom: 1px solid var(--line);
 }
 
 .sectionHeading {
   display: block;
-  width: min(100%, 48rem);
-  margin: 0 0 clamp(1.5rem, 2vw, 2rem);
+  width: min(100%, 44rem);
+  margin: 0 0 clamp(1.1rem, 1.4vw, 1.4rem);
 }
 
 .sectionEyebrow {
-  margin: 0 0 0.6rem;
+  margin: 0 0 0.45rem;
   color: var(--cyan);
   font-size: 0.62rem;
   letter-spacing: 0.17em;
@@ -737,9 +737,9 @@
 .sectionHeading h2 {
   max-width: none;
   margin: 0;
-  font-size: clamp(3.1rem, 4vw, 4.5rem);
+  font-size: clamp(2.65rem, 3.2vw, 3.65rem);
   font-weight: 600;
-  line-height: 0.96;
+  line-height: 0.95;
   letter-spacing: -0.055em;
   text-wrap: initial;
 }
@@ -752,19 +752,19 @@
 .productCard {
   display: grid;
   overflow: hidden;
-  min-height: 22rem;
-  grid-template-columns: minmax(0, 1.12fr) minmax(22rem, 0.88fr);
+  min-height: 19rem;
+  grid-template-columns: minmax(0, 1.05fr) minmax(21rem, 0.95fr);
   border: 1px solid rgba(157, 170, 202, 0.28);
-  border-radius: 2rem;
+  border-radius: 1.6rem;
   background: var(--instrument);
   box-shadow: 0 2.5rem 8rem rgba(0, 0, 0, 0.24);
 }
 
 .productIdentity {
   display: flex;
-  min-height: 22rem;
+  min-height: 19rem;
   flex-direction: column;
-  padding: clamp(1.5rem, 2.5vw, 2.5rem);
+  padding: clamp(1.25rem, 1.8vw, 1.9rem);
   background:
     radial-gradient(circle at 78% 22%, rgba(255, 0, 182, 0.2), transparent 22rem),
     radial-gradient(circle at 20% 78%, rgba(0, 194, 239, 0.18), transparent 18rem),
@@ -784,9 +784,9 @@
   flex: 1;
   place-items: center;
   overflow: hidden;
-  margin-top: 1rem;
+  margin-top: 0.75rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1.5rem;
+  border-radius: 1.25rem;
   background: rgba(34, 31, 51, 0.72);
 }
 
@@ -837,7 +837,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: clamp(1.75rem, 3vw, 3rem);
+  padding: clamp(1.5rem, 2.2vw, 2.2rem);
   border-left: 1px solid var(--line);
 }
 
@@ -845,13 +845,13 @@
   max-width: 31rem;
   margin: 0;
   color: var(--ice);
-  font-size: clamp(1.2rem, 2vw, 1.65rem);
-  line-height: 1.48;
+  font-size: clamp(1.08rem, 1.55vw, 1.4rem);
+  line-height: 1.44;
   letter-spacing: -0.025em;
 }
 
 .productDetail {
-  margin: 1.1rem 0 0;
+  margin: 0.85rem 0 0;
   color: var(--blueprint);
   font-size: 0.55rem;
   line-height: 1.8;
@@ -861,8 +861,8 @@
 .productLink {
   display: inline-flex;
   width: fit-content;
-  min-height: 3.25rem;
-  margin-top: 1.5rem;
+  min-height: 3rem;
+  margin-top: 1.1rem;
   align-items: center;
   justify-content: space-between;
   gap: 2.5rem;
@@ -893,8 +893,8 @@
 
 .footer {
   display: grid;
-  width: min(100% - 2.5rem, 90rem);
-  min-height: 5rem;
+  width: min(100% - 2.5rem, 80.5rem);
+  min-height: 4.25rem;
   margin: 0 auto;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
@@ -1052,11 +1052,11 @@
   }
 
   .productCard {
-    grid-template-columns: 1fr 0.86fr;
+    grid-template-columns: 1fr 0.9fr;
   }
 
   .productSection {
-    padding: 2.75rem 0 3.25rem;
+    padding: 2rem 0 2.5rem;
   }
 }
 
@@ -1102,19 +1102,20 @@
   }
 
   .sectionHeading h2 {
-    font-size: clamp(2.65rem, 7vw, 4rem);
+    font-size: clamp(2.45rem, 6.2vw, 3.4rem);
   }
 
   .productCard {
+    min-height: 0;
     grid-template-columns: 1fr;
   }
 
   .productIdentity {
-    min-height: 20rem;
+    min-height: 16rem;
   }
 
   .productCopy {
-    padding: 2.1rem;
+    padding: 1.75rem;
     border-top: 1px solid var(--line);
     border-left: 0;
   }
@@ -1125,7 +1126,7 @@
   .hero,
   .productSection,
   .footer {
-    width: min(100% - 2.5rem, 90rem);
+    width: min(100% - 2.5rem, 80.5rem);
   }
 
   .header {
@@ -1200,32 +1201,32 @@
   }
 
   .sectionHeading {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
   }
 
   .productSection {
-    padding: 2.5rem 0 3rem;
+    padding: 1.8rem 0 2.25rem;
   }
 
   .sectionHeading h2 {
-    font-size: clamp(2rem, 9vw, 2.7rem);
+    font-size: clamp(2rem, 8.5vw, 2.55rem);
   }
 
   .productCard {
-    border-radius: 1.5rem;
+    border-radius: 1.25rem;
   }
 
   .productIdentity {
-    min-height: 17.5rem;
-    padding: 1.5rem;
+    min-height: 14.5rem;
+    padding: 1.25rem;
   }
 
   .logoStage {
-    margin-top: 1.4rem;
+    margin-top: 0.75rem;
   }
 
   .productCopy {
-    padding: 2rem 1.5rem 2.4rem;
+    padding: 1.5rem;
   }
 
   .productLink {
@@ -1233,8 +1234,8 @@
   }
 
   .footer {
-    min-height: 7rem;
-    padding: 1.25rem 0;
+    min-height: 5.5rem;
+    padding: 1rem 0;
     grid-template-columns: 1fr auto;
   }
 
