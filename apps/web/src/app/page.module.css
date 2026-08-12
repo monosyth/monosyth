@@ -194,6 +194,7 @@
 
 .heroCopy {
   max-width: 47rem;
+  container-type: inline-size;
 }
 
 .eyebrow {
@@ -215,18 +216,22 @@
 }
 
 .hero h1 {
-  max-width: 9ch;
+  width: max-content;
+  max-width: 100%;
   margin: 0;
-  font-size: clamp(3.1rem, 7vw, 7.5rem);
+  font-size: clamp(2.65rem, 7vw, 7.2rem);
+  font-size: clamp(2.65rem, 13cqw, 7.2rem);
   font-weight: 700;
   line-height: 0.88;
   letter-spacing: -0.075em;
-  text-wrap: balance;
+  text-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .hero h1 span {
   display: block;
   color: var(--cyan);
+  white-space: nowrap;
 }
 
 .heroIntro {
@@ -337,6 +342,7 @@
   aspect-ratio: 1 / 0.93;
   overflow: hidden;
   background-image:
+    radial-gradient(circle at 50% 50%, rgba(34, 211, 238, 0.08), transparent 27%),
     linear-gradient(rgba(157, 170, 202, 0.065) 1px, transparent 1px),
     linear-gradient(90deg, rgba(157, 170, 202, 0.065) 1px, transparent 1px);
   background-size: 2rem 2rem;
@@ -344,21 +350,26 @@
 
 .engineCanvas::before {
   position: absolute;
-  inset: 7%;
+  top: 50%;
+  left: 50%;
+  width: 72%;
+  aspect-ratio: 1;
   border: 1px solid rgba(157, 170, 202, 0.1);
   border-radius: 50%;
   content: "";
+  transform: translate(-50%, -50%);
 }
 
 .engineCanvas::after {
   position: absolute;
-  top: 18%;
-  right: 4%;
-  width: 41%;
+  top: 50%;
+  left: 50%;
+  width: 48%;
   aspect-ratio: 1;
   border: 1px dashed rgba(34, 211, 238, 0.22);
   border-radius: 50%;
   content: "";
+  transform: translate(-50%, -50%);
 }
 
 .axisHorizontal,
@@ -369,7 +380,7 @@
 }
 
 .axisHorizontal {
-  top: 51%;
+  top: 50%;
   left: 4%;
   width: 92%;
   height: 1px;
@@ -377,69 +388,35 @@
 
 .axisVertical {
   top: 6%;
-  left: 67%;
+  left: 50%;
   width: 1px;
   height: 88%;
 }
 
-.trace {
+.orbitAnchor {
   position: absolute;
-  z-index: 1;
-  display: block;
-  height: 1px;
-  transform-origin: left center;
-  background: linear-gradient(90deg, transparent, var(--trace-color) 22%, var(--trace-color) 78%, transparent);
-  box-shadow: 0 0 0.75rem color-mix(in srgb, var(--trace-color) 40%, transparent);
-  opacity: 0.72;
-}
-
-.traceStar {
-  --trace-color: var(--lime);
-  top: 12%;
-  left: 24%;
-  width: 59%;
-  transform: rotate(33deg);
-}
-
-.traceSphere {
-  --trace-color: var(--lime);
-  top: 31%;
-  left: 24%;
-  width: 56%;
-  transform: rotate(19deg);
-}
-
-.traceCluster {
-  --trace-color: var(--spark);
   top: 50%;
-  left: 24%;
-  width: 53%;
+  left: 50%;
+  z-index: 3;
+  display: block;
+  width: 72%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
 }
 
-.traceSheet {
-  --trace-color: var(--indigo);
-  top: 69%;
-  left: 24%;
-  width: 56%;
-  transform: rotate(-19deg);
-}
-
-.traceCube {
-  --trace-color: var(--cyan);
-  top: 88%;
-  left: 24%;
-  width: 59%;
-  transform: rotate(-33deg);
+.orbitField {
+  position: absolute;
+  inset: 0;
+  display: block;
 }
 
 .specimenObject {
   position: absolute;
-  left: 5%;
-  z-index: 3;
+  z-index: 1;
   display: block;
-  width: clamp(4.8rem, 20%, 7.4rem);
+  width: 22%;
   aspect-ratio: 1;
-  overflow: hidden;
+  transform: translate(-50%, -50%);
 }
 
 .specimenObject img {
@@ -450,33 +427,38 @@
 }
 
 .starObject {
-  top: 1%;
+  top: 3%;
+  left: 50%;
 }
 
 .sphereObject {
-  top: 20%;
+  top: 35%;
+  left: 95%;
 }
 
 .clusterObject {
-  top: 39%;
+  top: 88%;
+  left: 78%;
 }
 
 .sheetObject {
-  top: 58%;
+  top: 88%;
+  left: 22%;
 }
 
 .cubeObject {
-  top: 77%;
+  top: 35%;
+  left: 5%;
 }
 
 .synthesis {
   position: absolute;
   top: 50%;
-  left: 79%;
+  left: 50%;
   z-index: 4;
   display: grid;
-  width: 5.8rem;
-  height: 5.8rem;
+  width: 5.4rem;
+  height: 5.4rem;
   place-items: center;
   transform: translate(-50%, -50%);
 }
@@ -511,14 +493,13 @@
 
 .synthesisCore {
   position: relative;
-  width: 1.1rem;
-  height: 1.1rem;
-  border: 2px solid var(--ice);
-  border-radius: 50%;
+  width: 1.4rem;
+  height: 1.4rem;
   background: var(--ice);
-  box-shadow:
-    0 0 1.2rem rgba(242, 247, 255, 0.95),
-    0 0 2.8rem rgba(34, 211, 238, 0.78);
+  clip-path: polygon(50% 0, 61% 38%, 100% 50%, 61% 62%, 50% 100%, 39% 62%, 0 50%, 39% 38%);
+  filter:
+    drop-shadow(0 0 0.65rem rgba(242, 247, 255, 0.95))
+    drop-shadow(0 0 1.4rem rgba(34, 211, 238, 0.82));
 }
 
 .synthesisLabel {
@@ -796,32 +777,12 @@
     animation: quietPulse 8s ease-in-out infinite;
   }
 
-  .specimenObject {
-    animation: specimenSignal 15s ease-in-out infinite;
+  .orbitField {
+    animation: orbitTurn 110s linear infinite;
   }
 
-  .trace {
-    animation: traceSignal 15s ease-in-out infinite;
-  }
-
-  .sphereObject,
-  .traceSphere {
-    animation-delay: 3s;
-  }
-
-  .clusterObject,
-  .traceCluster {
-    animation-delay: 6s;
-  }
-
-  .sheetObject,
-  .traceSheet {
-    animation-delay: 9s;
-  }
-
-  .cubeObject,
-  .traceCube {
-    animation-delay: 12s;
+  .orbitField img {
+    animation: orbitCounterTurn 110s linear infinite;
   }
 }
 
@@ -835,25 +796,15 @@
   }
 }
 
-@keyframes specimenSignal {
-  0%,
-  16%,
-  100% {
-    filter: brightness(0.82);
-  }
-  7% {
-    filter: brightness(1.16);
+@keyframes orbitTurn {
+  to {
+    transform: rotate(1turn);
   }
 }
 
-@keyframes traceSignal {
-  0%,
-  20%,
-  100% {
-    opacity: 0.28;
-  }
-  9% {
-    opacity: 0.92;
+@keyframes orbitCounterTurn {
+  to {
+    transform: rotate(-1turn);
   }
 }
 
@@ -889,11 +840,6 @@
 
   .heroCopy {
     max-width: 50rem;
-  }
-
-  .hero h1 {
-    max-width: 11ch;
-    font-size: clamp(4rem, 13vw, 7.3rem);
   }
 
   .heroVisual {
@@ -945,11 +891,6 @@
     padding: 4.25rem 0;
   }
 
-  .hero h1 {
-    font-size: clamp(2.85rem, 14.5vw, 4.2rem);
-    line-height: 0.92;
-  }
-
   .heroIntro {
     margin-top: 1.8rem;
   }
@@ -982,15 +923,25 @@
     display: none;
   }
 
+  .orbitAnchor {
+    width: 70%;
+  }
+
   .specimenObject {
-    left: 3%;
     width: 23%;
   }
 
   .synthesis {
-    left: 77%;
-    width: 4.8rem;
-    height: 4.8rem;
+    width: 4.5rem;
+    height: 4.5rem;
+  }
+
+  .synthesisRing::before {
+    inset: -1.1rem;
+  }
+
+  .synthesisRing::after {
+    inset: -2.2rem;
   }
 
   .sectionHeading {

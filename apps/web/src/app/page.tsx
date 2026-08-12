@@ -64,61 +64,59 @@ function CuriosityEngine() {
         <span className={styles.axisHorizontal} />
         <span className={styles.axisVertical} />
 
-        <span className={`${styles.trace} ${styles.traceStar}`} />
-        <span className={`${styles.trace} ${styles.traceSphere}`} />
-        <span className={`${styles.trace} ${styles.traceCluster}`} />
-        <span className={`${styles.trace} ${styles.traceSheet}`} />
-        <span className={`${styles.trace} ${styles.traceCube}`} />
-
-        <span className={`${styles.specimenObject} ${styles.starObject}`}>
-          <Image
-            src="/brand/specimens/folded-star.png"
-            alt=""
-            width={150}
-            height={150}
-            loading="eager"
-            unoptimized
-          />
-        </span>
-        <span className={`${styles.specimenObject} ${styles.sphereObject}`}>
-          <Image
-            src="/brand/specimens/lattice-sphere.png"
-            alt=""
-            width={150}
-            height={150}
-            loading="eager"
-            unoptimized
-          />
-        </span>
-        <span className={`${styles.specimenObject} ${styles.clusterObject}`}>
-          <Image
-            src="/brand/specimens/orange-cluster.png"
-            alt=""
-            width={150}
-            height={150}
-            loading="eager"
-            unoptimized
-          />
-        </span>
-        <span className={`${styles.specimenObject} ${styles.sheetObject}`}>
-          <Image
-            src="/brand/specimens/violet-sheet.png"
-            alt=""
-            width={150}
-            height={150}
-            loading="eager"
-            unoptimized
-          />
-        </span>
-        <span className={`${styles.specimenObject} ${styles.cubeObject}`}>
-          <Image
-            src="/brand/specimens/cyan-cube.png"
-            alt=""
-            width={150}
-            height={150}
-            loading="eager"
-            unoptimized
-          />
+        <span className={styles.orbitAnchor}>
+          <span className={styles.orbitField}>
+            <span className={`${styles.specimenObject} ${styles.starObject}`}>
+              <Image
+                src="/brand/specimens/folded-star.png"
+                alt=""
+                width={150}
+                height={150}
+                loading="eager"
+                unoptimized
+              />
+            </span>
+            <span className={`${styles.specimenObject} ${styles.sphereObject}`}>
+              <Image
+                src="/brand/specimens/lattice-sphere.png"
+                alt=""
+                width={150}
+                height={150}
+                loading="eager"
+                unoptimized
+              />
+            </span>
+            <span className={`${styles.specimenObject} ${styles.clusterObject}`}>
+              <Image
+                src="/brand/specimens/orange-cluster.png"
+                alt=""
+                width={150}
+                height={150}
+                loading="eager"
+                unoptimized
+              />
+            </span>
+            <span className={`${styles.specimenObject} ${styles.sheetObject}`}>
+              <Image
+                src="/brand/specimens/violet-sheet.png"
+                alt=""
+                width={150}
+                height={150}
+                loading="eager"
+                unoptimized
+              />
+            </span>
+            <span className={`${styles.specimenObject} ${styles.cubeObject}`}>
+              <Image
+                src="/brand/specimens/cyan-cube.png"
+                alt=""
+                width={150}
+                height={150}
+                loading="eager"
+                unoptimized
+              />
+            </span>
+          </span>
         </span>
 
         <span className={styles.synthesis}>
