@@ -290,8 +290,9 @@
   gap: 1rem;
   color: var(--blueprint);
   font-family: var(--font-ibm-plex-mono), monospace;
-  font-size: 0.64rem;
-  letter-spacing: 0.08em;
+  font-size: clamp(0.82rem, 1vw, 1rem);
+  font-weight: 600;
+  letter-spacing: 0.065em;
   text-transform: uppercase;
 }
 
