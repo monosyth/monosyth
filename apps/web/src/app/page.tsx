@@ -52,6 +52,32 @@ function BrandMark() {
   );
 }
 
+type SpecimenProps = {
+  className: string;
+  src: string;
+};
+
+function Specimen({ className, src }: SpecimenProps) {
+  return (
+    <span className={`${styles.specimenObject} ${className}`}>
+      <span className={styles.specimenCounter}>
+        <span className={styles.specimenAura} />
+        <span className={styles.specimenDrift}>
+          <Image
+            className={styles.specimenImage}
+            src={src}
+            alt=""
+            width={384}
+            height={384}
+            loading="eager"
+            unoptimized
+          />
+        </span>
+      </span>
+    </span>
+  );
+}
+
 function CuriosityEngine() {
   return (
     <div className={styles.engine} aria-hidden="true">
@@ -65,57 +91,29 @@ function CuriosityEngine() {
         <span className={styles.axisVertical} />
 
         <span className={styles.orbitAnchor}>
+          <span className={styles.orbitTrace} />
+          <span className={styles.orbitProbe} />
           <span className={styles.orbitField}>
-            <span className={`${styles.specimenObject} ${styles.starObject}`}>
-              <Image
-                src="/brand/specimens/folded-star.png"
-                alt=""
-                width={150}
-                height={150}
-                loading="eager"
-                unoptimized
-              />
-            </span>
-            <span className={`${styles.specimenObject} ${styles.sphereObject}`}>
-              <Image
-                src="/brand/specimens/lattice-sphere.png"
-                alt=""
-                width={150}
-                height={150}
-                loading="eager"
-                unoptimized
-              />
-            </span>
-            <span className={`${styles.specimenObject} ${styles.clusterObject}`}>
-              <Image
-                src="/brand/specimens/orange-cluster.png"
-                alt=""
-                width={150}
-                height={150}
-                loading="eager"
-                unoptimized
-              />
-            </span>
-            <span className={`${styles.specimenObject} ${styles.sheetObject}`}>
-              <Image
-                src="/brand/specimens/violet-sheet.png"
-                alt=""
-                width={150}
-                height={150}
-                loading="eager"
-                unoptimized
-              />
-            </span>
-            <span className={`${styles.specimenObject} ${styles.cubeObject}`}>
-              <Image
-                src="/brand/specimens/cyan-cube.png"
-                alt=""
-                width={150}
-                height={150}
-                loading="eager"
-                unoptimized
-              />
-            </span>
+            <Specimen
+              className={styles.starObject}
+              src="/brand/specimens/folded-star-clean.png"
+            />
+            <Specimen
+              className={styles.sphereObject}
+              src="/brand/specimens/lattice-sphere-clean.png"
+            />
+            <Specimen
+              className={styles.clusterObject}
+              src="/brand/specimens/orange-cluster-clean.png"
+            />
+            <Specimen
+              className={styles.sheetObject}
+              src="/brand/specimens/violet-sheet-clean.png"
+            />
+            <Specimen
+              className={styles.cubeObject}
+              src="/brand/specimens/cyan-cube-clean.png"
+            />
           </span>
         </span>
 
@@ -198,7 +196,10 @@ export default function Home() {
         <section className={styles.productSection} aria-labelledby="product-title">
           <div className={styles.sectionHeading}>
             <p className={styles.sectionEyebrow}>In the lab / Product 01</p>
-            <h2 id="product-title">One bright experiment, out in the world.</h2>
+            <h2 id="product-title">
+              <span>One bright experiment,</span>
+              <span>out in the world.</span>
+            </h2>
           </div>
 
           <article className={styles.productCard}>

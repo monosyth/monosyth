@@ -407,7 +407,63 @@
 .orbitField {
   position: absolute;
   inset: 0;
+  z-index: 2;
   display: block;
+  transform-origin: center;
+}
+
+.orbitTrace,
+.orbitProbe {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  pointer-events: none;
+  transform-origin: center;
+}
+
+.orbitTrace {
+  inset: -1.5%;
+  z-index: 0;
+  background: conic-gradient(
+    from 15deg,
+    transparent 0 18%,
+    rgba(34, 211, 238, 0.08) 24%,
+    rgba(34, 211, 238, 0.62) 31%,
+    rgba(185, 242, 61, 0.38) 35%,
+    transparent 43% 100%
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2px),
+    #000 calc(100% - 1.5px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2px),
+    #000 calc(100% - 1.5px)
+  );
+}
+
+.orbitProbe {
+  inset: 19%;
+  z-index: 1;
+  border: 1px dashed rgba(86, 91, 255, 0.16);
+}
+
+.orbitProbe::after {
+  position: absolute;
+  top: -0.16rem;
+  left: 50%;
+  width: 0.34rem;
+  height: 0.34rem;
+  border: 1px solid rgba(242, 247, 255, 0.72);
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow:
+    0 0 0 0.22rem rgba(34, 211, 238, 0.08),
+    0 0 0.85rem rgba(34, 211, 238, 0.72);
+  content: "";
+  transform: translate(-50%, -50%);
 }
 
 .specimenObject {
@@ -419,34 +475,133 @@
   transform: translate(-50%, -50%);
 }
 
-.specimenObject img {
+.specimenCounter,
+.specimenDrift {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transform-origin: center;
+}
+
+.specimenAura {
+  position: absolute;
+  inset: 20%;
+  z-index: 0;
+  display: block;
+  border: 1px dotted var(--specimen-ring);
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--specimen-glow), transparent 68%);
+  box-shadow: 0 0 1.2rem var(--specimen-glow);
+}
+
+.specimenAura::after {
+  position: absolute;
+  top: 5%;
+  right: 5%;
+  width: 0.24rem;
+  height: 0.24rem;
+  border-radius: 50%;
+  background: var(--specimen-color);
+  box-shadow: 0 0 0.55rem var(--specimen-color);
+  content: "";
+}
+
+.specimenImage {
+  position: relative;
+  z-index: 1;
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
+  filter: drop-shadow(0 0 0.6rem var(--specimen-glow));
 }
 
 .starObject {
+  --specimen-color: #6689ff;
+  --specimen-glow: rgba(86, 91, 255, 0.48);
+  --specimen-ring: rgba(105, 135, 255, 0.34);
+  --drift-time: 10.7s;
+  --drift-delay: -2.1s;
+  --drift-x: 1px;
+  --drift-y: -2px;
+  --drift-r: 0.8deg;
+  --drift-x-alt: -1.4px;
+  --drift-y-alt: 0.6px;
+  --drift-r-alt: -0.35deg;
+  --aura-time: 9.2s;
+  --aura-delay: -3.4s;
   top: 3%;
   left: 50%;
 }
 
 .sphereObject {
+  --specimen-color: #b9f23d;
+  --specimen-glow: rgba(185, 242, 61, 0.38);
+  --specimen-ring: rgba(185, 242, 61, 0.3);
+  --drift-time: 12.4s;
+  --drift-delay: -7.2s;
+  --drift-x: -1.6px;
+  --drift-y: 1px;
+  --drift-r: -0.7deg;
+  --drift-x-alt: 0.8px;
+  --drift-y-alt: -1.2px;
+  --drift-r-alt: 0.4deg;
+  --aura-time: 10.8s;
+  --aura-delay: -6.1s;
   top: 35%;
   left: 95%;
 }
 
 .clusterObject {
+  --specimen-color: #ff8a4c;
+  --specimen-glow: rgba(255, 138, 76, 0.42);
+  --specimen-ring: rgba(255, 138, 76, 0.32);
+  --drift-time: 9.8s;
+  --drift-delay: -4.6s;
+  --drift-x: 1.8px;
+  --drift-y: 1.2px;
+  --drift-r: 0.65deg;
+  --drift-x-alt: -0.7px;
+  --drift-y-alt: -1.4px;
+  --drift-r-alt: -0.5deg;
+  --aura-time: 8.7s;
+  --aura-delay: -1.8s;
   top: 88%;
   left: 78%;
 }
 
 .sheetObject {
+  --specimen-color: #6d5bff;
+  --specimen-glow: rgba(86, 91, 255, 0.46);
+  --specimen-ring: rgba(116, 96, 255, 0.34);
+  --drift-time: 11.6s;
+  --drift-delay: -8.8s;
+  --drift-x: -1.2px;
+  --drift-y: -1.6px;
+  --drift-r: 0.95deg;
+  --drift-x-alt: 1.3px;
+  --drift-y-alt: 0.7px;
+  --drift-r-alt: -0.55deg;
+  --aura-time: 9.9s;
+  --aura-delay: -7.3s;
   top: 88%;
   left: 22%;
 }
 
 .cubeObject {
+  --specimen-color: #22d3ee;
+  --specimen-glow: rgba(34, 211, 238, 0.42);
+  --specimen-ring: rgba(34, 211, 238, 0.34);
+  --drift-time: 13s;
+  --drift-delay: -5.7s;
+  --drift-x: 1.4px;
+  --drift-y: -1px;
+  --drift-r: -0.85deg;
+  --drift-x-alt: -1.2px;
+  --drift-y-alt: 1.4px;
+  --drift-r-alt: 0.45deg;
+  --aura-time: 11.3s;
+  --aura-delay: -4.5s;
   top: 35%;
   left: 5%;
 }
@@ -557,33 +712,36 @@
 .productSection {
   width: min(100% - 2.5rem, 90rem);
   margin: 0 auto;
-  padding: clamp(5rem, 9vw, 9rem) 0;
+  padding: clamp(4.5rem, 6vw, 6.5rem) 0 clamp(5.5rem, 8vw, 8rem);
   border-bottom: 1px solid var(--line);
 }
 
 .sectionHeading {
-  display: grid;
-  margin-bottom: 3rem;
-  grid-template-columns: 0.55fr 1.45fr;
-  align-items: start;
-  gap: 2rem;
+  display: block;
+  width: min(100%, 48rem);
+  margin: 0 0 clamp(2.75rem, 4vw, 4rem);
 }
 
 .sectionEyebrow {
-  margin: 0.35rem 0 0;
+  margin: 0 0 clamp(0.9rem, 1.5vw, 1.3rem);
   color: var(--cyan);
   font-size: 0.62rem;
   letter-spacing: 0.17em;
 }
 
 .sectionHeading h2 {
-  max-width: 14ch;
+  max-width: none;
   margin: 0;
-  font-size: clamp(2.5rem, 5.1vw, 5.6rem);
+  font-size: clamp(3.1rem, 4vw, 4.5rem);
   font-weight: 600;
-  line-height: 0.98;
-  letter-spacing: -0.06em;
-  text-wrap: balance;
+  line-height: 0.96;
+  letter-spacing: -0.055em;
+  text-wrap: initial;
+}
+
+.sectionHeading h2 span {
+  display: block;
+  white-space: nowrap;
 }
 
 .productCard {
@@ -778,11 +936,35 @@
   }
 
   .orbitField {
-    animation: orbitTurn 110s linear infinite;
+    animation: orbitTurn 94s linear infinite;
   }
 
-  .orbitField img {
-    animation: orbitCounterTurn 110s linear infinite;
+  .orbitTrace {
+    animation: orbitTurn 46s linear infinite;
+  }
+
+  .orbitProbe {
+    animation: orbitTurn 39s linear infinite reverse;
+  }
+
+  .specimenCounter {
+    animation: orbitCounterTurn 94s linear infinite;
+  }
+
+  .specimenDrift {
+    animation: microDrift var(--drift-time) ease-in-out var(--drift-delay) infinite;
+  }
+
+  .specimenAura {
+    animation: auraBreath var(--aura-time) ease-in-out var(--aura-delay) infinite;
+  }
+
+  .synthesisRing::after {
+    animation: orbitCounterTurn 56s linear infinite;
+  }
+
+  .synthesisCore {
+    animation: ideaTwinkle 8s ease-in-out infinite;
   }
 }
 
@@ -805,6 +987,43 @@
 @keyframes orbitCounterTurn {
   to {
     transform: rotate(-1turn);
+  }
+}
+
+@keyframes microDrift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0);
+  }
+  38% {
+    transform: translate3d(var(--drift-x), var(--drift-y), 0) rotate(var(--drift-r));
+  }
+  72% {
+    transform: translate3d(var(--drift-x-alt), var(--drift-y-alt), 0) rotate(var(--drift-r-alt));
+  }
+}
+
+@keyframes auraBreath {
+  0%,
+  100% {
+    opacity: 0.22;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 0.48;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes ideaTwinkle {
+  0%,
+  100% {
+    opacity: 0.88;
+    transform: scale(0.97) rotate(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.03) rotate(4deg);
   }
 }
 
@@ -847,12 +1066,8 @@
     justify-self: center;
   }
 
-  .sectionHeading {
-    grid-template-columns: 1fr;
-  }
-
   .sectionHeading h2 {
-    max-width: 15ch;
+    font-size: clamp(2.65rem, 7vw, 4rem);
   }
 
   .productCard {
@@ -948,6 +1163,10 @@
     margin-bottom: 2rem;
   }
 
+  .sectionHeading h2 {
+    font-size: clamp(2rem, 9vw, 2.7rem);
+  }
+
   .productCard {
     border-radius: 1.5rem;
   }
@@ -977,6 +1196,12 @@
 
   .footer p:nth-child(2) {
     display: none;
+  }
+}
+
+@media (max-width: 23rem) {
+  .sectionHeading h2 span {
+    white-space: normal;
   }
 }
 
