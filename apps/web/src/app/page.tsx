@@ -232,7 +232,9 @@ export default function Home() {
               <a
                 className={styles.productLink}
                 href="https://funpartyapp.com"
-                aria-label="Visit FunParty"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Visit FunParty (opens in a new tab)"
               >
                 <span>Visit FunParty</span>
                 <span aria-hidden="true">↗</span>
