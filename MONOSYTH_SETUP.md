@@ -2,18 +2,18 @@
 
 ## Project Layout
 
-- Repo root: `/Users/scottwaite/monosyth`
-- Web app: `/Users/scottwaite/monosyth/apps/web`
-- Weather app: `/Users/scottwaite/monosyth/apps/weather`
-- Homepage: `/Users/scottwaite/monosyth/apps/web/src/app/page.tsx`
-- App shell: `/Users/scottwaite/monosyth/apps/web/src/app/app/page.tsx`
-- Global layout and metadata: `/Users/scottwaite/monosyth/apps/web/src/app/layout.tsx`
-- Global styles: `/Users/scottwaite/monosyth/apps/web/src/app/globals.css`
-- Firebase config: `/Users/scottwaite/monosyth/apps/web/src/lib/firebase/config.ts`
-- Firebase client init: `/Users/scottwaite/monosyth/apps/web/src/lib/firebase/client.ts`
-- Auth provider: `/Users/scottwaite/monosyth/apps/web/src/components/auth/auth-provider.tsx`
-- Firestore profile logic: `/Users/scottwaite/monosyth/apps/web/src/lib/firebase/profiles.ts`
-- App Hosting config: `/Users/scottwaite/monosyth/apps/web/apphosting.yaml`
+- Repo root: `/Users/scottwaite/monosythlabs`
+- Web app: `/Users/scottwaite/monosythlabs/apps/web`
+- Weather app: `/Users/scottwaite/monosythlabs/apps/weather`
+- Homepage: `/Users/scottwaite/monosythlabs/apps/web/src/app/page.tsx`
+- App shell: `/Users/scottwaite/monosythlabs/apps/web/src/app/app/page.tsx`
+- Global layout and metadata: `/Users/scottwaite/monosythlabs/apps/web/src/app/layout.tsx`
+- Global styles: `/Users/scottwaite/monosythlabs/apps/web/src/app/globals.css`
+- Firebase config: `/Users/scottwaite/monosythlabs/apps/web/src/lib/firebase/config.ts`
+- Firebase client init: `/Users/scottwaite/monosythlabs/apps/web/src/lib/firebase/client.ts`
+- Auth provider: `/Users/scottwaite/monosythlabs/apps/web/src/components/auth/auth-provider.tsx`
+- Firestore profile logic: `/Users/scottwaite/monosythlabs/apps/web/src/lib/firebase/profiles.ts`
+- App Hosting config: `/Users/scottwaite/monosythlabs/apps/web/apphosting.yaml`
 
 ## Current Stack
 
@@ -33,7 +33,7 @@
 
 ## How I Edit
 
-1. Work inside `/Users/scottwaite/monosyth/apps/web`.
+1. Work inside `/Users/scottwaite/monosythlabs/apps/web`.
 2. Inspect the relevant files before changing them.
 3. Make code edits in the app source.
 4. Run lint and production build before committing.
@@ -42,7 +42,7 @@
 ## Local Development
 
 ```bash
-cd ~/monosyth/apps/web
+cd ~/monosythlabs/apps/web
 source ~/.nvm/nvm.sh
 nvm use 22
 npm install
@@ -56,7 +56,7 @@ Local URL:
 Weather app:
 
 ```bash
-cd ~/monosyth/apps/weather
+cd ~/monosythlabs/apps/weather
 source ~/.nvm/nvm.sh
 nvm use 22
 npm install
@@ -69,8 +69,8 @@ Weather app local URL:
 
 ## Local Environment File
 
-- Local env file: `/Users/scottwaite/monosyth/apps/web/.env.local`
-- Template: `/Users/scottwaite/monosyth/apps/web/.env.example`
+- Local env file: `/Users/scottwaite/monosythlabs/apps/web/.env.local`
+- Template: `/Users/scottwaite/monosythlabs/apps/web/.env.example`
 
 Important:
 
@@ -81,7 +81,7 @@ Important:
 ## Standard Validation Commands
 
 ```bash
-cd ~/monosyth/apps/web
+cd ~/monosythlabs/apps/web
 source ~/.nvm/nvm.sh
 nvm use 22
 npm run lint
@@ -95,13 +95,13 @@ The production site deploys automatically from GitHub through Firebase App Hosti
 Standard flow:
 
 ```bash
-cd ~/monosyth/apps/web
+cd ~/monosythlabs/apps/web
 source ~/.nvm/nvm.sh
 nvm use 22
 npm run lint
 npm run build
 
-cd ~/monosyth
+cd ~/monosythlabs
 git add .
 git commit -m "Your commit message"
 git push origin main

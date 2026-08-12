@@ -1,9 +1,14 @@
-# monosyth
+# Monosyth Labs website
 
-Monosyth is set up as a multi-app workspace.
+This repository contains the website and web services for Monosyth Labs, LLC.
+The primary domain is `monosyth.com`; `monosythlabs.com` forwards to it.
+
+Personal projects, generated documents, experiments, and general ChatGPT/Codex
+work belong in `/Users/scottwaite/monosyth`, which is intentionally separate
+from this GitHub repository.
 
 Use this file as the quick overview.
-For the full working playbook, deployment notes, and Firebase setup, read [`MONOSYTH_SETUP.md`](/Users/scottwaite/monosyth/MONOSYTH_SETUP.md).
+For the full working playbook, deployment notes, and Firebase setup, read [`MONOSYTH_SETUP.md`](/Users/scottwaite/monosythlabs/MONOSYTH_SETUP.md).
 
 ## Active apps
 
@@ -54,4 +59,4 @@ Use Firebase App Hosting with:
 ## Project notes
 
 - `README.md`: quick repo overview
-- [`MONOSYTH_SETUP.md`](/Users/scottwaite/monosyth/MONOSYTH_SETUP.md): detailed setup, deploy, and platform playbook
+- [`MONOSYTH_SETUP.md`](/Users/scottwaite/monosythlabs/MONOSYTH_SETUP.md): detailed setup, deploy, and platform playbook
