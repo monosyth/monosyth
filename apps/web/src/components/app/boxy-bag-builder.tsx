@@ -337,7 +337,7 @@ export function BoxyBagBuilder() {
               <article className={`${styles.cutCard} ${styles.cornerCard}`}>
                 <div className={styles.outputLabel}><span>Mark 4</span> Boxed corners</div>
                 <strong>{formatMeasurement(plan.cornerMark, unit)} from point</strong>
-                <small>Sew a {formatMeasurement(plan.cornerStitchLine, unit)} line, then trim to seam allowance</small>
+                <small>Pinch each corner flat, sew {formatMeasurement(plan.cornerStitchLine, unit)} across, then trim</small>
               </article>
               <article className={`${styles.cutCard} ${styles.zipperCard}`}>
                 <div className={styles.outputLabel}><span>Cut 1</span> Zipper tape</div>
@@ -482,45 +482,90 @@ function PatternDiagram({
   return (
     <figure className={styles.patternFigure}>
       <div className={styles.figureTitle}>
-        <div><span>Pattern map</span><strong>Cut rectangles first. Box corners after assembly.</strong></div>
+        <div><span>Pattern map</span><strong>Two separate stages—nothing is cut from the flat panels.</strong></div>
         <span className={styles.figureScale}>diagram · not to scale</span>
       </div>
-      <svg viewBox="0 0 820 350" role="img" aria-label={`Cut panels ${panelLength} by ${panelWidth}; mark corners ${cornerMark} from the point`}>
-        <defs>
-          <pattern id="fabric-grid" width="22" height="22" patternUnits="userSpaceOnUse">
-            <path d="M22 0H0v22" fill="none" stroke="#a78bfa" strokeOpacity=".12" strokeWidth="1" />
-          </pattern>
-          <marker id="pattern-arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto-start-reverse">
-            <path d="M8 0 0 4l8 4" fill="none" stroke="#d9d2ef" strokeWidth="1.4" />
-          </marker>
-        </defs>
-        <g transform="translate(42 48)">
-          <rect width="472" height="230" rx="3" fill="#1c1535" stroke="#a78bfa" strokeWidth="2" />
-          <rect width="472" height="230" rx="3" fill="url(#fabric-grid)" />
-          <rect x="16" y="16" width="440" height="198" rx="2" fill="none" stroke="#4de1ff" strokeDasharray="7 7" strokeOpacity=".72" />
-          <path d="M0 27h472" stroke="#ffd75e" strokeWidth="5" />
-          <path d="M16 48h105M351 48h105" stroke="#ff7aac" strokeWidth="2" strokeDasharray="5 5" />
-          <text x="236" y="119" textAnchor="middle" fill="#f6f2ff" fontSize="23" fontWeight="650">OUTER · CUT 2</text>
-          <text x="236" y="150" textAnchor="middle" fill="#bcb2d4" fontFamily="var(--font-ibm-plex-mono)" fontSize="14">LINING · CUT 2 AT SAME SIZE</text>
-          <text x="236" y="204" textAnchor="middle" fill="#4de1ff" fontFamily="var(--font-ibm-plex-mono)" fontSize="12">DASHED = {seamAllowance} SEAM ALLOWANCE</text>
-          <g stroke="#d9d2ef" strokeWidth="1.4" markerStart="url(#pattern-arrow)" markerEnd="url(#pattern-arrow)">
-            <path d="M0 257h472" />
-            <path d="M-24 0v230" />
-          </g>
-          <text x="236" y="284" textAnchor="middle" fill="#f6f2ff" fontFamily="var(--font-ibm-plex-mono)" fontSize="15">{panelLength}</text>
-          <text x="-32" y="115" textAnchor="middle" fill="#f6f2ff" fontFamily="var(--font-ibm-plex-mono)" fontSize="15" transform="rotate(-90 -32 115)">{panelWidth}</text>
-        </g>
-        <g transform="translate(595 66)">
-          <path d="M0 174 88 0l88 174Z" fill="#21183d" stroke="#a78bfa" strokeWidth="2" />
-          <path d="M37 101h102" stroke="#ffd75e" strokeWidth="4" />
-          <path d="M88 174V101" stroke="#ff7aac" strokeWidth="2" strokeDasharray="5 5" />
-          <circle cx="88" cy="174" r="5" fill="#ff7aac" />
-          <text x="88" y="92" textAnchor="middle" fill="#fff3b0" fontFamily="var(--font-ibm-plex-mono)" fontSize="12">SEW {stitchLine} ACROSS</text>
-          <text x="98" y="139" fill="#ffc0da" fontFamily="var(--font-ibm-plex-mono)" fontSize="12">{cornerMark}</text>
-          <text x="88" y="213" textAnchor="middle" fill="#f6f2ff" fontSize="17" fontWeight="650">BOX EACH CORNER</text>
-          <text x="88" y="235" textAnchor="middle" fill="#a99fc2" fontSize="12">trim only after checking</text>
-        </g>
-      </svg>
+      <div className={styles.diagramSteps}>
+        <section className={styles.diagramStep}>
+          <header className={styles.diagramStepHeader}>
+            <span>1</span>
+            <div>
+              <strong>Cut flat panels</strong>
+              <small>Keep every panel a full rectangle.</small>
+            </div>
+          </header>
+          <svg viewBox="0 0 560 350" role="img" aria-label={`Cut two outer and two lining rectangles ${panelLength} by ${panelWidth}. Do not cut corners from the flat panels.`}>
+            <defs>
+              <pattern id="fabric-grid" width="22" height="22" patternUnits="userSpaceOnUse">
+                <path d="M22 0H0v22" fill="none" stroke="#a78bfa" strokeOpacity=".12" strokeWidth="1" />
+              </pattern>
+              <marker id="panel-arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto-start-reverse">
+                <path d="M8 0 0 4l8 4" fill="none" stroke="#d9d2ef" strokeWidth="1.4" />
+              </marker>
+            </defs>
+            <g transform="translate(54 50)">
+              <rect width="452" height="220" rx="3" fill="#1c1535" stroke="#a78bfa" strokeWidth="2" />
+              <rect width="452" height="220" rx="3" fill="url(#fabric-grid)" />
+              <rect x="16" y="16" width="420" height="188" rx="2" fill="none" stroke="#4de1ff" strokeDasharray="7 7" strokeOpacity=".82" />
+              <path d="M0 27h452" stroke="#ffd75e" strokeWidth="5" />
+              <rect x="145" y="14" width="162" height="26" rx="13" fill="#130d2c" stroke="#ffd75e" strokeOpacity=".55" />
+              <text x="226" y="32" textAnchor="middle" fill="#fff3b0" fontFamily="var(--font-ibm-plex-mono)" fontSize="11">ATTACH TO ZIPPER</text>
+              <text x="226" y="111" textAnchor="middle" fill="#f6f2ff" fontSize="23" fontWeight="650">OUTER · CUT 2</text>
+              <text x="226" y="141" textAnchor="middle" fill="#bcb2d4" fontFamily="var(--font-ibm-plex-mono)" fontSize="14">LINING · CUT 2 AT SAME SIZE</text>
+              <text x="226" y="188" textAnchor="middle" fill="#4de1ff" fontFamily="var(--font-ibm-plex-mono)" fontSize="11">CYAN DASH = {seamAllowance} STITCHING LINE</text>
+              <g stroke="#d9d2ef" strokeWidth="1.4" markerStart="url(#panel-arrow)" markerEnd="url(#panel-arrow)">
+                <path d="M0 249h452" />
+                <path d="M-25 0v220" />
+              </g>
+              <text x="226" y="276" textAnchor="middle" fill="#f6f2ff" fontFamily="var(--font-ibm-plex-mono)" fontSize="15">{panelLength}</text>
+              <text x="-34" y="110" textAnchor="middle" fill="#f6f2ff" fontFamily="var(--font-ibm-plex-mono)" fontSize="15" transform="rotate(-90 -34 110)">{panelWidth}</text>
+            </g>
+            <text x="280" y="332" textAnchor="middle" fill="#ff9bc3" fontFamily="var(--font-ibm-plex-mono)" fontSize="12">NO CORNERS ARE CUT FROM THIS RECTANGLE</text>
+          </svg>
+        </section>
+
+        <section className={styles.diagramStep}>
+          <header className={styles.diagramStepHeader}>
+            <span>2</span>
+            <div>
+              <strong>Box after assembly</strong>
+              <small>Pinch one sewn corner into a flat triangle.</small>
+            </div>
+          </header>
+          <svg viewBox="0 0 420 350" role="img" aria-label={`After assembly, measure ${cornerMark} from the corner point and sew a ${stitchLine} line across. Check the bag, then trim the tip leaving a ${seamAllowance} seam allowance.`}>
+            <defs>
+              <pattern id="trim-hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                <rect width="8" height="8" fill="#ff7aac" fillOpacity=".16" />
+                <path d="M0 0v8" stroke="#ff7aac" strokeOpacity=".5" strokeWidth="2" />
+              </pattern>
+              <marker id="corner-arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto-start-reverse">
+                <path d="M8 0 0 4l8 4" fill="none" stroke="#ffb3d2" strokeWidth="1.4" />
+              </marker>
+            </defs>
+            <g transform="translate(56 18)">
+              <path d="M154 16 12 276h284Z" fill="#21183d" stroke="#a78bfa" strokeWidth="2.5" />
+              <path d="M154 16 112 93h84Z" fill="url(#trim-hatch)" />
+              <path d="M112 93h84" stroke="#ff7aac" strokeWidth="2" strokeDasharray="6 5" />
+              <path d="M101 113h106" stroke="#ffd75e" strokeWidth="5" />
+              <circle cx="154" cy="16" r="6" fill="#ff7aac" />
+              <path d="M225 21v88" stroke="#ffb3d2" strokeWidth="1.7" markerStart="url(#corner-arrow)" markerEnd="url(#corner-arrow)" />
+              <path d="M162 18h63M208 113h17" stroke="#ffb3d2" strokeWidth="1" strokeDasharray="4 4" opacity=".75" />
+              <path d="m132 210 22 16 22-16" fill="none" stroke="#4de1ff" strokeWidth="2" strokeLinecap="round" />
+              <path d="m93 247 61-21 61 21" fill="none" stroke="#4de1ff" strokeWidth="2" strokeLinecap="round" />
+              <text x="237" y="69" fill="#ffc5dc" fontFamily="var(--font-ibm-plex-mono)" fontSize="13">{cornerMark}</text>
+              <text x="154" y="8" textAnchor="middle" fill="#ffc5dc" fontFamily="var(--font-ibm-plex-mono)" fontSize="13">CORNER POINT</text>
+              <text x="154" y="87" textAnchor="middle" fill="#ffc5dc" fontFamily="var(--font-ibm-plex-mono)" fontSize="12">TRIM AFTER CHECKING</text>
+              <text x="154" y="136" textAnchor="middle" fill="#fff3b0" fontFamily="var(--font-ibm-plex-mono)" fontSize="14">SEW {stitchLine} ACROSS</text>
+              <text x="154" y="296" textAnchor="middle" fill="#9ff1ff" fontFamily="var(--font-ibm-plex-mono)" fontSize="12">SIDE + BOTTOM SEAMS MEET</text>
+            </g>
+          </svg>
+          <ol className={styles.diagramInstructions}>
+            <li>Measure <strong>{cornerMark}</strong> from the point.</li>
+            <li>Sew <strong>{stitchLine}</strong> straight across.</li>
+            <li>Check the depth, then trim to <strong>{seamAllowance}</strong>.</li>
+          </ol>
+        </section>
+      </div>
     </figure>
   );
 }
