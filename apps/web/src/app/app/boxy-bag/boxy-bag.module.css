@@ -199,6 +199,8 @@
 .methodNote span { color: #4de1ff; font-size: 1.1rem; }
 .methodNote p { margin: 0; }
 .methodNote strong { color: #dffaff; }
+.methodNote a { color: #7cecff; text-underline-offset: .16em; }
+.methodNote a:hover { color: #dffaff; }
 .validation { margin: .8rem 0 0; padding: .75rem; border-radius: .7rem; color: #ffd1df; background: rgba(255, 61, 154, .11); font-size: .78rem; }
 
 .results { display: grid; gap: 1rem; padding: 1.35rem; min-width: 0; }
@@ -249,12 +251,37 @@
 .zipperCard { border-color: rgba(255, 215, 94, .28); }
 .zipperCard .outputLabel span { background: #ffd75e; }
 
+.templateCallout {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .8rem;
+  align-items: start;
+  padding: .9rem 1rem;
+  border: 1px solid rgba(77, 225, 255, .3);
+  border-radius: 1rem;
+  background: linear-gradient(110deg, rgba(77, 225, 255, .09), rgba(167, 139, 250, .07));
+}
+.templateIcon { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: .55rem; color: #08111b; background: #4de1ff; font: 800 1.15rem var(--font-ibm-plex-mono), monospace; }
+.templateCallout div > span, .templateCallout strong { display: block; }
+.templateCallout div > span { color: #4de1ff; font: 500 .61rem var(--font-ibm-plex-mono), monospace; letter-spacing: .14em; text-transform: uppercase; }
+.templateCallout strong { margin-top: .18rem; color: #f6f2ff; font-size: .92rem; }
+.templateCallout p { margin: .28rem 0 0; color: #a99fc1; font-size: .71rem; line-height: 1.5; }
+.templateWarning { border-color: rgba(255, 215, 94, .35); background: linear-gradient(110deg, rgba(255, 215, 94, .09), rgba(255, 122, 172, .05)); }
+.templateWarning .templateIcon { background: #ffd75e; }
+.templateWarning div > span { color: #ffd75e; }
+
 .patternFigure { margin: 0; padding: 1rem; border: 1px solid rgba(167, 139, 250, .2); border-radius: 1.1rem; background: rgba(9, 6, 26, .68); overflow: hidden; }
 .figureTitle { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
 .figureTitle div span, .figureTitle div strong { display: block; }
 .figureTitle div span, .figureScale { color: #4de1ff; font: 500 .62rem var(--font-ibm-plex-mono), monospace; letter-spacing: .15em; text-transform: uppercase; }
 .figureTitle div strong { margin-top: .25rem; font-size: .92rem; }
 .figureScale { color: #6f6686; white-space: nowrap; }
+.diagramLegend { display: flex; flex-wrap: wrap; gap: .55rem 1rem; margin-top: .75rem; color: #8f85a9; font: 500 .58rem var(--font-ibm-plex-mono), monospace; letter-spacing: .05em; text-transform: uppercase; }
+.diagramLegend span { display: inline-flex; align-items: center; gap: .35rem; }
+.diagramLegend i { display: inline-block; width: 1.25rem; height: .22rem; border-radius: 999px; }
+.legendCut { background: #ff7aac; }
+.legendSew { background: #ffd75e; }
+.legendSeam { background: #4de1ff; }
 .diagramSteps { display: grid; gap: .75rem; margin-top: 1rem; }
 .diagramStep { min-width: 0; padding: .85rem; border: 1px solid rgba(167, 139, 250, .15); border-radius: .9rem; background: rgba(28, 20, 56, .45); }
 .diagramStepHeader { display: flex; align-items: center; gap: .7rem; }

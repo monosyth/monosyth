@@ -16,10 +16,11 @@ type Draft = {
 };
 
 const INCH_TO_CM = 2.54;
+const TEMPLATE_GUIDES_INCHES = [1, 1.5, 2, 2.5] as const;
 const presets = [
   { name: "Notions", note: "Pins + small tools", length: 7, width: 3, height: 3 },
   { name: "Everyday", note: "Makeup + cables", length: 9, width: 4, height: 4 },
-  { name: "Travel", note: "Roomy toiletry bag", length: 12, width: 6, height: 5 },
+  { name: "Travel", note: "Roomy toiletry bag", length: 12, width: 5, height: 5 },
 ] as const;
 
 const defaultDraft: Draft = {
@@ -76,11 +77,27 @@ function measurementPair(value: number, unit: Unit) {
   return `${formatMeasurement(value, unit)} (${formatEquivalent(value, unit)})`;
 }
 
+function getTemplateFit(guide: number, unit: Unit) {
+  const guideInches = unit === "in" ? guide : guide / INCH_TO_CM;
+  const exactGuide = TEMPLATE_GUIDES_INCHES.find(
+    (size) => Math.abs(size - guideInches) < 0.01,
+  );
+  const nearestGuide = TEMPLATE_GUIDES_INCHES.reduce((nearest, size) =>
+    Math.abs(size - guideInches) < Math.abs(nearest - guideInches) ? size : nearest,
+  );
+
+  return { exactGuide, guideInches, nearestGuide };
+}
+
 function buildCuttingList(draft: Draft, unit: Unit) {
   const plan = calculateBoxyBagPlan({
     ...draft,
     zipperExtra: unit === "in" ? 2 : 5,
   });
+  const templateFit = getTemplateFit(plan.cornerTemplateGuide, unit);
+  const guideText = templateFit.exactGuide
+    ? `Use the ${formatInches(templateFit.exactGuide)} corner on the clear Boxy Bag Template.`
+    : `Required guide: ${formatInches(templateFit.guideInches)}. The clear template has 1″, 1 1/2″, 2″, and 2 1/2″ corners; mark this custom size with a ruler.`;
 
   return [
     `BOXY BAG CUTTING PLAN`,
@@ -93,9 +110,11 @@ function buildCuttingList(draft: Draft, unit: Unit) {
     `Interfacing (optional): 2 @ ${measurementPair(plan.panelLength, unit)} × ${measurementPair(plan.panelWidth, unit)}`,
     `Zipper tape: 1 @ ${measurementPair(plan.recommendedZipper, unit)}`,
     ``,
-    `BOX THE CORNERS`,
-    `Mark ${measurementPair(plan.cornerMark, unit)} from each corner point.`,
-    `Sew a ${measurementPair(plan.cornerStitchLine, unit)} line across each boxed corner, then trim to the ${measurementPair(draft.seamAllowance, unit)} seam allowance.`,
+    `BOX THE CORNERS — OUTER + LINING`,
+    guideText,
+    `The guide is half the finished front-to-back width: ${measurementPair(plan.cornerTemplateGuide, unit)}.`,
+    `If measuring from the raw fabric corner before sewing, mark ${measurementPair(plan.rawCornerMark, unit)} (guide + seam allowance).`,
+    `Cut the square, bring its two raw edges together, and sew with a ${measurementPair(draft.seamAllowance, unit)} seam allowance. The finished corner seam is ${measurementPair(plan.cornerStitchLine, unit)} across.`,
   ].join("\n");
 }
 
@@ -113,13 +132,13 @@ export function BoxyBagBuilder() {
       }),
     [draft, unit],
   );
+  const templateFit = getTemplateFit(plan.cornerTemplateGuide, unit);
 
   const isValid =
     draft.length > 0 &&
     draft.width > 0 &&
     draft.height > 0 &&
-    draft.seamAllowance > 0 &&
-    draft.height > draft.seamAllowance * 2;
+    draft.seamAllowance > 0;
 
   function chooseUnit(nextUnit: Unit) {
     if (nextUnit === unit) return;
@@ -198,12 +217,12 @@ export function BoxyBagBuilder() {
             <h1>Build the box.<br /><span>We’ll do the math.</span></h1>
             <p className={styles.heroIntro}>
               Start with the size you want to hold. Get an exact cutting list,
-              corner marks, zipper length, and a visual pattern map.
+              the matching box-corner guide, zipper length, and a visual pattern map.
             </p>
             <div className={styles.heroTags} aria-label="Pattern details">
               <span>Fully lined</span>
-              <span>4 panels</span>
-              <span>Boxed ends</span>
+              <span>Cut rectangles first</span>
+              <span>Template-ready</span>
             </div>
           </div>
           <BagDiagram
@@ -290,13 +309,16 @@ export function BoxyBagBuilder() {
 
             {!isValid ? (
               <p className={styles.validation} role="alert">
-                Enter positive dimensions. Height must be more than twice the seam allowance.
+                Enter positive dimensions and a positive seam allowance.
               </p>
             ) : null}
 
             <div className={styles.methodNote}>
               <span aria-hidden="true">⌁</span>
-              <p><strong>Drafting method</strong> Two outer and two lining panels, with the zipper centered along the finished length.</p>
+              <p>
+                <strong>Your tool method</strong> Cut two outer and two lining rectangles first,
+                then box the assembled corners with the clear <a href="https://www.amazon.com/dp/B0H8RCQGS9" target="_blank" rel="noreferrer">1″–2½″ guide</a>.
+              </p>
             </div>
           </aside>
 
@@ -335,9 +357,9 @@ export function BoxyBagBuilder() {
                 <small>{formatEquivalent(plan.panelLength, unit)} × {formatEquivalent(plan.panelWidth, unit)}</small>
               </article>
               <article className={`${styles.cutCard} ${styles.cornerCard}`}>
-                <div className={styles.outputLabel}><span>Mark 4</span> Boxed corners</div>
-                <strong>{formatMeasurement(plan.cornerMark, unit)} from point</strong>
-                <small>Pinch each corner flat, sew {formatMeasurement(plan.cornerStitchLine, unit)} across, then trim</small>
+                <div className={styles.outputLabel}><span>Use</span> Boxy bag template</div>
+                <strong>{formatMeasurement(plan.cornerTemplateGuide, unit)} corner guide</strong>
+                <small>Half the finished front-to-back width; sew with a {formatMeasurement(draft.seamAllowance, unit)} seam allowance</small>
               </article>
               <article className={`${styles.cutCard} ${styles.zipperCard}`}>
                 <div className={styles.outputLabel}><span>Cut 1</span> Zipper tape</div>
@@ -346,10 +368,28 @@ export function BoxyBagBuilder() {
               </article>
             </div>
 
+            <article className={`${styles.templateCallout} ${templateFit.exactGuide ? "" : styles.templateWarning}`}>
+              <span className={styles.templateIcon} aria-hidden="true">⌜</span>
+              <div>
+                <span>Your clear template</span>
+                <strong>
+                  {templateFit.exactGuide
+                    ? `Use the ${formatInches(templateFit.exactGuide)} corner.`
+                    : `This draft needs a ${formatInches(templateFit.guideInches)} guide.`}
+                </strong>
+                <p>
+                  {templateFit.exactGuide
+                    ? `That guide makes the finished bag ${formatMeasurement(draft.width, unit)} front to back. If you measure from the raw fabric edge instead of the sewn seam lines, mark ${formatMeasurement(plan.rawCornerMark, unit)}.`
+                    : `The tool has 1″, 1 1/2″, 2″, and 2 1/2″ corners. Its nearest mark is ${formatInches(templateFit.nearestGuide)}; use a ruler for this custom size or change the finished width to ${formatMeasurement((templateFit.nearestGuide * 2) * (unit === "in" ? 1 : INCH_TO_CM), unit)}.`}
+                </p>
+              </div>
+            </article>
+
             <PatternDiagram
               panelLength={formatMeasurement(plan.panelLength, unit)}
               panelWidth={formatMeasurement(plan.panelWidth, unit)}
-              cornerMark={formatMeasurement(plan.cornerMark, unit)}
+              cornerGuide={formatMeasurement(plan.cornerTemplateGuide, unit)}
+              rawCornerMark={formatMeasurement(plan.rawCornerMark, unit)}
               stitchLine={formatMeasurement(plan.cornerStitchLine, unit)}
               seamAllowance={formatMeasurement(draft.seamAllowance, unit)}
             />
@@ -369,9 +409,9 @@ export function BoxyBagBuilder() {
                 <p className={styles.cardNumber}>04</p>
                 <h3>Corner sequence</h3>
                 <ol>
-                  <li>Pinch each corner so the seams meet.</li>
-                  <li>Measure from the point and mark the box line.</li>
-                  <li>Sew across, check the shape, then trim.</li>
+                  <li>Assemble the zipper, bottom, and side seams.</li>
+                  <li>Use the {formatMeasurement(plan.cornerTemplateGuide, unit)} guide at each sewn corner and cut.</li>
+                  <li>Bring the two cut edges together and sew the diagonal cap seam.</li>
                 </ol>
               </article>
             </div>
@@ -469,21 +509,28 @@ function BagDiagram({ length, width, height }: { length: string; width: string; 
 function PatternDiagram({
   panelLength,
   panelWidth,
-  cornerMark,
+  cornerGuide,
+  rawCornerMark,
   stitchLine,
   seamAllowance,
 }: {
   panelLength: string;
   panelWidth: string;
-  cornerMark: string;
+  cornerGuide: string;
+  rawCornerMark: string;
   stitchLine: string;
   seamAllowance: string;
 }) {
   return (
     <figure className={styles.patternFigure}>
       <div className={styles.figureTitle}>
-        <div><span>Pattern map</span><strong>Two separate stages—nothing is cut from the flat panels.</strong></div>
+        <div><span>Pattern map</span><strong>Cut the rectangles first. Box the sewn corners second.</strong></div>
         <span className={styles.figureScale}>diagram · not to scale</span>
+      </div>
+      <div className={styles.diagramLegend} aria-label="Diagram color key">
+        <span><i className={styles.legendCut} /> pink = cut away</span>
+        <span><i className={styles.legendSew} /> yellow = sew</span>
+        <span><i className={styles.legendSeam} /> cyan = existing seam</span>
       </div>
       <div className={styles.diagramSteps}>
         <section className={styles.diagramStep}>
@@ -491,7 +538,7 @@ function PatternDiagram({
             <span>1</span>
             <div>
               <strong>Cut flat panels</strong>
-              <small>Keep every panel a full rectangle.</small>
+              <small>Two outer + two lining, all the same size.</small>
             </div>
           </header>
           <svg viewBox="0 0 560 350" role="img" aria-label={`Cut two outer and two lining rectangles ${panelLength} by ${panelWidth}. Do not cut corners from the flat panels.`}>
@@ -512,7 +559,7 @@ function PatternDiagram({
               <text x="226" y="32" textAnchor="middle" fill="#fff3b0" fontFamily="var(--font-ibm-plex-mono)" fontSize="11">ATTACH TO ZIPPER</text>
               <text x="226" y="111" textAnchor="middle" fill="#f6f2ff" fontSize="23" fontWeight="650">OUTER · CUT 2</text>
               <text x="226" y="141" textAnchor="middle" fill="#bcb2d4" fontFamily="var(--font-ibm-plex-mono)" fontSize="14">LINING · CUT 2 AT SAME SIZE</text>
-              <text x="226" y="188" textAnchor="middle" fill="#4de1ff" fontFamily="var(--font-ibm-plex-mono)" fontSize="11">CYAN DASH = {seamAllowance} STITCHING LINE</text>
+              <text x="226" y="188" textAnchor="middle" fill="#4de1ff" fontFamily="var(--font-ibm-plex-mono)" fontSize="11">ASSEMBLE ZIPPER + MAIN SEAMS FIRST</text>
               <g stroke="#d9d2ef" strokeWidth="1.4" markerStart="url(#panel-arrow)" markerEnd="url(#panel-arrow)">
                 <path d="M0 249h452" />
                 <path d="M-25 0v220" />
@@ -520,7 +567,7 @@ function PatternDiagram({
               <text x="226" y="276" textAnchor="middle" fill="#f6f2ff" fontFamily="var(--font-ibm-plex-mono)" fontSize="15">{panelLength}</text>
               <text x="-34" y="110" textAnchor="middle" fill="#f6f2ff" fontFamily="var(--font-ibm-plex-mono)" fontSize="15" transform="rotate(-90 -34 110)">{panelWidth}</text>
             </g>
-            <text x="280" y="332" textAnchor="middle" fill="#ff9bc3" fontFamily="var(--font-ibm-plex-mono)" fontSize="12">NO CORNERS ARE CUT FROM THIS RECTANGLE</text>
+            <text x="280" y="332" textAnchor="middle" fill="#ffb3d2" fontFamily="var(--font-ibm-plex-mono)" fontSize="12">START WITH THE FULL RECTANGLE</text>
           </svg>
         </section>
 
@@ -528,41 +575,52 @@ function PatternDiagram({
           <header className={styles.diagramStepHeader}>
             <span>2</span>
             <div>
-              <strong>Box after assembly</strong>
-              <small>Pinch one sewn corner into a flat triangle.</small>
+              <strong>Cut + sew each corner cap</strong>
+              <small>Use the Boxy Bag Template after the main seams are sewn.</small>
             </div>
           </header>
-          <svg viewBox="0 0 420 350" role="img" aria-label={`After assembly, measure ${cornerMark} from the corner point and sew a ${stitchLine} line across. Check the bag, then trim the tip leaving a ${seamAllowance} seam allowance.`}>
+          <svg viewBox="0 0 520 350" role="img" aria-label={`At each sewn corner, use the ${cornerGuide} template guide. If measuring from the raw edge, mark ${rawCornerMark}. Cut away the pink square, bring the two cut edges together, and sew with a ${seamAllowance} seam allowance. The finished corner seam is ${stitchLine}.`}>
             <defs>
-              <pattern id="trim-hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <pattern id="cut-hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
                 <rect width="8" height="8" fill="#ff7aac" fillOpacity=".16" />
                 <path d="M0 0v8" stroke="#ff7aac" strokeOpacity=".5" strokeWidth="2" />
               </pattern>
-              <marker id="corner-arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto-start-reverse">
-                <path d="M8 0 0 4l8 4" fill="none" stroke="#ffb3d2" strokeWidth="1.4" />
+              <marker id="fold-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                <path d="M0 0 8 4 0 8" fill="none" stroke="#d9d2ef" strokeWidth="1.4" />
               </marker>
             </defs>
-            <g transform="translate(56 18)">
-              <path d="M154 16 12 276h284Z" fill="#21183d" stroke="#a78bfa" strokeWidth="2.5" />
-              <path d="M154 16 112 93h84Z" fill="url(#trim-hatch)" />
-              <path d="M112 93h84" stroke="#ff7aac" strokeWidth="2" strokeDasharray="6 5" />
-              <path d="M101 113h106" stroke="#ffd75e" strokeWidth="5" />
-              <circle cx="154" cy="16" r="6" fill="#ff7aac" />
-              <path d="M225 21v88" stroke="#ffb3d2" strokeWidth="1.7" markerStart="url(#corner-arrow)" markerEnd="url(#corner-arrow)" />
-              <path d="M162 18h63M208 113h17" stroke="#ffb3d2" strokeWidth="1" strokeDasharray="4 4" opacity=".75" />
-              <path d="m132 210 22 16 22-16" fill="none" stroke="#4de1ff" strokeWidth="2" strokeLinecap="round" />
-              <path d="m93 247 61-21 61 21" fill="none" stroke="#4de1ff" strokeWidth="2" strokeLinecap="round" />
-              <text x="237" y="69" fill="#ffc5dc" fontFamily="var(--font-ibm-plex-mono)" fontSize="13">{cornerMark}</text>
-              <text x="154" y="8" textAnchor="middle" fill="#ffc5dc" fontFamily="var(--font-ibm-plex-mono)" fontSize="13">CORNER POINT</text>
-              <text x="154" y="87" textAnchor="middle" fill="#ffc5dc" fontFamily="var(--font-ibm-plex-mono)" fontSize="12">TRIM AFTER CHECKING</text>
-              <text x="154" y="136" textAnchor="middle" fill="#fff3b0" fontFamily="var(--font-ibm-plex-mono)" fontSize="14">SEW {stitchLine} ACROSS</text>
-              <text x="154" y="296" textAnchor="middle" fill="#9ff1ff" fontFamily="var(--font-ibm-plex-mono)" fontSize="12">SIDE + BOTTOM SEAMS MEET</text>
+            <g>
+              <text x="105" y="30" textAnchor="middle" fill="#f6f2ff" fontFamily="var(--font-ibm-plex-mono)" fontSize="12">A · TRACE + CUT</text>
+              <path d="M24 52h181v181H24Z" fill="#21183d" stroke="#a78bfa" strokeWidth="2" />
+              <path d="M181 52v157H24M24 209h157" fill="none" stroke="#4de1ff" strokeWidth="1.7" strokeDasharray="7 6" />
+              <path d="M126 154h79v79h-79Z" fill="url(#cut-hatch)" />
+              <path d="M126 233v-79h79" fill="none" stroke="#ff7aac" strokeWidth="3" strokeDasharray="7 5" />
+              <circle cx="181" cy="209" r="5" fill="#4de1ff" />
+              <text x="174" y="198" textAnchor="end" fill="#9ff1ff" fontFamily="var(--font-ibm-plex-mono)" fontSize="10">SEAM INTERSECTION</text>
+              <text x="165" y="176" textAnchor="middle" fill="#ffd0e2" fontFamily="var(--font-ibm-plex-mono)" fontSize="11">CUT AWAY</text>
+              <text x="114" y="260" textAnchor="middle" fill="#ffb3d2" fontFamily="var(--font-ibm-plex-mono)" fontSize="11">RAW-EDGE MARK {rawCornerMark}</text>
+              <path d="M181 214v36M126 238v12" stroke="#ffb3d2" strokeWidth="1" />
+              <path d="M126 247h55" stroke="#ffb3d2" strokeWidth="1.4" />
+              <text x="105" y="284" textAnchor="middle" fill="#d8d0eb" fontFamily="var(--font-ibm-plex-mono)" fontSize="11">TOOL GUIDE {cornerGuide}</text>
+
+              <path d="M226 154h48" fill="none" stroke="#d9d2ef" strokeWidth="1.5" strokeDasharray="5 5" markerEnd="url(#fold-arrow)" />
+              <text x="250" y="143" textAnchor="middle" fill="#9389aa" fontFamily="var(--font-ibm-plex-mono)" fontSize="9">MATCH EDGES</text>
+
+              <text x="397" y="30" textAnchor="middle" fill="#f6f2ff" fontFamily="var(--font-ibm-plex-mono)" fontSize="12">B · BRING EDGES TOGETHER</text>
+              <path d="M291 85 486 168 454 245 259 162Z" fill="#21183d" stroke="#a78bfa" strokeWidth="2.2" />
+              <path d="M291 85 486 168" stroke="#ff7aac" strokeWidth="4" />
+              <path d="M281 109 476 192" stroke="#ffd75e" strokeWidth="5" />
+              <path d="M271 133 466 216" stroke="#4de1ff" strokeWidth="1.5" strokeDasharray="7 6" opacity=".8" />
+              <text x="395" y="104" transform="rotate(23 395 104)" textAnchor="middle" fill="#ffd0e2" fontFamily="var(--font-ibm-plex-mono)" fontSize="10">MATCHED RAW EDGES</text>
+              <text x="378" y="157" transform="rotate(23 378 157)" textAnchor="middle" fill="#fff3b0" fontFamily="var(--font-ibm-plex-mono)" fontSize="12">SEW {seamAllowance} FROM EDGE</text>
+              <text x="372" y="276" textAnchor="middle" fill="#d8d0eb" fontFamily="var(--font-ibm-plex-mono)" fontSize="11">FINISHED CAP SEAM · {stitchLine}</text>
+              <text x="260" y="323" textAnchor="middle" fill="#ffb3d2" fontFamily="var(--font-ibm-plex-mono)" fontSize="11">PINK IS REMOVED · YELLOW IS THE ONLY NEW SEAM</text>
             </g>
           </svg>
           <ol className={styles.diagramInstructions}>
-            <li>Measure <strong>{cornerMark}</strong> from the point.</li>
-            <li>Sew <strong>{stitchLine}</strong> straight across.</li>
-            <li>Check the depth, then trim to <strong>{seamAllowance}</strong>.</li>
+            <li>Use the <strong>{cornerGuide}</strong> template corner at the sewn seam intersection.</li>
+            <li>Cut away the square. A raw-edge measurement is <strong>{rawCornerMark}</strong>.</li>
+            <li>Match the two cut edges and sew with a <strong>{seamAllowance}</strong> seam allowance.</li>
           </ol>
         </section>
       </div>

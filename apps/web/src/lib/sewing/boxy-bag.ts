@@ -9,14 +9,15 @@ export type BoxyBagDimensions = {
 export type BoxyBagPlan = {
   panelLength: number;
   panelWidth: number;
-  cornerMark: number;
+  cornerTemplateGuide: number;
+  rawCornerMark: number;
   cornerStitchLine: number;
   recommendedZipper: number;
 };
 
 /**
  * Drafts a four-panel, fully lined boxy pouch. The zipper runs in the
- * finished-length direction and the height is the boxed-corner dimension.
+ * finished-length direction; width is the front-to-back boxed depth.
  */
 export function calculateBoxyBagPlan({
   length,
@@ -28,8 +29,9 @@ export function calculateBoxyBagPlan({
   return {
     panelLength: length + height + seamAllowance * 2,
     panelWidth: width + height + seamAllowance * 2,
-    cornerMark: height / 2,
-    cornerStitchLine: height,
-    recommendedZipper: length + height + seamAllowance * 2 + zipperExtra,
+    cornerTemplateGuide: width / 2,
+    rawCornerMark: width / 2 + seamAllowance,
+    cornerStitchLine: width,
+    recommendedZipper: length + height + zipperExtra,
   };
 }
