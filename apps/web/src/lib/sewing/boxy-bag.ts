@@ -1,37 +1,38 @@
 export type BoxyBagDimensions = {
   length: number;
-  width: number;
-  height: number;
+  cornerCut: number;
   seamAllowance: number;
   zipperExtra: number;
 };
 
 export type BoxyBagPlan = {
+  finishedEnd: number;
   panelLength: number;
   panelWidth: number;
-  cornerTemplateGuide: number;
-  rawCornerMark: number;
+  cornerCut: number;
   cornerStitchLine: number;
   recommendedZipper: number;
 };
 
 /**
- * Drafts a four-panel, fully lined boxy pouch. The zipper runs in the
- * finished-length direction; width is the front-to-back boxed depth.
+ * Drafts a cut-first, four-panel boxy pouch with square end caps. The selected
+ * acrylic-template corner is the raw square removed from all four corners of
+ * every panel. The seam allowance is taken from both sides of the boxed seam.
  */
 export function calculateBoxyBagPlan({
   length,
-  width,
-  height,
+  cornerCut,
   seamAllowance,
   zipperExtra,
 }: BoxyBagDimensions): BoxyBagPlan {
+  const finishedEnd = Math.max(0, (cornerCut - seamAllowance) * 2);
+
   return {
-    panelLength: length + height + seamAllowance * 2,
-    panelWidth: width + height + seamAllowance * 2,
-    cornerTemplateGuide: width / 2,
-    rawCornerMark: width / 2 + seamAllowance,
-    cornerStitchLine: width,
-    recommendedZipper: length + height + zipperExtra,
+    finishedEnd,
+    panelLength: length + cornerCut * 2,
+    panelWidth: cornerCut * 4 - seamAllowance * 2,
+    cornerCut,
+    cornerStitchLine: finishedEnd,
+    recommendedZipper: length + finishedEnd + zipperExtra,
   };
 }
