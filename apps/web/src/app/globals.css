@@ -1312,6 +1312,11 @@ a {
   --tile-accent-shadow: rgba(255, 61, 154, 0.7);
 }
 
+.studio-project-tile--amber {
+  --tile-accent: rgba(250, 204, 21, 0.58);
+  --tile-accent-shadow: rgba(251, 113, 133, 0.62);
+}
+
 .studio-project-tile-glow {
   position: absolute;
   inset: 0;

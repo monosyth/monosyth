@@ -8,6 +8,15 @@ import { ProfileEditor } from "@/components/app/profile-editor";
 
 const studioProjects = [
   {
+    name: "Boxy bag builder",
+    href: "/app/boxy-bag",
+    label: "Open calculator",
+    details: "Finished-size sewing calculator + cutting plan",
+    meta: "Sewing studio / Pattern math",
+    accent: "amber" as const,
+    glyph: "sewing" as const,
+  },
+  {
     name: "Weather",
     href: "/weather",
     label: "Open dashboard",
@@ -364,7 +373,7 @@ function ProjectTile({
   );
 }
 
-function ProjectGlyph({ kind }: { kind: "weather" | "neon" }) {
+function ProjectGlyph({ kind }: { kind: "weather" | "neon" | "sewing" }) {
   if (kind === "weather") {
     return (
       <svg viewBox="0 0 64 64" width="40" height="40" aria-hidden="true">
@@ -380,6 +389,35 @@ function ProjectGlyph({ kind }: { kind: "weather" | "neon" }) {
           fill="#fff"
           opacity="0.92"
         />
+      </svg>
+    );
+  }
+
+  if (kind === "sewing") {
+    return (
+      <svg viewBox="0 0 64 64" width="40" height="40" aria-hidden="true">
+        <defs>
+          <linearGradient id="proj-sewing" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#facc15" />
+            <stop offset="100%" stopColor="#fb7185" />
+          </linearGradient>
+        </defs>
+        <path
+          d="M17 21h30l5 9-6 18H18l-6-18 5-9Z"
+          fill="none"
+          stroke="url(#proj-sewing)"
+          strokeWidth="3"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M17 21 32 10l15 11M17 21l8 8h14l8-8M32 10v19"
+          fill="none"
+          stroke="url(#proj-sewing)"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle cx="32" cy="36" r="2.5" fill="#fef3c7" />
       </svg>
     );
   }
