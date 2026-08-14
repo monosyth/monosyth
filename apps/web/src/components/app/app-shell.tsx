@@ -1,12 +1,27 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { ProfileEditor } from "@/components/app/profile-editor";
 
-const studioProjects = [
+type ProjectAccent = "amber" | "cyan" | "magenta" | "red";
+type ProjectGlyphKind = "neon" | "possum" | "sewing" | "weather";
+
+type StudioProject = {
+  name: string;
+  href: string;
+  label: string;
+  details: string;
+  meta: string;
+  accent: ProjectAccent;
+  glyph: ProjectGlyphKind;
+  external?: boolean;
+};
+
+const studioProjects: readonly StudioProject[] = [
   {
     name: "Boxy bag builder",
     href: "/app/boxy-bag",
@@ -33,6 +48,16 @@ const studioProjects = [
     meta: "Firestore / Google Auth",
     accent: "magenta" as const,
     glyph: "neon" as const,
+  },
+  {
+    name: "Possum Payday",
+    href: "https://possum-payday.monosyth984401.chatgpt.site",
+    label: "Play game",
+    details: "Family fortune reels + Goat Rodeo bonus",
+    meta: "Original game / 5×5 reels",
+    accent: "red",
+    glyph: "possum",
+    external: true,
   },
 ];
 
@@ -349,13 +374,11 @@ function AccountField({
 function ProjectTile({
   project,
 }: {
-  project: (typeof studioProjects)[number];
+  project: StudioProject;
 }) {
-  return (
-    <Link
-      href={project.href}
-      className={`studio-project-tile studio-project-tile--${project.accent}`}
-    >
+  const className = `studio-project-tile studio-project-tile--${project.accent}`;
+  const content = (
+    <>
       <div className="studio-project-tile-glow" aria-hidden="true" />
       <div className="studio-project-tile-glyph">
         <ProjectGlyph kind={project.glyph} />
@@ -369,11 +392,42 @@ function ProjectTile({
         <span>{project.label}</span>
         <span aria-hidden="true">↗</span>
       </div>
+    </>
+  );
+
+  if (project.external) {
+    return (
+      <a
+        href={project.href}
+        className={className}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={project.href} className={className}>
+      {content}
     </Link>
   );
 }
 
-function ProjectGlyph({ kind }: { kind: "weather" | "neon" | "sewing" }) {
+function ProjectGlyph({ kind }: { kind: ProjectGlyphKind }) {
+  if (kind === "possum") {
+    return (
+      <Image
+        src="/possum-payday.png"
+        width={64}
+        height={64}
+        className="studio-project-tile-glyph-image"
+        alt=""
+      />
+    );
+  }
+
   if (kind === "weather") {
     return (
       <svg viewBox="0 0 64 64" width="40" height="40" aria-hidden="true">
