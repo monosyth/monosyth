@@ -17,9 +17,9 @@ export type BoxyBagPlan = {
 };
 
 /**
- * Drafts a clean-finish, four-panel zipper pouch. The selected acrylic-template
- * corner is the raw square removed from both bottom corners of every panel.
- * The seam allowance is taken from both sides of each boxed-corner seam.
+ * Drafts a clean-finish, four-panel wraparound-zipper pouch. The selected
+ * acrylic-template corner is the raw square removed from all four corners of
+ * every panel. The seam allowance is taken from both sides of each cap seam.
  */
 export function calculateBoxyBagPlan({
   length,
@@ -32,9 +32,9 @@ export function calculateBoxyBagPlan({
 
   return {
     finishedDepth,
-    finishedBaseLength: Math.max(0, length - finishedDepth),
-    panelLength: length + seamAllowance * 2,
-    panelWidth: height + cornerCut + seamAllowance,
+    finishedBaseLength: length,
+    panelLength: length + cornerCut * 2 + seamAllowance * 2,
+    panelWidth: height + cornerCut * 2 + seamAllowance * 2,
     cornerCut,
     cornerStitchLine: finishedDepth,
     recommendedZipper: length + seamAllowance * 2 + zipperExtra,
