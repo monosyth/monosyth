@@ -9,6 +9,7 @@ export type BoxyBagDimensions = {
 export type BoxyBagPlan = {
   finishedDepth: number;
   finishedBaseLength: number;
+  finishedHeight: number;
   panelLength: number;
   panelWidth: number;
   cornerCut: number;
@@ -33,10 +34,38 @@ export function calculateBoxyBagPlan({
   return {
     finishedDepth,
     finishedBaseLength: length,
+    finishedHeight: height,
     panelLength: length + cornerCut * 2 + seamAllowance * 2,
     panelWidth: height + cornerCut * 2 + seamAllowance * 2,
     cornerCut,
     cornerStitchLine: finishedDepth,
     recommendedZipper: length + seamAllowance * 2 + zipperExtra,
+  };
+}
+
+export function calculateBoxyBagPlanFromPanels({
+  panelLength,
+  panelWidth,
+  cornerCut,
+  seamAllowance,
+  zipperExtra,
+}: Omit<BoxyBagDimensions, "length" | "height"> & {
+  panelLength: number;
+  panelWidth: number;
+}): BoxyBagPlan {
+  const length = Math.max(0, panelLength - cornerCut * 2 - seamAllowance * 2);
+  const height = Math.max(0, panelWidth - cornerCut * 2 - seamAllowance * 2);
+  const plan = calculateBoxyBagPlan({
+    length,
+    height,
+    cornerCut,
+    seamAllowance,
+    zipperExtra,
+  });
+
+  return {
+    ...plan,
+    panelLength,
+    panelWidth,
   };
 }

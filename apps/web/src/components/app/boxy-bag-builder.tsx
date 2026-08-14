@@ -5,14 +5,22 @@ import { useMemo, useState } from "react";
 
 import styles from "@/app/app/boxy-bag/boxy-bag.module.css";
 import { useAuth } from "@/components/auth/auth-provider";
-import { calculateBoxyBagPlan } from "@/lib/sewing/boxy-bag";
+import {
+  calculateBoxyBagPlan,
+  calculateBoxyBagPlanFromPanels,
+} from "@/lib/sewing/boxy-bag";
 
 type Unit = "in" | "cm";
+type InputMode = "finished" | "panels";
 type Draft = {
   length: number;
   height: number;
   seamAllowance: number;
   cornerGuideInches: number;
+};
+type PanelDraft = {
+  width: number;
+  height: number;
 };
 
 const INCH_TO_CM = 2.54;
@@ -29,6 +37,10 @@ const defaultDraft: Draft = {
   seamAllowance: 0.25,
   cornerGuideInches: 2,
 };
+const defaultPanelDraft: PanelDraft = {
+  width: 13.5,
+  height: 8.5,
+};
 
 function roundForInput(value: number) {
   return Math.round(value * 1000) / 1000;
@@ -41,6 +53,14 @@ function convertDraft(draft: Draft, nextUnit: Unit): Draft {
     length: roundForInput(draft.length * factor),
     height: roundForInput(draft.height * factor),
     seamAllowance: roundForInput(draft.seamAllowance * factor),
+  };
+}
+
+function convertPanelDraft(draft: PanelDraft, nextUnit: Unit): PanelDraft {
+  const factor = nextUnit === "cm" ? INCH_TO_CM : 1 / INCH_TO_CM;
+  return {
+    width: roundForInput(draft.width * factor),
+    height: roundForInput(draft.height * factor),
   };
 }
 
@@ -81,18 +101,30 @@ function measurementPair(value: number, unit: Unit) {
   return `${formatMeasurement(value, unit)} (${formatEquivalent(value, unit)})`;
 }
 
-function getPlan(draft: Draft, unit: Unit) {
-  return calculateBoxyBagPlan({
+function getPlan(draft: Draft, panelDraft: PanelDraft, inputMode: InputMode, unit: Unit) {
+  const shared = {
     length: draft.length,
     height: draft.height,
     cornerCut: guideInUnit(draft.cornerGuideInches, unit),
     seamAllowance: draft.seamAllowance,
     zipperExtra: unit === "in" ? 2 : 5,
-  });
+  };
+
+  if (inputMode === "panels") {
+    return calculateBoxyBagPlanFromPanels({
+      panelLength: panelDraft.width,
+      panelWidth: panelDraft.height,
+      cornerCut: shared.cornerCut,
+      seamAllowance: shared.seamAllowance,
+      zipperExtra: shared.zipperExtra,
+    });
+  }
+
+  return calculateBoxyBagPlan(shared);
 }
 
-function buildCuttingList(draft: Draft, unit: Unit) {
-  const plan = getPlan(draft, unit);
+function buildCuttingList(draft: Draft, panelDraft: PanelDraft, inputMode: InputMode, unit: Unit) {
+  const plan = getPlan(draft, panelDraft, inputMode, unit);
   const guide = formatInches(draft.cornerGuideInches);
   const panelSize = `${measurementPair(plan.panelLength, unit)} × ${measurementPair(plan.panelWidth, unit)}`;
 
@@ -100,7 +132,8 @@ function buildCuttingList(draft: Draft, unit: Unit) {
     `BOXY BAG — CUT-FIRST PLAN`,
     `Tool corner: ${guide}`,
     `Seam allowance: ${measurementPair(draft.seamAllowance, unit)}`,
-    `Finished bag: ${measurementPair(draft.length, unit)} L × ${measurementPair(plan.finishedDepth, unit)} W × ${measurementPair(draft.height, unit)} H`,
+    `Calculator mode: ${inputMode === "finished" ? "finished bag → panel cuts" : "starting panels → finished bag"}`,
+    `Finished bag: ${measurementPair(plan.finishedBaseLength, unit)} L × ${measurementPair(plan.finishedDepth, unit)} W × ${measurementPair(plan.finishedHeight, unit)} H`,
     `Bottom footprint: ${measurementPair(plan.finishedBaseLength, unit)} × ${measurementPair(plan.finishedDepth, unit)}`,
     ``,
     `CUT ALL PANELS BEFORE SEWING`,
@@ -125,8 +158,8 @@ function buildCuttingList(draft: Draft, unit: Unit) {
     `6. Sew each outer side-center edge and the outer bottom-center edge. Sew the lining edges separately, leaving a 3–4 in / 8–10 cm turning gap in its bottom. Leave every corner opening unsewn.`,
     `7. Box the 2 LOWER outer openings and 2 LOWER lining openings separately: flatten each opening, match its side seam to its bottom seam, and sew ${measurementPair(draft.seamAllowance, unit)} from the raw edge.`,
     `8. Optional: tack each lower outer cap seam allowance to its matching lining cap seam allowance, checking that the lining is not twisted.`,
-    `9. DOUBLE PINCH the first zipper end: flatten the upper outer opening around the zipper end, then flatten its lining opening the same way. Center both side seams on the zipper teeth, align the raw cut edges into one straight stack, and sew ${measurementPair(draft.seamAllowance, unit)} across all layers.`,
-    `10. Repeat the double pinch at the other zipper end. Backstitch across nylon coil teeth and trim excess zipper tape only after both seams are secure.`,
+    `9. INVERT ZIPPER END 1: turn the end so the outer and lining openings can lie flat. Center the zipper directly opposite the matching center-bottom seam, align the raw cut edges into one straight stack, and sew ${measurementPair(draft.seamAllowance, unit)} straight across all layers.`,
+    `10. Repeat at zipper end 2. Use only a nylon coil zipper, hand-wheel across the coil, backstitch, and trim excess zipper tape only after both end seams are secure. These are single enclosed end seams—not French seams.`,
     `11. Turn through the lining gap and the open zipper, shape the bag, close the gap, and place the lining inside.`,
   ].join("\n");
 }
@@ -134,21 +167,46 @@ function buildCuttingList(draft: Draft, unit: Unit) {
 export function BoxyBagBuilder() {
   const { status } = useAuth();
   const [unit, setUnit] = useState<Unit>("in");
+  const [inputMode, setInputMode] = useState<InputMode>("finished");
   const [draft, setDraft] = useState<Draft>(defaultDraft);
+  const [panelDraft, setPanelDraft] = useState<PanelDraft>(defaultPanelDraft);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
 
-  const plan = useMemo(() => getPlan(draft, unit), [draft, unit]);
+  const plan = useMemo(
+    () => getPlan(draft, panelDraft, inputMode, unit),
+    [draft, panelDraft, inputMode, unit],
+  );
   const isValid =
-    draft.length > 0 &&
-    draft.height > 0 &&
     draft.seamAllowance > 0 &&
     plan.cornerCut > draft.seamAllowance &&
-    plan.finishedBaseLength > 0;
+    plan.finishedBaseLength > 0 &&
+    plan.finishedHeight > 0;
 
   function chooseUnit(nextUnit: Unit) {
     if (nextUnit === unit) return;
     setDraft((current) => convertDraft(current, nextUnit));
+    setPanelDraft((current) => convertPanelDraft(current, nextUnit));
     setUnit(nextUnit);
+  }
+
+  function chooseInputMode(nextMode: InputMode) {
+    if (nextMode === inputMode) return;
+
+    if (nextMode === "panels") {
+      setPanelDraft({
+        width: roundForInput(plan.panelLength),
+        height: roundForInput(plan.panelWidth),
+      });
+    } else {
+      setDraft((current) => ({
+        ...current,
+        length: roundForInput(plan.finishedBaseLength),
+        height: roundForInput(plan.finishedHeight),
+      }));
+    }
+
+    setInputMode(nextMode);
+    setCopyState("idle");
   }
 
   function updateDraft(key: "length" | "height" | "seamAllowance", value: number) {
@@ -164,6 +222,14 @@ export function BoxyBagBuilder() {
     setCopyState("idle");
   }
 
+  function updatePanelDraft(key: keyof PanelDraft, value: number) {
+    setPanelDraft((current) => ({
+      ...current,
+      [key]: Number.isFinite(value) ? Math.max(0, value) : 0,
+    }));
+    setCopyState("idle");
+  }
+
   function applyPreset(preset: (typeof presets)[number]) {
     const factor = unit === "in" ? 1 : INCH_TO_CM;
     setDraft((current) => ({
@@ -172,12 +238,13 @@ export function BoxyBagBuilder() {
       height: roundForInput(preset.height * factor),
       cornerGuideInches: preset.cornerGuideInches,
     }));
+    setInputMode("finished");
     setCopyState("idle");
   }
 
   async function copyPlan() {
     try {
-      await navigator.clipboard.writeText(buildCuttingList(draft, unit));
+      await navigator.clipboard.writeText(buildCuttingList(draft, panelDraft, inputMode, unit));
       setCopyState("copied");
     } catch {
       setCopyState("error");
@@ -212,6 +279,8 @@ export function BoxyBagBuilder() {
   const measurementStep = unit === "in" ? 0.125 : 0.1;
   const cornerCutLabel = formatMeasurement(plan.cornerCut, unit);
   const finishedDepthLabel = formatMeasurement(plan.finishedDepth, unit);
+  const finishedLengthLabel = formatMeasurement(plan.finishedBaseLength, unit);
+  const finishedHeightLabel = formatMeasurement(plan.finishedHeight, unit);
 
   return (
     <main className={styles.page}>
@@ -228,8 +297,8 @@ export function BoxyBagBuilder() {
             <p className={styles.eyebrow}>Sewing studio / Cut-first builder</p>
             <h1>Pick a corner.<br /><span>Cut every panel.</span></h1>
             <p className={styles.heroIntro}>
-              Choose an acrylic corner and a finished height. Then follow the
-              complete four-panel pattern for a lining with no exposed seams.
+              Start with a finished bag size or panels you already have. Choose
+              an acrylic corner, then follow the illustrated four-panel pattern.
             </p>
             <div className={styles.heroTags} aria-label="Pattern details">
               <span>Fully lined</span>
@@ -238,9 +307,9 @@ export function BoxyBagBuilder() {
             </div>
           </div>
           <BagDiagram
-            length={formatMeasurement(draft.length, unit)}
+            length={finishedLengthLabel}
             width={finishedDepthLabel}
-            height={formatMeasurement(draft.height, unit)}
+            height={finishedHeightLabel}
           />
         </header>
 
@@ -257,18 +326,54 @@ export function BoxyBagBuilder() {
               </div>
             </div>
 
-            <div className={styles.presets}>
-              {presets.map((preset) => (
-                <button type="button" key={preset.name} onClick={() => applyPreset(preset)}>
-                  <span>{preset.name}</span>
-                  <small>{preset.note}</small>
+            <fieldset className={styles.templatePicker}>
+              <legend>What do you know?</legend>
+              <p>Work forward from a finished bag size, or backward from panels you already cut.</p>
+              <div className={styles.templateChoices}>
+                <button
+                  type="button"
+                  aria-pressed={inputMode === "finished"}
+                  className={inputMode === "finished" ? styles.templateChoiceActive : ""}
+                  onClick={() => chooseInputMode("finished")}
+                >
+                  <strong>Finished bag</strong>
+                  <small>Choose final size → get panel cuts</small>
                 </button>
-              ))}
-            </div>
+                <button
+                  type="button"
+                  aria-pressed={inputMode === "panels"}
+                  className={inputMode === "panels" ? styles.templateChoiceActive : ""}
+                  onClick={() => chooseInputMode("panels")}
+                >
+                  <strong>My panels</strong>
+                  <small>Enter panel size → get final bag</small>
+                </button>
+              </div>
+            </fieldset>
+
+            {inputMode === "finished" ? (
+              <div className={styles.presets}>
+                {presets.map((preset) => (
+                  <button type="button" key={preset.name} onClick={() => applyPreset(preset)}>
+                    <span>{preset.name}</span>
+                    <small>{preset.note}</small>
+                  </button>
+                ))}
+              </div>
+            ) : null}
 
             <div className={styles.fields}>
-              <MeasurementInput id="bag-length" label="Finished length" note="Along the zipper" value={draft.length} unit={unit} step={measurementStep} onChange={(value) => updateDraft("length", value)} />
-              <MeasurementInput id="bag-height" label="Finished height" note="Top to bottom" value={draft.height} unit={unit} step={measurementStep} onChange={(value) => updateDraft("height", value)} />
+              {inputMode === "finished" ? (
+                <>
+                  <MeasurementInput id="bag-length" label="Finished length" note="Along the zipper" value={draft.length} unit={unit} step={measurementStep} onChange={(value) => updateDraft("length", value)} />
+                  <MeasurementInput id="bag-height" label="Finished height" note="Top to bottom" value={draft.height} unit={unit} step={measurementStep} onChange={(value) => updateDraft("height", value)} />
+                </>
+              ) : (
+                <>
+                  <MeasurementInput id="panel-width" label="Starting panel width" note="Raw edge along zipper" value={panelDraft.width} unit={unit} step={measurementStep} onChange={(value) => updatePanelDraft("width", value)} />
+                  <MeasurementInput id="panel-height" label="Starting panel height" note="Raw panel top to bottom" value={panelDraft.height} unit={unit} step={measurementStep} onChange={(value) => updatePanelDraft("height", value)} />
+                </>
+              )}
               <MeasurementInput id="bag-seam" label="Seam allowance" note="Used throughout" value={draft.seamAllowance} unit={unit} step={measurementStep} onChange={(value) => updateDraft("seamAllowance", value)} />
             </div>
 
@@ -306,14 +411,16 @@ export function BoxyBagBuilder() {
               <p className={styles.validation} role="alert">
                 {plan.cornerCut <= draft.seamAllowance
                   ? "The seam allowance must be smaller than the selected tool corner."
-                  : "Enter a finished length and height greater than zero."}
+                  : inputMode === "panels"
+                    ? "Each panel must be larger than two corner cuts plus two seam allowances."
+                    : "Enter a finished length and height greater than zero."}
               </p>
             ) : null}
 
             <div className={styles.methodNote}>
               <span aria-hidden="true">◎</span>
               <p>
-                <strong>Wraparound zipper method</strong> Cut all four corners from two outer and two lining panels. The lower corners are boxed separately; the two upper corners use the tutorial&apos;s double pinch so the zipper turns down both ends and every raw seam stays hidden.
+                <strong>Wraparound zipper + center-bottom seam</strong> Cut all four corners from two outer and two lining panels. Box the lower corners separately. At each upper end, invert the opening, center the zipper opposite the bottom seam, and sew one straight enclosed seam—no French seams.
               </p>
             </div>
           </aside>
@@ -323,7 +430,7 @@ export function BoxyBagBuilder() {
               <div>
                 <p className={styles.cardNumber}>02</p>
                 <h2>Your cut-first plan</h2>
-                <p>All mandatory fabric pieces are shown below.</p>
+                <p>{inputMode === "panels" ? "Your starting panels make the finished bag below." : "All mandatory fabric pieces are shown below."}</p>
               </div>
               <div className={styles.resultActions}>
                 <button type="button" onClick={() => void copyPlan()} disabled={!isValid}>{copyState === "copied" ? "Copied ✓" : copyState === "error" ? "Copy failed" : "Copy list"}</button>
@@ -333,14 +440,14 @@ export function BoxyBagBuilder() {
 
             <div className={styles.finishedBanner}>
               <span>Finished bag</span>
-              <strong>{formatMeasurement(draft.length, unit)} × {finishedDepthLabel} × {formatMeasurement(draft.height, unit)}</strong>
+              <strong>{finishedLengthLabel} × {finishedDepthLabel} × {finishedHeightLabel}</strong>
               <small>length × depth × height</small>
             </div>
 
             <div className={styles.dimensionBreakdown} aria-label="Finished dimension details">
-              <span><small>Zipper span</small><strong>{formatMeasurement(draft.length, unit)}</strong></span>
+              <span><small>Zipper span</small><strong>{finishedLengthLabel}</strong></span>
               <span><small>Bottom footprint</small><strong>{formatMeasurement(plan.finishedBaseLength, unit)} × {finishedDepthLabel}</strong></span>
-              <span><small>Vertical height</small><strong>{formatMeasurement(draft.height, unit)}</strong></span>
+              <span><small>Vertical height</small><strong>{finishedHeightLabel}</strong></span>
             </div>
 
             <div className={styles.outputGrid}>
@@ -370,17 +477,17 @@ export function BoxyBagBuilder() {
               <span aria-hidden="true">16 CUTS</span>
               <div>
                 <strong>Put the acrylic corner directly on the raw fabric corner.</strong>
-                <p>No measuring from a stitched seam. Cut four corners from each of four panels; the lower four pairs become ordinary boxed corners and the upper pairs become two double-pinch zipper ends.</p>
+                <p>No measuring from a stitched seam. Cut four corners from each of four panels; the lower pairs become ordinary boxed corners and each upper end becomes one flat seam sewn straight across the zipper.</p>
               </div>
             </article>
 
             <PatternDiagram
-              finishedLength={formatMeasurement(draft.length, unit)}
+              finishedLength={finishedLengthLabel}
               panelLength={formatMeasurement(plan.panelLength, unit)}
               panelWidth={formatMeasurement(plan.panelWidth, unit)}
               cornerCut={cornerCutLabel}
               finishedDepth={finishedDepthLabel}
-              finishedHeight={formatMeasurement(draft.height, unit)}
+              finishedHeight={finishedHeightLabel}
               seamAllowance={formatMeasurement(draft.seamAllowance, unit)}
             />
 
@@ -401,7 +508,7 @@ export function BoxyBagBuilder() {
                 <ol>
                   <li>Attach outer and lining panels to the zipper.</li>
                   <li>Sew the remaining main seams, leaving every notch open.</li>
-                  <li>Box four lower corners, then double-pinch both zipper ends.</li>
+                  <li>Box four lower corners, then invert and sew across both zipper ends.</li>
                 </ol>
               </article>
             </div>
@@ -517,7 +624,7 @@ function PatternDiagram({ finishedLength, panelLength, panelWidth, cornerCut, fi
         <article className={styles.methodSelected}>
           <span>This pattern</span>
           <strong>Wraparound zipper + 4 panels</strong>
-          <p>Four cuts per panel create lower box corners plus double-pinch zipper ends.</p>
+          <p>Four cuts per panel create lower box corners plus flat, straight-sewn zipper ends.</p>
         </article>
       </div>
 
@@ -644,7 +751,7 @@ function PatternDiagram({ finishedLength, panelLength, panelWidth, cornerCut, fi
             </svg>
           </article>
         </div>
-        <div className={styles.criticalStrip}><strong>Stop here at the zipper ends:</strong> do not close the upper openings as ordinary side seams. They stay open until Step 7, when each outer opening and lining opening is flattened together around the zipper in one double pinch.</div>
+        <div className={styles.criticalStrip}><strong>Stop here at the zipper ends:</strong> do not close the upper openings as ordinary side seams. They stay open until Step 7, when you invert each end, flatten the outer and lining together, and sew one straight line across the zipper.</div>
       </section>
 
       <section className={styles.sewingMap}>
@@ -686,14 +793,14 @@ function PatternDiagram({ finishedLength, panelLength, panelWidth, cornerCut, fi
       <section className={styles.anchorSection}>
         <div className={styles.sectionHeading}>
           <span>Step 7</span>
-          <div><strong>Double pinch both zipper ends</strong><small>This is the special upper-corner step that makes the zipper turn down the two short sides.</small></div>
+          <div><strong>Invert each end + sew straight across the zipper</strong><small>The zipper turns down the short sides; the center-bottom seam sits directly opposite it.</small></div>
         </div>
         <div className={styles.sewingSteps}>
-          <article><span>A</span><strong>Pinch the outer first</strong><svg viewBox="0 0 180 110" aria-hidden="true"><path d="M27 78 89 27l64 51" fill="none" stroke="#a78bfa" strokeWidth="20" strokeLinejoin="round" /><path d="M89 21v70" stroke="#d3a72e" strokeWidth="12" /><path d="M89 21v70" stroke="#24162e" strokeWidth="4" strokeDasharray="4 4" /></svg><p>At one upper opening, flatten the two outer cut edges. Put the outer side seam directly on the zipper teeth.</p></article>
-          <article><span>B</span><strong>Add the lining pinch</strong><svg viewBox="0 0 180 110" aria-hidden="true"><path d="M25 80 89 29l66 51" fill="none" stroke="#a78bfa" strokeWidth="21" strokeLinejoin="round" /><path d="M36 88 89 48l55 40" fill="none" stroke="#4de1ff" strokeWidth="13" strokeLinejoin="round" /><path d="M89 19v77" stroke="#d3a72e" strokeWidth="9" /><path d="M89 19v77" stroke="#24162e" strokeWidth="3" strokeDasharray="4 4" /></svg><p>Flatten the matching lining opening around it. Center the lining side seam on the same zipper line; keep the lining untwisted.</p></article>
-          <article><span>C</span><strong>Sew the straight stack</strong><svg viewBox="0 0 180 110" aria-hidden="true"><path d="M22 35h136v50H22Z" fill="#241943" stroke="#a78bfa" strokeWidth="2" /><path d="M28 42h124" stroke="#4de1ff" strokeWidth="7" /><path d="M90 26v68" stroke="#d3a72e" strokeWidth="10" /><path d="M90 26v68" stroke="#21172b" strokeWidth="3" strokeDasharray="4 4" /><path d="M22 75h136" stroke="#ffd75e" strokeWidth="5" /></svg><p>Align all raw cut edges into one straight line and sew {seamAllowance} from it across outer, zipper and lining. Repeat at the other end.</p></article>
+          <article><span>A</span><strong>Invert + flatten one end</strong><svg viewBox="0 0 180 110" role="img" aria-label="One bag end turned inside out and opened flat"><path d="M25 89V27h130v62Z" fill="#241943" stroke="#a78bfa" strokeWidth="2" /><path d="M32 35h116" stroke="#4de1ff" strokeWidth="8" /><path d="M90 18v79" stroke="#d3a72e" strokeWidth="10" /><path d="M90 18v79" stroke="#21172b" strokeWidth="3" strokeDasharray="4 4" /><path d="M54 88 90 70l36 18" fill="none" stroke="#ff7aac" strokeWidth="3" /><text x="90" y="106" textAnchor="middle" fill="#ffb3d2" fontSize="8">BOTTOM SEAM OPPOSITE ZIPPER</text></svg><p>Pull the end inside out through the lining gap. Open the upper cutouts until the end lies flat like a straight stack.</p></article>
+          <article><span>B</span><strong>Center + align the layers</strong><svg viewBox="0 0 180 110" role="img" aria-label="Zipper centered over aligned outer and lining bottom seams"><path d="M22 31h136v58H22Z" fill="#241943" stroke="#a78bfa" strokeWidth="2" /><path d="M28 39h124" stroke="#4de1ff" strokeWidth="8" /><path d="M90 20v78" stroke="#d3a72e" strokeWidth="10" /><path d="M90 20v78" stroke="#21172b" strokeWidth="3" strokeDasharray="4 4" /><path d="M78 76h24M90 66v25" stroke="#ff7aac" strokeWidth="3" /><path d="m80 60 10 7 10-7" fill="none" stroke="#ff7aac" strokeWidth="2" /><text x="90" y="108" textAnchor="middle" fill="#ffb3d2" fontSize="8">MATCH CENTER LINES</text></svg><p>Put the zipper directly over the outer center-bottom seam. Align the matching lining seam on that same center line; keep the lining untwisted.</p></article>
+          <article><span>C</span><strong>Sew one straight end seam</strong><svg viewBox="0 0 180 110" role="img" aria-label="One straight stitch line sewn across the flattened outer, zipper and lining"><path d="M22 31h136v58H22Z" fill="#241943" stroke="#a78bfa" strokeWidth="2" /><path d="M28 39h124" stroke="#4de1ff" strokeWidth="8" /><path d="M90 20v78" stroke="#d3a72e" strokeWidth="10" /><path d="M90 20v78" stroke="#21172b" strokeWidth="3" strokeDasharray="4 4" /><path d="M22 78h136" stroke="#ffd75e" strokeWidth="5" /><path d="m144 70 12 8-12 8" fill="none" stroke="#ffd75e" strokeWidth="3" /><text x="90" y="106" textAnchor="middle" fill="#fff1ae" fontSize="8">SEW STRAIGHT ACROSS</text></svg><p>Match every raw edge. Sew {seamAllowance} from the edge across outer, nylon zipper coil and lining. Repeat at the other end.</p></article>
         </div>
-        <div className={styles.criticalStrip}><strong>Before sewing:</strong> open the zipper halfway, keep any folded ribbon tab centered with its fold pointing into the bag, and check that neither shell is twisted. Use a nylon coil zipper; hand-wheel slowly over the teeth, backstitch, then trim excess tape beyond the seam.</div>
+        <div className={styles.criticalStrip}><strong>This is not a French seam:</strong> it is one straight end seam. Open the zipper halfway, keep any tab folded inward, and use a nylon coil zipper—never metal teeth or a metal stop under the needle. Hand-wheel slowly, backstitch, then trim excess tape. After turning, the allowance stays between the outer and lining.</div>
       </section>
 
       <section className={styles.finishSection}>
@@ -702,10 +809,10 @@ function PatternDiagram({ finishedLength, panelLength, panelWidth, cornerCut, fi
           <div><strong>Turn, close + finish</strong><small>The zipper and lining openings are the two exits you must preserve.</small></div>
         </div>
         <div className={styles.finishChecks}>
-          <article><b>1</b><span><strong>Turn</strong> Pull the entire pouch through the lining gap, then through the half-open zipper.</span></article>
-          <article><b>2</b><span><strong>Shape</strong> Push out the four lower corners and both zipper-end caps; make sure the zipper wraps down evenly.</span></article>
-          <article><b>3</b><span><strong>Close</strong> Fold the lining gap allowances inward and edgestitch or ladder-stitch closed.</span></article>
-          <article><b>4</b><span><strong>Seat</strong> Place the lining inside and press gently around the zipper.</span></article>
+          <article><b>1</b><svg viewBox="0 0 76 54" aria-hidden="true"><path d="M8 11h32v31H8Z" fill="#12364b" stroke="#4de1ff" /><path d="M32 18h35v27H32Z" fill="#302052" stroke="#a78bfa" /><path d="m24 27 20 0" stroke="#ffd75e" strokeWidth="3" /><path d="m39 21 7 6-7 6" fill="none" stroke="#ffd75e" strokeWidth="2" /></svg><span><strong>Turn</strong> Pull the entire pouch through the lining gap, then through the half-open zipper.</span></article>
+          <article><b>2</b><svg viewBox="0 0 76 54" aria-hidden="true"><path d="m11 17 40-7 14 10-40 7Z" fill="#ffd75e" /><path d="m11 17 14 10v18L11 35Z" fill="#177f9c" /><path d="m25 27 40-7v18l-40 7Z" fill="#5f38b4" /><path d="m18 18 33-6 10 7" fill="none" stroke="#24162e" strokeWidth="2" /></svg><span><strong>Shape</strong> Push out the four lower corners and both zipper-end caps; make sure the zipper wraps down evenly.</span></article>
+          <article><b>3</b><svg viewBox="0 0 76 54" aria-hidden="true"><path d="M8 10h60v35H8Z" fill="#12364b" stroke="#4de1ff" /><path d="M17 38h42" stroke="#4de1ff" strokeWidth="3" strokeDasharray="4 3" /><path d="M28 38h20" stroke="#ffd75e" strokeWidth="4" /></svg><span><strong>Close</strong> Fold the lining gap allowances inward and edgestitch or ladder-stitch closed.</span></article>
+          <article><b>4</b><svg viewBox="0 0 76 54" aria-hidden="true"><path d="M10 9h56v38H10Z" fill="#302052" stroke="#a78bfa" /><path d="M18 16h40v24H18Z" fill="#12364b" stroke="#4de1ff" /><path d="M14 12h48" stroke="#ffd75e" strokeWidth="4" /><path d="m31 23 7 6 7-6" fill="none" stroke="#ff7aac" strokeWidth="2" /></svg><span><strong>Seat</strong> Place the lining inside and press gently around the zipper.</span></article>
         </div>
       </section>
 
@@ -724,8 +831,8 @@ function PatternDiagram({ finishedLength, panelLength, panelWidth, cornerCut, fi
           <li><strong>Form two shells.</strong> Open the zipper halfway. Bring the outer panels right sides together and the lining panels right sides together. Match the two side-center edges, the bottom-center edges and all corner cutouts; keep the zipper seam allowances directed toward the lining.</li>
           <li><strong>Sew only the center seams.</strong> Sew the outer side-center edges and bottom-center edge. Sew the lining side-center edges and bottom-center edge separately, stopping for the marked turning gap. Leave all four cutout openings in each shell unsewn.</li>
           <li><strong>Box the four lower corners.</strong> Flatten one lower outer opening so its side seam sits directly on its bottom seam; nest the allowances and sew {seamAllowance} from the raw edge. Repeat for the second lower outer corner and both lower lining corners. Optionally tack each outer cap allowance to its matching lining cap allowance.</li>
-          <li><strong>Double pinch zipper end 1.</strong> Flatten the upper outer opening and center its side seam on the zipper teeth. Flatten the matching lining opening around the same end and center its side seam on the zipper too. Bring all raw cut edges into one straight stack, keep any ribbon centered, and sew {seamAllowance} across every layer.</li>
-          <li><strong>Double pinch zipper end 2.</strong> Repeat at the other end. Confirm that the zipper is still half open and the lining is not twisted. Hand-wheel over nylon coil teeth, backstitch securely, then trim excess zipper tape outside the new seams.</li>
+          <li><strong>Invert and sew zipper end 1.</strong> Pull the end inside out through the lining gap and flatten the upper outer and lining openings. Center the zipper directly opposite the outer center-bottom seam; put the matching lining seam on that same center line. Bring all raw cut edges into one straight stack, keep any ribbon folded inward, and sew {seamAllowance} straight across every layer.</li>
+          <li><strong>Invert and sew zipper end 2.</strong> Repeat at the other end. Confirm that the zipper is still half open and the lining is not twisted. Hand-wheel over nylon coil teeth, backstitch securely, then trim excess zipper tape outside the new seams. Do not sew a second line or turn this into a French seam.</li>
           <li><strong>Turn and close.</strong> Pull the pouch through the lining gap and then through the open zipper. Push out the lower corners and zipper-end caps, close the lining gap, and seat the lining. The finished bag is approximately {finishedLength} long × {finishedDepth} deep × {finishedHeight} high.</li>
         </ol>
       </section>

@@ -207,6 +207,7 @@
 .templateChoices .templateChoiceActive { border-color: #ff7aac; background: linear-gradient(145deg, rgba(255, 122, 172, .2), rgba(95, 56, 180, .2)); box-shadow: 0 0 0 2px rgba(255, 122, 172, .11); }
 .templateChoices .templateChoiceActive strong { color: #ffc5dc; }
 .templateChoices .templateChoiceActive small { color: #d5c9e6; }
+.templatePicker + .fields { margin-top: 1rem; }
 .derivedEnd { display: grid; grid-template-columns: auto 1fr; gap: .15rem .6rem; align-items: center; margin-top: .65rem; padding: .65rem .7rem; border-radius: .72rem; background: rgba(255, 122, 172, .08); }
 .derivedEnd span { grid-row: span 2; color: #ff9bc3; font: 600 .55rem var(--font-ibm-plex-mono), monospace; letter-spacing: .12em; text-transform: uppercase; }
 .derivedEnd strong { color: #fff; font-size: .78rem; }
@@ -399,6 +400,7 @@
 .finishChecks { display: grid; gap: .5rem; margin-top: .7rem; }
 .finishChecks article { display: flex; align-items: flex-start; gap: .55rem; padding: .65rem; border: 1px solid rgba(167, 139, 250, .13); border-radius: .7rem; background: rgba(8, 6, 24, .45); }
 .finishChecks article > b { display: grid; place-items: center; flex: 0 0 1.35rem; height: 1.35rem; border-radius: .35rem; color: #140b2b; background: #ffd75e; font: 800 .6rem var(--font-ibm-plex-mono), monospace; }
+.finishChecks article > svg { flex: 0 0 4.25rem; width: 4.25rem; height: auto; border-radius: .45rem; background: rgba(8, 6, 24, .65); }
 .finishChecks article > span { color: #9389aa; font-size: .64rem; line-height: 1.45; }
 .finishChecks article strong { display: block; color: #f6f2ff; font-size: .69rem; }
 .fullPattern { border-color: rgba(77, 225, 255, .25); background: linear-gradient(145deg, rgba(77, 225, 255, .06), rgba(24, 17, 50, .62)); }
