@@ -177,6 +177,13 @@
   color: var(--gold);
 }
 
+.possum-payday-route .utility-button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.35);
+  opacity: 0.48;
+  transform: none;
+}
+
 .possum-payday-route .sound-button {
   color: var(--teal);
 }
@@ -370,45 +377,33 @@
   filter: drop-shadow(0 8px 6px rgba(0, 0, 0, 0.7));
 }
 
-.possum-payday-route .bonus-launch {
+.possum-payday-route .bonus-badge {
   width: 100%;
-  padding: 14px 8px 11px;
-  border: 2px solid #ffdf70;
+  padding: 13px 8px 10px;
+  border: 2px dashed #ffdf70;
   border-radius: 7px;
-  background: linear-gradient(180deg, #e93a42, #8d111d);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.25), 0 6px 0 #4a0a11, 0 9px 17px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(180deg, rgba(126, 34, 38, 0.95), rgba(63, 18, 18, 0.95));
+  box-shadow: inset 0 0 13px rgba(255, 196, 58, 0.16), 0 7px 17px rgba(0, 0, 0, 0.42);
   color: white;
-  cursor: pointer;
-  transform: rotate(-2deg);
-  transition: filter 150ms ease, transform 150ms ease;
-}
-
-.possum-payday-route .bonus-launch:hover {
-  filter: brightness(1.18);
-  transform: rotate(-1deg) translateY(-2px);
-}
-
-.possum-payday-route .bonus-launch:disabled {
-  cursor: wait;
-  filter: grayscale(0.35) brightness(0.72);
   transform: rotate(-2deg);
 }
 
-.possum-payday-route .bonus-launch span,
-.possum-payday-route .bonus-launch small {
+.possum-payday-route .bonus-badge span,
+.possum-payday-route .bonus-badge small {
   display: block;
 }
 
-.possum-payday-route .bonus-launch span {
+.possum-payday-route .bonus-badge span {
+  color: var(--gold);
   font-family: var(--display);
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   font-style: italic;
   letter-spacing: 0.04em;
 }
 
-.possum-payday-route .bonus-launch small {
+.possum-payday-route .bonus-badge small {
   margin-top: 3px;
-  color: #ffeac3;
+  color: var(--teal);
   font-size: 0.55rem;
   font-style: normal;
   font-weight: 900;
@@ -1228,6 +1223,10 @@
   box-shadow: inset 0 0 70px rgba(0, 0, 0, 0.7);
 }
 
+.possum-payday-route .bonus-modal:focus {
+  outline: none;
+}
+
 .possum-payday-route .modal-close {
   position: absolute;
   z-index: 10;
@@ -1346,25 +1345,29 @@
   grid-template-columns: repeat(3, 1fr);
   width: 86%;
   height: 82%;
-  gap: 4px;
+  gap: 7px;
 }
 
 .possum-payday-route .hay-spot {
   position: relative;
   min-width: 0;
-  overflow: visible;
-  border: 0;
-  background: transparent;
-  cursor: default;
+  overflow: hidden;
+  border: 1px solid rgba(255, 218, 126, 0.25);
+  border-radius: 9px;
+  background:
+    linear-gradient(180deg, rgba(93, 51, 26, 0.62), rgba(30, 15, 10, 0.76)),
+    repeating-linear-gradient(88deg, transparent 0 8px, rgba(255, 255, 255, 0.025) 9px 11px);
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.55);
+  transition: border-color 130ms ease, box-shadow 130ms ease, filter 130ms ease;
 }
 
 .possum-payday-route .hay-bale {
   position: absolute;
   z-index: 4;
   right: 7%;
-  bottom: 9%;
+  bottom: 15%;
   left: 7%;
-  height: 29%;
+  height: 25%;
   border: 2px solid #79511b;
   border-radius: 9px 9px 14px 14px;
   background:
@@ -1394,10 +1397,10 @@
   position: absolute;
   z-index: 3;
   right: 0;
-  bottom: 23%;
+  bottom: 25%;
   left: 0;
   width: 100%;
-  height: 84%;
+  height: 70%;
   object-fit: contain;
   user-select: none;
   filter: drop-shadow(0 7px 5px rgba(0, 0, 0, 0.7));
@@ -1405,11 +1408,78 @@
 }
 
 .possum-payday-route .hay-spot.has-goat {
-  cursor: crosshair;
+  border-color: #fff09b;
+  box-shadow: inset 0 0 18px rgba(255, 203, 54, 0.3), 0 0 17px rgba(255, 195, 48, 0.48);
+  filter: brightness(1.12);
 }
 
-.possum-payday-route .hay-spot.has-goat:hover img {
-  transform: scale(1.08) rotate(-4deg);
+.possum-payday-route .hay-spot.is-winning-pen {
+  border-color: var(--teal);
+  box-shadow:
+    inset 0 0 25px rgba(54, 216, 195, 0.3),
+    0 0 6px 2px #fff1a4,
+    0 0 30px rgba(54, 216, 195, 0.72);
+  animation: pp-winnerPulse 620ms ease-in-out infinite alternate;
+}
+
+.possum-payday-route .bonus-pen-stamp,
+.possum-payday-route .bonus-multiplier,
+.possum-payday-route .hay-spot small {
+  position: absolute;
+  z-index: 6;
+  font-family: var(--condensed);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.possum-payday-route .bonus-pen-stamp {
+  top: 5px;
+  left: 6px;
+  max-width: 54%;
+  overflow: hidden;
+  color: #af9a70;
+  font-size: 0.43rem;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.possum-payday-route .bonus-multiplier {
+  top: 3px;
+  right: 5px;
+  color: var(--gold);
+  font-family: var(--display);
+  font-size: clamp(0.95rem, 2vw, 1.45rem);
+  font-style: italic;
+  line-height: 1;
+  text-shadow: 0 0 8px rgba(255, 196, 49, 0.48);
+}
+
+.possum-payday-route .hay-spot small {
+  right: 3px;
+  bottom: 3px;
+  left: 3px;
+  overflow: hidden;
+  padding: 3px 2px;
+  border-radius: 3px;
+  background: rgba(18, 8, 6, 0.86);
+  color: #f0dcac;
+  font-size: 0.42rem;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.possum-payday-route .bonus-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .possum-payday-route .bonus-footer {
@@ -1422,7 +1492,6 @@
   justify-content: center;
 }
 
-.possum-payday-route .start-rodeo,
 .possum-payday-route .rules-got-it {
   min-width: 240px;
   min-height: 58px;
@@ -1440,15 +1509,18 @@
 }
 
 .possum-payday-route .live-callout {
+  max-width: 100%;
   padding: 12px 20px;
   border: 1px solid rgba(255, 219, 105, 0.5);
   border-radius: 5px;
   background: rgba(114, 15, 21, 0.86);
   color: #ffe991;
   font-family: var(--display);
-  font-size: 1.3rem;
+  font-size: clamp(0.82rem, 1.65vw, 1.15rem);
   font-style: italic;
   letter-spacing: 0.05em;
+  line-height: 1.05;
+  text-align: center;
   animation: pp-livePulse 500ms ease-in-out infinite alternate;
 }
 
@@ -1751,7 +1823,7 @@
     display: none;
   }
 
-  .possum-payday-route .bonus-launch {
+  .possum-payday-route .bonus-badge {
     grid-column: 3;
     grid-row: 1 / span 3;
     width: 145px;
@@ -1965,16 +2037,16 @@
     font-size: 1.22rem;
   }
 
-  .possum-payday-route .bonus-launch {
+  .possum-payday-route .bonus-badge {
     width: 112px;
     padding: 9px 5px 7px;
   }
 
-  .possum-payday-route .bonus-launch span {
+  .possum-payday-route .bonus-badge span {
     font-size: 1.02rem;
   }
 
-  .possum-payday-route .bonus-launch small {
+  .possum-payday-route .bonus-badge small {
     font-size: 0.42rem;
   }
 
@@ -2075,12 +2147,6 @@
     width: 94%;
     margin-top: 10px;
     margin-bottom: 75px;
-  }
-
-  .possum-payday-route .start-rodeo {
-    min-width: 205px;
-    min-height: 48px;
-    font-size: 1.15rem;
   }
 
   .possum-payday-route .bonus-result {
