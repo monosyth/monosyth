@@ -17,10 +17,10 @@ export type BoxyBagPlan = {
 };
 
 /**
- * Drafts a clean-finish, no-bottom-seam box pouch from one outer rectangle
- * and one lining rectangle. Each rectangle wraps from one zipper edge, around
- * the pouch, and back to the other zipper edge. Corner squares are removed
- * only after the zipper tube is flattened and its two short ends are sewn.
+ * Drafts a four-panel box pouch from two outer rectangles and two lining
+ * rectangles. One outer/lining pair is sewn to each zipper tape. The paired
+ * outer panels and paired lining panels are then flattened on opposite sides
+ * of the zipper so the acrylic tool can cut four stacked raw corners.
  */
 export function calculateBoxyBagPlan({
   length,
@@ -30,7 +30,7 @@ export function calculateBoxyBagPlan({
 }: BoxyBagDimensions): BoxyBagPlan {
   const finishedDepth = Math.max(0, (cornerCut - seamAllowance) * 2);
   const panelLength = length + finishedDepth + seamAllowance * 2;
-  const panelWidth = (height + finishedDepth) * 2 + seamAllowance * 2;
+  const panelWidth = height + finishedDepth + seamAllowance * 2;
 
   return {
     finishedDepth,
@@ -55,7 +55,7 @@ export function calculateBoxyBagPlanFromPanels({
 }): BoxyBagPlan {
   const finishedDepth = Math.max(0, (cornerCut - seamAllowance) * 2);
   const length = Math.max(0, panelLength - finishedDepth - seamAllowance * 2);
-  const height = Math.max(0, (panelWidth - seamAllowance * 2) / 2 - finishedDepth);
+  const height = Math.max(0, panelWidth - finishedDepth - seamAllowance * 2);
   const plan = calculateBoxyBagPlan({
     length,
     height,

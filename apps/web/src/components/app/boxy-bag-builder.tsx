@@ -40,7 +40,7 @@ const defaultDraft: Draft = {
 };
 const defaultPanelDraft: PanelDraft = {
   width: 13,
-  height: 15.5,
+  height: 8,
 };
 
 function roundForInput(value: number) {
@@ -129,7 +129,7 @@ function buildCuttingList(draft: Draft, panelDraft: PanelDraft, inputMode: Input
   const zipperTabSize = unit === "in" ? 2.5 : 6;
 
   return [
-    `BOXY BAG — FULL NO-BOTTOM-SEAM PATTERN`,
+    `BOXY BAG — FULL FOUR-PANEL PATTERN`,
     `Tool corner: ${guide}`,
     `Seam allowance: ${measurementPair(draft.seamAllowance, unit)}`,
     `Calculator mode: ${inputMode === "finished" ? "finished bag → panel cuts" : "starting panels → finished bag"}`,
@@ -137,30 +137,30 @@ function buildCuttingList(draft: Draft, panelDraft: PanelDraft, inputMode: Input
     `Bottom footprint: ${measurementPair(plan.finishedBaseLength, unit)} × ${measurementPair(plan.finishedDepth, unit)}`,
     ``,
     `CUT BEFORE SEWING`,
-    `Outer: cut 1 rectangle @ ${panelSize}`,
-    `Lining: cut 1 rectangle @ ${panelSize}`,
-    `Interfacing (recommended): cut 1 rectangle @ ${panelSize} and fuse to the outer wrong side`,
+    `Outer: cut 2 rectangles @ ${panelSize}`,
+    `Lining: cut 2 rectangles @ ${panelSize}`,
+    `Interfacing (recommended): cut 2 rectangles @ ${panelSize} and fuse to both outer wrong sides`,
     `Zipper tabs: cut 2 squares @ ${measurementPair(zipperTabSize, unit)}`,
     `Nylon coil zipper: 1 @ ${measurementPair(plan.recommendedZipper, unit)} or longer; trim after making the tabs`,
     ``,
-    `THE TOOL CUT HAPPENS AFTER THE ZIPPER + SHORT END SEAMS`,
-    `Flatten the sewn unit with the zipper running horizontally through the center, folded outer above it and folded lining below it.`,
-    `Remove 1 square from each of the 4 raw corners of that flat unit = 4 ${guide} tool cuts total.`,
-    `Place the ${guide} tool corner flush with each RAW corner. It intentionally cuts through the newly sewn short-end seam; reinforce the cut ends immediately.`,
+    `THE TOOL CUT HAPPENS AFTER THE ZIPPER — BEFORE THE SHELL SEAMS`,
+    `Put the 2 outer panels right sides together above the zipper and the 2 lining panels right sides together below it. The zipper runs horizontally through the exact center.`,
+    `Remove 1 stacked square from each of the 4 raw corners of that flat unit = 4 ${guide} tool placements total, cutting 2 fabric layers each time.`,
+    `Place the ${guide} tool corner flush with each RAW corner. Do not measure from a stitch line and do not add seam allowance to the tool.`,
     `Finished depth = 2 × (${formatMeasurement(plan.cornerCut, unit)} tool − ${formatMeasurement(draft.seamAllowance, unit)} seam allowance) = ${formatMeasurement(plan.finishedDepth, unit)}.`,
     ``,
-    `ASSEMBLE — ONE OUTER / ONE LINING / ZIPPER-GAP METHOD`,
-    `1. Fuse the interfacing to the outer wrong side. Fold and topstitch the two zipper-tab squares into narrow tabs.`,
-    `2. ZIPPER SIDE 1: Outer right side up; zipper right side down on one short edge; lining right side down on top. Sew through all 3 layers at ${measurementPair(draft.seamAllowance, unit)}.`,
-    `3. Turn both fabrics away from the teeth, press, and topstitch through outer + lining close to the fold.`,
-    `4. ZIPPER SIDE 2 / OUTER: bring the opposite short edge of the outer right side to the free zipper tape. Sew at ${measurementPair(draft.seamAllowance, unit)} to form the folded outer loop.`,
-    `5. ZIPPER SIDE 2 / LINING: open the zipper and put its pull inside a centered 2 in / 5 cm gap. Sew the opposite lining short edge to the same zipper tape, stopping on both sides of that gap. Press and topstitch, still leaving the gap open.`,
-    `6. Close the zipper. Baste one folded tab over each zipper end, catching only the outer and lining layers beside the zipper. Keep the tab folds pointing inward.`,
-    `7. Put the zipper pull back inside the turning gap. Turn the tube wrong side out and separate it flat: folded OUTER on one side, folded LINING on the other, zipper running horizontally through the center.`,
-    `8. Center the zipper precisely. Align the two raw short ends and sew each end straight across at ${measurementPair(draft.seamAllowance, unit)} through outer, zipper/tab, and lining. Hand-wheel over nylon coil teeth.`,
-    `9. NOW CUT: place the ${guide} acrylic corner flush with each raw corner of the sewn flat unit and cut all 4 squares. Reinforce the exposed ends of both short-end seams.`,
-    `10. BOX + JOIN each matching corner pair: open the outer cutout into a straight cap, open its lining mate beside it, align the two cap edges with the short-end seam centered, and sew one continuous diagonal cap seam at ${measurementPair(draft.seamAllowance, unit)}. Repeat for all 4 corners.`,
-    `11. Pull the bag right side out through the zipper-seam gap. Shape all corners, open the zipper fully, then topstitch the gap closed. The raw allowances remain between outer and lining.`,
+    `ASSEMBLE — TWO OUTER / TWO LINING / CENTERED-ZIPPER METHOD`,
+    `1. Fuse interfacing to both outer wrong sides. Fold and topstitch the two zipper-tab squares into narrow tabs.`,
+    `2. ZIPPER SIDE 1: Outer 1 right side up; zipper right side down on its short edge; Lining 1 right side down on top. Sew through all 3 layers at ${measurementPair(draft.seamAllowance, unit)}.`,
+    `3. ZIPPER SIDE 2: Outer 2 right side up; free zipper tape right side down on its short edge; Lining 2 right side down on top. Sew through all 3 layers at ${measurementPair(draft.seamAllowance, unit)}.`,
+    `4. Press both fabric pairs away from the zipper teeth and topstitch close to each fold. Baste one folded tab over each zipper end, folds pointing inward.`,
+    `5. Open the zipper halfway. Bring Outer 1 and Outer 2 right sides together on one side of the zipper. Bring Lining 1 and Lining 2 right sides together on the other side. Flatten the stack with the zipper horizontal through the exact center.`,
+    `6. NOW CUT: put the ${guide} acrylic corner flush with each of the 4 raw corners of the flat stack. Cut through both layers at each corner. Do not measure from a seam.`,
+    `7. Sew the two short ends straight across at ${measurementPair(draft.seamAllowance, unit)}, passing across outer, nylon zipper/tab, and lining. Hand-wheel over the coil.`,
+    `8. Sew the outer bottom-center seam between its two cutouts. Sew the lining bottom-center seam separately, leaving a centered 3–4 in / 8–10 cm turning gap.`,
+    `9. BOX 4 CORNERS: open one cutout, match its short-end seam to its bottom seam, flatten the raw cap edges, and sew diagonally across at ${measurementPair(draft.seamAllowance, unit)}. Repeat for 2 outer and 2 lining corners.`,
+    `10. Optional: tack each outer cap seam allowance to its matching lining cap seam allowance so the lining stays seated. Confirm the lining is not twisted first.`,
+    `11. Pull the pouch through the lining bottom gap and then through the half-open zipper. Shape the corners, close the lining gap, and seat the lining. Raw shell seams remain between the outer and lining.`,
   ].join("\n");
 }
 
@@ -298,11 +298,11 @@ export function BoxyBagBuilder() {
             <h1>Size it. Sew the zipper.<br /><span>Then cut the corners.</span></h1>
             <p className={styles.heroIntro}>
               Start with a finished bag size or panels you already have. Choose
-              an acrylic corner, then follow the illustrated no-bottom-seam pattern.
+              an acrylic corner, then follow the illustrated four-panel pattern.
             </p>
             <div className={styles.heroTags} aria-label="Pattern details">
               <span>Fully lined</span>
-              <span>1 outer + 1 lining</span>
+              <span>2 outer + 2 lining</span>
               <span>4 tool sizes</span>
             </div>
           </div>
@@ -328,7 +328,7 @@ export function BoxyBagBuilder() {
 
             <fieldset className={styles.templatePicker}>
               <legend>What do you know?</legend>
-              <p>Work forward from a finished bag size, or backward from two matching rectangles you already cut.</p>
+              <p>Work forward from a finished bag size, or backward from four matching panels you already cut.</p>
               <div className={styles.templateChoices}>
                 <button
                   type="button"
@@ -337,7 +337,7 @@ export function BoxyBagBuilder() {
                   onClick={() => chooseInputMode("finished")}
                 >
                   <strong>Finished bag</strong>
-                  <small>Choose final size → get both rectangles</small>
+                  <small>Choose final size → get all four panels</small>
                 </button>
                 <button
                   type="button"
@@ -371,7 +371,7 @@ export function BoxyBagBuilder() {
               ) : (
                 <>
                   <MeasurementInput id="panel-width" label="Starting panel width" note="Short edge attached to zipper" value={panelDraft.width} unit={unit} step={measurementStep} onChange={(value) => updatePanelDraft("width", value)} />
-                  <MeasurementInput id="panel-height" label="Starting panel height" note="Long edge wraps around bag" value={panelDraft.height} unit={unit} step={measurementStep} onChange={(value) => updatePanelDraft("height", value)} />
+                  <MeasurementInput id="panel-height" label="Starting panel height" note="Zipper edge to bottom seam" value={panelDraft.height} unit={unit} step={measurementStep} onChange={(value) => updatePanelDraft("height", value)} />
                 </>
               )}
               <MeasurementInput id="bag-seam" label="Seam allowance" note="Used throughout" value={draft.seamAllowance} unit={unit} step={measurementStep} onChange={(value) => updateDraft("seamAllowance", value)} />
@@ -420,7 +420,7 @@ export function BoxyBagBuilder() {
             <div className={styles.methodNote}>
               <span aria-hidden="true">◎</span>
               <p>
-                <strong>Zipper-gap method · no bottom seam</strong> One outer rectangle and one lining rectangle each fold around from one zipper edge to the other. The four acrylic cuts happen only after the zipper is centered and the two short ends are sewn.
+                <strong>Four-panel method · centered zipper</strong> Two outer panels and two lining panels attach to the zipper first. Pair the outers above it and the linings below it, then make four stacked acrylic cuts before sewing the shell seams.
               </p>
             </div>
           </aside>
@@ -452,19 +452,19 @@ export function BoxyBagBuilder() {
 
             <div className={styles.outputGrid}>
               <article className={styles.cutCard}>
-                <div className={styles.outputLabel}><span>Cut 1</span> Outer rectangle</div>
+                <div className={styles.outputLabel}><span>Cut 2</span> Outer panels</div>
                 <strong>{formatMeasurement(plan.panelLength, unit)} × {formatMeasurement(plan.panelWidth, unit)}</strong>
-                <small>Fuse one matching piece of interfacing to its wrong side.</small>
+                <small>Fuse one matching interfacing panel to each wrong side.</small>
               </article>
               <article className={styles.cutCard}>
-                <div className={styles.outputLabel}><span>Cut 1</span> Lining rectangle</div>
+                <div className={styles.outputLabel}><span>Cut 2</span> Lining panels</div>
                 <strong>{formatMeasurement(plan.panelLength, unit)} × {formatMeasurement(plan.panelWidth, unit)}</strong>
-                <small>Same size as the outer. Leave it rectangular—do not cut corners yet.</small>
+                <small>Same size as the outer panels. Leave every panel rectangular.</small>
               </article>
               <article className={`${styles.cutCard} ${styles.cornerCard}`}>
                 <div className={styles.outputLabel}><span>Cut later</span> 4 assembled corners</div>
                 <strong>{cornerCutLabel} × {cornerCutLabel}</strong>
-                <small>Use the tool only after the zipper unit is flat and both short ends are sewn.</small>
+                <small>Use the tool after the zipper unit is flat but before sewing the shell seams.</small>
               </article>
               <article className={`${styles.cutCard} ${styles.zipperCard}`}>
                 <div className={styles.outputLabel}><span>Cut 1 + 2 tabs</span> Nylon zipper</div>
@@ -476,8 +476,8 @@ export function BoxyBagBuilder() {
             <article className={styles.cutFirstCallout}>
               <span aria-hidden="true">CUT LATER</span>
               <div>
-                <strong>The zipper and short-end seams come before the acrylic tool.</strong>
-                <p>Flatten the sewn tube with outer above, lining below, and zipper running horizontally through the exact center. Then put the tool directly on each of the four raw corners—no measuring from the stitch line.</p>
+                <strong>Install the zipper first. Cut the four corners next.</strong>
+                <p>Attach both sides of the zipper, then pair the two outers above it and the two linings below it. With the zipper horizontal through the exact center, put the tool on each of the four stacked raw corners—no measuring from a stitch line.</p>
               </div>
             </article>
 
@@ -496,9 +496,9 @@ export function BoxyBagBuilder() {
                 <p className={styles.cardNumber}>03</p>
                 <h3>Complete cutting checklist</h3>
                 <ul>
-                  <li><span>1</span> rectangular outer panel</li>
-                  <li><span>1</span> matching lining panel</li>
-                  <li><span>1</span> matching interfacing panel</li>
+                  <li><span>2</span> rectangular outer panels</li>
+                  <li><span>2</span> matching lining panels</li>
+                  <li><span>2</span> matching interfacing panels</li>
                   <li><span>2</span> 2½″ / 6 cm zipper-tab squares</li>
                   <li><span>1</span> {formatMeasurement(plan.recommendedZipper, unit)} nylon coil zipper</li>
                 </ul>
@@ -507,15 +507,15 @@ export function BoxyBagBuilder() {
                 <p className={styles.cardNumber}>04</p>
                 <h3>Sewing sequence</h3>
                 <ol>
-                  <li>Wrap outer and lining around both zipper edges.</li>
-                  <li>Leave the zipper-side turning gap; flatten and sew both ends.</li>
-                  <li>Cut four tool corners, then sew four joined corner caps.</li>
+                  <li>Attach one outer/lining pair to each zipper edge.</li>
+                  <li>Pair outer above and lining below; cut four stacked corners.</li>
+                  <li>Sew shell seams, box four corners, then turn through the lining.</li>
                 </ol>
               </article>
             </div>
 
             <p className={styles.accuracyNote}>
-              Tool-cut math subtracts the short-end seam allowance from both sides of the finished depth. Fabric bulk and turn-of-cloth can still shift the result slightly; test precious fabric in muslin first.
+              Tool-cut math subtracts the cap seam allowance from both sides of the finished depth. Fabric bulk and turn-of-cloth can still shift the result slightly; test precious fabric in muslin first.
             </p>
           </section>
         </div>
