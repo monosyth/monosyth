@@ -53,7 +53,7 @@ const studioProjects: readonly StudioProject[] = [
     href: "/app/possum-payday",
     label: "Play game",
     details: "Family fortune reels + Goat Rodeo bonus",
-    meta: "Original game / 5×5 reels",
+    meta: "Original game / 6×5 reels",
     accent: "red",
     glyph: "possum",
   },

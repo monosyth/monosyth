@@ -6,7 +6,7 @@ import "./possum-payday.css";
 
 const title = "Possum Payday · Monosyth Studio";
 const description =
-  "A rowdy 5×5 family fortune slot game with original characters, junkyard treasures, and the Goat Rodeo bonus.";
+  "A rowdy 6×5 family fortune slot game with original characters, junkyard treasures, and the Goat Rodeo bonus.";
 
 export const metadata: Metadata = {
   title,
