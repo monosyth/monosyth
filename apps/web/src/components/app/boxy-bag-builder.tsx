@@ -472,7 +472,7 @@ function PanelPiece({ layer, number, panelLength, panelWidth, cornerCut }: {
       <header><span>{layer}</span><strong>Panel {number}</strong></header>
       <svg viewBox="0 0 300 170" role="img" aria-label={`${layer} panel ${number}, ${panelLength} by ${panelWidth}, with two ${cornerCut} square bottom corners removed`}>
         <g fill="#ff7aac" fillOpacity=".13" stroke="#ff7aac" strokeDasharray="5 4"><rect x="26" y="102" width="46" height="46" /><rect x="228" y="102" width="46" height="46" /></g>
-        <path d="M26 22h248v126h-46v-46H72v46H26Z" fill={outer ? "#302052" : "#12364b"} stroke={outer ? "#a78bfa" : "#4de1ff"} strokeWidth="2" />
+        <path d="M26 22h248v80h-46v46H72v-46H26Z" fill={outer ? "#302052" : "#12364b"} stroke={outer ? "#a78bfa" : "#4de1ff"} strokeWidth="2" />
         <path d="M26 22h248" stroke="#ffd75e" strokeWidth="4" />
         <text x="150" y="74" textAnchor="middle" fill="#f6f2ff" fontSize="15" fontWeight="700">{layer.toUpperCase()} {number}</text>
         <text x="150" y="94" textAnchor="middle" fill="#a9a0bf" fontFamily="var(--font-ibm-plex-mono)" fontSize="10">TOP · ZIPPER EDGE</text>
@@ -550,9 +550,9 @@ function PatternDiagram({ finishedLength, panelLength, panelWidth, cornerCut, fi
           <g transform="translate(96 56)">
             <rect width="568" height="236" fill="none" stroke="#5c4a7d" strokeDasharray="5 6" />
             <g fill="url(#panel-cut-hatch)" stroke="#ff7aac" strokeWidth="1.5" strokeDasharray="6 5"><rect y="172" width="64" height="64" /><rect x="504" y="172" width="64" height="64" /></g>
-            <path d="M0 0h568v236h-64v-64H64v64H0Z" fill="#20163d" stroke="#a78bfa" strokeWidth="2.5" />
+            <path d="M0 0h568v172h-64v64H64v-64H0Z" fill="#20163d" stroke="#a78bfa" strokeWidth="2.5" />
             <path d="M0 0h568" stroke="#ffd75e" strokeWidth="6" />
-            <path d="M0 0h568v236h-64v-64H64v64H0Z" fill="url(#panel-grid)" />
+            <path d="M0 0h568v172h-64v64H64v-64H0Z" fill="url(#panel-grid)" />
             <text x="284" y="108" textAnchor="middle" fill="#f6f2ff" fontSize="21" fontWeight="700">ONE SHAPED PANEL</text>
             <text x="284" y="137" textAnchor="middle" fill="#bcb2d4" fontFamily="var(--font-ibm-plex-mono)" fontSize="13">REPEAT × 4 FABRIC PANELS</text>
             <text x="284" y="24" textAnchor="middle" fill="#fff3b0" fontFamily="var(--font-ibm-plex-mono)" fontSize="11">RAW ZIPPER EDGE · {panelLength}</text>
@@ -616,9 +616,9 @@ function PatternDiagram({ finishedLength, panelLength, panelWidth, cornerCut, fi
           <article>
             <header><span>Outer shell</span><strong>Outer 1 + Outer 2 · right sides together</strong></header>
             <svg viewBox="0 0 300 170" role="img" aria-label="Outer panels right sides together with side and bottom seams sewn and bottom corner openings left open">
-              <path d="M34 22h232v126h-47v-44H81v44H34Z" fill="#2c1c50" stroke="#a78bfa" strokeWidth="2" />
-              <path d="M34 22v126M266 22v126M81 104h138" fill="none" stroke="#ffd75e" strokeWidth="5" />
-              <path d="M34 148h47M219 148h47" stroke="#ff7aac" strokeWidth="4" strokeDasharray="5 4" />
+              <path d="M34 22h232v82h-47v44H81v-44H34Z" fill="#2c1c50" stroke="#a78bfa" strokeWidth="2" />
+              <path d="M34 22v82M266 22v82M81 148h138" fill="none" stroke="#ffd75e" strokeWidth="5" />
+              <path d="M34 104h47v44M266 104h-47v44" fill="none" stroke="#ff7aac" strokeWidth="4" strokeDasharray="5 4" />
               <text x="150" y="63" textAnchor="middle" fill="#f7f3ff" fontSize="12">SEW SIDES + BOTTOM</text>
               <text x="150" y="86" textAnchor="middle" fill="#b8aed0" fontSize="10">LEAVE 2 CORNER OPENINGS</text>
             </svg>
@@ -626,10 +626,10 @@ function PatternDiagram({ finishedLength, panelLength, panelWidth, cornerCut, fi
           <article>
             <header><span>Lining shell</span><strong>Lining 1 + Lining 2 · right sides together</strong></header>
             <svg viewBox="0 0 300 170" role="img" aria-label="Lining panels right sides together with side and bottom seams sewn, bottom corner openings open, and a turning gap in the bottom seam">
-              <path d="M34 22h232v126h-47v-44H81v44H34Z" fill="#10364a" stroke="#4de1ff" strokeWidth="2" />
-              <path d="M34 22v126M266 22v126M81 104h45M174 104h45" fill="none" stroke="#ffd75e" strokeWidth="5" />
-              <path d="M126 104h48" stroke="#4de1ff" strokeWidth="4" strokeDasharray="6 4" />
-              <path d="M34 148h47M219 148h47" stroke="#ff7aac" strokeWidth="4" strokeDasharray="5 4" />
+              <path d="M34 22h232v82h-47v44H81v-44H34Z" fill="#10364a" stroke="#4de1ff" strokeWidth="2" />
+              <path d="M34 22v82M266 22v82M81 148h45M174 148h45" fill="none" stroke="#ffd75e" strokeWidth="5" />
+              <path d="M126 148h48" stroke="#4de1ff" strokeWidth="4" strokeDasharray="6 4" />
+              <path d="M34 104h47v44M266 104h-47v44" fill="none" stroke="#ff7aac" strokeWidth="4" strokeDasharray="5 4" />
               <text x="150" y="63" textAnchor="middle" fill="#f7f3ff" fontSize="12">SEW SIDES + BOTTOM</text>
               <text x="150" y="87" textAnchor="middle" fill="#a7efff" fontSize="10">LEAVE 3–4″ / 8–10 CM GAP</text>
             </svg>
@@ -644,7 +644,7 @@ function PatternDiagram({ finishedLength, panelLength, panelWidth, cornerCut, fi
           <div><strong>Sew four pre-cut boxed corners</strong><small>Two in the outer shell and two in the lining shell; no fabric is trimmed after assembly.</small></div>
         </div>
         <div className={styles.sewingSteps}>
-          <article><span>A</span><strong>Find one paired opening</strong><svg viewBox="0 0 180 110" aria-hidden="true"><path d="M24 18h132v74H96V58H60v34H24Z" fill="#241943" stroke="#a78bfa" strokeWidth="2" /><path d="M60 92V58h36v34" fill="none" stroke="#ff7aac" strokeWidth="4" /></svg><p>Two matching {cornerCut} cutouts have formed one open corner.</p></article>
+          <article><span>A</span><strong>Find one paired opening</strong><svg viewBox="0 0 180 110" aria-hidden="true"><path d="M24 18h132v40h-42v34H24Z" fill="#241943" stroke="#a78bfa" strokeWidth="2" /><path d="M114 92V58h42" fill="none" stroke="#ff7aac" strokeWidth="4" /></svg><p>Two matching {cornerCut} cutouts have formed one open corner.</p></article>
           <article><span>B</span><strong>Match seams + raw edges</strong><svg viewBox="0 0 180 110" aria-hidden="true"><path d="M31 27 89 55 149 27" fill="none" stroke="#a78bfa" strokeWidth="19" strokeLinejoin="round" /><path d="M31 27 89 55 149 27" fill="none" stroke="#ff7aac" strokeWidth="3" /><path d="M47 79h84" stroke="#d9d2ef" strokeDasharray="5 4" /><path d="m76 67 13 12 13-12" fill="none" stroke="#d9d2ef" strokeWidth="2" /></svg><p>Pull the opening flat. Nest the side seam directly on the bottom seam.</p></article>
           <article><span>C</span><strong>Sew straight across</strong><svg viewBox="0 0 180 110" aria-hidden="true"><path d="M26 31 154 70 143 98 15 59Z" fill="#241943" stroke="#a78bfa" strokeWidth="2" /><path d="M26 31 154 70" stroke="#ff7aac" strokeWidth="4" /><path d="M20 50 148 89" stroke="#ffd75e" strokeWidth="5" /></svg><p>Sew {seamAllowance} from the raw edge; finished depth ≈ {finishedDepth}. Backstitch both ends.</p></article>
         </div>
