@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import styles from "@/app/app/boxy-bag/boxy-bag.module.css";
 import { useAuth } from "@/components/auth/auth-provider";
+import { NoBottomSeamPattern } from "@/components/app/no-bottom-seam-pattern";
 import {
   calculateBoxyBagPlan,
   calculateBoxyBagPlanFromPanels,
@@ -38,8 +39,8 @@ const defaultDraft: Draft = {
   cornerGuideInches: 2,
 };
 const defaultPanelDraft: PanelDraft = {
-  width: 13.5,
-  height: 8.5,
+  width: 13,
+  height: 15.5,
 };
 
 function roundForInput(value: number) {
@@ -107,7 +108,6 @@ function getPlan(draft: Draft, panelDraft: PanelDraft, inputMode: InputMode, uni
     height: draft.height,
     cornerCut: guideInUnit(draft.cornerGuideInches, unit),
     seamAllowance: draft.seamAllowance,
-    zipperExtra: unit === "in" ? 2 : 5,
   };
 
   if (inputMode === "panels") {
@@ -116,7 +116,6 @@ function getPlan(draft: Draft, panelDraft: PanelDraft, inputMode: InputMode, uni
       panelWidth: panelDraft.height,
       cornerCut: shared.cornerCut,
       seamAllowance: shared.seamAllowance,
-      zipperExtra: shared.zipperExtra,
     });
   }
 
@@ -127,40 +126,41 @@ function buildCuttingList(draft: Draft, panelDraft: PanelDraft, inputMode: Input
   const plan = getPlan(draft, panelDraft, inputMode, unit);
   const guide = formatInches(draft.cornerGuideInches);
   const panelSize = `${measurementPair(plan.panelLength, unit)} × ${measurementPair(plan.panelWidth, unit)}`;
+  const zipperTabSize = unit === "in" ? 2.5 : 6;
 
   return [
-    `BOXY BAG — CUT-FIRST PLAN`,
+    `BOXY BAG — FULL NO-BOTTOM-SEAM PATTERN`,
     `Tool corner: ${guide}`,
     `Seam allowance: ${measurementPair(draft.seamAllowance, unit)}`,
     `Calculator mode: ${inputMode === "finished" ? "finished bag → panel cuts" : "starting panels → finished bag"}`,
     `Finished bag: ${measurementPair(plan.finishedBaseLength, unit)} L × ${measurementPair(plan.finishedDepth, unit)} W × ${measurementPair(plan.finishedHeight, unit)} H`,
     `Bottom footprint: ${measurementPair(plan.finishedBaseLength, unit)} × ${measurementPair(plan.finishedDepth, unit)}`,
     ``,
-    `CUT ALL PANELS BEFORE SEWING`,
-    `Outer panel 1: start ${panelSize}; use the acrylic tool on all 4 raw corners`,
-    `Outer panel 2: start ${panelSize}; use the acrylic tool on all 4 raw corners`,
-    `Lining panel 1: start ${panelSize}; use the acrylic tool on all 4 raw corners`,
-    `Lining panel 2: start ${panelSize}; use the acrylic tool on all 4 raw corners`,
-    `Interfacing panels 1–2 (optional): cut to the same final shape`,
-    `Zipper tape: 1 @ ${measurementPair(plan.recommendedZipper, unit)}`,
+    `CUT BEFORE SEWING`,
+    `Outer: cut 1 rectangle @ ${panelSize}`,
+    `Lining: cut 1 rectangle @ ${panelSize}`,
+    `Interfacing (recommended): cut 1 rectangle @ ${panelSize} and fuse to the outer wrong side`,
+    `Zipper tabs: cut 2 squares @ ${measurementPair(zipperTabSize, unit)}`,
+    `Nylon coil zipper: 1 @ ${measurementPair(plan.recommendedZipper, unit)} or longer; trim after making the tabs`,
     ``,
-    `CORNER TOTAL`,
-    `Remove 4 squares per mandatory panel = 16 ${guide} corner squares total.`,
-    `Place the ${guide} tool corner flush with each RAW fabric corner. Do not measure from a seam line and do not add seam allowance to the tool.`,
+    `THE TOOL CUT HAPPENS AFTER THE ZIPPER + SHORT END SEAMS`,
+    `Flatten the sewn unit with the zipper running horizontally through the center, folded outer above it and folded lining below it.`,
+    `Remove 1 square from each of the 4 raw corners of that flat unit = 4 ${guide} tool cuts total.`,
+    `Place the ${guide} tool corner flush with each RAW corner. It intentionally cuts through the newly sewn short-end seam; reinforce the cut ends immediately.`,
     `Finished depth = 2 × (${formatMeasurement(plan.cornerCut, unit)} tool − ${formatMeasurement(draft.seamAllowance, unit)} seam allowance) = ${formatMeasurement(plan.finishedDepth, unit)}.`,
     ``,
-    `ASSEMBLE — WRAPAROUND ZIPPER / ENCLOSED-SEAM METHOD`,
-    `1. Fuse optional interfacing or batting to both outer panels; quilt if desired. Staystitch quilted raw edges inside the seam allowance.`,
-    `2. Zipper side 1: Outer 1 right side up, zipper right side down, Lining 1 right side down. Align the straight top center edges and sew.`,
-    `3. Zipper side 2: Outer 2 right side up, free zipper tape right side down, Lining 2 right side down. Align the straight top center edges and sew.`,
-    `4. Press the fabric away from the teeth and topstitch both zipper edges. Add optional folded ribbon tabs at the two zipper ends, folds pointing inward.`,
-    `5. OPEN THE ZIPPER HALFWAY. Put outer panels right sides together and lining panels right sides together.`,
-    `6. Sew each outer side-center edge and the outer bottom-center edge. Sew the lining edges separately, leaving a 3–4 in / 8–10 cm turning gap in its bottom. Leave every corner opening unsewn.`,
-    `7. Box the 2 LOWER outer openings and 2 LOWER lining openings separately: flatten each opening, match its side seam to its bottom seam, and sew ${measurementPair(draft.seamAllowance, unit)} from the raw edge.`,
-    `8. Optional: tack each lower outer cap seam allowance to its matching lining cap seam allowance, checking that the lining is not twisted.`,
-    `9. INVERT ZIPPER END 1: turn the end so the outer and lining openings can lie flat. Center the zipper directly opposite the matching center-bottom seam, align the raw cut edges into one straight stack, and sew ${measurementPair(draft.seamAllowance, unit)} straight across all layers.`,
-    `10. Repeat at zipper end 2. Use only a nylon coil zipper, hand-wheel across the coil, backstitch, and trim excess zipper tape only after both end seams are secure. These are single enclosed end seams—not French seams.`,
-    `11. Turn through the lining gap and the open zipper, shape the bag, close the gap, and place the lining inside.`,
+    `ASSEMBLE — ONE OUTER / ONE LINING / ZIPPER-GAP METHOD`,
+    `1. Fuse the interfacing to the outer wrong side. Fold and topstitch the two zipper-tab squares into narrow tabs.`,
+    `2. ZIPPER SIDE 1: Outer right side up; zipper right side down on one short edge; lining right side down on top. Sew through all 3 layers at ${measurementPair(draft.seamAllowance, unit)}.`,
+    `3. Turn both fabrics away from the teeth, press, and topstitch through outer + lining close to the fold.`,
+    `4. ZIPPER SIDE 2 / OUTER: bring the opposite short edge of the outer right side to the free zipper tape. Sew at ${measurementPair(draft.seamAllowance, unit)} to form the folded outer loop.`,
+    `5. ZIPPER SIDE 2 / LINING: open the zipper and put its pull inside a centered 2 in / 5 cm gap. Sew the opposite lining short edge to the same zipper tape, stopping on both sides of that gap. Press and topstitch, still leaving the gap open.`,
+    `6. Close the zipper. Baste one folded tab over each zipper end, catching only the outer and lining layers beside the zipper. Keep the tab folds pointing inward.`,
+    `7. Put the zipper pull back inside the turning gap. Turn the tube wrong side out and separate it flat: folded OUTER on one side, folded LINING on the other, zipper running horizontally through the center.`,
+    `8. Center the zipper precisely. Align the two raw short ends and sew each end straight across at ${measurementPair(draft.seamAllowance, unit)} through outer, zipper/tab, and lining. Hand-wheel over nylon coil teeth.`,
+    `9. NOW CUT: place the ${guide} acrylic corner flush with each raw corner of the sewn flat unit and cut all 4 squares. Reinforce the exposed ends of both short-end seams.`,
+    `10. BOX + JOIN each matching corner pair: open the outer cutout into a straight cap, open its lining mate beside it, align the two cap edges with the short-end seam centered, and sew one continuous diagonal cap seam at ${measurementPair(draft.seamAllowance, unit)}. Repeat for all 4 corners.`,
+    `11. Pull the bag right side out through the zipper-seam gap. Shape all corners, open the zipper fully, then topstitch the gap closed. The raw allowances remain between outer and lining.`,
   ].join("\n");
 }
 
@@ -294,15 +294,15 @@ export function BoxyBagBuilder() {
 
         <header className={styles.hero}>
           <div className={styles.heroCopy}>
-            <p className={styles.eyebrow}>Sewing studio / Cut-first builder</p>
-            <h1>Pick a corner.<br /><span>Cut every panel.</span></h1>
+            <p className={styles.eyebrow}>Sewing studio / Full pattern maker</p>
+            <h1>Size it. Sew the zipper.<br /><span>Then cut the corners.</span></h1>
             <p className={styles.heroIntro}>
               Start with a finished bag size or panels you already have. Choose
-              an acrylic corner, then follow the illustrated four-panel pattern.
+              an acrylic corner, then follow the illustrated no-bottom-seam pattern.
             </p>
             <div className={styles.heroTags} aria-label="Pattern details">
               <span>Fully lined</span>
-              <span>Cut first</span>
+              <span>1 outer + 1 lining</span>
               <span>4 tool sizes</span>
             </div>
           </div>
@@ -328,7 +328,7 @@ export function BoxyBagBuilder() {
 
             <fieldset className={styles.templatePicker}>
               <legend>What do you know?</legend>
-              <p>Work forward from a finished bag size, or backward from panels you already cut.</p>
+              <p>Work forward from a finished bag size, or backward from two matching rectangles you already cut.</p>
               <div className={styles.templateChoices}>
                 <button
                   type="button"
@@ -337,7 +337,7 @@ export function BoxyBagBuilder() {
                   onClick={() => chooseInputMode("finished")}
                 >
                   <strong>Finished bag</strong>
-                  <small>Choose final size → get panel cuts</small>
+                  <small>Choose final size → get both rectangles</small>
                 </button>
                 <button
                   type="button"
@@ -370,8 +370,8 @@ export function BoxyBagBuilder() {
                 </>
               ) : (
                 <>
-                  <MeasurementInput id="panel-width" label="Starting panel width" note="Raw edge along zipper" value={panelDraft.width} unit={unit} step={measurementStep} onChange={(value) => updatePanelDraft("width", value)} />
-                  <MeasurementInput id="panel-height" label="Starting panel height" note="Raw panel top to bottom" value={panelDraft.height} unit={unit} step={measurementStep} onChange={(value) => updatePanelDraft("height", value)} />
+                  <MeasurementInput id="panel-width" label="Starting panel width" note="Short edge attached to zipper" value={panelDraft.width} unit={unit} step={measurementStep} onChange={(value) => updatePanelDraft("width", value)} />
+                  <MeasurementInput id="panel-height" label="Starting panel height" note="Long edge wraps around bag" value={panelDraft.height} unit={unit} step={measurementStep} onChange={(value) => updatePanelDraft("height", value)} />
                 </>
               )}
               <MeasurementInput id="bag-seam" label="Seam allowance" note="Used throughout" value={draft.seamAllowance} unit={unit} step={measurementStep} onChange={(value) => updateDraft("seamAllowance", value)} />
@@ -412,7 +412,7 @@ export function BoxyBagBuilder() {
                 {plan.cornerCut <= draft.seamAllowance
                   ? "The seam allowance must be smaller than the selected tool corner."
                   : inputMode === "panels"
-                    ? "Each panel must be larger than two corner cuts plus two seam allowances."
+                    ? "The rectangles are too small for this tool corner and seam allowance."
                     : "Enter a finished length and height greater than zero."}
               </p>
             ) : null}
@@ -420,7 +420,7 @@ export function BoxyBagBuilder() {
             <div className={styles.methodNote}>
               <span aria-hidden="true">◎</span>
               <p>
-                <strong>Wraparound zipper + center-bottom seam</strong> Cut all four corners from two outer and two lining panels. Box the lower corners separately. At each upper end, invert the opening, center the zipper opposite the bottom seam, and sew one straight enclosed seam—no French seams.
+                <strong>Zipper-gap method · no bottom seam</strong> One outer rectangle and one lining rectangle each fold around from one zipper edge to the other. The four acrylic cuts happen only after the zipper is centered and the two short ends are sewn.
               </p>
             </div>
           </aside>
@@ -429,7 +429,7 @@ export function BoxyBagBuilder() {
             <div className={styles.resultsHeader}>
               <div>
                 <p className={styles.cardNumber}>02</p>
-                <h2>Your cut-first plan</h2>
+                <h2>Your complete pattern</h2>
                 <p>{inputMode === "panels" ? "Your starting panels make the finished bag below." : "All mandatory fabric pieces are shown below."}</p>
               </div>
               <div className={styles.resultActions}>
@@ -452,32 +452,32 @@ export function BoxyBagBuilder() {
 
             <div className={styles.outputGrid}>
               <article className={styles.cutCard}>
-                <div className={styles.outputLabel}><span>Cut 2</span> Outer panels</div>
+                <div className={styles.outputLabel}><span>Cut 1</span> Outer rectangle</div>
                 <strong>{formatMeasurement(plan.panelLength, unit)} × {formatMeasurement(plan.panelWidth, unit)}</strong>
-                <small>Then use the tool to remove a {cornerCutLabel} square from all four raw corners.</small>
+                <small>Fuse one matching piece of interfacing to its wrong side.</small>
               </article>
               <article className={styles.cutCard}>
-                <div className={styles.outputLabel}><span>Cut 2</span> Lining panels</div>
+                <div className={styles.outputLabel}><span>Cut 1</span> Lining rectangle</div>
                 <strong>{formatMeasurement(plan.panelLength, unit)} × {formatMeasurement(plan.panelWidth, unit)}</strong>
-                <small>Same final shape as the outer panels.</small>
+                <small>Same size as the outer. Leave it rectangular—do not cut corners yet.</small>
               </article>
               <article className={`${styles.cutCard} ${styles.cornerCard}`}>
-                <div className={styles.outputLabel}><span>Cut 4 ea.</span> Tool corners</div>
+                <div className={styles.outputLabel}><span>Cut later</span> 4 assembled corners</div>
                 <strong>{cornerCutLabel} × {cornerCutLabel}</strong>
-                <small>16 squares removed across the four mandatory fabric panels.</small>
+                <small>Use the tool only after the zipper unit is flat and both short ends are sewn.</small>
               </article>
               <article className={`${styles.cutCard} ${styles.zipperCard}`}>
-                <div className={styles.outputLabel}><span>Cut 1</span> Zipper tape</div>
+                <div className={styles.outputLabel}><span>Cut 1 + 2 tabs</span> Nylon zipper</div>
                 <strong>{formatMeasurement(plan.recommendedZipper, unit)}</strong>
-                <small>Includes working room beyond the finished zipper opening.</small>
+                <small>Use this length or longer. Cut two 2½″ / 6 cm squares for folded end tabs.</small>
               </article>
             </div>
 
             <article className={styles.cutFirstCallout}>
-              <span aria-hidden="true">16 CUTS</span>
+              <span aria-hidden="true">CUT LATER</span>
               <div>
-                <strong>Put the acrylic corner directly on the raw fabric corner.</strong>
-                <p>No measuring from a stitched seam. Cut four corners from each of four panels; the lower pairs become ordinary boxed corners and each upper end becomes one flat seam sewn straight across the zipper.</p>
+                <strong>The zipper and short-end seams come before the acrylic tool.</strong>
+                <p>Flatten the sewn tube with outer above, lining below, and zipper running horizontally through the exact center. Then put the tool directly on each of the four raw corners—no measuring from the stitch line.</p>
               </div>
             </article>
 
@@ -496,9 +496,10 @@ export function BoxyBagBuilder() {
                 <p className={styles.cardNumber}>03</p>
                 <h3>Complete cutting checklist</h3>
                 <ul>
-                  <li><span>2</span> shaped outer panels</li>
-                  <li><span>2</span> shaped lining panels</li>
-                  <li><span>2</span> shaped interfacing panels, optional</li>
+                  <li><span>1</span> rectangular outer panel</li>
+                  <li><span>1</span> matching lining panel</li>
+                  <li><span>1</span> matching interfacing panel</li>
+                  <li><span>2</span> 2½″ / 6 cm zipper-tab squares</li>
                   <li><span>1</span> {formatMeasurement(plan.recommendedZipper, unit)} nylon coil zipper</li>
                 </ul>
               </article>
@@ -506,15 +507,15 @@ export function BoxyBagBuilder() {
                 <p className={styles.cardNumber}>04</p>
                 <h3>Sewing sequence</h3>
                 <ol>
-                  <li>Attach outer and lining panels to the zipper.</li>
-                  <li>Sew the remaining main seams, leaving every notch open.</li>
-                  <li>Box four lower corners, then invert and sew across both zipper ends.</li>
+                  <li>Wrap outer and lining around both zipper edges.</li>
+                  <li>Leave the zipper-side turning gap; flatten and sew both ends.</li>
+                  <li>Cut four tool corners, then sew four joined corner caps.</li>
                 </ol>
               </article>
             </div>
 
             <p className={styles.accuracyNote}>
-              Cut-first math subtracts seam allowance from both sides of each cap seam. Fabric bulk and turn-of-cloth can still shift the finished size slightly; test precious fabric in muslin first.
+              Tool-cut math subtracts the short-end seam allowance from both sides of the finished depth. Fabric bulk and turn-of-cloth can still shift the result slightly; test precious fabric in muslin first.
             </p>
           </section>
         </div>
@@ -602,6 +603,20 @@ function PatternDiagram({ finishedLength, panelLength, panelWidth, cornerCut, fi
   finishedHeight: string;
   seamAllowance: string;
 }) {
+  if (finishedLength) {
+    return (
+      <NoBottomSeamPattern
+        finishedLength={finishedLength}
+        panelLength={panelLength}
+        panelWidth={panelWidth}
+        cornerCut={cornerCut}
+        finishedDepth={finishedDepth}
+        finishedHeight={finishedHeight}
+        seamAllowance={seamAllowance}
+      />
+    );
+  }
+
   return (
     <figure className={styles.patternFigure}>
       <div className={styles.figureTitle}>
