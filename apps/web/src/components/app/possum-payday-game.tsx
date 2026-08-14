@@ -25,6 +25,13 @@ type SlotSymbol = {
   weight: number;
   pays: [number, number, number, number];
   rarity: string;
+  family: "KIN" | "CRITTER" | "RIDE" | "RODEO";
+  palette: {
+    top: string;
+    deep: string;
+    accent: string;
+    glow: string;
+  };
 };
 
 const SYMBOLS: SlotSymbol[] = [
@@ -37,6 +44,13 @@ const SYMBOLS: SlotSymbol[] = [
     weight: 4,
     pays: [0.55, 1.25, 3.2, 7.5],
     rarity: "LEGEND",
+    family: "KIN",
+    palette: {
+      top: "#9a2856",
+      deep: "#250a18",
+      accent: "#ff77a6",
+      glow: "rgba(255, 83, 145, 0.58)",
+    },
   },
   {
     id: "uncle",
@@ -47,6 +61,13 @@ const SYMBOLS: SlotSymbol[] = [
     weight: 5,
     pays: [0.42, 1, 2.5, 6],
     rarity: "PREMIUM",
+    family: "KIN",
+    palette: {
+      top: "#59397b",
+      deep: "#180d27",
+      accent: "#c092ff",
+      glow: "rgba(181, 126, 255, 0.52)",
+    },
   },
   {
     id: "goat",
@@ -56,7 +77,14 @@ const SYMBOLS: SlotSymbol[] = [
     fallback: "GOAT",
     weight: 7,
     pays: [0.32, 0.78, 1.9, 4.5],
-    rarity: "WILD-ISH",
+    rarity: "HEADLINER",
+    family: "CRITTER",
+    palette: {
+      top: "#27796c",
+      deep: "#092521",
+      accent: "#58f1d0",
+      glow: "rgba(69, 241, 211, 0.52)",
+    },
   },
   {
     id: "possum",
@@ -67,26 +95,13 @@ const SYMBOLS: SlotSymbol[] = [
     weight: 8,
     pays: [0.26, 0.62, 1.5, 3.6],
     rarity: "SLICK",
-  },
-  {
-    id: "truck",
-    name: "Mud Majesty",
-    nickname: "Zero miles per gallon",
-    image: "/possum-payday/art/symbols/mud-truck.png",
-    fallback: "4×4",
-    weight: 10,
-    pays: [0.2, 0.48, 1.15, 2.8],
-    rarity: "LOUD",
-  },
-  {
-    id: "mower",
-    name: "Yard Ferrari",
-    nickname: "Street questionably legal",
-    image: "/possum-payday/art/symbols/mower-racer.png",
-    fallback: "MOW",
-    weight: 10,
-    pays: [0.17, 0.4, 0.95, 2.3],
-    rarity: "TUNED",
+    family: "CRITTER",
+    palette: {
+      top: "#315d82",
+      deep: "#091a29",
+      accent: "#79caff",
+      glow: "rgba(93, 190, 255, 0.5)",
+    },
   },
   {
     id: "raccoon",
@@ -97,6 +112,47 @@ const SYMBOLS: SlotSymbol[] = [
     weight: 12,
     pays: [0.14, 0.33, 0.8, 1.9],
     rarity: "FERAL",
+    family: "CRITTER",
+    palette: {
+      top: "#405261",
+      deep: "#10171d",
+      accent: "#a7d8e8",
+      glow: "rgba(125, 201, 224, 0.46)",
+    },
+  },
+  {
+    id: "truck",
+    name: "Mud Majesty",
+    nickname: "Zero miles per gallon",
+    image: "/possum-payday/art/symbols/mud-truck.png",
+    fallback: "4×4",
+    weight: 10,
+    pays: [0.2, 0.48, 1.15, 2.8],
+    rarity: "LOUD",
+    family: "RIDE",
+    palette: {
+      top: "#a54120",
+      deep: "#2d1009",
+      accent: "#ff7d39",
+      glow: "rgba(255, 103, 43, 0.52)",
+    },
+  },
+  {
+    id: "mower",
+    name: "Yard Ferrari",
+    nickname: "Street questionably legal",
+    image: "/possum-payday/art/symbols/mower-racer.png",
+    fallback: "MOW",
+    weight: 10,
+    pays: [0.17, 0.4, 0.95, 2.3],
+    rarity: "TUNED",
+    family: "RIDE",
+    palette: {
+      top: "#5d7b20",
+      deep: "#172207",
+      accent: "#b9ed50",
+      glow: "rgba(175, 232, 71, 0.48)",
+    },
   },
   {
     id: "throne",
@@ -107,6 +163,13 @@ const SYMBOLS: SlotSymbol[] = [
     weight: 1,
     pays: [0, 0, 0, 0],
     rarity: "SCATTER",
+    family: "RODEO",
+    palette: {
+      top: "#a86408",
+      deep: "#311202",
+      accent: "#ffdd55",
+      glow: "rgba(255, 201, 54, 0.68)",
+    },
   },
 ];
 
@@ -168,6 +231,7 @@ const SPIN_FRAME_MS = 70;
 const REDUCED_SPIN_FRAME_MS = 105;
 const MAX_WIN_LINES = 18;
 const MAX_LINES_PER_SYMBOL = 6;
+const ANTICIPATION_STOP_FRAME = 48;
 const PAYLINE_COLORS = [
   "#ffd84d",
   "#45f1d3",
@@ -177,27 +241,33 @@ const PAYLINE_COLORS = [
   "#d2ff65",
 ] as const;
 
-type BonusPen = {
-  label: string;
-  multiplier: number;
-  stamp: string;
-};
+type BonusTarget = "raccoon" | "mower" | "truck";
+type BonusPhase =
+  | "intro"
+  | "spinning"
+  | "collecting"
+  | "transforming"
+  | "showing-win"
+  | "complete";
 
-const BONUS_PENS: readonly BonusPen[] = [
-  { label: "Feed Tub", multiplier: 2, stamp: "CHOW" },
-  { label: "Federal Mailbox", multiplier: 2, stamp: "USPS?" },
-  { label: "Pie Tent", multiplier: 3, stamp: "PIE" },
-  { label: "Mower Ramp", multiplier: 3, stamp: "MOW" },
-  { label: "Mud Hole", multiplier: 4, stamp: "4×4" },
-  { label: "Deputy's Cooler", multiplier: 5, stamp: "ICE" },
-  { label: "Bait Shop", multiplier: 6, stamp: "WORMS" },
-  { label: "Junkyard VIP", multiplier: 8, stamp: "VIP" },
-  { label: "Golden Outhouse", multiplier: 10, stamp: "ROYAL" },
+const BONUS_SPIN_COUNT = 6;
+const BONUS_REEL_STOP_FRAMES = [3, 4, 5, 6, 7, 8] as const;
+const BONUS_MILESTONES: readonly {
+  at: number;
+  target: BonusTarget;
+  label: string;
+  callout: string;
+}[] = [
+  { at: 2, target: "raccoon", label: "HUBCAP BANDIT", callout: "TRASH PANDA ROUNDUP" },
+  { at: 5, target: "mower", label: "YARD FERRARI", callout: "MOWER MUTINY" },
+  { at: 8, target: "truck", label: "MUD MAJESTY", callout: "TRUCKS GOT HORNS" },
 ] as const;
-const BONUS_TICKS = 18;
 
 const weightedBag = SYMBOLS.flatMap((symbol) =>
   Array.from({ length: symbol.weight }, () => symbol.id),
+);
+const bonusWeightedBag = SYMBOLS.filter((symbol) => symbol.id !== "throne").flatMap(
+  (symbol) => Array.from({ length: symbol.weight }, () => symbol.id),
 );
 
 function randomSymbol(): SymbolId {
@@ -206,6 +276,20 @@ function randomSymbol(): SymbolId {
 
 function randomGrid(): SymbolId[] {
   return Array.from({ length: REEL_COUNT * ROW_COUNT }, randomSymbol);
+}
+
+function randomBonusSymbol(): SymbolId {
+  return bonusWeightedBag[Math.floor(Math.random() * bonusWeightedBag.length)];
+}
+
+function randomBonusGrid(): SymbolId[] {
+  return Array.from({ length: REEL_COUNT * ROW_COUNT }, randomBonusSymbol);
+}
+
+function countThronesThroughReel(grid: SymbolId[], finalReel: number) {
+  return grid.reduce((count, symbol, index) => {
+    return count + (symbol === "throne" && index % REEL_COUNT <= finalReel ? 1 : 0);
+  }, 0);
 }
 
 function pause(ms: number) {
@@ -247,11 +331,12 @@ function buildSpinFrame(
   frame: number,
   stopFrames: readonly number[],
   reducedMotion: boolean,
+  randomizer: () => SymbolId = randomSymbol,
 ) {
   return currentGrid.map((currentSymbol, index) => {
     const reel = index % REEL_COUNT;
     if (frame >= stopFrames[reel]) return finalGrid[index];
-    return reducedMotion ? currentSymbol : randomSymbol();
+    return reducedMotion ? currentSymbol : randomizer();
   });
 }
 
@@ -351,6 +436,147 @@ function evaluateGrid(grid: SymbolId[], bet: number) {
   };
 }
 
+function evaluateBonusGrid(grid: SymbolId[], bet: number) {
+  const visualResult = evaluateGrid(grid, bet);
+  let payout = 0;
+
+  for (const symbol of SYMBOLS) {
+    if (symbol.id === "throne") continue;
+
+    const matchesByReel = Array.from({ length: REEL_COUNT }, (_, reel) => {
+      let matches = 0;
+      for (let row = 0; row < ROW_COUNT; row += 1) {
+        if (grid[row * REEL_COUNT + reel] === symbol.id) matches += 1;
+      }
+      return matches;
+    });
+
+    let reels = 0;
+    while (reels < REEL_COUNT && matchesByReel[reels] > 0) reels += 1;
+    if (reels < 3) continue;
+
+    const rawWays = matchesByReel
+      .slice(0, reels)
+      .reduce((total, matches) => total * matches, 1);
+    const paidWays = Math.min(rawWays, 4);
+    payout += Math.max(
+      1,
+      Math.round((bet * symbol.pays[reels - 3] * paidWays) / 6),
+    );
+  }
+
+  return {
+    ...visualResult,
+    payout,
+    bonusTriggered: false,
+    scatterCells: [],
+  };
+}
+
+type BonusSpinPlan = {
+  landingGrid: SymbolId[];
+  finalGrid: SymbolId[];
+  goldenCells: number[];
+  transformedCells: number[];
+  collectedAfter: number;
+  unlockedAfter: BonusTarget[];
+  newlyUnlocked: BonusTarget[];
+  result: ReturnType<typeof evaluateGrid>;
+};
+
+type BonusPlan = {
+  bet: number;
+  spins: BonusSpinPlan[];
+  totalPayout: number;
+};
+
+function chooseGoldenBillyCells(grid: SymbolId[], count: number) {
+  const goatCells = grid
+    .map((symbol, index) => (symbol === "goat" ? index : -1))
+    .filter((index) => index >= 0);
+  const remainingCells = grid
+    .map((_, index) => index)
+    .filter((index) => !goatCells.includes(index));
+  const candidates = [...goatCells, ...remainingCells];
+  const chosen: number[] = [];
+
+  while (chosen.length < count && candidates.length > 0) {
+    const candidateIndex = Math.floor(Math.random() * candidates.length);
+    chosen.push(candidates.splice(candidateIndex, 1)[0]);
+  }
+
+  return chosen;
+}
+
+function createBonusPlan(bet: number): BonusPlan {
+  let collected = 0;
+  let unlocked: BonusTarget[] = [];
+  const spins: BonusSpinPlan[] = [];
+
+  for (let spinIndex = 0; spinIndex < BONUS_SPIN_COUNT; spinIndex += 1) {
+    const rawGrid = randomBonusGrid();
+    const landingGrid = rawGrid.map((symbol) =>
+      unlocked.includes(symbol as BonusTarget) ? "goat" : symbol,
+    );
+    const goldenCells = chooseGoldenBillyCells(
+      landingGrid,
+      Math.random() < 0.35 ? 2 : 1,
+    );
+    goldenCells.forEach((cell) => {
+      landingGrid[cell] = "goat";
+    });
+
+    collected += goldenCells.length;
+    const newlyUnlocked = BONUS_MILESTONES.filter(
+      (milestone) => collected >= milestone.at && !unlocked.includes(milestone.target),
+    ).map((milestone) => milestone.target);
+    const unlockedAfter = [...unlocked, ...newlyUnlocked];
+    const transformedCells: number[] = [];
+    const finalGrid = landingGrid.map((symbol, index) => {
+      if (
+        newlyUnlocked.includes(rawGrid[index] as BonusTarget) &&
+        !goldenCells.includes(index)
+      ) {
+        transformedCells.push(index);
+        return "goat";
+      }
+      return symbol;
+    });
+    const result = evaluateBonusGrid(finalGrid, bet);
+
+    spins.push({
+      landingGrid,
+      finalGrid,
+      goldenCells,
+      transformedCells,
+      collectedAfter: collected,
+      unlockedAfter,
+      newlyUnlocked,
+      result,
+    });
+    unlocked = unlockedAfter;
+  }
+
+  let totalPayout = spins.reduce((total, spin) => total + spin.result.payout, 0);
+  const minimumPayout = bet * 4;
+  if (totalPayout < minimumPayout) {
+    const topUp = minimumPayout - totalPayout;
+    const lastSpin = spins[spins.length - 1];
+    lastSpin.result = {
+      ...lastSpin.result,
+      payout: lastSpin.result.payout + topUp,
+      winningCells:
+        lastSpin.result.winningCells.size > 0
+          ? lastSpin.result.winningCells
+          : new Set(lastSpin.goldenCells),
+      wins: [...lastSpin.result.wins, "County Fair appearance fee"],
+    };
+    totalPayout = minimumPayout;
+  }
+
+  return { bet, spins, totalPayout };
+}
+
 type Spark = {
   id: number;
   left: number;
@@ -423,14 +649,32 @@ function PossumPaydayMachine() {
   const [sparks, setSparks] = useState<Spark[]>([]);
   const [soundOn, setSoundOn] = useState(true);
   const [showRules, setShowRules] = useState(false);
+  const [scatterProgress, setScatterProgress] = useState(0);
+  const [isAnticipating, setIsAnticipating] = useState(false);
 
   const [bonusOpen, setBonusOpen] = useState(false);
   const [bonusActive, setBonusActive] = useState(false);
-  const [goatSpot, setGoatSpot] = useState(4);
-  const [bonusWinner, setBonusWinner] = useState(-1);
   const [bonusBet, setBonusBet] = useState(bet);
   const [bonusAward, setBonusAward] = useState(0);
   const [bonusPending, setBonusPending] = useState(false);
+  const [bonusPhase, setBonusPhase] = useState<BonusPhase>("intro");
+  const [bonusGrid, setBonusGrid] = useState<SymbolId[]>(STARTING_GRID);
+  const [bonusSpinIndex, setBonusSpinIndex] = useState(0);
+  const [bonusGoldenCells, setBonusGoldenCells] = useState<Set<number>>(new Set());
+  const [bonusTransformedCells, setBonusTransformedCells] = useState<Set<number>>(
+    new Set(),
+  );
+  const [bonusWinningCells, setBonusWinningCells] = useState<Set<number>>(new Set());
+  const [bonusSpinningReels, setBonusSpinningReels] = useState<Set<number>>(
+    new Set(),
+  );
+  const [bonusCollected, setBonusCollected] = useState(0);
+  const [bonusUnlocked, setBonusUnlocked] = useState<BonusTarget[]>([]);
+  const [bonusSpinWin, setBonusSpinWin] = useState(0);
+  const [bonusRunningTotal, setBonusRunningTotal] = useState(0);
+  const [bonusMessage, setBonusMessage] = useState(
+    "The gates are opening for six automatic free spins.",
+  );
   const soundRef = useRef(soundOn);
   const audioContextRef = useRef<AudioContext | null>(null);
   const spinMotorRef = useRef<SpinMotor | null>(null);
@@ -441,6 +685,7 @@ function PossumPaydayMachine() {
   const bonusAnimationTimerRef = useRef<number | null>(null);
   const bonusRunRef = useRef(0);
   const bonusAwardedRef = useRef(false);
+  const bonusPlanRef = useRef<BonusPlan | null>(null);
   const prefersReducedMotionRef = useRef(false);
   const spinButtonRef = useRef<HTMLButtonElement | null>(null);
   const bonusDialogRef = useRef<HTMLElement | null>(null);
@@ -451,7 +696,6 @@ function PossumPaydayMachine() {
     () => new Set(activeWinLine?.cells ?? []),
     [activeWinLine],
   );
-  const selectedBonusPen = BONUS_PENS[bonusWinner] ?? null;
 
   useEffect(() => {
     soundRef.current = soundOn;
@@ -671,7 +915,7 @@ function PossumPaydayMachine() {
     window.setTimeout(() => setSparks([]), 2200);
   }, []);
 
-  const openBonus = useCallback(() => {
+  const openBonus = useCallback((triggerBet: number) => {
     if (bonusTimerRef.current !== null) {
       window.clearTimeout(bonusTimerRef.current);
       bonusTimerRef.current = null;
@@ -682,22 +926,70 @@ function PossumPaydayMachine() {
     }
     bonusRunRef.current += 1;
     bonusAwardedRef.current = false;
-    const winner = Math.floor(Math.random() * BONUS_PENS.length);
-    bonusPendingRef.current = false;
+    const plan = createBonusPlan(triggerBet);
+    bonusPlanRef.current = plan;
     setBonusPending(false);
     setWinLines([]);
     setActiveWinLineIndex(0);
     setShowRules(false);
     setBonusOpen(true);
     setBonusActive(true);
-    setBonusWinner(winner);
-    setGoatSpot((winner + 4) % BONUS_PENS.length);
-    setBonusBet(bet);
+    setBonusBet(triggerBet);
     setBonusAward(0);
+    setBonusPhase("intro");
+    setBonusGrid(randomBonusGrid());
+    setBonusSpinIndex(0);
+    setBonusGoldenCells(new Set());
+    setBonusTransformedCells(new Set());
+    setBonusWinningCells(new Set());
+    setBonusSpinningReels(new Set());
+    setBonusCollected(0);
+    setBonusUnlocked([]);
+    setBonusSpinWin(0);
+    setBonusRunningTotal(0);
+    setBonusMessage("Six free spins. Golden Billy upgrades the whole rodeo as he lands.");
     playTone(196, 0.18, "sawtooth", 0.042);
     playTone(330, 0.2, "sawtooth", 0.04, 0.11);
     playTone(220, 0.2, "sawtooth", 0.035, 0.24);
-  }, [bet, playTone]);
+  }, [playTone]);
+
+  const completeBonus = useCallback(() => {
+    const plan = bonusPlanRef.current;
+    if (!plan || bonusAwardedRef.current) return;
+
+    bonusAwardedRef.current = true;
+    bonusRunRef.current += 1;
+    if (bonusAnimationTimerRef.current !== null) {
+      window.clearTimeout(bonusAnimationTimerRef.current);
+      bonusAnimationTimerRef.current = null;
+    }
+
+    const finalSpin = plan.spins[plan.spins.length - 1];
+    setBonusGrid(finalSpin?.finalGrid ?? STARTING_GRID);
+    setBonusSpinIndex(Math.max(0, plan.spins.length - 1));
+    setBonusGoldenCells(new Set(finalSpin?.goldenCells ?? []));
+    setBonusTransformedCells(new Set(finalSpin?.transformedCells ?? []));
+    setBonusWinningCells(new Set(finalSpin?.result.winningCells ?? []));
+    setBonusSpinningReels(new Set());
+    setBonusCollected(finalSpin?.collectedAfter ?? 0);
+    setBonusUnlocked(finalSpin?.unlockedAfter ?? []);
+    setBonusSpinWin(finalSpin?.result.payout ?? 0);
+    setBonusRunningTotal(plan.totalPayout);
+    setBonusAward(plan.totalPayout);
+    setBonusPhase("complete");
+    setBonusMessage(
+      `${plan.spins.length} free spins complete. Billy has submitted his expense report.`,
+    );
+    setCredits((current) => current + plan.totalPayout);
+    setLastWin(plan.totalPayout);
+    setBestWin((current) => Math.max(current, plan.totalPayout));
+    setMessage(`GOAT RODEO PAID ${plan.totalPayout.toLocaleString()} CREDITS!`);
+    setBonusActive(false);
+    showerSparks(true);
+    playTone(392, 0.18, "triangle", 0.038);
+    playTone(523, 0.22, "triangle", 0.035, 0.1);
+    playTone(659, 0.28, "sine", 0.033, 0.21);
+  }, [playTone, showerSparks]);
 
   const closeBonus = useCallback(() => {
     if (bonusActive) return;
@@ -706,6 +998,9 @@ function PossumPaydayMachine() {
       window.clearTimeout(bonusAnimationTimerRef.current);
       bonusAnimationTimerRef.current = null;
     }
+    bonusPendingRef.current = false;
+    bonusPlanRef.current = null;
+    setBonusPending(false);
     setBonusOpen(false);
     window.requestAnimationFrame(() => spinButtonRef.current?.focus());
   }, [bonusActive]);
@@ -754,9 +1049,14 @@ function PossumPaydayMachine() {
     spinRunRef.current = runId;
     const finalGrid = randomGrid();
     const reducedMotion = prefersReducedMotionRef.current;
+    const teaseEligible = countThronesThroughReel(finalGrid, REEL_COUNT - 2) === 2;
+    const fullMotionStopFrames: number[] = [...REEL_STOP_FRAMES];
+    if (teaseEligible) fullMotionStopFrames[REEL_COUNT - 1] = ANTICIPATION_STOP_FRAME;
     const stopFrames: readonly number[] = reducedMotion
-      ? Array.from({ length: REEL_COUNT }, (_, reel) => reel)
-      : REEL_STOP_FRAMES;
+      ? Array.from({ length: REEL_COUNT }, (_, reel) =>
+          teaseEligible && reel === REEL_COUNT - 1 ? REEL_COUNT + 2 : reel,
+        )
+      : fullMotionStopFrames;
     const frameDelay = reducedMotion ? REDUCED_SPIN_FRAME_MS : SPIN_FRAME_MS;
 
     setCredits((value) => value - bet);
@@ -767,6 +1067,8 @@ function PossumPaydayMachine() {
     setActiveWinLineIndex(0);
     setSettledReelCount(0);
     setSettlingReel(null);
+    setScatterProgress(0);
+    setIsAnticipating(false);
     setSpinningReels(new Set(Array.from({ length: REEL_COUNT }, (_, reel) => reel)));
     setIsSpinning(true);
     setMessage("RATTLIN' THE FAMILY TREE…");
@@ -789,10 +1091,31 @@ function PossumPaydayMachine() {
 
         const stoppedReel = stopFrames.indexOf(frame);
         if (stoppedReel >= 0) {
+          const landedThrones = countThronesThroughReel(finalGrid, stoppedReel);
+          setScatterProgress(landedThrones);
           setSettlingReel(stoppedReel);
           setSettledReelCount(stoppedReel + 1);
-          setMessage(`REEL ${stoppedReel + 1} LOCKED — ${REEL_COUNT - stoppedReel - 1} STILL RAISING CAIN`);
+          if (stoppedReel === REEL_COUNT - 2 && teaseEligible) {
+            setIsAnticipating(true);
+            setMessage("TWO GOLDEN THRONES — ONE MORE OPENS THE GOAT GATE!");
+            playTone(262, 0.22, "triangle", 0.034);
+            playTone(330, 0.26, "triangle", 0.03, 0.18);
+            playTone(392, 0.3, "triangle", 0.028, 0.38);
+          } else {
+            setMessage(`REEL ${stoppedReel + 1} LOCKED — ${REEL_COUNT - stoppedReel - 1} STILL RAISING CAIN`);
+          }
           playReelStop(stoppedReel);
+        }
+
+        if (
+          teaseEligible &&
+          !reducedMotion &&
+          frame > stopFrames[REEL_COUNT - 2] &&
+          frame < stopFrames[REEL_COUNT - 1] &&
+          frame % 5 === 0
+        ) {
+          const rise = frame - stopFrames[REEL_COUNT - 2];
+          playTone(340 + rise * 8, 0.075, "triangle", 0.015);
         }
       }
 
@@ -802,9 +1125,14 @@ function PossumPaydayMachine() {
       setGrid(finalGrid);
       setSpinningReels(new Set());
       setSettledReelCount(REEL_COUNT);
+      setScatterProgress(result.scatterCells.length);
+      setIsAnticipating(false);
       setWinningCells(result.winningCells);
       setWinLines(result.winLines);
-      setActiveWinLineIndex(0);
+      const scatterLineIndex = result.winLines.findIndex(
+        (line) => line.kind === "scatter",
+      );
+      setActiveWinLineIndex(scatterLineIndex >= 0 ? scatterLineIndex : 0);
       setLastWin(result.payout);
       setBestWin((value) => Math.max(value, result.payout));
       setCredits((value) => value + result.payout);
@@ -822,7 +1150,7 @@ function PossumPaydayMachine() {
         setBonusPending(true);
         bonusTimerRef.current = window.setTimeout(() => {
           bonusTimerRef.current = null;
-          if (spinRunRef.current === runId) openBonus();
+          if (spinRunRef.current === runId) openBonus(bet);
         }, 1300);
       } else if (result.payout > bet * 8) {
         setMessage("FAMILY FORTUNE! EVEN THE POSSUM STOOD UP!");
@@ -886,84 +1214,154 @@ function PossumPaydayMachine() {
   }, [bonusOpen, showRules, spin]);
 
   useEffect(() => {
-    if (!bonusOpen || !bonusActive || bonusWinner < 0) return;
+    const plan = bonusPlanRef.current;
+    if (!bonusOpen || !bonusActive || !plan) return;
 
     const runId = bonusRunRef.current + 1;
     bonusRunRef.current = runId;
     const reducedMotion = prefersReducedMotionRef.current;
-    let tick = 0;
-    let currentSpot = (bonusWinner + 4) % BONUS_PENS.length;
+    let spinIndex = 0;
+    let runningTotal = 0;
 
-    const finishRodeo = () => {
-      if (
-        bonusRunRef.current !== runId ||
-        bonusAwardedRef.current ||
-        !BONUS_PENS[bonusWinner]
-      ) {
+    const schedule = (delay: number, callback: () => void) => {
+      if (bonusAnimationTimerRef.current !== null) {
+        window.clearTimeout(bonusAnimationTimerRef.current);
+      }
+      bonusAnimationTimerRef.current = window.setTimeout(() => {
+        if (bonusRunRef.current === runId) callback();
+      }, delay);
+    };
+
+    const showSpinWin = (spin: BonusSpinPlan) => {
+      runningTotal += spin.result.payout;
+      setBonusPhase("showing-win");
+      setBonusWinningCells(new Set(spin.result.winningCells));
+      setBonusSpinWin(spin.result.payout);
+      setBonusRunningTotal(runningTotal);
+      setBonusMessage(
+        spin.result.payout > 0
+          ? `Ride ${spinIndex + 1} paid ${spin.result.payout.toLocaleString()} credits.`
+          : `Ride ${spinIndex + 1}: Billy ate the payline.`,
+      );
+      if (spin.result.payout > 0) {
+        playTone(392 + spinIndex * 24, 0.11, "triangle", 0.024);
+        playTone(523 + spinIndex * 20, 0.16, "sine", 0.02, 0.08);
+      }
+
+      schedule(reducedMotion ? 190 : 720, () => {
+        spinIndex += 1;
+        if (spinIndex >= plan.spins.length) {
+          completeBonus();
+        } else {
+          runSpin();
+        }
+      });
+    };
+
+    const collectAndTransform = (spin: BonusSpinPlan) => {
+      setBonusPhase("collecting");
+      setBonusGoldenCells(new Set(spin.goldenCells));
+      setBonusCollected(spin.collectedAfter);
+      setBonusMessage(
+        `${spin.goldenCells.length} Golden ${spin.goldenCells.length === 1 ? "Billy" : "Billies"} rounded up — ${spin.collectedAfter} total.`,
+      );
+      playNoiseBurst(0.08, 0.026, 620);
+      playTone(660, 0.1, "triangle", 0.025);
+
+      const revealWin = () => {
+        setBonusGrid(spin.finalGrid);
+        setBonusUnlocked(spin.unlockedAfter);
+        setBonusTransformedCells(new Set(spin.transformedCells));
+        showSpinWin(spin);
+      };
+
+      if (spin.newlyUnlocked.length === 0) {
+        schedule(reducedMotion ? 130 : 380, revealWin);
         return;
       }
 
-      bonusAwardedRef.current = true;
-      bonusAnimationTimerRef.current = null;
-      const winningPen = BONUS_PENS[bonusWinner];
-      const award = bonusBet * winningPen.multiplier;
-      setBonusAward(award);
-      setCredits((current) => current + award);
-      setLastWin(award);
-      setBestWin((current) => Math.max(current, award));
-      setMessage(
-        `GOAT RODEO: ${winningPen.label.toUpperCase()} PAID ${winningPen.multiplier}×!`,
-      );
-      setBonusActive(false);
-      showerSparks(winningPen.multiplier >= 8);
-      playTone(392, 0.16, "triangle", 0.038);
-      playTone(523, 0.2, "triangle", 0.035, 0.1);
-      playTone(659, 0.26, "sine", 0.033, 0.21);
+      schedule(reducedMotion ? 130 : 410, () => {
+        const latestUnlock = BONUS_MILESTONES.find(
+          (milestone) => milestone.target === spin.newlyUnlocked.at(-1),
+        );
+        setBonusPhase("transforming");
+        setBonusGrid(spin.finalGrid);
+        setBonusUnlocked(spin.unlockedAfter);
+        setBonusTransformedCells(new Set(spin.transformedCells));
+        setBonusMessage(
+          `${latestUnlock?.callout ?? "BILLY UPGRADE"}! ${latestUnlock?.label ?? "A SYMBOL"} is Billy for the rest of the rodeo.`,
+        );
+        playTone(220, 0.14, "sawtooth", 0.034);
+        playTone(440, 0.18, "triangle", 0.032, 0.1);
+        playTone(660, 0.22, "sine", 0.028, 0.2);
+        schedule(reducedMotion ? 170 : 650, () => showSpinWin(spin));
+      });
     };
 
-    const advanceRodeo = () => {
-      if (bonusRunRef.current !== runId) return;
+    const runSpin = () => {
+      const spin = plan.spins[spinIndex];
+      if (!spin) {
+        completeBonus();
+        return;
+      }
+
+      setBonusPhase("spinning");
+      setBonusSpinIndex(spinIndex);
+      setBonusGoldenCells(new Set());
+      setBonusTransformedCells(new Set());
+      setBonusWinningCells(new Set());
+      setBonusSpinWin(0);
+      setBonusMessage(`Free spin ${spinIndex + 1} of ${plan.spins.length} is rattling.`);
 
       if (reducedMotion) {
-        setGoatSpot(bonusWinner);
-        playNoiseBurst(0.11, 0.032, 330);
-        playTone(330, 0.12, "square", 0.03);
-        bonusAnimationTimerRef.current = window.setTimeout(finishRodeo, 460);
+        setBonusGrid(spin.landingGrid);
+        setBonusSpinningReels(new Set());
+        schedule(150, () => collectAndTransform(spin));
         return;
       }
 
-      if (tick >= BONUS_TICKS) {
-        finishRodeo();
-        return;
-      }
+      let frame = 0;
+      setBonusSpinningReels(
+        new Set(Array.from({ length: REEL_COUNT }, (_, reel) => reel)),
+      );
 
-      const isFinalTick = tick === BONUS_TICKS - 1;
-      let nextSpot = bonusWinner;
-      if (!isFinalTick) {
-        do {
-          nextSpot = Math.floor(Math.random() * BONUS_PENS.length);
-        } while (nextSpot === currentSpot || (tick < BONUS_TICKS - 4 && nextSpot === bonusWinner));
-      }
+      const advanceFrame = () => {
+        const activeReels = new Set<number>();
+        for (let reel = 0; reel < REEL_COUNT; reel += 1) {
+          if (frame < BONUS_REEL_STOP_FRAMES[reel]) activeReels.add(reel);
+        }
+        setBonusSpinningReels(activeReels);
+        setBonusGrid((current) =>
+          buildSpinFrame(
+            current,
+            spin.landingGrid,
+            frame,
+            BONUS_REEL_STOP_FRAMES,
+            false,
+            randomBonusSymbol,
+          ),
+        );
 
-      currentSpot = nextSpot;
-      setGoatSpot(nextSpot);
-      playTone(165 + tick * 10, 0.045, "square", 0.012);
-      if (tick % 4 === 0) playNoiseBurst(0.05, 0.014, 280 + tick * 18);
-      if (isFinalTick) {
-        playNoiseBurst(0.13, 0.04, 360);
-        playTone(310, 0.14, "square", 0.034, 0.03);
-        playTone(620, 0.17, "triangle", 0.03, 0.11);
-      }
+        const stoppedReel = BONUS_REEL_STOP_FRAMES.indexOf(
+          frame as (typeof BONUS_REEL_STOP_FRAMES)[number],
+        );
+        if (stoppedReel >= 0) playReelStop(stoppedReel);
 
-      tick += 1;
-      const nextDelay = isFinalTick ? 720 : Math.max(112, 235 - tick * 5);
-      bonusAnimationTimerRef.current = window.setTimeout(advanceRodeo, nextDelay);
+        if (frame >= BONUS_REEL_STOP_FRAMES[REEL_COUNT - 1]) {
+          setBonusGrid(spin.landingGrid);
+          setBonusSpinningReels(new Set());
+          schedule(180, () => collectAndTransform(spin));
+          return;
+        }
+
+        frame += 1;
+        schedule(64, advanceFrame);
+      };
+
+      schedule(240, advanceFrame);
     };
 
-    bonusAnimationTimerRef.current = window.setTimeout(
-      advanceRodeo,
-      reducedMotion ? 320 : 470,
-    );
+    schedule(reducedMotion ? 180 : 520, runSpin);
 
     return () => {
       if (bonusRunRef.current === runId) bonusRunRef.current += 1;
@@ -974,12 +1372,11 @@ function PossumPaydayMachine() {
     };
   }, [
     bonusActive,
-    bonusBet,
     bonusOpen,
-    bonusWinner,
+    completeBonus,
     playNoiseBurst,
+    playReelStop,
     playTone,
-    showerSparks,
   ]);
 
   useEffect(() => {
@@ -1112,7 +1509,7 @@ function PossumPaydayMachine() {
         </aside>
 
         <div
-          className={`slot-cabinet ${isSpinning ? "is-spinning" : ""} ${activeWinLine ? "has-win-tour" : ""}`}
+          className={`slot-cabinet ${isSpinning ? "is-spinning" : ""} ${activeWinLine ? "has-win-tour" : ""} ${isAnticipating ? "is-anticipating" : ""}`}
         >
           <div className="cabinet-top">
             <span className="county-seal">P</span>
@@ -1123,12 +1520,53 @@ function PossumPaydayMachine() {
             <span className="county-seal">P</span>
           </div>
 
+          <div
+            className={`feature-strip ${isAnticipating ? "is-anticipating" : ""}`}
+            aria-label={`${Math.min(scatterProgress, 3)} of 3 Golden Thrones landed. Three start six Goat Rodeo free spins.`}
+          >
+            <span
+              className="feature-live-status"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {isSpinning
+                ? `${Math.min(scatterProgress, 3)} of 3 Golden Thrones landed.`
+                : ""}
+            </span>
+            <div className="feature-thrones" aria-hidden="true">
+              {Array.from({ length: 3 }, (_, index) => (
+                <span
+                  className={scatterProgress > index ? "is-lit" : ""}
+                  key={index}
+                >
+                  <Image
+                    src="/possum-payday/art/symbols/golden-throne.png"
+                    alt=""
+                    width={64}
+                    height={64}
+                  />
+                </span>
+              ))}
+            </div>
+            <div className="feature-strip-copy">
+              <span>{isAnticipating ? "ONE MORE OPENS THE GATE" : "GOAT RODEO FEATURE"}</span>
+              <strong>3 GOLDEN THRONES START THE RODEO</strong>
+            </div>
+            <div className="feature-spin-award">
+              <span>AUTO FREE SPINS</span>
+              <strong>{BONUS_SPIN_COUNT}</strong>
+            </div>
+          </div>
+
           <div className="reel-bezel">
             <div className="reel-order" aria-hidden="true">
               {Array.from({ length: REEL_COUNT }, (_, reel) => (
                 <span
                   className={
-                    spinningReels.has(reel)
+                    isAnticipating && reel === REEL_COUNT - 1
+                      ? "is-anticipating"
+                      : spinningReels.has(reel)
                       ? "is-reel-running"
                       : settledReelCount > reel
                         ? "is-reel-locked"
@@ -1159,6 +1597,9 @@ function PossumPaydayMachine() {
                       "symbol-tile",
                       reelSpinning ? "is-reel-spinning" : "",
                       reelSettling ? "is-reel-settling" : "",
+                      isAnticipating && reel === REEL_COUNT - 1
+                        ? "is-anticipating"
+                        : "",
                       winning ? "is-winner is-way-member" : "",
                       activeWay ? "is-active-way" : "",
                     ]
@@ -1166,10 +1607,15 @@ function PossumPaydayMachine() {
                       .join(" ")}
                     key={index}
                     role="gridcell"
+                    data-family={symbol.family.toLowerCase()}
                     aria-label={`Reel ${reel + 1}, row ${Math.floor(index / REEL_COUNT) + 1}: ${symbol.name}${winning ? ", winning symbol" : ""}`}
                     style={
                       {
                         "--reel": reel,
+                        "--symbol-top": symbol.palette.top,
+                        "--symbol-deep": symbol.palette.deep,
+                        "--symbol-accent": symbol.palette.accent,
+                        "--symbol-glow": symbol.palette.glow,
                         "--payline-color": activeWay
                           ? activeWinLine?.color
                           : undefined,
@@ -1187,6 +1633,11 @@ function PossumPaydayMachine() {
                     <span className="symbol-fallback" aria-hidden="true">
                       {symbol.fallback}
                     </span>
+                    {symbol.id === "throne" ? (
+                      <span className="scatter-ribbon" aria-hidden="true">
+                        RODEO
+                      </span>
+                    ) : null}
                     <span className="symbol-name">{symbol.name}</span>
                   </div>
                 );
@@ -1307,14 +1758,15 @@ function PossumPaydayMachine() {
           <span className="side-eyebrow">SIDE HUSTLE</span>
           <h2>GOAT RODEO</h2>
           <p>
-            Three rare Golden Thrones send Billy stampeding through nine prize
-            pens. He picks the multiplier. You do nothing.
+            Three rare Golden Thrones start six free spins. Collect Golden
+            Billys to turn the raccoon, mower, then truck into Billy for the
+            rest of the rodeo.
           </p>
           <div className="bonus-badge">
-            <span>AUTO BONUS</span>
-            <small>LAND 3 THRONES</small>
+            <span>6 FREE SPINS</span>
+            <small>3 THRONES START</small>
           </div>
-          <div className="warning-stamp">LIVESTOCK<br />UNSUPERVISED</div>
+          <div className="warning-stamp">GOLDEN BILLYS<br />UPGRADE REELS</div>
         </aside>
       </section>
 
@@ -1326,8 +1778,20 @@ function PossumPaydayMachine() {
         </div>
         <div className="symbol-roster">
           {SYMBOLS.map((symbol) => (
-            <article className="roster-card" key={symbol.id}>
-              <span className="rarity-tag">{symbol.rarity}</span>
+            <article
+              className="roster-card"
+              data-family={symbol.family.toLowerCase()}
+              key={symbol.id}
+              style={
+                {
+                  "--symbol-top": symbol.palette.top,
+                  "--symbol-deep": symbol.palette.deep,
+                  "--symbol-accent": symbol.palette.accent,
+                  "--symbol-glow": symbol.palette.glow,
+                } as React.CSSProperties
+              }
+            >
+              <span className="rarity-tag">{symbol.family} · {symbol.rarity}</span>
               <div className="roster-art">
                 <Image src={symbol.image} alt="" width={240} height={240} />
                 <span>{symbol.fallback}</span>
@@ -1374,79 +1838,148 @@ function PossumPaydayMachine() {
 
             <div className="bonus-copy">
               <span className="bonus-kicker">
-                {bonusActive ? "BILLY IS PICKING" : "COUNTY AUDIT FAILED"}
+                {bonusActive ? "AUTOMATIC FREE GAMES" : "COUNTY AUDIT FAILED"}
               </span>
               <h2 id="bonus-title">GOAT RODEO</h2>
-              <p id="bonus-description">
-                {bonusActive
-                  ? "No tapping. No chasing. Billy will automatically choose one deeply uninsured prize pen."
-                  : `${selectedBonusPen?.label ?? "A prize pen"} survived just long enough to pay the bill.`}
-              </p>
+              <p id="bonus-description">{bonusMessage}</p>
               <div className="bonus-scoreboard">
                 <div>
-                  <span>TRIGGER BET</span>
-                  <strong>{bonusBet}</strong>
-                </div>
-                <div>
-                  <span>MULTIPLIER</span>
+                  <span>FREE SPIN</span>
                   <strong>
-                    {bonusActive ? "??" : `${selectedBonusPen?.multiplier ?? 0}×`}
+                    {bonusPhase === "intro"
+                      ? "READY"
+                      : `${Math.min(bonusSpinIndex + 1, BONUS_SPIN_COUNT)}/${BONUS_SPIN_COUNT}`}
                   </strong>
                 </div>
                 <div>
-                  <span>RODEO WIN</span>
-                  <strong>{bonusActive ? "—" : bonusAward.toLocaleString()}</strong>
+                  <span>GOLDEN BILLYS</span>
+                  <strong>{bonusCollected}</strong>
                 </div>
+                <div>
+                  <span>BONUS WIN</span>
+                  <strong>{bonusRunningTotal.toLocaleString()}</strong>
+                </div>
+              </div>
+
+              <div className="goat-collection-track" aria-label="Golden Billy upgrade milestones">
+                {BONUS_MILESTONES.map((milestone) => {
+                  const unlocked = bonusUnlocked.includes(milestone.target);
+                  return (
+                    <div
+                      className={`collection-milestone ${unlocked ? "is-unlocked" : ""}`}
+                      key={milestone.target}
+                    >
+                      <span>{milestone.at} BILLIES</span>
+                      <div aria-hidden="true">
+                        <Image
+                          src={SYMBOL_MAP[milestone.target].image}
+                          alt=""
+                          width={68}
+                          height={68}
+                        />
+                        <b>→</b>
+                        <Image
+                          src={SYMBOL_MAP.goat.image}
+                          alt=""
+                          width={68}
+                          height={68}
+                        />
+                      </div>
+                      <small>{milestone.label} BECOMES BILLY</small>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            <div className={`rodeo-arena ${bonusActive ? "is-live" : ""}`}>
-              <div className="arena-lights" aria-hidden="true" />
-              <div className="rodeo-grid" aria-hidden="true">
-                {BONUS_PENS.map((pen, index) => (
+            <div className={`bonus-reel-stage phase-${bonusPhase}`}>
+              <div className="bonus-reel-topline" aria-hidden="true">
+                <span>WAITE COUNTY RODEO REELS</span>
+                <strong>BET {bonusBet}</strong>
+              </div>
+              <div
+                className="bonus-reel-grid"
+                role="grid"
+                aria-label="Six reel by five row Goat Rodeo free spin grid"
+                aria-busy={bonusPhase === "spinning"}
+              >
+                {bonusGrid.map((symbolId, index) => {
+                  const symbol = SYMBOL_MAP[symbolId];
+                  const reel = index % REEL_COUNT;
+                  const golden = bonusGoldenCells.has(index);
+                  const transformed = bonusTransformedCells.has(index);
+                  const winning = bonusWinningCells.has(index);
+                  return (
                   <div
-                    key={pen.label}
+                    key={index}
                     className={[
-                      "hay-spot",
-                      goatSpot === index ? "has-goat" : "",
-                      !bonusActive && bonusWinner === index
-                        ? "is-winning-pen"
-                        : "",
+                      "bonus-symbol-tile",
+                      bonusSpinningReels.has(reel) ? "is-spinning" : "",
+                      golden ? "is-golden-billy" : "",
+                      transformed ? "is-transformed" : "",
+                      winning ? "is-winner" : "",
                     ]
                       .filter(Boolean)
                       .join(" ")}
+                    data-family={symbol.family.toLowerCase()}
+                    role="gridcell"
+                    aria-label={`Free spin reel ${reel + 1}, row ${Math.floor(index / REEL_COUNT) + 1}: ${golden ? "Golden Billy collection symbol" : symbol.name}${winning ? ", winning symbol" : ""}`}
+                    style={
+                      {
+                        "--symbol-top": symbol.palette.top,
+                        "--symbol-deep": symbol.palette.deep,
+                        "--symbol-accent": symbol.palette.accent,
+                        "--symbol-glow": symbol.palette.glow,
+                      } as React.CSSProperties
+                    }
                   >
-                    <span className="bonus-pen-stamp">{pen.stamp}</span>
-                    <span className="bonus-multiplier">{pen.multiplier}×</span>
-                    <span className="hay-bale" />
-                    <small>{pen.label}</small>
-                    {goatSpot === index && (
-                      <Image
-                        src="/possum-payday/art/symbols/billy-goat.png"
-                        alt=""
-                        width={240}
-                        height={240}
-                      />
-                    )}
+                    <Image
+                      src={symbol.image}
+                      alt=""
+                      width={160}
+                      height={160}
+                      draggable={false}
+                    />
+                    {golden ? <span className="golden-billy-sash">GOLDEN</span> : null}
                   </div>
+                  );
+                })}
+              </div>
+              <div className="bonus-spin-plates" aria-hidden="true">
+                {Array.from({ length: BONUS_SPIN_COUNT }, (_, index) => (
+                  <span
+                    className={
+                      bonusPhase === "complete" || index < bonusSpinIndex
+                        ? "is-complete"
+                        : index === bonusSpinIndex && bonusPhase !== "intro"
+                          ? "is-current"
+                          : ""
+                    }
+                    key={index}
+                  >
+                    {index + 1}
+                  </span>
                 ))}
               </div>
-              <p className="bonus-status" role="status" aria-live="polite">
-                {bonusActive
-                  ? "Billy is automatically choosing a prize multiplier."
-                  : `Billy chose ${selectedBonusPen?.label ?? "a prize pen"} for ${selectedBonusPen?.multiplier ?? 0} times the triggering wager.`}
-              </p>
+              <div className="bonus-phase-callout" role="status" aria-live="polite">
+                <span>{bonusPhase.replace("-", " ")}</span>
+                <strong>{bonusMessage}</strong>
+                {bonusSpinWin > 0 && bonusPhase === "showing-win" ? (
+                  <em>+{bonusSpinWin.toLocaleString()} CREDITS</em>
+                ) : null}
+              </div>
             </div>
 
             <div className="bonus-footer">
               {bonusActive && (
-                <strong className="live-callout">
-                  HANDS OFF — BILLY IS MAKING A FINANCIAL DECISION
-                </strong>
+                <div className="bonus-live-controls">
+                  <strong className="live-callout">HANDS OFF — THE RODEO RUNS ITSELF</strong>
+                  <button type="button" onClick={completeBonus}>SKIP TO TOTAL</button>
+                </div>
               )}
-              {!bonusActive && bonusAward > 0 && (
+              {!bonusActive && (
                 <div className="bonus-result" aria-live="polite">
-                  <span>{selectedBonusPen?.label ?? "PRIZE PEN"}!</span>
+                  <span>{BONUS_SPIN_COUNT} FREE SPINS COMPLETE</span>
                   <strong>+{bonusAward.toLocaleString()} CREDITS</strong>
                   <button ref={bonusBackButtonRef} type="button" onClick={closeBonus}>
                     BACK TO THE REELS
@@ -1476,7 +2009,8 @@ function PossumPaydayMachine() {
               <li><strong>Match left to right.</strong> The same symbol on 3, 4, 5, or 6 consecutive reels wins.</li>
               <li><strong>Stack the family.</strong> Multiple copies on each reel multiply the number of winning ways.</li>
               <li><strong>Find 3 rare Golden Thrones.</strong> They pay anywhere and kick open Goat Rodeo.</li>
-              <li><strong>Let Billy choose.</strong> The automatic rodeo lands on a prize pen and multiplies the triggering wager—no tapping required.</li>
+              <li><strong>Ride six free spins.</strong> Goat Rodeo plays automatically—no tapping or chasing required.</li>
+              <li><strong>Collect Golden Billys.</strong> At 2, 5, and 8, they permanently turn the raccoon, mower, then truck into Billy for the rest of the feature.</li>
             </ol>
             <button className="rules-got-it" type="button" onClick={() => setShowRules(false)}>
               I RECKON I GOT IT
