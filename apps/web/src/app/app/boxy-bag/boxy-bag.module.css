@@ -249,6 +249,10 @@
 .finishedBanner span { grid-row: span 2; color: #ffd75e; font: 500 .65rem var(--font-ibm-plex-mono), monospace; letter-spacing: .16em; text-transform: uppercase; }
 .finishedBanner strong { font-size: clamp(1.25rem, 3vw, 1.9rem); letter-spacing: -.025em; }
 .finishedBanner small { color: #8f85a9; font-size: .7rem; }
+.dimensionBreakdown { display: grid; gap: .45rem; }
+.dimensionBreakdown > span { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; padding: .62rem .72rem; border: 1px solid rgba(167, 139, 250, .14); border-radius: .72rem; background: rgba(21, 14, 45, .55); }
+.dimensionBreakdown small { color: #837998; font: 500 .58rem var(--font-ibm-plex-mono), monospace; letter-spacing: .08em; text-transform: uppercase; }
+.dimensionBreakdown strong { color: #f6f2ff; font-size: .76rem; }
 
 .outputGrid { display: grid; gap: .65rem; }
 .cutCard {
@@ -304,6 +308,17 @@
 .legendCut { background: #ff7aac; }
 .legendSew { background: #ffd75e; }
 .legendSeam { background: #4de1ff; }
+.methodCompare { display: grid; gap: .55rem; align-items: stretch; margin-top: .85rem; }
+.methodCompare article { padding: .8rem; border: 1px solid rgba(167, 139, 250, .14); border-radius: .8rem; background: rgba(16, 11, 36, .62); }
+.methodCompare article > span, .methodCompare article > strong { display: block; }
+.methodCompare article > span { color: #786f8e; font: 700 .54rem var(--font-ibm-plex-mono), monospace; letter-spacing: .12em; text-transform: uppercase; }
+.methodCompare article > strong { margin-top: .25rem; color: #aaa1c0; font-size: .76rem; }
+.methodCompare article > p { margin: .3rem 0 0; color: #756c8b; font-size: .63rem; line-height: 1.45; }
+.methodCompare > b { display: none; align-self: center; color: #4de1ff; text-align: center; }
+.methodCompare .methodSelected { border-color: rgba(77, 225, 255, .38); background: linear-gradient(135deg, rgba(77, 225, 255, .1), rgba(167, 139, 250, .08)); }
+.methodCompare .methodSelected > span { color: #4de1ff; }
+.methodCompare .methodSelected > strong { color: #f6f2ff; }
+.methodCompare .methodSelected > p { color: #aaa1c0; }
 .diagramSteps { display: grid; gap: .75rem; margin-top: 1rem; }
 .diagramStep { min-width: 0; padding: .85rem; border: 1px solid rgba(167, 139, 250, .15); border-radius: .9rem; background: rgba(28, 20, 56, .45); }
 .diagramStepHeader { display: flex; align-items: center; gap: .7rem; }
@@ -317,7 +332,7 @@
 .diagramInstructions li::before { content: counter(corner-steps); display: grid; place-items: center; flex: 0 0 1rem; height: 1rem; border-radius: 50%; color: #130b29; background: #ff9bc3; font: 700 .56rem var(--font-ibm-plex-mono), monospace; }
 .diagramInstructions strong { color: #f6f2ff; }
 
-.allPanelsSection, .panelAnatomy, .sewingMap { margin-top: 1rem; padding: .9rem; border: 1px solid rgba(167, 139, 250, .15); border-radius: 1rem; background: rgba(24, 17, 50, .5); }
+.allPanelsSection, .panelAnatomy, .zipperSection, .shellSection, .sewingMap, .anchorSection, .finishSection, .fullPattern { margin-top: 1rem; padding: .9rem; border: 1px solid rgba(167, 139, 250, .15); border-radius: 1rem; background: rgba(24, 17, 50, .5); }
 .sectionHeading { display: flex; align-items: center; gap: .7rem; }
 .sectionHeading > span { display: grid; place-items: center; flex: 0 0 3.1rem; height: 1.65rem; border-radius: 999px; color: #10091f; background: #4de1ff; font: 800 .58rem var(--font-ibm-plex-mono), monospace; text-transform: uppercase; }
 .sectionHeading strong, .sectionHeading small { display: block; }
@@ -339,12 +354,58 @@
 .interfacingStrip strong { color: #f5efff; font-size: .72rem; }
 .interfacingStrip p { margin: 0; color: #8f85a9; font-size: .64rem; line-height: 1.4; }
 .panelAnatomy svg { display: block; width: 100%; height: auto; margin-top: .55rem; }
+.zipperSteps, .shellGrid { display: grid; gap: .6rem; margin-top: .8rem; }
+.zipperSteps > article, .shellGrid > article { min-width: 0; padding: .72rem; border: 1px solid rgba(167, 139, 250, .14); border-radius: .8rem; background: rgba(8, 6, 24, .52); }
+.miniStep { display: flex; align-items: center; gap: .5rem; }
+.miniStep > span { display: grid; place-items: center; width: 1.35rem; height: 1.35rem; border-radius: 50%; color: #140b2b; background: #ffd75e; font: 800 .6rem var(--font-ibm-plex-mono), monospace; }
+.miniStep strong { color: #f6f2ff; font-size: .74rem; }
+.layerStack { display: grid; gap: .28rem; margin-top: .65rem; perspective: 16rem; }
+.layerStack > div { display: grid; gap: .12rem; padding: .52rem .6rem; border-radius: .42rem; transform: skewX(-3deg); box-shadow: 0 7px 15px rgba(0, 0, 0, .18); }
+.layerStack b { font: 700 .6rem var(--font-ibm-plex-mono), monospace; letter-spacing: .06em; }
+.layerStack small { font-size: .57rem; }
+.liningLayer { color: #dffaff; border: 1px solid rgba(77, 225, 255, .55); background: #123b50; }
+.liningLayer small { color: #9bdcea; }
+.zipperLayer { color: #241637; border: 1px solid #ffe38a; background: #ffd75e; }
+.zipperLayer small { color: #5a4720; }
+.outerLayer { color: #f3edff; border: 1px solid rgba(167, 139, 250, .62); background: #38245e; }
+.outerLayer small { color: #c2b4da; }
+.zipperSteps article > p { margin: .62rem 0 0; color: #9288aa; font-size: .63rem; line-height: 1.45; }
+.zipperSteps svg { display: block; width: 100%; height: auto; margin-top: .55rem; }
+.orientationNote { margin: .65rem 0 0; padding: .65rem .7rem; border-left: 2px solid #4de1ff; color: #aaa1c0; background: rgba(77, 225, 255, .06); font-size: .65rem; line-height: 1.45; }
+.orientationNote strong { color: #dffaff; }
+.shellGrid article header span, .shellGrid article header strong { display: block; }
+.shellGrid article header span { color: #4de1ff; font: 700 .56rem var(--font-ibm-plex-mono), monospace; letter-spacing: .12em; text-transform: uppercase; }
+.shellGrid article:first-child header span { color: #c2adff; }
+.shellGrid article header strong { margin-top: .2rem; color: #f6f2ff; font-size: .7rem; }
+.shellGrid svg { display: block; width: 100%; height: auto; margin-top: .35rem; }
+.criticalStrip { margin-top: .65rem; padding: .7rem .75rem; border: 1px solid rgba(255, 215, 94, .24); border-radius: .7rem; color: #9d93b3; background: rgba(255, 215, 94, .06); font-size: .64rem; line-height: 1.5; }
+.criticalStrip strong { color: #fff0b8; }
 .sewingSteps { display: grid; gap: .55rem; margin-top: .8rem; }
 .sewingSteps article { position: relative; min-width: 0; padding: .7rem; border: 1px solid rgba(167, 139, 250, .14); border-radius: .78rem; background: rgba(8, 6, 24, .5); }
 .sewingSteps article > span { display: grid; place-items: center; position: absolute; top: .65rem; left: .65rem; width: 1.35rem; height: 1.35rem; border-radius: 50%; color: #140b2b; background: #ff9bc3; font: 800 .6rem var(--font-ibm-plex-mono), monospace; }
 .sewingSteps strong { display: block; padding-left: 1.75rem; color: #f6f2ff; font-size: .75rem; }
 .sewingSteps svg { display: block; width: 100%; height: auto; margin: .35rem 0 .15rem; }
 .sewingSteps p { margin: 0; color: #9288aa; font-size: .63rem; line-height: 1.4; }
+.cornerCount { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .35rem .5rem; margin-top: .65rem; padding: .62rem; border-radius: .7rem; color: #9e94b5; background: rgba(255, 122, 172, .06); font: .58rem var(--font-ibm-plex-mono), monospace; text-transform: uppercase; }
+.cornerCount span { padding: .25rem .38rem; border-radius: .3rem; color: #140b2b; background: #ff9bc3; font-weight: 800; }
+.cornerCount b { color: #dfd7ee; font-weight: 500; }
+.cornerCount i { color: #4de1ff; font-style: normal; }
+.cornerCount strong { color: #fff; }
+.anchorGrid { display: grid; gap: .6rem; align-items: center; margin-top: .65rem; }
+.anchorGrid svg { display: block; width: 100%; height: auto; }
+.anchorGrid ol { display: grid; gap: .48rem; margin: 0; padding: 0; list-style: none; counter-reset: anchor-steps; }
+.anchorGrid li { counter-increment: anchor-steps; display: flex; gap: .5rem; color: #9b91b2; font-size: .65rem; line-height: 1.45; }
+.anchorGrid li::before { content: counter(anchor-steps); display: grid; place-items: center; flex: 0 0 1.15rem; height: 1.15rem; border-radius: 50%; color: #130b29; background: #4de1ff; font: 800 .56rem var(--font-ibm-plex-mono), monospace; }
+.finishChecks { display: grid; gap: .5rem; margin-top: .7rem; }
+.finishChecks article { display: flex; align-items: flex-start; gap: .55rem; padding: .65rem; border: 1px solid rgba(167, 139, 250, .13); border-radius: .7rem; background: rgba(8, 6, 24, .45); }
+.finishChecks article > b { display: grid; place-items: center; flex: 0 0 1.35rem; height: 1.35rem; border-radius: .35rem; color: #140b2b; background: #ffd75e; font: 800 .6rem var(--font-ibm-plex-mono), monospace; }
+.finishChecks article > span { color: #9389aa; font-size: .64rem; line-height: 1.45; }
+.finishChecks article strong { display: block; color: #f6f2ff; font-size: .69rem; }
+.fullPattern { border-color: rgba(77, 225, 255, .25); background: linear-gradient(145deg, rgba(77, 225, 255, .06), rgba(24, 17, 50, .62)); }
+.fullPattern > ol { display: grid; gap: .65rem; margin: .8rem 0 0; padding: 0; list-style: none; counter-reset: full-pattern; }
+.fullPattern > ol > li { counter-increment: full-pattern; position: relative; padding: .7rem .7rem .7rem 2.7rem; border: 1px solid rgba(167, 139, 250, .13); border-radius: .72rem; color: #9d93b3; background: rgba(8, 6, 24, .45); font-size: .66rem; line-height: 1.52; }
+.fullPattern > ol > li::before { content: counter(full-pattern, decimal-leading-zero); position: absolute; top: .72rem; left: .7rem; color: #4de1ff; font: 700 .62rem var(--font-ibm-plex-mono), monospace; }
+.fullPattern li strong { color: #f6f2ff; }
 
 .notesGrid { display: grid; gap: .65rem; }
 .notesGrid article { padding: 1rem; border: 1px solid rgba(167, 139, 250, .17); border-radius: 1rem; background: rgba(22, 15, 47, .58); }
@@ -371,8 +432,16 @@
   .hero { grid-template-columns: minmax(0, .95fr) minmax(23rem, 1.05fr); padding: 3rem 2.4rem 2.6rem; }
   .controls, .results { padding: 1.7rem; }
   .outputGrid, .notesGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dimensionBreakdown { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dimensionBreakdown > span { display: grid; }
   .panelSet { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sewingSteps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .methodCompare { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+  .methodCompare > b { display: block; }
+  .zipperSteps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .shellGrid, .anchorGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .finishChecks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fullPattern > ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (min-width: 900px) {
@@ -414,6 +483,6 @@
   .resultsHeader p, .accuracyNote, .cutCard small, .finishedBanner small { color: #555 !important; }
   .resultsHeader h2, .cutCard strong, .finishedBanner strong, .notesGrid h3 { color: #111; }
   .cardNumber, .figureTitle div span, .figureScale { color: #333; }
-  .finishedBanner, .cutCard, .patternFigure, .notesGrid article, .panelPiece, .panelAnatomy, .sewingMap { break-inside: avoid; color: #111; background: #fff; border-color: #bbb; }
+  .finishedBanner, .cutCard, .patternFigure, .notesGrid article, .panelPiece, .panelAnatomy, .zipperSection, .shellSection, .sewingMap, .anchorSection, .finishSection, .fullPattern { break-inside: avoid; color: #111; background: #fff; border-color: #bbb; }
   .patternFigure svg { filter: grayscale(1); }
 }
