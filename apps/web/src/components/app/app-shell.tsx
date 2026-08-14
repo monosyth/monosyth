@@ -18,7 +18,6 @@ type StudioProject = {
   meta: string;
   accent: ProjectAccent;
   glyph: ProjectGlyphKind;
-  external?: boolean;
 };
 
 const studioProjects: readonly StudioProject[] = [
@@ -51,13 +50,12 @@ const studioProjects: readonly StudioProject[] = [
   },
   {
     name: "Possum Payday",
-    href: "https://possum-payday.monosyth984401.chatgpt.site",
+    href: "/app/possum-payday",
     label: "Play game",
     details: "Family fortune reels + Goat Rodeo bonus",
     meta: "Original game / 5×5 reels",
     accent: "red",
     glyph: "possum",
-    external: true,
   },
 ];
 
@@ -394,19 +392,6 @@ function ProjectTile({
       </div>
     </>
   );
-
-  if (project.external) {
-    return (
-      <a
-        href={project.href}
-        className={className}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        {content}
-      </a>
-    );
-  }
 
   return (
     <Link href={project.href} className={className}>

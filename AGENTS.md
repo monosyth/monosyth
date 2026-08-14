@@ -11,5 +11,8 @@ that support it.
   unrelated to the website.
 - The production site deploys from this repository's `main` branch through
   Firebase App Hosting.
+- Never deploy this site or its child apps to ChatGPT Sites. ChatGPT and Codex
+  tools may assist with building, but production must remain on Monosyth-owned
+  hosting at `monosyth.com`.
 
 For work inside `apps/web`, also follow `apps/web/AGENTS.md`.
