@@ -12,8 +12,8 @@ export default function BlockLibraryPage() {
   const checked = QUILT_BLOCKS.filter((block) => block.sources?.length).length;
   return (
     <>
-      <PageIntro chapter="03" eyebrow="Quilt block instructions" title="Traditional and modern quilt blocks" intro={`${checked} source-checked block recipes are shown first, each with cut sizes, construction diagrams, pressing notes, and measurements to check. The remaining entries stay available under All blocks and are marked for further source review.`}>
-        <div className={styles.pageIntroStats}><div><strong>{traditional}</strong><span>traditional</span></div><div><strong>{modern}</strong><span>modern</span></div><div><strong>{checked}</strong><span>reference checked</span></div></div>
+      <PageIntro chapter="03" eyebrow="Quilt block instructions" title="Traditional and modern quilt blocks" intro={`All ${checked} recipes include linked sources, cut sizes, construction diagrams, pressing notes, and measurements to check. Exact-recipe pages follow a published cut list and map; method-checked pages use a Monosyth layout built from a documented construction method.`}>
+        <div className={styles.pageIntroStats}><div><strong>{traditional}</strong><span>traditional</span></div><div><strong>{modern}</strong><span>modern</span></div><div><strong>{checked}</strong><span>source checked</span></div></div>
       </PageIntro>
       <section className={styles.contentSection}><BlockBrowser blocks={QUILT_BLOCKS} /></section>
     </>

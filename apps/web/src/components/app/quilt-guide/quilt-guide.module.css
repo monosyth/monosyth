@@ -1080,6 +1080,39 @@
   font-variant-numeric: tabular-nums;
 }
 
+.quickTable caption {
+  padding: 1rem;
+  text-align: left;
+  background: rgba(255, 254, 249, 0.88);
+}
+
+.quickTable caption span,
+.quickTable caption strong,
+.quickTable caption small {
+  display: block;
+}
+
+.quickTable caption span {
+  color: var(--q-teal-dark);
+  font: 800 0.88rem/1.35 var(--font-space-grotesk), Arial, sans-serif;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.quickTable caption strong {
+  margin-top: 0.2rem;
+  color: var(--q-ink);
+  font: 800 1.2rem/1.25 var(--font-space-grotesk), Arial, sans-serif;
+}
+
+.quickTable caption small {
+  max-width: 76ch;
+  margin-top: 0.35rem;
+  color: var(--q-muted);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
 .quickTable th,
 .quickTable td {
   padding: 0.9rem 1rem;
@@ -2812,6 +2845,7 @@
 .cutGroupFeature { --cut-color: var(--q-tomato); }
 .cutGroupBackground { --cut-color: var(--q-paper-deep); --cut-ink: var(--q-ink); }
 .cutGroupAccent { --cut-color: var(--q-teal); }
+.cutGroupSecondary { --cut-color: var(--q-gold); --cut-ink: var(--q-ink); }
 .cutGroupScrap { --cut-color: var(--q-lilac); }
 
 .cutTicketGrid article > span {

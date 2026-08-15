@@ -150,7 +150,7 @@ export const PRECUTS: readonly Precut[] = [
 
 export type BlockCutGroup = {
   fabric: string;
-  color: "feature" | "background" | "accent" | "scrap";
+  color: "feature" | "background" | "accent" | "secondary" | "scrap";
   cuts: readonly string[];
 };
 
@@ -176,6 +176,8 @@ export type QuiltBlock = {
   }[];
   precutNote: string;
   accuracyNote: string;
+  sourceScope?: "exact recipe" | "construction method";
+  sourceNote?: string;
   sources?: readonly {
     label: string;
     url: string;
@@ -218,6 +220,11 @@ const accent = (cuts: readonly string[]): BlockCutGroup => ({
   color: "accent",
   cuts,
 });
+const secondary = (cuts: readonly string[]): BlockCutGroup => ({
+  fabric: "Secondary",
+  color: "secondary",
+  cuts,
+});
 const scraps = (cuts: readonly string[]): BlockCutGroup => ({
   fabric: "Assorted scraps",
   color: "scrap",
@@ -244,6 +251,7 @@ const ALL_QUILT_BLOCKS: readonly QuiltBlock[] = [
     ],
     precutNote: "Cut 6½″ squares from yardage or a 10″ square. A full charm is too small for this 12″ version.",
     accuracyNote: "The center intersection is the visual target; nesting opposing seam allowances makes it reliable.",
+    sources: [{ label: "AllPeopleQuilt — 12″ Four Patch cutting and assembly", url: "https://www.allpeoplequilt.com/quilt-patterns/quilt-throws/good-sports" }],
   },
   {
     slug: "nine-patch",
@@ -285,6 +293,7 @@ const ALL_QUILT_BLOCKS: readonly QuiltBlock[] = [
     ],
     precutNote: "A 10″ square yields four 3½″ squares with useful leftovers; strip piecing is faster for multiples.",
     accuracyNote: "Tiny errors repeat across four columns, so verify the first row before chain-piecing the rest.",
+    sources: [{ label: "Darcy Quilts — 12″ Sixteen Patch strip-piecing tutorial", url: "https://darcyquilts.com/how-to-make-a-16-patch-quilt-block-tutorial/" }],
   },
   {
     slug: "rail-fence",
@@ -354,6 +363,9 @@ const ALL_QUILT_BLOCKS: readonly QuiltBlock[] = [
     ],
     precutNote: "Every log is 2½″ wide, so Jelly Roll strips work without width trimming.",
     accuracyNote: "Center each opposite log pair so the block grows symmetrically.",
+    sourceScope: "construction method",
+    sourceNote: "Courthouse Steps can be drafted with many center and log widths. The linked 12″ tutorial verifies the paired-opposite-log sequence; this page’s listed dimensions were independently checked to total 12½″ raw.",
+    sources: [{ label: "Quilts By Jen — 12″ Courthouse Steps construction", url: "https://quiltsbyjen.ca/courthouse-steps-quilt-block/" }],
   },
   {
     slug: "pinwheel",
@@ -374,6 +386,7 @@ const ALL_QUILT_BLOCKS: readonly QuiltBlock[] = [
     ],
     precutNote: "This size needs yardage. For a larger 18″-finished pinwheel, use two contrasting pairs of 10″ squares—four squares total—and trim the four HSTs to 9½″.",
     accuracyNote: "Preserve the ¼″ seam allowance beyond the center tips when trimming.",
+    sources: [{ label: "Adventures of a DIY Mom — 12″ Pinwheel cutting chart and photo tutorial", url: "https://www.adventuresofadiymom.com/2024/11/how-to-make-pinwheel-quilt-block.html" }],
   },
   {
     slug: "friendship-star",
@@ -436,6 +449,9 @@ const ALL_QUILT_BLOCKS: readonly QuiltBlock[] = [
     ],
     precutNote: "This size requires 7½″ squares; 10″ layer squares leave generous room and can be trimmed first.",
     accuracyNote: "Trim equally from all four sides so the center remains centered.",
+    sourceScope: "construction method",
+    sourceNote: "The linked 12″ pattern verifies the four-hourglass arrangement. This guide uses an oversized two-pass QST method so every 6½″ raw unit can be trimmed accurately before assembly.",
+    sources: [{ label: "AccuQuilt — 12″ Hourglass block arrangement", url: "https://www.accuquilt.com/media/emails/QQK17-PatternBook.pdf" }],
   },
   {
     slug: "ohio-star",
@@ -456,7 +472,10 @@ const ALL_QUILT_BLOCKS: readonly QuiltBlock[] = [
     ],
     precutNote: "Layer squares are an easy source, but each 10″ square yields only one 5½″ start. You need four 10″ squares total—two feature and two background.",
     accuracyNote: "The QST center is the trimming anchor; do not trim by outer edges alone.",
-    sources: [{ label: "Polka Dot Chair — 12″ Ohio Star photo tutorial", url: "https://www.polkadotchair.com/how-to-make-a-12-inch-ohio-star-quilt-block/" }],
+    sources: [
+      { label: "Polka Dot Chair — 12″ Ohio Star photo tutorial", url: "https://www.polkadotchair.com/how-to-make-a-12-inch-ohio-star-quilt-block/" },
+      { label: "Generations Quilt Patterns — Ohio Star cutting charts and QST orientation", url: "https://www.generations-quilt-patterns.com/ohio-star-quilt-block.html" },
+    ],
   },
   {
     slug: "churn-dash",
@@ -532,6 +551,9 @@ const ALL_QUILT_BLOCKS: readonly QuiltBlock[] = [
     ],
     precutNote: "Layer squares can be subcut for bodies and charms for sky squares; verify directional prints before flipping corners.",
     accuracyNote: "Make one test goose and confirm 3½″ × 6½″ before chain-piecing the remaining seven.",
+    sourceScope: "construction method",
+    sourceNote: "The linked tutorial verifies the 12″ map, eight 3½″ × 6½″ Flying Geese, and paired-quadrant rotation. It demonstrates no-waste geese; this page uses the equally valid one-at-a-time stitch-and-flip method so the cut list stays beginner-readable.",
+    sources: [{ label: "SewCanShe — 12″ Dutchman’s Puzzle photo tutorial", url: "https://sewcanshe.com/2014-5-2-classic-blocks-fresh-fabrics-for-may-the-dutchmans-puzzle/" }],
   },
   {
     slug: "jacobs-ladder",
@@ -547,11 +569,12 @@ const ALL_QUILT_BLOCKS: readonly QuiltBlock[] = [
     steps: [
       { title: "Five Four Patches", instruction: "Pair 2½″ feature and background squares, press in opposite directions, then join pairs into five checkerboard Four Patches.", checkpoint: "Five units trim to 4½″." },
       { title: "Four HSTs", instruction: "Use the 5″ squares to make four two-at-a-time HSTs. Trim to 4½″.", checkpoint: "Nine total 4½″ subunits." },
-      { title: "Build the ladder", instruction: "Place Four Patches at all four corners and center. Fill side positions with HSTs so feature triangles continue one diagonal chain.", checkpoint: "The feature path runs corner to corner." },
+      { title: "Build the ladder", instruction: "Place Four Patches at all four corners and center with feature squares at upper-left and lower-right in every unit. Fill the four side positions with HSTs as shown so the feature fabric forms a continuous diagonal ladder from lower left to upper right.", checkpoint: "All five Four Patches share one orientation and the four HSTs continue the diagonal path." },
       { title: "Join rows", instruction: "Sew the 3 × 3 grid, nesting seams where possible.", checkpoint: "12½″ raw / 12″ finished." },
     ],
     precutNote: "Mini charms are ready for the Four Patches; charms make the HSTs with trimming room.",
-    accuracyNote: "Rotate the center Four Patch to continue the same diagonal color path.",
+    accuracyNote: "The official map keeps all five Four Patches in the same checkerboard orientation. A quarter-turn of the center unit breaks the ladder.",
+    sources: [{ label: "Riley Blake Designs — 12″ Jacob’s Ladder instructions", url: "https://www.rileyblakedesigns.com/assets/images/sewalongs/BuildingBlocks/2022/JacobsLadder.pdf" }],
   },
   {
     slug: "snowball",
@@ -572,6 +595,9 @@ const ALL_QUILT_BLOCKS: readonly QuiltBlock[] = [
     ],
     precutNote: "A Layer Cake makes a smaller 9½″-finished Snowball; scale corners to the declared ratio or follow that pattern’s exact recipe.",
     accuracyNote: "Snowball proportions vary by pattern; this page intentionally uses 4″-finished corner triangles.",
+    sourceScope: "construction method",
+    sourceNote: "Snowball corner proportions are not universal. The linked 12″ tutorial verifies the stitch-and-flip construction; this Monosyth version deliberately uses larger 4½″ cut corner squares for a 4″-finished corner triangle.",
+    sources: [{ label: "Piece N Quilt — 12″ Snowball stitch-and-flip tutorial", url: "https://www.pieceandquilt.com/2015/12/how-to-snowball-quilt-block-basics.html" }],
   },
   {
     slug: "bear-paw",
@@ -614,6 +640,10 @@ const ALL_QUILT_BLOCKS: readonly QuiltBlock[] = [
     ],
     precutNote: "This version is designed specifically for nine untrimmed 5″ charm squares.",
     accuracyNote: "The general finished-size formula for this version is three times the starting square minus 2″.",
+    sources: [
+      { label: "Kate Colleran Designs — 5″-square Disappearing Nine Patch size proof", url: "https://katecollerandesigns.com/exploring-quilting-basics-the-disappearing-9-patch-block/" },
+      { label: "Leah Day — Disappearing Nine Patch precut planning chart", url: "https://leahday.com/blogs/free/disappearing-9-patch" },
+    ],
   },
   {
     slug: "modern-plus",
@@ -634,6 +664,9 @@ const ALL_QUILT_BLOCKS: readonly QuiltBlock[] = [
     ],
     precutNote: "Mini charms are exactly the required cut size—nine feature and sixteen background.",
     accuracyNote: "Keep background values quiet so the plus retains a strong silhouette.",
+    sourceScope: "construction method",
+    sourceNote: "This 10″ mini-charm layout is Monosyth-drafted. The linked tutorial verifies the same plus-block row construction at quilt scale; the 5 × 5 grid here was independently checked to finish at 10″.",
+    sources: [{ label: "Diary of a Quilter — pieced Plus Quilt construction", url: "https://www.diaryofaquilter.com/gratitude-quilt-a-free-plus-quilt-tutorial/" }],
   },
   {
     slug: "hst-chevron",
@@ -649,11 +682,14 @@ const ALL_QUILT_BLOCKS: readonly QuiltBlock[] = [
     steps: [
       { title: "Batch HSTs", instruction: "Use the sixteen 4″ squares to make sixteen HSTs two at a time.", checkpoint: "Eight paired batches yield sixteen." },
       { title: "Trim", instruction: "Trim each HST to 3½″ with the 45° seam on the ruler diagonal.", checkpoint: "Sixteen 3″-finished HSTs." },
-      { title: "Make chevrons", instruction: "Arrange a 4 × 4 grid. Mirror adjacent HST diagonals to create repeated V shapes across each row.", checkpoint: "All V shapes point the same direction." },
+      { title: "Make chevrons", instruction: "Arrange a 4 × 4 grid. Mirror adjacent HST diagonals in pairs to make two V shapes in each row. Reverse the V direction in the next row so the diagonals connect into continuous zigzag bands.", checkpoint: "Rows alternate V direction and every diagonal continues across a seam." },
       { title: "Assemble grid", instruction: "Join rows, pressing alternating directions, then join all four rows.", checkpoint: "12½″ raw / 12″ finished." },
     ],
     precutNote: "Charm squares are ideal HST starts: sew first, then trim the finished units to 3½″.",
     accuracyNote: "Photograph the layout before sewing; one rotated HST breaks the entire chevron rhythm.",
+    sourceScope: "construction method",
+    sourceNote: "The linked tutorial verifies the same 4 × 4 Chevron layout and 3½″ raw HST units, but makes those units with an eight-at-a-time paper template. This guide uses trim-friendly two-at-a-time HSTs from 4″ squares so a beginner can work without a specialty template.",
+    sources: [{ label: "Gathered — 12″ Chevron block layout and HST checkpoints", url: "https://www.gathered.how/sewing-and-quilting/quilting/chevrons-quilt-block-pattern" }],
   },
   {
     slug: "wonky-star",
@@ -674,6 +710,7 @@ const ALL_QUILT_BLOCKS: readonly QuiltBlock[] = [
     ],
     precutNote: "Use charms trimmed to 4½″ for background and leftovers for the improvised wedges.",
     accuracyNote: "Wonky means varied angles, not missing seam allowance; every finished point still needs room beyond its tip.",
+    sources: [{ label: "Scissortail Quilting — 12″ Wonky Star cutting chart and diagrams", url: "https://scissortailquilting.com/wp-content/uploads/dlm_uploads/2019/09/WonkyStarQuiltBlockPattern_Rev1.pdf" }],
   },
   {
     slug: "offset-log-cabin",
@@ -682,18 +719,26 @@ const ALL_QUILT_BLOCKS: readonly QuiltBlock[] = [
     finishedSize: "12″",
     unfinishedSize: "12½″",
     difficulty: "Confident beginner",
-    unitType: "Color-shifted logs",
-    summary: "Classic Log Cabin construction pushed off balance by concentrated color and asymmetric value.",
+    unitType: "Unequal-width sequential logs",
+    summary: "A true offset Log Cabin: narrow light logs and wider dark logs shift the center and create the illusion of a curve.",
     diagram: "offset-log-cabin",
-    cuts: [accent(["1 — 4½″ center square"]), feature(["4 — 2½″ logs: 4½″, 6½″, 8½″, 10½″ long"]), bg(["4 — 2½″ logs: 6½″, 8½″, 10½″, 12½″ long"])],
-    steps: [
-      { title: "Choose the pull", instruction: "Place saturated feature logs on the right and bottom path; reserve low-volume logs for the opposite path.", checkpoint: "Value plan creates the visual offset." },
-      { title: "Round one", instruction: "Add 4½″, 6½″, 6½″, and 8½″ logs clockwise, pressing outward.", checkpoint: "8½″ square after four logs." },
-      { title: "Round two", instruction: "Continue with 8½″, 10½″, 10½″, and 12½″ logs, preserving the high/low value split.", checkpoint: "12½″ square after eight logs." },
-      { title: "Compose multiples", instruction: "Rotate completed blocks independently to create a larger off-center ripple.", checkpoint: "12½″ raw / 12″ finished." },
+    cuts: [
+      { fabric: "Center / dark", color: "feature", cuts: ["1 — 3½″ center square"] },
+      { fabric: "Narrow light logs", color: "background", cuts: ["1 — 1½″ × 3½″ (log 1)", "1 — 1½″ × 4½″ (log 2)", "1 — 1½″ × 6½″ (log 5)", "1 — 1½″ × 7½″ (log 6)", "1 — 1½″ × 9½″ (log 9)", "1 — 1½″ × 10½″ (log 10)"] },
+      { fabric: "Wide dark logs", color: "feature", cuts: ["1 — 2½″ × 4½″ (log 3)", "1 — 2½″ × 6½″ (log 4)", "1 — 2½″ × 7½″ (log 7)", "1 — 2½″ × 9½″ (log 8)", "1 — 2½″ × 10½″ (log 11)", "1 — 2½″ × 12½″ (log 12)"] },
     ],
-    precutNote: "Jelly Roll strips supply every log; sort them into strong and quiet value groups before cutting lengths.",
-    accuracyNote: "The geometry is square; the offset comes from color placement, so value contrast matters more than print family.",
+    steps: [
+      { phase: "Prepare", title: "Number the unequal-width logs", instruction: "Keep the six 1½″ light logs and six 2½″ dark logs in separate numbered stacks. The center belongs to the dark side.", checkpoint: "One 3½″ center and twelve numbered logs are ready.", diagram: "cut-pieces" },
+      { phase: "Make units", title: "Add narrow light logs 1 and 2", instruction: "Sew light log 1 to the top of the center, then light log 2 to the left. Press away from the center after each seam.", checkpoint: "The unit measures 4½″ square after log 2.", diagram: "log-rounds" },
+      { phase: "Make units", title: "Add wide dark logs 3 and 4", instruction: "Sew dark log 3 across the bottom, then dark log 4 along the right edge. The wider logs begin shifting the center toward the upper-left.", checkpoint: "The unit measures 6½″ square after log 4.", diagram: "log-rounds" },
+      { phase: "Make units", title: "Add logs 5 through 8", instruction: "Repeat the same top, left, bottom, right path: narrow light logs 5 and 6, then wide dark logs 7 and 8. Press and measure after every log pair.", checkpoint: "The unit measures 9½″ square after log 8.", diagram: "log-rounds" },
+      { phase: "Assemble", title: "Finish with logs 9 through 12", instruction: "Add narrow light logs 9 and 10, then wide dark logs 11 and 12. Do not substitute equal widths—the unequal widths create the offset.", checkpoint: "12½″ raw / 12″ finished.", diagram: "final" },
+    ],
+    precutNote: "Jelly Roll strips supply the 2½″ dark logs. Cut the 1½″ light logs from Honey Bun strips or trim wider strips to 1½″.",
+    accuracyNote: "Unlike a color-shifted ordinary Log Cabin, a true offset block uses different log widths. Check raw sizes at 4½″, 6½″, 9½″, and 12½″.",
+    sourceScope: "construction method",
+    sourceNote: "The linked source verifies that a true Offset Log Cabin uses 1½″ light logs and 2½″ dark logs. Its published block finishes at 9″; this page extends the same proven sequence by one full round to finish at 12″.",
+    sources: [{ label: "Epida Studio — Offset Log Cabin unequal-width method", url: "https://www.epidastudio.com/log-cabin-sampler-offset-cabin/" }],
   },
   {
     slug: "stacked-coins",
@@ -714,6 +759,9 @@ const ALL_QUILT_BLOCKS: readonly QuiltBlock[] = [
     ],
     precutNote: "Charm squares can be trimmed to 4½″ × 3½″ coins; directional prints should all face the same way before stacking.",
     accuracyNote: "Measure each coin column before adding sashing; both must finish at the same 12½″ raw height.",
+    sourceScope: "construction method",
+    sourceNote: "Stacked Coins varies by quilt and is not one fixed 12″ historical block. The linked tutorial verifies the stacked-strip method; this two-column sampler recipe was independently checked to finish at 12″.",
+    sources: [{ label: "Confessions of a Fabric Addict — Stacked Coins construction", url: "https://confessionsofafabricaddict.blogspot.com/2018/02/scrumptious-scraps-quilt-along-stacked.html" }],
   },
   {
     slug: "minimalist-cross",
@@ -734,6 +782,9 @@ const ALL_QUILT_BLOCKS: readonly QuiltBlock[] = [
     ],
     precutNote: "Jelly Roll strips provide every cross piece; layer squares can yield the 5½″ background fields.",
     accuracyNote: "Because the background is quiet, a wandering vertical alignment is visible—match the arm edges, not just raw corners.",
+    sourceScope: "construction method",
+    sourceNote: "This centered 12″ cross is a Monosyth-drafted grid, not a claim of one canonical named block. Its five-piece cross and four-field geometry were checked directly from the listed cut sizes.",
+    sources: [{ label: "Treasurie — Cross block construction and size variations", url: "https://blog.treasurie.com/cross-quilt-blocks/" }],
   },
   {
     slug: "improv-mosaic",
@@ -754,6 +805,9 @@ const ALL_QUILT_BLOCKS: readonly QuiltBlock[] = [
     ],
     precutNote: "Use orphan mini charms, Jelly Roll ends, and trimming leftovers; this is the intentional scrap-release valve.",
     accuracyNote: "The interior is improvised, but the four 6½″ trimmed quadrants make the final size deterministic.",
+    sourceScope: "construction method",
+    sourceNote: "Improv piecing has no single canonical patch map. The linked tutorial verifies the sew, press, straighten, and add workflow; this guide controls the final size by trimming four oversized slabs to 6½″ before joining.",
+    sources: [{ label: "Diary of a Quilter — 12½″ trimmed improv block workflow", url: "https://www.diaryofaquilter.com/improv-log-cabin-block-tutorial/" }],
   },
   {
     slug: "economy-block",
@@ -809,17 +863,17 @@ const ALL_QUILT_BLOCKS: readonly QuiltBlock[] = [
     unitType: "Flying Geese + pieced corners",
     summary: "A compact star built from 2½-inch patches around a 4½-inch center.",
     diagram: "maple-star",
-    cuts: [feature(["1 — 4½″ center square"]), accent(["4 — 2½″ × 4½″ rectangles", "12 — 2½″ squares"]), bg(["8 — 2½″ × 4½″ rectangles", "4 — 2½″ squares"])],
+    cuts: [feature(["1 — 4½″ center square (A)"]), accent(["4 — 2½″ × 4½″ center rectangles (B)"]), secondary(["12 — 2½″ star-point and corner squares (C)"]), bg(["8 — 2½″ × 4½″ rectangles", "4 — 2½″ squares"])],
     steps: [
-      { phase: "Prepare", title: "Mark eight point squares", instruction: "Mark one diagonal on eight of the twelve 2½″ accent squares. Reserve the other four accent squares for corner units.", checkpoint: "Eight marked point squares; four unmarked accent squares.", diagram: "flying-geese-mark" },
-      { phase: "Make units", title: "Make four Flying Geese", instruction: "Use two marked accent squares on each of four background 2½″ × 4½″ rectangles. Sew on the lines, trim ¼″ outside, flip, and press.", checkpoint: "Four geese at 2½″ × 4½″.", diagram: "flying-geese-unit" },
-      { phase: "Make units", title: "Make four corner units", instruction: "Sew one unmarked accent 2½″ square to one background 2½″ square. Add a background 2½″ × 4½″ rectangle along the bottom edge. Repeat four times.", checkpoint: "Four corner units at 4½″ square.", diagram: "corner-units" },
-      { phase: "Make units", title: "Complete the side units", instruction: "Sew one accent 2½″ × 4½″ rectangle to the base of each Flying Goose. Keep every goose point aimed away from the rectangle.", checkpoint: "Four side units at 4½″ square.", diagram: "corner-units" },
-      { phase: "Arrange", title: "Lay out the 3 × 3 block", instruction: "Place the 4½″ feature square at center, side units at top/bottom/left/right, and pieced corner units in the four corners. Rotate the units to match the final map.", checkpoint: "All star points face away from the center.", diagram: "layout" },
+      { phase: "Prepare", title: "Mark eight C squares", instruction: "Draw one diagonal on eight of the twelve 2½″ secondary-color C squares. Reserve the other four C squares for the outer corner units.", checkpoint: "Eight marked C squares; four unmarked C squares.", diagram: "flying-geese-mark" },
+      { phase: "Make units", title: "Make four reverse-color Flying Geese", instruction: "Use two marked C squares on each of four background 2½″ × 4½″ rectangles. Sew on the lines, check coverage, trim ¼″ outside, flip, and press. The two small C triangles—not the large background triangle—become the star points.", checkpoint: "Four geese at 2½″ × 4½″ with a large background triangle.", diagram: "flying-geese-unit" },
+      { phase: "Make units", title: "Make four corner units", instruction: "Sew one unmarked C square to one background 2½″ square. Add a background 2½″ × 4½″ rectangle to make a 4½″ square. Repeat four times, then rotate each unit so its C square occupies the inner corner of the finished block.", checkpoint: "Four corner units at 4½″ square; each C square is nearest the star.", diagram: "corner-units" },
+      { phase: "Make units", title: "Complete the four side units", instruction: "Sew one accent B rectangle to the long edge of each Flying Goose. Rotate each finished side unit so the B rectangle touches center, the large background triangle points toward B, and the two small C triangles point toward the outside edge.", checkpoint: "Four side units at 4½″ square with two visible C star points each.", diagram: "corner-units" },
+      { phase: "Arrange", title: "Lay out the 3 × 3 block", instruction: "Place center square A in the middle. Put side units at top, right, bottom, and left with every B rectangle touching A. Put the pieced corner units in the corners with every small C square facing inward.", checkpoint: "Eight C triangles and four C corner squares form the Maple Star shown in the finished map.", diagram: "layout" },
       { phase: "Assemble", title: "Sew rows and join", instruction: "Join three units per row, press for nesting, then sew the three rows together.", checkpoint: "12½″ raw / 12″ finished.", diagram: "rows" },
     ],
-    precutNote: "Every 2½″ square can come from mini charms; 2½″ strips also provide the rectangles. Use a layer square or yardage for the 4½″ center.",
-    accuracyNote: "This block repeats many 2½″ units; confirm the first goose and first corner unit before batching the rest.",
+    precutNote: "Mini charms supply all C squares and background squares. Jelly Roll strips supply the 2½″ × 4½″ rectangles. Use a charm or layer square for center A.",
+    accuracyNote: "Keep fabrics A, B, and C separate: A is only the center, B forms the four rectangles around it, and C forms every star point and inner corner square.",
     sources: [{ label: "Polka Dot Chair — 12″ Maple Star photo tutorial", url: "https://www.polkadotchair.com/maple-star-quilt-block-tutorials/" }],
   },
   {
@@ -873,7 +927,7 @@ const ALL_QUILT_BLOCKS: readonly QuiltBlock[] = [
     unfinishedSize: "12½″",
     difficulty: "Intermediate",
     unitType: "Twelve HSTs in a 4 × 4 grid",
-    summary: "A four-patch pinwheel sits inside an eight-point HST star.",
+    summary: "A feature-fabric pinwheel sits inside an eight-point star formed by the background halves of twelve HSTs.",
     diagram: "pinwheel-star",
     cuts: [feature(["1 — 8¼″ square", "2 — 4″ squares"]), bg(["1 — 8¼″ square", "2 — 4″ squares", "4 — 3½″ corner squares"])],
     steps: [
@@ -881,7 +935,7 @@ const ALL_QUILT_BLOCKS: readonly QuiltBlock[] = [
       { phase: "Make units", title: "Make eight HSTs at once", instruction: "Sew a scant ¼″ on both sides of both marked diagonals. Cut through the exact horizontal and vertical centers, then cut on both marked diagonals.", checkpoint: "Eight oversized HST units.", diagram: "hst-eight" },
       { phase: "Make units", title: "Make four more HSTs", instruction: "Pair each 4″ feature square with a 4″ background square. Mark one diagonal, sew ¼″ on both sides, and cut on the line.", checkpoint: "Twelve HST units total.", diagram: "hst-cut" },
       { phase: "Check", title: "Trim all HSTs", instruction: "Press toward the darker fabric and trim every HST to 3½″ using the ruler’s 45° line.", checkpoint: "Twelve 3½″ HSTs plus four plain 3½″ background squares.", diagram: "hst-trim" },
-      { phase: "Arrange", title: "Lay out the 4 × 4 star", instruction: "Place plain background squares at the four corners. Use eight HSTs for the outer Sawtooth points and four HSTs for the center pinwheel, matching the final map exactly.", checkpoint: "The center pinwheel spins consistently and every outer point faces outward.", diagram: "layout" },
+      { phase: "Arrange", title: "Lay out the 4 × 4 star", instruction: "Place plain background squares at the four corners. Use eight HSTs around the outside so their background triangles form the outward star points and their feature triangles face inward. Use the remaining four HSTs for the feature-fabric center pinwheel. Match the final map exactly.", checkpoint: "The feature center pinwheel spins consistently and the four background-color star points face outward.", diagram: "layout" },
       { phase: "Assemble", title: "Sew four rows and join", instruction: "Join four units per row. Press alternate rows in opposite directions, nest all intersections, and sew the four rows together.", checkpoint: "12½″ raw / 12″ finished.", diagram: "rows" },
     ],
     precutNote: "The 8¼″ starts fit inside layer squares. The 4″ starts and 3½″ corners fit inside charms.",
@@ -898,16 +952,17 @@ const ALL_QUILT_BLOCKS: readonly QuiltBlock[] = [
     unitType: "Six HSTs + pieced basket body",
     summary: "A diagonal basket with a contrasting handle corner and stepped body.",
     diagram: "basket",
-    cuts: [feature(["2 — 4″ HST squares", "3 — 3½″ basket squares"]), accent(["1 — 4″ HST square"]), bg(["3 — 4″ HST squares", "2 — 3½″ × 6½″ rectangles", "4 — 3½″ squares"])],
+    cuts: [feature(["2 — 4″ HST squares", "3 — 3½″ basket squares"]), accent(["1 — 4″ HST square"]), bg(["3 — 4″ HST squares", "2 — 3½″ × 6½″ rectangles", "3 needed — 3½″ squares", "Optional: 1 extra 3½″ square as listed in the source"])],
     steps: [
       { phase: "Make units", title: "Make six HSTs", instruction: "Pair two 4″ feature squares with two 4″ background squares to make four HSTs. Pair the 4″ accent square with the remaining 4″ background square to make two more. Press and trim all six to 3½″.", checkpoint: "Four feature/background HSTs and two accent/background HSTs at 3½″.", diagram: "hst-cut" },
-      { phase: "Arrange", title: "Lay out the basket body", instruction: "Arrange a 3 × 3 unit from the four feature/background HSTs, three feature squares, and two background squares according to the final map. The feature patches step diagonally upward from lower right.", checkpoint: "Main basket unit is a clear diagonal triangle.", diagram: "layout" },
-      { phase: "Assemble", title: "Sew the basket body", instruction: "Sew the three rows, press alternate rows in opposite directions, and join them.", checkpoint: "Main unit measures 9½″ square raw.", diagram: "rows" },
-      { phase: "Make units", title: "Build the handle sections", instruction: "Sew one 3½″ × 6½″ background rectangle to one accent/background HST. Make the second handle section from the remaining rectangle, HST, and one 3½″ background square as shown in the final map.", checkpoint: "Two handle/background sections are ready to attach.", diagram: "corner-units" },
-      { phase: "Assemble", title: "Complete the block", instruction: "Attach the short handle section below the basket body and the long section to its right. Match the diagonal handle orientation before sewing.", checkpoint: "12½″ raw / 12″ finished.", diagram: "final" },
+      { phase: "Arrange", title: "Lay out the 9½″-wide main section", instruction: "Build four horizontal rows exactly as shown in the finished map. Row 1: background square, then two feature HSTs. Row 2: feature HST, background square, feature square. Row 3: feature HST, then two feature squares. Row 4: one background 3½″ × 6½″ rectangle, then one accent HST.", checkpoint: "The first three rows are 9½″ wide; row 4 is a rectangle plus one HST and is also 9½″ wide.", diagram: "layout" },
+      { phase: "Assemble", title: "Sew the main section", instruction: "Sew the pieces within each row. Press neighboring row seams in opposite directions, then join all four rows in order. In the bottom-right accent HST, the accent triangle must touch the unit’s top and left raw edges, exactly as shown in the map.", checkpoint: "Main section measures 9½″ × 12½″ raw.", diagram: "rows" },
+      { phase: "Make units", title: "Build the right side column", instruction: "Stack the remaining background 3½″ × 6½″ rectangle at top, the remaining accent HST in the middle, and a 3½″ background square at bottom. Sew the two horizontal seams. In this accent HST, the accent triangle touches the unit’s bottom and left raw edges.", checkpoint: "Side column measures 3½″ × 12½″ raw.", diagram: "corner-units" },
+      { phase: "Assemble", title: "Join the two sections", instruction: "Place the 3½″ × 12½″ column on the right side of the 9½″ × 12½″ main section. Match the row intersections and sew the full vertical seam. The two accent triangles meet at their shared corner to form the diagonal handle shown in the source map.", checkpoint: "12½″ raw / 12″ finished.", diagram: "final" },
     ],
     precutNote: "Charms supply every HST start and 3½″ square. Layer squares or yardage are needed for the 3½″ × 6½″ background rectangles.",
     accuracyNote: "Lay out the entire block before joining sections; the two accent HSTs must form one continuous handle direction.",
+    sourceNote: "The tutorial’s construction photos and row list verify this exact 12″ map. Its cutting list names four plain 3½″ background squares, but the published assembly uses only three; this guide marks the fourth as an optional spare instead of hiding the mismatch.",
     sources: [{ label: "Polka Dot Chair — 12″ Basket photo tutorial", url: "https://www.polkadotchair.com/twelve-inch-basket-quilt-block-pattern-a-step-by-step-guide/" }],
   },
   {

@@ -23,7 +23,7 @@ export function BlockBrowser({ blocks }: { blocks: readonly QuiltBlock[] }) {
     <section>
       <div className={styles.libraryControls}>
         <div className={styles.segmentedControl} aria-label="Filter block family">
-          {(["all", "checked", "traditional", "modern"] as const).map((item) => <button type="button" key={item} aria-pressed={filter === item} onClick={() => setFilter(item)} className={filter === item ? styles.segmentedActive : ""}>{item === "all" ? "All blocks" : item === "checked" ? "Reference checked" : item}</button>)}
+          {(["all", "checked", "traditional", "modern"] as const).map((item) => <button type="button" key={item} aria-pressed={filter === item} onClick={() => setFilter(item)} className={filter === item ? styles.segmentedActive : ""}>{item === "all" ? "All blocks" : item === "checked" ? "Source checked" : item}</button>)}
         </div>
         <label className={styles.searchField}><span className={styles.srOnly}>Search quilt blocks</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name or unit…" /><b aria-hidden="true">⌕</b></label>
       </div>
@@ -35,7 +35,7 @@ export function BlockBrowser({ blocks }: { blocks: readonly QuiltBlock[] }) {
             <div className={styles.blockCardBody}>
               <div><span>{String(index + 1).padStart(2, "0")}</span><b>{block.family}</b></div>
               <h2>{block.name}</h2>
-              {block.sources?.length ? <span className={styles.blockSourceStatus}>Reference checked</span> : null}
+              {block.sources?.length ? <span className={styles.blockSourceStatus}>{block.sourceScope === "construction method" ? "Method checked · studio layout" : "Exact recipe checked"}</span> : null}
               <p>{block.summary}</p>
               <dl><div><dt>FINISHES</dt><dd>{block.finishedSize}</dd></div><div><dt>BUILD</dt><dd>{block.unitType}</dd></div></dl>
             </div>
@@ -43,7 +43,7 @@ export function BlockBrowser({ blocks }: { blocks: readonly QuiltBlock[] }) {
           </Link>
         ))}
       </div>
-      {!visible.length ? <div className={styles.emptyState}><strong>No block matches that search.</strong><button type="button" onClick={() => { setQuery(""); setFilter("checked"); }}>Show reference-checked blocks</button></div> : null}
+      {!visible.length ? <div className={styles.emptyState}><strong>No block matches that search.</strong><button type="button" onClick={() => { setQuery(""); setFilter("checked"); }}>Show source-checked blocks</button></div> : null}
     </section>
   );
 }

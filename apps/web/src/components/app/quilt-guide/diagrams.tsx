@@ -85,18 +85,41 @@ function SplitCell({
   y,
   size,
   direction,
+  reverse = false,
 }: {
   x: number;
   y: number;
   size: number;
   direction: "horizontal" | "vertical";
+  reverse?: boolean;
 }) {
+  const firstFill = reverse ? COLORS.background : COLORS.feature;
+  const secondFill = reverse ? COLORS.feature : COLORS.background;
   return (
     <g stroke={COLORS.cream} strokeWidth="0.7">
-      <rect x={x} y={y} width={direction === "vertical" ? size / 2 : size} height={direction === "horizontal" ? size / 2 : size} fill={COLORS.feature} />
-      <rect x={direction === "vertical" ? x + size / 2 : x} y={direction === "horizontal" ? y + size / 2 : y} width={direction === "vertical" ? size / 2 : size} height={direction === "horizontal" ? size / 2 : size} fill={COLORS.background} />
+      <rect x={x} y={y} width={direction === "vertical" ? size / 2 : size} height={direction === "horizontal" ? size / 2 : size} fill={firstFill} />
+      <rect x={direction === "vertical" ? x + size / 2 : x} y={direction === "horizontal" ? y + size / 2 : y} width={direction === "vertical" ? size / 2 : size} height={direction === "horizontal" ? size / 2 : size} fill={secondFill} />
     </g>
   );
+}
+
+function OffsetLogCabin({ upto = 12, numbered = false }: { upto?: number; numbered?: boolean }) {
+  const parts = [
+    { x: 30, y: 30, width: 30, height: 30, fill: COLORS.featureDark },
+    { x: 30, y: 20, width: 30, height: 10, fill: COLORS.background },
+    { x: 20, y: 20, width: 10, height: 40, fill: COLORS.background },
+    { x: 20, y: 60, width: 40, height: 20, fill: COLORS.feature },
+    { x: 60, y: 20, width: 20, height: 60, fill: COLORS.feature },
+    { x: 20, y: 10, width: 60, height: 10, fill: COLORS.background },
+    { x: 10, y: 10, width: 10, height: 70, fill: COLORS.background },
+    { x: 10, y: 80, width: 70, height: 20, fill: COLORS.featureDark },
+    { x: 80, y: 10, width: 20, height: 90, fill: COLORS.featureDark },
+    { x: 10, y: 0, width: 90, height: 10, fill: COLORS.background },
+    { x: 0, y: 0, width: 10, height: 100, fill: COLORS.background },
+    { x: 0, y: 100, width: 100, height: 20, fill: COLORS.feature },
+    { x: 100, y: 0, width: 20, height: 120, fill: COLORS.feature },
+  ];
+  return <g stroke={COLORS.cream} strokeWidth="0.8">{parts.filter((_, index) => index === 0 || index <= upto).map((part, index) => <g key={index}><rect {...part} />{numbered ? <text x={part.x + part.width / 2} y={part.y + part.height / 2 + 3} textAnchor="middle" fill={part.fill === COLORS.background ? COLORS.line : COLORS.cream} stroke="none" fontSize={index === 0 ? 9 : 8} fontWeight="900">{index === 0 ? "C" : index}</text> : null}</g>)}</g>;
 }
 
 function FourPatchCell({ x, y, size, reverse = false }: { x: number; y: number; size: number; reverse?: boolean }) {
@@ -127,15 +150,13 @@ function Grid({
 }
 
 function LogCabin({
-  offset = false,
   upto = 12,
   numbered = false,
 }: {
-  offset?: boolean;
   upto?: number;
   numbered?: boolean;
 }) {
-  const dark = offset ? COLORS.featureDark : COLORS.feature;
+  const dark = COLORS.feature;
   const rounds = [
     { x: 45, y: 45, width: 30, height: 30, fill: COLORS.accent },
     { x: 45, y: 30, width: 30, height: 15, fill: COLORS.background },
@@ -212,10 +233,10 @@ function Snowball() {
   return (
     <g stroke={COLORS.cream} strokeWidth="0.9">
       <rect width="120" height="120" fill={COLORS.feature} />
-      <polygon points="0,0 38,0 0,38" fill={COLORS.background} />
-      <polygon points="120,0 82,0 120,38" fill={COLORS.background} />
-      <polygon points="120,120 82,120 120,82" fill={COLORS.background} />
-      <polygon points="0,120 38,120 0,82" fill={COLORS.background} />
+      <polygon points="0,0 40,0 0,40" fill={COLORS.background} />
+      <polygon points="120,0 80,0 120,40" fill={COLORS.background} />
+      <polygon points="120,120 80,120 120,80" fill={COLORS.background} />
+      <polygon points="0,120 40,120 0,80" fill={COLORS.background} />
     </g>
   );
 }
@@ -326,14 +347,14 @@ function PatternForSlug({ slug }: { slug: string }) {
     }} />;
   }
   if (slug === "log-cabin") return <LogCabin />;
-  if (slug === "offset-log-cabin") return <LogCabin offset />;
+  if (slug === "offset-log-cabin") return <OffsetLogCabin />;
   if (slug === "courthouse-steps") return <CourthouseSteps />;
   if (slug === "pinwheel") {
     const corners: Corner[] = ["ne", "se", "nw", "sw"];
     return <Grid size={2} cells={(x, y, size, row, column) => <Hst x={x} y={y} size={size} corner={corners[row * 2 + column]} />} />;
   }
   if (slug === "friendship-star") {
-    const map: (Corner | "f" | "b")[] = ["b", "se", "b", "ne", "f", "sw", "b", "nw", "b"];
+    const map: (Corner | "f" | "b")[] = ["b", "sw", "b", "se", "f", "nw", "b", "ne", "b"];
     return <Grid size={3} cells={(x, y, size, row, column) => {
       const token = map[row * 3 + column];
       return token === "f" || token === "b" ? <Square x={x} y={y} size={size} fill={token === "f" ? COLORS.feature : COLORS.background} /> : <Hst x={x} y={y} size={size} corner={token} />;
@@ -351,7 +372,7 @@ function PatternForSlug({ slug }: { slug: string }) {
     return <Grid size={3} cells={(x, y, size, row, column) => {
       const isCenter = row === 1 && column === 1;
       const isCorner = row !== 1 && column !== 1;
-      return isCenter ? <Square x={x} y={y} size={size} fill={COLORS.feature} /> : isCorner ? <Square x={x} y={y} size={size} fill={COLORS.background} /> : <Qst x={x} y={y} size={size} rotate={(row + column) % 2 > 0} />;
+      return isCenter ? <Square x={x} y={y} size={size} fill={COLORS.feature} /> : isCorner ? <Square x={x} y={y} size={size} fill={COLORS.background} /> : <Qst x={x} y={y} size={size} rotate={row !== 1} />;
     }} />;
   }
   if (slug === "churn-dash") {
@@ -360,7 +381,9 @@ function PatternForSlug({ slug }: { slug: string }) {
       const corner = cornerMap[`${row}-${column}`];
       if (corner) return <Hst x={x} y={y} size={size} corner={corner} />;
       if (row === 1 && column === 1) return <Square x={x} y={y} size={size} fill={COLORS.background} />;
-      return <SplitCell x={x} y={y} size={size} direction={row === 1 ? "horizontal" : "vertical"} />;
+      const direction = row === 1 ? "vertical" : "horizontal";
+      const reverse = row === 0 || column === 0;
+      return <SplitCell x={x} y={y} size={size} direction={direction} reverse={reverse} />;
     }} />;
   }
   if (slug === "sawtooth-star") return <SawtoothStar />;
@@ -380,10 +403,9 @@ function PatternForSlug({ slug }: { slug: string }) {
   }
   if (slug === "jacobs-ladder") {
     return <Grid size={3} cells={(x, y, size, row, column) => {
-      if ((row + column) % 2 === 0) return <FourPatchCell x={x} y={y} size={size} reverse={row === 1} />;
-      const corners: Corner[] = ["se", "sw", "ne", "nw"];
-      const index = row === 0 ? column === 1 ? 0 : 1 : row === 1 ? column === 0 ? 2 : 3 : column === 1 ? 3 : 0;
-      return <Hst x={x} y={y} size={size} corner={corners[index]} />;
+      if ((row + column) % 2 === 0) return <FourPatchCell x={x} y={y} size={size} />;
+      const map: Record<string, Corner> = { "0-1": "sw", "1-0": "se", "1-2": "nw", "2-1": "ne" };
+      return <Hst x={x} y={y} size={size} corner={map[`${row}-${column}`]} />;
     }} />;
   }
   if (slug === "snowball") return <Snowball />;
@@ -398,10 +420,10 @@ function PatternForSlug({ slug }: { slug: string }) {
     );
   }
   if (slug === "maple-leaf") {
-    const map: (Corner | "f" | "b" | "stem")[] = ["b", "sw", "se", "se", "f", "f", "ne", "f", "stem"];
+    const map: (Corner | "f" | "b" | "stem")[] = ["b", "sw", "sw", "ne", "f", "f", "ne", "f", "stem"];
     return <Grid size={3} cells={(x, y, size, row, column) => {
       const token = map[row * 3 + column];
-      if (token === "stem") return <g><Square x={x} y={y} size={size} fill={COLORS.background} /><polygon points={`${x},${y + size} ${x + 8},${y + size} ${x + size},${y}`} fill={COLORS.feature} /></g>;
+      if (token === "stem") return <g><Square x={x} y={y} size={size} fill={COLORS.background} /><polygon points={`${x},${y + 8} ${x + 8},${y} ${x + size},${y + size - 8} ${x + size - 8},${y + size}`} fill={COLORS.feature} /></g>;
       if (token === "f" || token === "b") return <Square x={x} y={y} size={size} fill={token === "f" ? COLORS.feature : COLORS.background} />;
       return <Hst x={x} y={y} size={size} corner={token} />;
     }} />;
@@ -410,14 +432,22 @@ function PatternForSlug({ slug }: { slug: string }) {
     return (
       <g stroke={COLORS.cream} strokeWidth="0.8">
         <Square x={40} y={40} size={40} fill={COLORS.feature} />
-        <g><Square x={0} y={0} size={20} fill={COLORS.accent} /><Square x={20} y={0} size={20} fill={COLORS.background} /><rect x={0} y={20} width={40} height={20} fill={COLORS.background} /></g>
-        <g transform="rotate(90 60 60)"><Square x={0} y={0} size={20} fill={COLORS.accent} /><Square x={20} y={0} size={20} fill={COLORS.background} /><rect x={0} y={20} width={40} height={20} fill={COLORS.background} /></g>
-        <g transform="rotate(180 60 60)"><Square x={0} y={0} size={20} fill={COLORS.accent} /><Square x={20} y={0} size={20} fill={COLORS.background} /><rect x={0} y={20} width={40} height={20} fill={COLORS.background} /></g>
-        <g transform="rotate(270 60 60)"><Square x={0} y={0} size={20} fill={COLORS.accent} /><Square x={20} y={0} size={20} fill={COLORS.background} /><rect x={0} y={20} width={40} height={20} fill={COLORS.background} /></g>
-        <g><rect x="40" y="0" width="40" height="40" fill={COLORS.background} /><polygon points="40,0 60,40 80,0" fill={COLORS.accent} /></g>
-        <g transform="rotate(90 60 60)"><rect x="40" y="0" width="40" height="40" fill={COLORS.background} /><polygon points="40,0 60,40 80,0" fill={COLORS.accent} /></g>
-        <g transform="rotate(180 60 60)"><rect x="40" y="0" width="40" height="40" fill={COLORS.background} /><polygon points="40,0 60,40 80,0" fill={COLORS.accent} /></g>
-        <g transform="rotate(270 60 60)"><rect x="40" y="0" width="40" height="40" fill={COLORS.background} /><polygon points="40,0 60,40 80,0" fill={COLORS.accent} /></g>
+        <rect x="40" y="20" width="40" height="20" fill={COLORS.accent} />
+        <rect x="20" y="40" width="20" height="40" fill={COLORS.accent} />
+        <rect x="80" y="40" width="20" height="40" fill={COLORS.accent} />
+        <rect x="40" y="80" width="40" height="20" fill={COLORS.accent} />
+        <FlyingGoose x={40} y={0} width={40} height={20} direction="down" fill={COLORS.background} skyFill={COLORS.gold} />
+        <FlyingGoose x={100} y={40} width={20} height={40} direction="left" fill={COLORS.background} skyFill={COLORS.gold} />
+        <FlyingGoose x={40} y={100} width={40} height={20} direction="up" fill={COLORS.background} skyFill={COLORS.gold} />
+        <FlyingGoose x={0} y={40} width={20} height={40} direction="right" fill={COLORS.background} skyFill={COLORS.gold} />
+        <rect x="0" y="0" width="40" height="20" fill={COLORS.background} />
+        <Square x={0} y={20} size={20} fill={COLORS.background} /><Square x={20} y={20} size={20} fill={COLORS.gold} />
+        <rect x="80" y="0" width="40" height="20" fill={COLORS.background} />
+        <Square x={80} y={20} size={20} fill={COLORS.gold} /><Square x={100} y={20} size={20} fill={COLORS.background} />
+        <Square x={0} y={80} size={20} fill={COLORS.background} /><Square x={20} y={80} size={20} fill={COLORS.gold} />
+        <rect x="0" y="100" width="40" height="20" fill={COLORS.background} />
+        <Square x={80} y={80} size={20} fill={COLORS.gold} /><Square x={100} y={80} size={20} fill={COLORS.background} />
+        <rect x="80" y="100" width="40" height="20" fill={COLORS.background} />
       </g>
     );
   }
@@ -438,7 +468,7 @@ function PatternForSlug({ slug }: { slug: string }) {
     );
   }
   if (slug === "pinwheel-star") {
-    const map: (Corner | "b")[] = ["b", "ne", "nw", "b", "se", "ne", "se", "sw", "ne", "nw", "sw", "nw", "b", "se", "sw", "b"];
+    const map: (Corner | "b")[] = ["b", "sw", "se", "b", "ne", "ne", "se", "nw", "se", "nw", "sw", "sw", "b", "nw", "ne", "b"];
     return <Grid size={4} cells={(x, y, size, row, column) => {
       const token = map[row * 4 + column];
       return token === "b" ? <Square x={x} y={y} size={size} fill={COLORS.background} /> : <Hst x={x} y={y} size={size} corner={token} />;
@@ -446,12 +476,21 @@ function PatternForSlug({ slug }: { slug: string }) {
   }
   if (slug === "basket") {
     return (
-      <g stroke={COLORS.cream} strokeWidth="0.9">
-        <rect width="120" height="120" fill={COLORS.background} />
-        <polygon points="5,40 80,115 5,115" fill={COLORS.feature} />
-        <path d="M58 10 110 62" stroke={COLORS.accent} strokeWidth="15" />
-        <path d="M58 10 110 62" stroke={COLORS.cream} strokeWidth="0.9" />
-        <path d="M40 5v110M80 5v110M5 40h110M5 80h110" fill="none" opacity="0.7" />
+      <g stroke={COLORS.cream} strokeWidth="0.8">
+        <Square x={0} y={0} size={30} fill={COLORS.background} />
+        <Hst x={30} y={0} size={30} corner="sw" />
+        <Hst x={60} y={0} size={30} corner="se" />
+        <Hst x={0} y={30} size={30} corner="ne" />
+        <Square x={30} y={30} size={30} fill={COLORS.background} />
+        <Square x={60} y={30} size={30} fill={COLORS.feature} />
+        <Hst x={0} y={60} size={30} corner="se" />
+        <Square x={30} y={60} size={30} fill={COLORS.feature} />
+        <Square x={60} y={60} size={30} fill={COLORS.feature} />
+        <rect x="0" y="90" width="60" height="30" fill={COLORS.background} />
+        <Hst x={60} y={90} size={30} corner="nw" featureFill={COLORS.accent} />
+        <rect x="90" y="0" width="30" height="60" fill={COLORS.background} />
+        <Hst x={90} y={60} size={30} corner="sw" featureFill={COLORS.accent} />
+        <Square x={90} y={90} size={30} fill={COLORS.background} />
       </g>
     );
   }
@@ -470,11 +509,11 @@ function PatternForSlug({ slug }: { slug: string }) {
     );
   }
   if (slug === "annies-choice") {
-    const map: Corner[] = ["ne", "nw", "sw", "se", "nw", "sw", "ne", "se", "ne", "se", "nw", "sw", "sw", "se", "ne", "nw"];
+    const map: Corner[] = ["ne", "ne", "se", "se", "ne", "sw", "nw", "se", "nw", "se", "ne", "sw", "nw", "nw", "sw", "sw"];
     return <Grid size={4} cells={(x, y, size, row, column) => <Hst x={x} y={y} size={size} corner={map[row * 4 + column]} />} />;
   }
   if (slug === "butterfly-cross") {
-    const corner = (x: number, y: number, rotate: number) => <g transform={`translate(${x} ${y}) rotate(${rotate} 25 25)`}><Hst x={0} y={0} size={25} corner="se" /><Square x={25} y={0} size={25} fill={COLORS.background} /><Square x={0} y={25} size={25} fill={COLORS.feature} /><Hst x={25} y={25} size={25} corner="nw" /></g>;
+    const corner = (x: number, y: number, rotate: number) => <g transform={`translate(${x} ${y}) rotate(${rotate} 25 25)`}><Square x={0} y={0} size={25} fill={COLORS.background} /><Hst x={25} y={0} size={25} corner="sw" /><Hst x={0} y={25} size={25} corner="ne" /><Square x={25} y={25} size={25} fill={COLORS.feature} /></g>;
     return <g>{corner(0, 0, 0)}{corner(70, 0, 90)}{corner(70, 70, 180)}{corner(0, 70, 270)}<rect x="50" width="20" height="120" fill={COLORS.background} stroke={COLORS.cream} /><rect y="50" width="120" height="20" fill={COLORS.background} stroke={COLORS.cream} /><rect x="50" y="50" width="20" height="20" fill={COLORS.accent} stroke={COLORS.cream} /></g>;
   }
   if (slug === "disappearing-nine-patch") {
@@ -486,7 +525,7 @@ function PatternForSlug({ slug }: { slug: string }) {
   }
   if (slug === "modern-plus") return <Grid size={5} cells={(x, y, size, row, column) => <Square x={x} y={y} size={size} fill={row === 2 || column === 2 ? COLORS.feature : COLORS.background} />} />;
   if (slug === "hst-chevron") {
-    return <Grid size={4} cells={(x, y, size, row, column) => <Hst x={x} y={y} size={size} corner={(column % 2 === 0 ? (row % 2 === 0 ? "se" : "ne") : (row % 2 === 0 ? "sw" : "nw")) as Corner} />} />;
+    return <Grid size={4} cells={(x, y, size, row, column) => <Hst x={x} y={y} size={size} corner={(column % 2 === 0 ? (row % 2 === 0 ? "se" : "nw") : (row % 2 === 0 ? "sw" : "ne")) as Corner} />} />;
   }
   if (slug === "wonky-star") return <WonkyStar />;
   if (slug === "stacked-coins") {
@@ -610,7 +649,7 @@ export function BlockStepDiagram({
     const gooseColors = slug === "sawtooth-star"
       ? { body: COLORS.background, sky: COLORS.feature }
       : slug === "maple-star"
-        ? { body: COLORS.background, sky: COLORS.accent }
+        ? { body: COLORS.background, sky: COLORS.gold }
         : { body: COLORS.feature, sky: COLORS.background };
     const artwork = (() => {
       if (diagram === "cut-pieces") return <g><rect x="4" y="12" width="34" height="48" fill={COLORS.feature} /><text x="21" y="39" textAnchor="middle" fill="white" fontSize="8" fontWeight="700">A</text><rect x="43" y="20" width="54" height="32" fill={COLORS.background} stroke={COLORS.line} /><text x="70" y="39" textAnchor="middle" fill={COLORS.line} fontSize="8" fontWeight="700">B</text><rect x="102" y="8" width="30" height="56" fill={COLORS.accent} /><text x="117" y="39" textAnchor="middle" fill="white" fontSize="8" fontWeight="700">C</text><path d="M4 68h128" stroke={COLORS.line} strokeDasharray="4 3" /><text x="68" y="82" textAnchor="middle" fill={COLORS.line} fontSize="7">COUNT AND LABEL BEFORE SEWING</text></g>;
@@ -623,8 +662,8 @@ export function BlockStepDiagram({
       if (diagram === "strip-set") return <g>{[COLORS.feature, COLORS.accent, COLORS.background].map((fill, i) => <rect key={fill} x="8" y={13 + i * 25} width="124" height="25" fill={fill} stroke={COLORS.cream} />)}<path d="M8 7h124M8 4v6M132 4v6" stroke={COLORS.line} /><text x="70" y="101" textAnchor="middle" fill={COLORS.line} fontSize="8" fontWeight="700">PRESS · MEASURE · KEEP STRAIGHT</text></g>;
       if (diagram === "subcut") return <g>{[COLORS.feature, COLORS.accent, COLORS.background].map((fill, i) => <rect key={fill} x="8" y={13 + i * 22} width="124" height="22" fill={fill} stroke={COLORS.cream} />)}{[8,39,70,101,132].map((x) => <path key={x} d={`M${x} 9v72`} stroke={COLORS.line} strokeWidth="1.4" strokeDasharray="4 2" />)}<text x="70" y="97" textAnchor="middle" fill={COLORS.line} fontSize="8" fontWeight="700">SQUARE ONE END · CUT EQUAL UNITS</text></g>;
       if (diagram === "log-rounds") {
-        const upto = stage === 1 ? 2 : stage === 2 ? 4 : stage === 3 ? 10 : 12;
-        return <g transform="translate(25 -3) scale(.75)"><LogCabin upto={upto} numbered /></g>;
+        const upto = stage === 1 ? 2 : stage === 2 ? 4 : stage === 3 ? (slug === "offset-log-cabin" ? 8 : 10) : 12;
+        return <g transform="translate(25 -3) scale(.75)">{slug === "offset-log-cabin" ? <OffsetLogCabin upto={upto} numbered /> : <LogCabin upto={upto} numbered />}</g>;
       }
       if (diagram === "square-in-square") return <g><rect x="25" y="4" width="88" height="88" fill={COLORS.background} stroke={COLORS.line} /><polygon points="69,4 113,48 69,92 25,48" fill={COLORS.accent} /><rect x="47" y="26" width="44" height="44" fill={COLORS.feature} /><path d="M19 48h100" stroke={COLORS.accent} strokeDasharray="3 3" /><text x="69" y="105" textAnchor="middle" fill={COLORS.line} fontSize="8" fontWeight="700">CENTER OPPOSITE PAIRS</text></g>;
       if (diagram === "stem-unit") return <g><rect x="34" y="5" width="72" height="72" fill={COLORS.background} stroke={COLORS.line} /><polygon points="34,77 48,77 106,5 92,5" fill={COLORS.feature} /><path d="M27 84 113 -2" stroke={COLORS.accent} strokeDasharray="3 3" /><text x="70" y="98" textAnchor="middle" fill={COLORS.line} fontSize="8" fontWeight="700">CENTER STEM · THEN TRIM</text></g>;

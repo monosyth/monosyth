@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { GuideLinkCard, Note, PageIntro, SectionHeading } from "@/components/app/quilt-guide/ui";
-import { RESEARCH_SOURCES } from "@/lib/quilting/data";
+import { QUILT_BLOCKS, RESEARCH_SOURCES } from "@/lib/quilting/data";
 
 import styles from "@/components/app/quilt-guide/quilt-guide.module.css";
 
@@ -117,6 +118,45 @@ export default function SourcesPage() {
       </section>
 
       <section className={`${styles.contentSection} ${styles.paperSection}`}>
+        <SectionHeading
+          eyebrow="Block recipe audit"
+          title="A source for every block"
+          description="Exact recipe means the cut list, units, orientation, and finished map were checked against a published tutorial. Method checked means the guide uses its own measured layout while the linked source verifies the construction method. Open any block for its full scope note."
+        />
+        <div className={styles.quickTableWrap}>
+          <table className={styles.quickTable}>
+            <thead>
+              <tr>
+                <th>BLOCK</th>
+                <th>CHECK TYPE</th>
+                <th>PUBLISHED REFERENCES</th>
+              </tr>
+            </thead>
+            <tbody>
+              {QUILT_BLOCKS.map((block) => (
+                <tr key={block.slug}>
+                  <th scope="row">
+                    <Link href={`/app/quilt-guide/block-library/${block.slug}`}>
+                      {block.name} →
+                    </Link>
+                  </th>
+                  <td>{block.sourceScope === "construction method" ? "Construction method" : "Exact recipe"}</td>
+                  <td>
+                    {block.sources?.map((source, index) => (
+                      <span key={source.url}>
+                        {index > 0 ? " · " : ""}
+                        <a href={source.url} target="_blank" rel="noreferrer">{source.label} ↗</a>
+                      </span>
+                    ))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className={styles.contentSection}>
         <SectionHeading
           eyebrow="Formula ledger"
           title="The assumptions behind the quick answers"

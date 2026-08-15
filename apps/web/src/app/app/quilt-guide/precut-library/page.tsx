@@ -17,8 +17,8 @@ export default function PrecutLibraryPage() {
       </PageIntro>
 
       <figure className={styles.chapterPhoto}>
-        <Image src="/quilt-guide/precut-flatlay.png" alt="Photoreal precut quilting cotton stacks, strips, small squares, HST units, and a rotary cutter" fill priority sizes="100vw" />
-        <figcaption>Original studio image · Actual products can vary in count, pinking, and usable dimensions.</figcaption>
+        <Image src="/quilt-guide/real-quilting-tools.jpg" alt="Real rotary cutter, scissors, measuring tape, pins, thread, and sewing notions arranged on a green cutting mat" fill priority sizes="100vw" />
+        <figcaption>Real workbench · Photo by <a href="https://www.pexels.com/photo/assorted-color-sewing-machine-1409217/" target="_blank" rel="noreferrer">Adonyi Gábor / Pexels ↗</a>. Actual precut products vary in count, pinking, and usable dimensions.</figcaption>
       </figure>
 
       <section className={styles.contentSection}>

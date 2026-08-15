@@ -29,13 +29,14 @@ export default async function BlockRecipePage({ params }: BlockPageProps) {
   const currentIndex = QUILT_BLOCKS.findIndex((item) => item.slug === block.slug);
   const previous = QUILT_BLOCKS[(currentIndex - 1 + QUILT_BLOCKS.length) % QUILT_BLOCKS.length];
   const next = QUILT_BLOCKS[(currentIndex + 1) % QUILT_BLOCKS.length];
+  const exactRecipe = block.sourceScope !== "construction method";
 
   return (
     <>
       <section className={styles.blockRecipeHero}>
         <div className={styles.blockRecipeCopy}>
           <Link href="/app/quilt-guide/block-library" className={styles.backToLibrary}>← Quilt block instructions</Link>
-          <div className={styles.blockRecipeLabels}><Label tone={block.family === "modern" ? "teal" : "tomato"}>{block.family}</Label><Label>{block.difficulty}</Label>{block.sources?.length ? <Label tone="teal">reference checked</Label> : null}</div>
+          <div className={styles.blockRecipeLabels}><Label tone={block.family === "modern" ? "teal" : "tomato"}>{block.family}</Label><Label>{block.difficulty}</Label>{block.sources?.length ? <Label tone="teal">{exactRecipe ? "recipe checked" : "method checked"}</Label> : null}</div>
           <h1>{block.name}</h1>
           <p>{block.summary}</p>
           <dl className={styles.blockHeroMetrics}>
@@ -61,7 +62,7 @@ export default async function BlockRecipePage({ params }: BlockPageProps) {
         <Note title="Using precuts" tone="gold">{block.precutNote}</Note>
         {block.sources?.length ? (
           <aside className={styles.recipeSources} aria-label="Tutorial sources used to verify this block">
-            <div><strong>Reference check</strong><p>The cut sizes, unit method, orientation, and final block map were checked against the linked tutorial. The diagrams here are original teaching diagrams, not copied tutorial images.</p></div>
+            <div><strong>{exactRecipe ? "Exact recipe check" : "Construction-method check"}</strong><p>{block.sourceNote ?? (exactRecipe ? "The cut sizes, unit method, orientation, and final block map were checked against the linked tutorial. The diagrams here are original teaching diagrams, not copied tutorial images." : "This is a Monosyth-drafted layout. The geometry was checked independently, and the linked tutorials verify the construction method rather than this exact arrangement.")}</p></div>
             <ul>{block.sources.map((source) => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.label} ↗</a></li>)}</ul>
           </aside>
         ) : (

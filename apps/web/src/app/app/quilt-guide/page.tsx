@@ -29,8 +29,8 @@ export default function QuiltGuideHome() {
           </div>
         </div>
         <figure className={styles.homeHeroImage}>
-          <Image src="/quilt-guide/precut-flatlay.png" alt="Photoreal quilting cotton precuts, HST units, a pinwheel block, acrylic ruler, and rotary cutter on a cutting mat" fill priority sizes="(max-width: 900px) 100vw, 52vw" />
-          <figcaption><span>Original studio image</span> Layer squares · charms · mini squares · HSTs</figcaption>
+          <Image src="/quilt-guide/real-quilting-tools.jpg" alt="Real rotary cutter, scissors, measuring tape, pins, thread, and sewing notions arranged on a green cutting mat" fill priority sizes="(max-width: 900px) 100vw, 52vw" />
+          <figcaption><span>Real workbench</span> Photo by <a href="https://www.pexels.com/photo/assorted-color-sewing-machine-1409217/" target="_blank" rel="noreferrer">Adonyi Gábor / Pexels ↗</a></figcaption>
         </figure>
       </section>
 
