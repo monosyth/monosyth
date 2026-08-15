@@ -1,4 +1,5 @@
 import { hstPlan } from "./math";
+import { assertBlockLibraryGeometry } from "./block-geometry";
 
 export type GuideNavItem = {
   href: string;
@@ -1060,6 +1061,11 @@ export const QUILT_BLOCKS: readonly QuiltBlock[] = [
   ...BLOCK_LIBRARY_ORDER.map((slug) => ALL_QUILT_BLOCKS.find((block) => block.slug === slug)).filter((block): block is QuiltBlock => Boolean(block)),
   ...ALL_QUILT_BLOCKS.filter((block) => !BLOCK_LIBRARY_ORDER.includes(block.slug as (typeof BLOCK_LIBRARY_ORDER)[number])),
 ];
+
+// The block pages are instructional, so bad arithmetic must stop a build—not
+// merely look plausible in the browser. This checks every advertised size,
+// assembly proof, unit yield, shared diagram map, and attached source.
+assertBlockLibraryGeometry(QUILT_BLOCKS);
 
 export function getBlock(slug: string) {
   return QUILT_BLOCKS.find((block) => block.slug === slug);

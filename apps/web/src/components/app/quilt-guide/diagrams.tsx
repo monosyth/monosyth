@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { BlockStepDiagramKind } from "@/lib/quilting/data";
+import { getBlockCellMap, type BlockCellToken, type HstCorner } from "@/lib/quilting/block-geometry";
 
 import styles from "./quilt-guide.module.css";
 
@@ -9,6 +10,7 @@ const COLORS = {
   feature: "#c23e31",
   featureDark: "#a7352f",
   accent: "#167471",
+  secondary: "#df8194",
   gold: "#e3a52e",
   navy: "#233451",
   lilac: "#9078b6",
@@ -16,7 +18,7 @@ const COLORS = {
   line: "#302b28",
 };
 
-type Corner = "nw" | "ne" | "se" | "sw";
+type Corner = HstCorner;
 
 function Square({
   x,
@@ -147,6 +149,57 @@ function Grid({
     const column = index % size;
     return <g key={`${row}-${column}`}>{cells(column * cell, row * cell, cell, row, column)}</g>;
   });
+}
+
+function SharedCell({ token, x, y, size }: { token: BlockCellToken; x: number; y: number; size: number }) {
+  if (token.kind === "square") {
+    return <Square x={x} y={y} size={size} fill={COLORS[token.fabric]} />;
+  }
+  if (token.kind === "hst") {
+    return <Hst x={x} y={y} size={size} corner={token.corner} featureFill={token.feature ? COLORS[token.feature] : COLORS.feature} />;
+  }
+  if (token.kind === "qst") {
+    return <Qst x={x} y={y} size={size} rotate={token.axis === "vertical"} />;
+  }
+  if (token.kind === "split") {
+    return <SplitCell x={x} y={y} size={size} direction={token.direction} reverse={token.reverse} />;
+  }
+  if (token.kind === "four-patch") {
+    return <FourPatchCell x={x} y={y} size={size} reverse={token.reverse} />;
+  }
+  return (
+    <g>
+      <Square x={x} y={y} size={size} fill={COLORS.background} />
+      <polygon
+        points={`${x},${y + size * 0.2} ${x + size * 0.2},${y} ${x + size},${y + size * 0.8} ${x + size * 0.8},${y + size}`}
+        fill={COLORS.feature}
+      />
+    </g>
+  );
+}
+
+function SharedBlockMap({ slug }: { slug: string }) {
+  const map = getBlockCellMap(slug);
+  if (!map) return null;
+  const cellWidth = 120 / map.columns;
+  const cellHeight = 120 / map.rows;
+  return (
+    <g>
+      {map.cells.map((token, index) => {
+        const rowIndex = Math.floor(index / map.columns);
+        const columnIndex = index % map.columns;
+        return (
+          <SharedCell
+            key={`${rowIndex}-${columnIndex}`}
+            token={token}
+            x={columnIndex * cellWidth}
+            y={rowIndex * cellHeight}
+            size={Math.min(cellWidth, cellHeight)}
+          />
+        );
+      })}
+    </g>
+  );
 }
 
 function LogCabin({
@@ -330,6 +383,7 @@ function FlyingGoose({
 }
 
 function PatternForSlug({ slug }: { slug: string }) {
+  if (getBlockCellMap(slug)) return <SharedBlockMap slug={slug} />;
   if (slug === "four-patch") {
     return <Grid size={2} cells={(x, y, size, row, column) => <Square x={x} y={y} size={size} fill={(row + column) % 2 ? COLORS.background : COLORS.feature} />} />;
   }

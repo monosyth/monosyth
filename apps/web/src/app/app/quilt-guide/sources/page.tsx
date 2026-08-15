@@ -216,6 +216,7 @@ export default function SourcesPage() {
       <section className={styles.contentSection}>
         <SectionHeading eyebrow="Back to the bench" title="Use the research in context" />
         <div className={styles.guideLinkGrid}>
+          <GuideLinkCard href="/app/quilt-guide/geometry-audit" number="A" title="Open the geometry audit" body="See the machine-checked size, seam, unit-yield, and diagram proof for every block." meta={`${QUILT_BLOCKS.length} block checks`} accent="lilac" />
           <GuideLinkCard href="/app/quilt-guide" number="00" title="Open the workbench" body="Return to the at-a-glance charts and full guide map." meta="All chapters" accent="gold" />
           <GuideLinkCard href="/app/quilt-guide/triangle-school" number="02" title="Check triangle math" body="Compare exact and trim-friendly HST, QST, and Flying Geese starts." meta="Formula calculators" accent="teal" />
           <GuideLinkCard href="/app/quilt-guide/ruler-cutting" number="06" title="Set up a cutting batch" body="Follow standard-ruler and generic slotted-ruler workflows safely." meta="Square · strip · subcut" accent="tomato" />
