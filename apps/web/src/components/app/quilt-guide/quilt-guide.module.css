@@ -200,7 +200,7 @@
   justify-content: space-between;
   gap: 2rem;
   width: min(100% - 3rem, 1380px);
-  min-height: 78px;
+  min-height: 64px;
   margin-inline: auto;
 }
 
@@ -229,7 +229,7 @@
 
 .guideBrand small {
   color: var(--q-ink-soft);
-  font: 500 0.61rem/1.2 var(--font-ibm-plex-mono), monospace;
+  font: 500 0.7rem/1.2 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -249,10 +249,10 @@
 
 .seamPill,
 .headerAction {
-  min-height: 36px;
+  min-height: 34px;
   border: 1px solid var(--q-line);
   border-radius: 999px;
-  font: 600 0.64rem/1 var(--font-ibm-plex-mono), monospace;
+  font: 600 0.72rem/1 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.05em;
   white-space: nowrap;
 }
@@ -295,7 +295,7 @@
 .guideNav {
   position: sticky;
   z-index: 40;
-  top: 78px;
+  top: 64px;
   border-bottom: 1px solid var(--q-line);
   background: rgba(255, 254, 249, 0.95);
   backdrop-filter: blur(14px);
@@ -303,7 +303,7 @@
 
 .guideNavScroller {
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: repeat(9, minmax(0, 1fr));
   width: min(100% - 3rem, 1380px);
   margin-inline: auto;
 }
@@ -314,11 +314,11 @@
   grid-template-columns: auto 1fr;
   align-items: baseline;
   gap: 0.45rem;
-  min-height: 52px;
-  padding: 0.95rem 0.65rem 0.8rem;
+  min-height: 46px;
+  padding: 0.72rem 0.65rem 0.68rem;
   color: var(--q-ink-soft);
   border-right: 1px solid var(--q-line);
-  font-size: 0.73rem;
+  font-size: 0.82rem;
   line-height: 1;
   transition: color 160ms ease, background 160ms ease;
 }
@@ -357,7 +357,7 @@
 
 .guideNavLink > span {
   color: var(--q-tomato);
-  font: 500 0.55rem/1 var(--font-ibm-plex-mono), monospace;
+  font: 600 0.67rem/1 var(--font-ibm-plex-mono), monospace;
 }
 
 .guideNavLink b {
@@ -385,7 +385,7 @@
   color: rgba(255, 254, 249, 0.72);
   background: var(--q-navy);
   border-top: 5px solid var(--q-gold);
-  font-size: 0.76rem;
+  font-size: 0.88rem;
 }
 
 .guideFooter > div:first-child {
@@ -416,7 +416,7 @@
 
 .footerLinks a {
   color: var(--q-white);
-  font: 600 0.64rem/1.3 var(--font-ibm-plex-mono), monospace;
+  font: 600 0.74rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.04em;
   text-decoration: underline;
   text-decoration-color: rgba(255, 255, 255, 0.3);
@@ -433,7 +433,7 @@
   gap: 0.65rem;
   margin: 0 0 0.7rem;
   color: var(--q-teal-dark);
-  font: 700 0.64rem/1.35 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.76rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.15em;
   text-transform: uppercase;
 }
@@ -452,7 +452,7 @@
 
 .contentSection {
   width: min(100% - 3rem, 1280px);
-  margin: clamp(3.75rem, 7vw, 7rem) auto 0;
+  margin: clamp(2.75rem, 5vw, 4.75rem) auto 0;
 }
 
 .paperSection,
@@ -492,7 +492,7 @@
   grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.65fr);
   column-gap: 3rem;
   align-items: end;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .sectionHeading .eyebrow {
@@ -502,7 +502,7 @@
 .sectionHeading h2 {
   margin: 0;
   font-family: var(--font-playfair-display), Georgia, serif;
-  font-size: clamp(2rem, 4vw, 3.45rem);
+  font-size: clamp(1.9rem, 3.3vw, 2.8rem);
   font-weight: 650;
   line-height: 1.02;
   letter-spacing: -0.045em;
@@ -511,7 +511,7 @@
 .sectionHeading > p:last-child {
   margin: 0;
   color: var(--q-ink-soft);
-  font-size: clamp(0.86rem, 1.3vw, 1rem);
+  font-size: clamp(0.95rem, 1.2vw, 1.05rem);
 }
 
 .darkSection .sectionHeading > p:last-child {
@@ -520,8 +520,8 @@
 
 .homeHero {
   display: grid;
-  grid-template-columns: minmax(24rem, 0.9fr) minmax(30rem, 1.1fr);
-  min-height: min(720px, calc(100vh - 130px));
+  grid-template-columns: minmax(30rem, 1.25fr) minmax(24rem, 0.75fr);
+  min-height: 340px;
   border-bottom: 1px solid var(--q-line);
 }
 
@@ -529,8 +529,8 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: clamp(3rem, 7vw, 7rem) max(1.5rem, calc((100vw - 1380px) / 2));
-  padding-right: clamp(2rem, 5vw, 5rem);
+  padding: clamp(2rem, 4vw, 3rem) max(1.5rem, calc((100vw - 1380px) / 2));
+  padding-right: clamp(2rem, 4vw, 3.5rem);
 }
 
 .homeHeroCopy h1,
@@ -544,8 +544,9 @@
 }
 
 .homeHeroCopy h1 {
-  max-width: 10ch;
-  font-size: clamp(3.6rem, 7vw, 7.4rem);
+  max-width: 14ch;
+  font-size: clamp(2.9rem, 4.8vw, 4.4rem);
+  line-height: 0.98;
 }
 
 .homeHeroCopy h1 em {
@@ -555,7 +556,7 @@
 
 .homeHeroCopy > p:not(.eyebrow) {
   max-width: 38rem;
-  margin: 1.6rem 0 0;
+  margin: 1rem 0 0;
   color: var(--q-ink-soft);
   font-size: clamp(1rem, 1.5vw, 1.18rem);
 }
@@ -564,7 +565,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
-  margin-top: 2rem;
+  margin-top: 1.25rem;
 }
 
 .primaryAction,
@@ -607,9 +608,9 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.6rem 1.2rem;
-  margin-top: 1.7rem;
+  margin-top: 1rem;
   color: var(--q-ink-soft);
-  font: 500 0.61rem/1.4 var(--font-ibm-plex-mono), monospace;
+  font: 500 0.72rem/1.4 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -638,7 +639,7 @@
 }
 
 .homeHeroImage {
-  min-height: 530px;
+  min-height: 340px;
   border-left: 1px solid var(--q-line);
 }
 
@@ -671,7 +672,7 @@
   justify-content: space-between;
   gap: 1rem;
   color: rgba(255, 255, 255, 0.88);
-  font: 500 0.59rem/1.4 var(--font-ibm-plex-mono), monospace;
+  font: 500 0.7rem/1.4 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.04em;
 }
 
@@ -695,8 +696,8 @@
 .quickAnswerBand > div {
   display: grid;
   gap: 0.2rem;
-  min-height: 118px;
-  padding: 1.5rem clamp(1rem, 2.5vw, 2.2rem);
+  min-height: 100px;
+  padding: 1.15rem clamp(1rem, 2.5vw, 2.2rem);
   border-right: 1px solid rgba(255, 255, 255, 0.12);
 }
 
@@ -707,16 +708,18 @@
 .quickAnswerBand span,
 .quickAnswerBand small {
   color: rgba(255, 255, 255, 0.64);
-  font: 500 0.58rem/1.2 var(--font-ibm-plex-mono), monospace;
+  font: 500 0.7rem/1.25 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
 .quickAnswerBand strong {
   color: var(--q-gold);
-  font-family: var(--font-playfair-display), Georgia, serif;
+  font-family: var(--font-space-grotesk), sans-serif;
   font-size: clamp(1.7rem, 3vw, 2.55rem);
+  font-weight: 750;
   line-height: 1;
+  letter-spacing: -0.04em;
 }
 
 .guideLinkGrid {
@@ -790,7 +793,7 @@
   color: var(--q-white);
   background: var(--q-ink);
   border-radius: 50%;
-  font: 700 0.62rem/1 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.72rem/1 var(--font-ibm-plex-mono), monospace;
 }
 
 .guideLinkVisual {
@@ -813,7 +816,7 @@
 .guideLinkBody > p {
   margin: 0 0 0.4rem;
   color: var(--card-accent);
-  font: 700 0.57rem/1.3 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.7rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -829,7 +832,7 @@
   display: block;
   margin-top: 0.7rem;
   color: var(--q-ink-soft);
-  font-size: 0.83rem;
+  font-size: 0.9rem;
 }
 
 .miniPrecuts,
@@ -978,7 +981,7 @@
 .metric span,
 .metric small {
   color: var(--q-ink-soft);
-  font: 600 0.57rem/1.35 var(--font-ibm-plex-mono), monospace;
+  font: 600 0.84rem/1.4 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -986,9 +989,11 @@
 .metric strong {
   align-self: end;
   color: var(--metric-color);
-  font-family: var(--font-playfair-display), Georgia, serif;
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: clamp(2.1rem, 3.5vw, 2.85rem);
+  font-weight: 750;
   line-height: 1;
+  letter-spacing: -0.045em;
 }
 
 .note {
@@ -1022,13 +1027,13 @@
 .note strong {
   display: block;
   margin-bottom: 0.15rem;
-  font-size: 0.8rem;
+  font-size: 0.98rem;
 }
 
 .note p {
   margin: 0;
   color: var(--q-ink-soft);
-  font-size: 0.78rem;
+  font-size: 0.92rem;
 }
 
 .darkSection .note {
@@ -1048,7 +1053,7 @@
   min-height: 1.6rem;
   padding: 0.38rem 0.65rem;
   border-radius: 999px;
-  font: 700 0.56rem/1 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.7rem/1 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.09em;
   text-transform: uppercase;
 }
@@ -1071,7 +1076,7 @@
   width: 100%;
   min-width: 680px;
   border-collapse: collapse;
-  font-size: 0.79rem;
+  font-size: 0.9rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1096,7 +1101,7 @@
 .quickTable thead th {
   color: var(--q-white);
   background: var(--q-navy);
-  font: 600 0.58rem/1.3 var(--font-ibm-plex-mono), monospace;
+  font: 600 0.72rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.075em;
   text-transform: uppercase;
 }
@@ -1158,7 +1163,7 @@
 .stackNote > div small,
 .ruleCard > span {
   color: var(--q-ink-soft);
-  font: 600 0.55rem/1.35 var(--font-ibm-plex-mono), monospace;
+  font: 600 0.7rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -1186,7 +1191,7 @@
 
 .ruleCard p {
   color: rgba(255, 255, 255, 0.72);
-  font-size: 0.8rem;
+  font-size: 0.9rem;
 }
 
 .ruleCard a {
@@ -1198,24 +1203,25 @@
 
 .pageIntro {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr);
-  align-items: end;
-  gap: 3rem;
+  grid-template-columns: minmax(0, 1.45fr) minmax(18rem, 0.55fr);
+  align-items: center;
+  gap: 2rem;
   width: min(100% - 3rem, 1280px);
   margin-inline: auto;
-  padding: clamp(4rem, 8vw, 8rem) 0 clamp(2.5rem, 5vw, 4rem);
+  padding: clamp(1.75rem, 3.5vw, 2.75rem) 0 clamp(1.25rem, 2vw, 1.75rem);
 }
 
 .pageIntroCopy h1 {
-  max-width: 13ch;
-  font-size: clamp(3rem, 6.5vw, 6.4rem);
+  max-width: 19ch;
+  font-size: clamp(2.35rem, 3.8vw, 3.75rem);
+  line-height: 1;
 }
 
 .pageLead {
   max-width: 54rem;
-  margin: 1.4rem 0 0;
+  margin: 0.75rem 0 0;
   color: var(--q-ink-soft);
-  font-size: clamp(0.98rem, 1.5vw, 1.14rem);
+  font-size: clamp(0.98rem, 1.25vw, 1.08rem);
 }
 
 .pageIntroAside {
@@ -1241,7 +1247,7 @@
 .pageIntroFormula span,
 .pageIntroFormula small {
   color: rgba(255, 255, 255, 0.64);
-  font: 500 0.56rem/1.4 var(--font-ibm-plex-mono), monospace;
+  font: 500 0.78rem/1.4 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -1277,14 +1283,15 @@
 
 .pageIntroStats strong {
   color: var(--q-gold);
-  font-family: var(--font-playfair-display), Georgia, serif;
+  font-family: var(--font-space-grotesk), sans-serif;
   font-size: 2rem;
+  font-weight: 750;
   line-height: 1;
 }
 
 .pageIntroStats span {
   color: rgba(255, 255, 255, 0.66);
-  font: 500 0.52rem/1.3 var(--font-ibm-plex-mono), monospace;
+  font: 500 0.68rem/1.3 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }
@@ -1299,11 +1306,17 @@
 }
 
 .chapterPhoto {
-  height: clamp(290px, 44vw, 520px);
+  height: clamp(120px, 12vw, 170px);
 }
 
 .chapterPhotoTall {
-  height: clamp(390px, 56vw, 680px);
+  height: clamp(140px, 15vw, 210px);
+}
+
+.pageIntro + .contentSection,
+.chapterPhoto + .contentSection,
+.chapterPhotoTall + .contentSection {
+  margin-top: 1.5rem;
 }
 
 .precutCardGrid {
@@ -1358,7 +1371,7 @@
 .precutCard > div:first-child span,
 .precutCard > div:first-child small,
 .precutCard dt {
-  font: 600 0.53rem/1.3 var(--font-ibm-plex-mono), monospace;
+  font: 600 0.68rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -1375,9 +1388,11 @@
 .precutCard > strong {
   display: block;
   margin-top: 1.3rem;
-  font-family: var(--font-playfair-display), Georgia, serif;
+  font-family: var(--font-space-grotesk), sans-serif;
   font-size: clamp(2.6rem, 5vw, 4rem);
+  font-weight: 750;
   line-height: 0.95;
+  letter-spacing: -0.045em;
 }
 
 .precutCard h2 {
@@ -1389,7 +1404,7 @@
   flex: 1;
   margin: 0.75rem 0 1.4rem;
   opacity: 1;
-  font-size: 0.76rem;
+  font-size: 0.9rem;
 }
 
 .precutCard dl {
@@ -1413,7 +1428,7 @@
 .precutCard dd {
   margin: 0.2rem 0 0;
   font-weight: 700;
-  font-size: 0.75rem;
+  font-size: 0.84rem;
 }
 
 .equivalenceGrid,
@@ -1448,7 +1463,7 @@
 .onePackGrid span,
 .finishInfoGrid span {
   color: var(--q-teal-dark);
-  font: 700 0.56rem/1.3 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.7rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -1460,15 +1475,17 @@
 
 .equivalenceGrid strong {
   margin-top: 0.55rem;
-  font-family: var(--font-playfair-display), Georgia, serif;
+  font-family: var(--font-space-grotesk), sans-serif;
   font-size: clamp(1.55rem, 2.8vw, 2.25rem);
+  font-weight: 750;
   line-height: 1;
+  letter-spacing: -0.04em;
 }
 
 .equivalenceGrid b {
   margin-top: 0.5rem;
   color: var(--q-tomato);
-  font-size: 0.74rem;
+  font-size: 0.86rem;
 }
 
 .equivalenceGrid p,
@@ -1478,7 +1495,7 @@
 .standardRulerGrid p {
   margin-bottom: 0;
   color: var(--q-ink-soft);
-  font-size: 0.76rem;
+  font-size: 0.9rem;
 }
 
 .calculatorCard,
@@ -1500,9 +1517,11 @@
 
 .calculatorHead h2 {
   margin: 0;
-  font-family: var(--font-playfair-display), Georgia, serif;
-  font-size: clamp(1.8rem, 4vw, 3.1rem);
-  line-height: 1;
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: clamp(1.7rem, 2.8vw, 2.4rem);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
 }
 
 .calculatorBadge {
@@ -1510,7 +1529,7 @@
   color: var(--q-white);
   background: var(--q-teal);
   border-radius: 999px;
-  font: 600 0.56rem/1 var(--font-ibm-plex-mono), monospace;
+  font: 600 0.8rem/1 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.06em;
   white-space: nowrap;
   text-transform: uppercase;
@@ -1536,7 +1555,7 @@
   border: 1px solid transparent;
   border-radius: 0.35rem;
   cursor: pointer;
-  font-size: 0.73rem;
+  font-size: 0.86rem;
   font-weight: 650;
   transition: color 150ms ease, background 150ms ease, border-color 150ms ease;
 }
@@ -1577,7 +1596,7 @@
 
 .fieldLabel > span {
   color: var(--q-ink-soft);
-  font: 600 0.56rem/1.3 var(--font-ibm-plex-mono), monospace;
+  font: 600 0.84rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }
@@ -1593,6 +1612,7 @@
   background: var(--q-white);
   border: 1px solid var(--q-line-strong);
   border-radius: 0.4rem;
+  font-size: 1rem;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
   transition: border-color 150ms ease, box-shadow 150ms ease;
@@ -1624,7 +1644,7 @@
   top: 50%;
   right: 0.8rem;
   color: var(--q-teal);
-  font: 700 0.62rem/1 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.8rem/1 var(--font-ibm-plex-mono), monospace;
   text-transform: uppercase;
   transform: translateY(-50%);
 }
@@ -1661,15 +1681,17 @@
 .mixerParent span,
 .mixerParent small,
 .mixerGrid i {
-  font: 600 0.57rem/1.3 var(--font-ibm-plex-mono), monospace;
+  font: 600 0.7rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
 .mixerParent strong {
-  font-family: var(--font-playfair-display), Georgia, serif;
+  font-family: var(--font-space-grotesk), sans-serif;
   font-size: clamp(2.6rem, 5vw, 4.4rem);
+  font-weight: 750;
   line-height: 1;
+  letter-spacing: -0.045em;
 }
 
 .mixerParent small,
@@ -1701,9 +1723,9 @@
 
 .mixerVs {
   color: var(--q-ink-soft);
-  font-family: var(--font-playfair-display), Georgia, serif;
+  font-family: var(--font-space-grotesk), sans-serif;
   font-size: 1.7rem;
-  font-style: italic;
+  font-weight: 700;
 }
 
 .resultStrip {
@@ -1733,16 +1755,18 @@
 
 .resultStrip span {
   color: rgba(255, 255, 255, 0.64);
-  font: 500 0.54rem/1.35 var(--font-ibm-plex-mono), monospace;
+  font: 500 0.7rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }
 
 .resultStrip strong {
   color: var(--q-gold);
-  font-family: var(--font-playfair-display), Georgia, serif;
+  font-family: var(--font-space-grotesk), sans-serif;
   font-size: 1.7rem;
+  font-weight: 750;
   line-height: 1;
+  letter-spacing: -0.035em;
 }
 
 .solutionGrid {
@@ -1772,7 +1796,7 @@
 .solutionGrid p {
   margin-bottom: 0;
   color: var(--q-ink-soft);
-  font-size: 0.76rem;
+  font-size: 0.9rem;
 }
 
 .cutLabel,
@@ -1784,7 +1808,7 @@
   padding: 0.28rem 0.45rem;
   color: var(--q-white);
   border-radius: 0.22rem;
-  font: 700 0.52rem/1 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.68rem/1 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.075em;
   text-transform: uppercase;
 }
@@ -1834,21 +1858,23 @@
 
 .packSummary > span {
   color: var(--q-teal-dark);
-  font: 700 0.58rem/1 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.72rem/1 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.12em;
 }
 
 .packSummary > strong {
-  font-family: var(--font-playfair-display), Georgia, serif;
+  font-family: var(--font-space-grotesk), sans-serif;
   font-size: clamp(2rem, 5vw, 3.8rem);
+  font-weight: 750;
   line-height: 0.95;
+  letter-spacing: -0.045em;
 }
 
 .packSummary p,
 .packSummary small,
 .calculatorFootnote {
   color: var(--q-ink-soft);
-  font-size: 0.76rem;
+  font-size: 0.9rem;
 }
 
 .packSummary p {
@@ -1882,11 +1908,11 @@
 
 .methodTabs button strong {
   color: var(--q-ink);
-  font-size: 0.79rem;
+  font-size: 0.9rem;
 }
 
 .methodTabs button span {
-  font: 500 0.53rem/1.3 var(--font-ibm-plex-mono), monospace;
+  font: 500 0.7rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -1930,14 +1956,16 @@
 .cutReadout small {
   margin: 0;
   color: var(--q-ink-soft);
-  font-size: 0.76rem;
+  font-size: 0.9rem;
 }
 
 .cutReadout > strong {
   color: var(--q-tomato);
-  font-family: var(--font-playfair-display), Georgia, serif;
+  font-family: var(--font-space-grotesk), sans-serif;
   font-size: clamp(3rem, 7vw, 5.5rem);
+  font-weight: 750;
   line-height: 0.9;
+  letter-spacing: -0.05em;
 }
 
 .cutReadout p b {
@@ -1958,7 +1986,7 @@
   background: rgba(217, 79, 63, 0.09);
   border: 1px solid rgba(217, 79, 63, 0.3);
   border-radius: 0.4rem;
-  font-size: 0.75rem;
+  font-size: 0.88rem;
 }
 
 .warningBand strong {
@@ -2049,7 +2077,7 @@
   color: var(--q-white);
   background: var(--q-tomato);
   border-radius: 50%;
-  font: 700 0.57rem/1 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.7rem/1 var(--font-ibm-plex-mono), monospace;
 }
 
 .methodCardGrid .wideDiagram {
@@ -2064,14 +2092,14 @@
 
 .methodCardGrid p {
   color: var(--q-ink-soft);
-  font-size: 0.76rem;
+  font-size: 0.88rem;
 }
 
 .methodCardGrid article > strong {
   padding-top: 0.7rem;
   color: var(--q-teal-dark);
   border-top: 1px solid var(--q-line);
-  font: 700 0.56rem/1.4 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.72rem/1.45 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.05em;
 }
 
@@ -2099,7 +2127,7 @@
 
 .sequenceGrid article > span {
   color: var(--q-tomato);
-  font: 700 0.55rem/1.3 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.7rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.08em;
 }
 
@@ -2114,7 +2142,7 @@
   margin: 1rem 0 0;
   padding-left: 1.2rem;
   color: var(--q-ink-soft);
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 .sequenceGrid li + li {
@@ -2162,7 +2190,7 @@
   color: var(--q-navy);
   background: var(--q-gold);
   border-radius: 50%;
-  font: 700 0.56rem/1 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.7rem/1 var(--font-ibm-plex-mono), monospace;
 }
 
 .checkGrid strong {
@@ -2173,7 +2201,7 @@
 .checkGrid p {
   margin-bottom: 0;
   color: rgba(255, 255, 255, 0.65);
-  font-size: 0.73rem;
+  font-size: 0.88rem;
 }
 
 .presetRow {
@@ -2185,7 +2213,7 @@
 .presetRow button {
   display: grid;
   gap: 0.15rem;
-  min-height: 56px;
+  min-height: 64px;
   padding: 0.6rem;
   color: var(--q-ink-soft);
   background: var(--q-paper-deep);
@@ -2196,11 +2224,11 @@
 
 .presetRow button strong {
   color: var(--q-ink);
-  font-size: 0.72rem;
+  font-size: 0.94rem;
 }
 
 .presetRow button span {
-  font: 500 0.51rem/1 var(--font-ibm-plex-mono), monospace;
+  font: 500 0.8rem/1.2 var(--font-ibm-plex-mono), monospace;
 }
 
 .presetRow .presetActive,
@@ -2218,7 +2246,7 @@
 .presetCaveat {
   margin: 0.55rem 0 1.2rem;
   color: var(--q-ink-soft);
-  font-size: 0.66rem;
+  font-size: 0.88rem;
 }
 
 .plannerWorkspace {
@@ -2253,7 +2281,7 @@
 .controlGroup legend {
   padding: 0 0.4rem;
   color: var(--q-teal-dark);
-  font: 700 0.58rem/1.2 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.84rem/1.25 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -2290,16 +2318,18 @@
 .finishedTopBanner span,
 .finishedTopBanner small {
   color: rgba(255, 255, 255, 0.65);
-  font: 500 0.54rem/1.3 var(--font-ibm-plex-mono), monospace;
+  font: 500 0.8rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .finishedTopBanner strong {
   color: var(--q-gold);
-  font-family: var(--font-playfair-display), Georgia, serif;
+  font-family: var(--font-space-grotesk), sans-serif;
   font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 750;
   line-height: 1;
+  letter-spacing: -0.04em;
 }
 
 .resultTiles {
@@ -2318,7 +2348,7 @@
 .resultTiles span,
 .resultTiles small {
   color: var(--q-ink-soft);
-  font: 500 0.5rem/1.3 var(--font-ibm-plex-mono), monospace;
+  font: 500 0.8rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }
@@ -2326,9 +2356,11 @@
 .resultTiles strong {
   margin-block: 0.2rem;
   color: var(--q-teal);
-  font-family: var(--font-playfair-display), Georgia, serif;
+  font-family: var(--font-space-grotesk), sans-serif;
   font-size: 1.55rem;
+  font-weight: 750;
   line-height: 1;
+  letter-spacing: -0.035em;
 }
 
 .cutSummary {
@@ -2349,13 +2381,13 @@
 }
 
 .cutSummary p strong {
-  font-size: 0.85rem;
+  font-size: 0.95rem;
 }
 
 .cutSummary > small {
   grid-column: 1 / -1;
   color: var(--q-ink-soft);
-  font-size: 0.62rem;
+  font-size: 0.82rem;
 }
 
 .onePackGrid {
@@ -2388,7 +2420,10 @@
 .formulaCardGrid strong {
   display: block;
   color: var(--q-tomato);
+  font-family: var(--font-space-grotesk), sans-serif;
   font-size: clamp(1.25rem, 2vw, 1.65rem);
+  font-weight: 750;
+  letter-spacing: -0.035em;
 }
 
 .largeSteps {
@@ -2414,7 +2449,7 @@
   display: block;
   margin-bottom: 3rem;
   color: var(--q-gold);
-  font: 700 0.62rem/1 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.72rem/1 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.1em;
 }
 
@@ -2426,7 +2461,7 @@
 
 .largeSteps p {
   color: rgba(255, 255, 255, 0.64);
-  font-size: 0.72rem;
+  font-size: 0.88rem;
 }
 
 .libraryControls {
@@ -2474,7 +2509,7 @@
 .libraryCount {
   margin: 1rem 0 1.4rem;
   color: var(--q-ink-soft);
-  font: 500 0.63rem/1.4 var(--font-ibm-plex-mono), monospace;
+  font: 500 0.76rem/1.4 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.04em;
 }
 
@@ -2531,7 +2566,7 @@
   justify-content: space-between;
   gap: 0.7rem;
   color: var(--q-ink-soft);
-  font: 600 0.51rem/1 var(--font-ibm-plex-mono), monospace;
+  font: 600 0.68rem/1.25 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -2542,16 +2577,30 @@
 
 .blockCardBody h2 {
   margin: 0.65rem 0 0;
-  font-family: var(--font-playfair-display), Georgia, serif;
-  font-size: 1.45rem;
-  line-height: 1.03;
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 750;
+  line-height: 1.08;
+}
+
+.blockSourceStatus {
+  align-self: flex-start;
+  margin-top: 0.45rem;
+  padding: 0.25rem 0.4rem;
+  color: var(--q-teal-dark);
+  background: rgba(22, 116, 113, 0.09);
+  border: 1px solid rgba(22, 116, 113, 0.22);
+  border-radius: 0.25rem;
+  font: 700 0.68rem/1.2 var(--font-ibm-plex-mono), monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .blockCardBody > p {
   flex: 1;
   margin: 0.55rem 0 0.8rem;
   color: var(--q-ink-soft);
-  font-size: 0.68rem;
+  font-size: 0.86rem;
 }
 
 .blockCardBody dl {
@@ -2569,14 +2618,14 @@
 
 .blockCardBody dt {
   color: var(--q-ink-soft);
-  font: 500 0.47rem/1.2 var(--font-ibm-plex-mono), monospace;
+  font: 500 0.65rem/1.25 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.06em;
 }
 
 .blockCardBody dd {
   overflow: hidden;
   margin: 0.2rem 0 0;
-  font-size: 0.62rem;
+  font-size: 0.78rem;
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2622,7 +2671,7 @@
 .blockRecipeHero {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(25rem, 0.8fr);
-  min-height: 590px;
+  min-height: 380px;
   border-bottom: 1px solid var(--q-line);
 }
 
@@ -2630,14 +2679,14 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: clamp(3rem, 7vw, 6rem) clamp(1.5rem, 6vw, 7rem) clamp(3rem, 7vw, 6rem) max(1.5rem, calc((100vw - 1280px) / 2));
+  padding: clamp(2rem, 4vw, 3rem) clamp(1.5rem, 4vw, 4rem) clamp(2rem, 4vw, 3rem) max(1.5rem, calc((100vw - 1280px) / 2));
 }
 
 .backToLibrary {
   align-self: flex-start;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   color: var(--q-teal-dark);
-  font: 700 0.61rem/1.4 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.74rem/1.4 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.06em;
   text-decoration: underline;
   text-underline-offset: 0.3rem;
@@ -2651,13 +2700,16 @@
 }
 
 .blockRecipeCopy h1 {
-  max-width: 12ch;
-  font-size: clamp(3.6rem, 7vw, 7rem);
+  max-width: 15ch;
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: clamp(2.5rem, 4vw, 3.8rem);
+  font-weight: 760;
+  line-height: 1;
 }
 
 .blockRecipeCopy > p {
   max-width: 42rem;
-  margin: 1.3rem 0 0;
+  margin: 0.85rem 0 0;
   color: var(--q-ink-soft);
   font-size: 1rem;
 }
@@ -2666,7 +2718,7 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1px;
-  margin: 2rem 0 0;
+  margin: 1.25rem 0 0;
   overflow: hidden;
   border: 1px solid var(--q-line);
   border-radius: 0.5rem;
@@ -2680,14 +2732,14 @@
 
 .blockHeroMetrics dt {
   color: var(--q-ink-soft);
-  font: 600 0.51rem/1.2 var(--font-ibm-plex-mono), monospace;
+  font: 600 0.68rem/1.25 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.08em;
 }
 
 .blockHeroMetrics dd {
   margin: 0.3rem 0 0;
   color: var(--q-teal-dark);
-  font-size: 0.78rem;
+  font-size: 0.9rem;
   font-weight: 750;
 }
 
@@ -2697,7 +2749,7 @@
   align-content: center;
   gap: 1rem;
   min-width: 0;
-  padding: clamp(2rem, 5vw, 5rem);
+  padding: clamp(1.5rem, 3vw, 2.5rem);
   background:
     linear-gradient(rgba(48, 43, 40, 0.04) 1px, transparent 1px),
     linear-gradient(90deg, rgba(48, 43, 40, 0.04) 1px, transparent 1px),
@@ -2707,13 +2759,13 @@
 }
 
 .blockRecipeVisual .blockSvg {
-  width: min(100%, 27rem);
+  width: min(100%, 20rem);
   filter: drop-shadow(1rem 1rem 0 rgba(48, 43, 40, 0.09));
 }
 
 .blockRecipeVisual > span {
   color: var(--q-ink-soft);
-  font: 600 0.56rem/1.4 var(--font-ibm-plex-mono), monospace;
+  font: 600 0.72rem/1.4 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -2728,15 +2780,16 @@
 
 .recipeSectionHead h2 {
   margin: 0;
-  font-family: var(--font-playfair-display), Georgia, serif;
-  font-size: clamp(2rem, 4vw, 3.4rem);
-  line-height: 1;
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  font-weight: 750;
+  line-height: 1.05;
 }
 
 .recipeSectionHead > p {
   margin: 0;
   color: var(--q-ink-soft);
-  font-size: 0.78rem;
+  font-size: 0.92rem;
 }
 
 .cutTicketGrid {
@@ -2768,13 +2821,14 @@
   height: 1.8rem;
   border: 1px solid currentColor;
   border-radius: 50%;
-  font: 700 0.57rem/1 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.7rem/1 var(--font-ibm-plex-mono), monospace;
 }
 
 .cutTicketGrid h3 {
   margin: 1.2rem 0 0;
-  font-family: var(--font-playfair-display), Georgia, serif;
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
   font-size: 1.35rem;
+  font-weight: 750;
 }
 
 .cutTicketGrid ul {
@@ -2786,31 +2840,36 @@
 .cutTicketGrid li {
   padding-block: 0.35rem;
   border-top: 1px solid currentColor;
-  font: 600 0.62rem/1.35 var(--font-ibm-plex-mono), monospace;
+  font: 600 0.76rem/1.45 var(--font-ibm-plex-mono), monospace;
 }
 
 .stepCardGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: 1fr;
+  gap: 0.9rem;
 }
 
 .stepCard {
   display: grid;
-  grid-template-rows: auto 13rem 1fr auto;
+  grid-template-columns: minmax(13rem, 0.65fr) minmax(15rem, 0.75fr) minmax(20rem, 1.6fr);
+  grid-template-areas:
+    "step-head step-diagram step-body"
+    "step-check step-check step-check";
+  grid-template-rows: minmax(15rem, auto) auto;
   overflow: hidden;
-  min-height: 470px;
+  min-height: 0;
   background: rgba(255, 254, 249, 0.72);
   border: 1px solid var(--q-line);
   border-radius: 0.6rem;
 }
 
 .stepCard > header {
+  grid-area: step-head;
   display: flex;
   align-items: flex-start;
   gap: 0.65rem;
-  padding: 1rem;
-  border-bottom: 1px solid var(--q-line);
+  padding: 1.25rem;
+  border-right: 1px solid var(--q-line);
 }
 
 .stepCard > header > span {
@@ -2821,48 +2880,134 @@
   color: var(--q-white);
   background: var(--q-tomato);
   border-radius: 50%;
-  font: 700 0.56rem/1 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.7rem/1 var(--font-ibm-plex-mono), monospace;
 }
 
 .stepCard header small,
 .stepCard > div:last-child span {
   color: var(--q-teal-dark);
-  font: 700 0.49rem/1.3 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.68rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .stepCard h3 {
-  margin: 0.2rem 0 0;
-  font-family: var(--font-playfair-display), Georgia, serif;
-  font-size: 1.2rem;
-  line-height: 1.05;
+  margin: 0.35rem 0 0;
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: 1.35rem;
+  font-weight: 750;
+  line-height: 1.1;
 }
 
-.stepCard .stepSvg {
-  align-self: center;
-  max-height: 12rem;
-  padding: 0.8rem;
-}
-
-.stepCard > p {
-  margin: 0;
-  padding: 1rem;
-  color: var(--q-ink-soft);
-  border-top: 1px solid var(--q-line);
-  font-size: 0.72rem;
-}
-
-.stepCard > div:last-child {
+.stepDiagramPanel {
   display: grid;
+  grid-area: step-diagram;
+  place-items: center;
+  min-width: 0;
+  padding: 1rem;
+  background: rgba(242, 232, 217, 0.58);
+  border-right: 1px solid var(--q-line);
+}
+
+.stepDiagramPanel .stepSvg {
+  width: 100%;
+  max-width: 17rem;
+  max-height: 13rem;
+}
+
+.stepInstructionBody {
+  grid-area: step-body;
+  padding: 1.25rem;
+}
+
+.stepInstructionBody > p {
+  margin: 0;
+  color: var(--q-ink-soft);
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.stepInstructionBody ul {
+  margin: 0.8rem 0 0;
+  padding-left: 1.2rem;
+  color: var(--q-ink-soft);
+  font-size: 0.96rem;
+}
+
+.stepInstructionBody li + li {
+  margin-top: 0.35rem;
+}
+
+.stepInstructionBody .pressingNote {
+  margin-top: 0.9rem;
+  padding: 0.75rem;
+  color: var(--q-ink);
+  background: rgba(227, 165, 46, 0.12);
+  border-left: 3px solid var(--q-gold);
+}
+
+.stepCheckpoint {
+  grid-area: step-check;
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.45fr) 1fr;
+  align-items: baseline;
   gap: 0.3rem;
-  padding: 0.8rem 1rem;
+  padding: 0.9rem 1.25rem;
   background: rgba(22, 116, 113, 0.07);
   border-top: 1px solid rgba(22, 116, 113, 0.2);
 }
 
-.stepCard > div:last-child strong {
-  font-size: 0.69rem;
+.stepCheckpoint span {
+  color: var(--q-teal-dark);
+  font: 700 0.76rem/1.35 var(--font-ibm-plex-mono), monospace;
+  letter-spacing: 0.08em;
+}
+
+.stepCheckpoint strong {
+  font-size: 0.96rem;
+}
+
+.recipeSources {
+  display: grid;
+  grid-template-columns: minmax(18rem, 0.8fr) minmax(20rem, 1.2fr);
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1.1rem;
+  background: rgba(22, 116, 113, 0.07);
+  border: 1px solid rgba(22, 116, 113, 0.24);
+  border-radius: 0.6rem;
+}
+
+.recipeSources strong {
+  font-size: 1rem;
+}
+
+.recipeSources p {
+  margin: 0.35rem 0 0;
+  color: var(--q-ink-soft);
+  font-size: 0.9rem;
+}
+
+.recipeSources ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.recipeSources li + li {
+  margin-top: 0.45rem;
+}
+
+.recipeSources a {
+  color: var(--q-teal-dark);
+  font-weight: 720;
+  text-decoration: underline;
+  text-underline-offset: 0.18rem;
+}
+
+.recipeSourcesPending {
+  grid-template-columns: 1fr;
+  background: rgba(227, 165, 46, 0.1);
+  border-color: rgba(227, 165, 46, 0.35);
 }
 
 .recipeFinishGrid {
@@ -2891,7 +3036,7 @@
 .recipeFinishGrid > article > p:not(.eyebrow),
 .recipeFinishGrid li {
   color: var(--q-ink-soft);
-  font-size: 0.78rem;
+  font-size: 0.9rem;
 }
 
 .finalBlockPanel {
@@ -2916,16 +3061,18 @@
 .finalBlockPanel span,
 .finalBlockPanel small {
   color: rgba(255, 255, 255, 0.62);
-  font: 500 0.54rem/1.3 var(--font-ibm-plex-mono), monospace;
+  font: 500 0.7rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .finalBlockPanel strong {
   color: var(--q-gold);
-  font-family: var(--font-playfair-display), Georgia, serif;
+  font-family: var(--font-space-grotesk), sans-serif;
   font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 750;
   line-height: 1;
+  letter-spacing: -0.045em;
 }
 
 .blockPager {
@@ -2961,7 +3108,7 @@
 
 .blockPager span {
   color: var(--q-ink-soft);
-  font: 500 0.5rem/1.2 var(--font-ibm-plex-mono), monospace;
+  font: 500 0.68rem/1.25 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }
@@ -2971,7 +3118,7 @@
 }
 
 .blockPager strong {
-  font-size: 0.74rem;
+  font-size: 0.86rem;
 }
 
 .rulerStepGrid {
@@ -3004,15 +3151,17 @@
 .rulerKitGrid article > div:first-child span,
 .rulerKitGrid article > div:first-child small {
   color: var(--q-teal-dark);
-  font: 700 0.54rem/1.3 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.7rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }
 
 .rulerKitGrid article > div:first-child strong {
-  font-family: var(--font-playfair-display), Georgia, serif;
+  font-family: var(--font-space-grotesk), sans-serif;
   font-size: clamp(1.55rem, 2.5vw, 2.1rem);
+  font-weight: 750;
   line-height: 1;
+  letter-spacing: -0.035em;
 }
 
 .rulerKitGrid .wideDiagram {
@@ -3030,21 +3179,21 @@
 .rulerKitGrid p {
   flex: 1;
   color: var(--q-ink-soft);
-  font-size: 0.76rem;
+  font-size: 0.9rem;
 }
 
 .rulerKitGrid article > strong {
   padding-top: 0.75rem;
   color: var(--q-teal-dark);
   border-top: 1px solid var(--q-line);
-  font: 700 0.56rem/1.45 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.72rem/1.5 var(--font-ibm-plex-mono), monospace;
 }
 
 .rulerKitGrid a {
   align-self: flex-start;
   margin-top: 0.9rem;
   color: var(--q-tomato-dark);
-  font: 700 0.58rem/1.3 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.72rem/1.35 var(--font-ibm-plex-mono), monospace;
   text-decoration: underline;
   text-underline-offset: 0.25rem;
 }
@@ -3072,7 +3221,7 @@
   color: var(--q-white);
   background: var(--q-teal);
   border-radius: 50%;
-  font: 700 0.56rem/1 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.7rem/1 var(--font-ibm-plex-mono), monospace;
 }
 
 .rulerStepGrid h2 {
@@ -3091,7 +3240,7 @@
   color: var(--q-ink-soft);
   background: var(--q-paper-deep);
   border-radius: 0.4rem;
-  font-size: 0.76rem;
+  font-size: 0.9rem;
 }
 
 .cutTicketExamples {
@@ -3109,7 +3258,7 @@
 
 .cutTicketExamples article > span {
   color: var(--q-teal-dark);
-  font: 700 0.54rem/1.3 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.7rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.09em;
 }
 
@@ -3121,7 +3270,7 @@
 
 .cutTicketExamples p {
   color: var(--q-ink-soft);
-  font-size: 0.76rem;
+  font-size: 0.9rem;
 }
 
 .slotCode {
@@ -3133,7 +3282,7 @@
   color: var(--q-white);
   background: var(--q-navy);
   border-radius: 0.4rem;
-  font: 600 0.57rem/1 var(--font-ibm-plex-mono), monospace;
+  font: 600 0.72rem/1.2 var(--font-ibm-plex-mono), monospace;
   scrollbar-width: thin;
 }
 
@@ -3167,7 +3316,7 @@
   color: var(--q-white);
   background: var(--q-tomato);
   border-radius: 50%;
-  font: 700 0.62rem/1 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.72rem/1 var(--font-ibm-plex-mono), monospace;
 }
 
 .standardRulerGrid h3 {
@@ -3191,14 +3340,14 @@
 
 .officialLinkBand span {
   color: var(--q-gold);
-  font: 700 0.54rem/1.3 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.7rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.08em;
 }
 
 .officialLinkBand p {
   margin: 0;
   color: rgba(255, 255, 255, 0.65);
-  font-size: 0.72rem;
+  font-size: 0.88rem;
 }
 
 .officialLinkBand a {
@@ -3206,7 +3355,7 @@
   color: var(--q-navy);
   background: var(--q-gold);
   border-radius: 0.35rem;
-  font-size: 0.68rem;
+  font-size: 0.82rem;
   font-weight: 750;
 }
 
@@ -3235,7 +3384,7 @@
   color: var(--q-white);
   background: var(--q-tomato);
   border-radius: 50%;
-  font: 700 0.57rem/1 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.7rem/1 var(--font-ibm-plex-mono), monospace;
 }
 
 .borderWorkflow h2 {
@@ -3247,13 +3396,13 @@
 .borderWorkflow p {
   margin-bottom: 0;
   color: var(--q-ink-soft);
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 .borderWorkflow article > strong {
   grid-column: 2;
   color: var(--q-teal-dark);
-  font: 700 0.54rem/1.3 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.7rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.09em;
 }
 
@@ -3291,7 +3440,7 @@
   color: var(--q-navy);
   background: var(--q-gold);
   border-radius: 50%;
-  font: 700 0.57rem/1 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.7rem/1 var(--font-ibm-plex-mono), monospace;
 }
 
 .bindingSteps strong {
@@ -3303,7 +3452,7 @@
   grid-column: 2;
   margin: 0;
   color: rgba(255, 255, 255, 0.63);
-  font-size: 0.7rem;
+  font-size: 0.88rem;
 }
 
 .finishingResults {
@@ -3331,8 +3480,10 @@
 .backingResult h3,
 .bindingResult h3 {
   margin: 0.55rem 0 0;
-  font-family: var(--font-playfair-display), Georgia, serif;
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-weight: 750;
   line-height: 1;
+  letter-spacing: -0.04em;
 }
 
 .backingResult h3 {
@@ -3341,7 +3492,7 @@
 
 .backingResult > div:first-child p {
   color: var(--q-ink-soft);
-  font-size: 0.72rem;
+  font-size: 0.9rem;
 }
 
 .backingOptions {
@@ -3364,21 +3515,23 @@
 .backingOptions span,
 .backingOptions small {
   color: var(--q-ink-soft);
-  font: 500 0.5rem/1.3 var(--font-ibm-plex-mono), monospace;
+  font: 500 0.68rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .backingOptions strong {
-  font-size: 0.73rem;
+  font-size: 0.86rem;
 }
 
 .backingOptions b {
   grid-row: 1 / span 2;
   grid-column: 2;
   color: var(--q-tomato);
-  font-family: var(--font-playfair-display), Georgia, serif;
+  font-family: var(--font-space-grotesk), sans-serif;
   font-size: 1.5rem;
+  font-weight: 750;
+  letter-spacing: -0.035em;
 }
 
 .backingOptions small {
@@ -3412,7 +3565,10 @@
 
 .bindingResult h3 {
   color: var(--q-gold);
+  font-family: var(--font-space-grotesk), sans-serif;
   font-size: clamp(2.6rem, 5vw, 4.5rem);
+  font-weight: 750;
+  letter-spacing: -0.05em;
 }
 
 .bindingResult p,
@@ -3420,7 +3576,7 @@
   position: relative;
   z-index: 1;
   color: rgba(255, 255, 255, 0.65);
-  font-size: 0.72rem;
+  font-size: 0.88rem;
 }
 
 .bindingCoil {
@@ -3466,9 +3622,16 @@
 
   .formulaCardGrid,
   .standardRulerGrid,
-  .cutTicketGrid,
-  .stepCardGrid {
+  .cutTicketGrid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stepCardGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .stepCard {
+    grid-template-columns: minmax(11rem, 0.55fr) minmax(13rem, 0.7fr) minmax(18rem, 1.5fr);
   }
 
   .largeSteps {
@@ -3513,12 +3676,13 @@
   }
 
   .homeHeroCopy {
-    min-height: 520px;
-    padding: 4rem 1.5rem;
+    min-height: 0;
+    padding: 2.5rem 1.5rem;
   }
 
   .homeHeroImage {
-    min-height: 480px;
+    min-height: 180px;
+    height: 180px;
     border-top: 1px solid var(--q-line);
     border-left: 0;
   }
@@ -3594,20 +3758,39 @@
   }
 
   .blockRecipeVisual {
-    min-height: 520px;
+    min-height: 260px;
     border-top: 1px solid var(--q-line);
     border-left: 0;
   }
 
   .stepCard {
-    min-height: 430px;
+    grid-template-columns: minmax(12rem, 0.65fr) minmax(0, 1fr);
+    grid-template-areas:
+      "step-head step-diagram"
+      "step-body step-body"
+      "step-check step-check";
+    grid-template-rows: auto auto auto;
+    min-height: 0;
+  }
+
+  .stepCard > header {
+    border-bottom: 1px solid var(--q-line);
+  }
+
+  .stepDiagramPanel {
+    border-right: 0;
+    border-bottom: 1px solid var(--q-line);
+  }
+
+  .recipeSources {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 680px) {
   .guideHeaderInner {
     gap: 0.8rem;
-    min-height: 68px;
+    min-height: 64px;
   }
 
   .guideHeaderActions .headerAction:first-of-type,
@@ -3624,14 +3807,14 @@
     font-size: 1rem;
   }
 
-  .headerAction {
+.headerAction {
     min-height: 34px;
     padding-inline: 0.7rem;
-    font-size: 0.58rem;
+    font-size: 0.7rem;
   }
 
   .guideNav {
-    top: 68px;
+    top: 64px;
   }
 
   .guideFooter {
@@ -3661,23 +3844,24 @@
   }
 
   .homeHeroCopy {
-    min-height: 470px;
-    padding: 3rem 1rem;
+    min-height: 0;
+    padding: 2rem 1rem;
   }
 
   .homeHeroCopy h1 {
-    font-size: clamp(3.4rem, 17vw, 5.2rem);
+    font-size: clamp(2.65rem, 12vw, 3.6rem);
   }
 
   .homeHeroImage {
-    min-height: 390px;
+    min-height: 150px;
+    height: 150px;
   }
 
   .homeHeroImage figcaption,
   .chapterPhoto figcaption,
   .chapterPhotoTall figcaption {
     display: block;
-    font-size: 0.5rem;
+    font-size: 0.66rem;
   }
 
   .homeHeroImage figcaption span {
@@ -3723,6 +3907,24 @@
     grid-template-columns: 1fr;
   }
 
+  .stepCard {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "step-head"
+      "step-diagram"
+      "step-body"
+      "step-check";
+  }
+
+  .stepCard > header,
+  .stepDiagramPanel {
+    border-right: 0;
+  }
+
+  .stepCheckpoint {
+    grid-template-columns: 1fr;
+  }
+
   .guideLinkCard {
     min-height: 340px;
   }
@@ -3742,12 +3944,12 @@
   }
 
   .pageIntro {
-    padding-block: 3.5rem 2rem;
+    padding-block: 2rem 1.25rem;
   }
 
   .pageIntroCopy h1,
   .blockRecipeCopy h1 {
-    font-size: clamp(3rem, 15vw, 5.25rem);
+    font-size: clamp(2.2rem, 10vw, 3.2rem);
   }
 
   .pageIntroStats {
@@ -3767,11 +3969,11 @@
   }
 
   .chapterPhoto {
-    height: 320px;
+    height: 120px;
   }
 
   .chapterPhotoTall {
-    height: 440px;
+    height: 150px;
   }
 
   .inputGridTwo,
@@ -3892,7 +4094,7 @@
   }
 
   .blockRecipeCopy {
-    padding: 3rem 1rem;
+    padding: 2rem 1rem;
   }
 
   .blockHeroMetrics {
@@ -3900,8 +4102,8 @@
   }
 
   .blockRecipeVisual {
-    min-height: 390px;
-    padding: 2rem;
+    min-height: 240px;
+    padding: 1.5rem;
   }
 
   .stepCard {
@@ -3982,6 +4184,291 @@
 
   .finalBlockPanel {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Fusible-grid method and cutting-table readability */
+.fusiblePlannerLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(24rem, 0.95fr);
+  gap: 1rem;
+}
+
+.fusiblePlannerResults {
+  align-self: stretch;
+  padding: 1rem;
+  background: rgba(22, 116, 113, 0.055);
+  border: 1px solid var(--q-line);
+  border-radius: 0.65rem;
+}
+
+.squarePresetRow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.8rem;
+}
+
+.squarePresetRow button {
+  display: grid;
+  gap: 0.25rem;
+  min-height: 4.5rem;
+  padding: 0.75rem;
+  color: var(--q-ink);
+  background: var(--q-white);
+  border: 1px solid var(--q-line-strong);
+  border-radius: 0.45rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.squarePresetRow button[aria-pressed="true"] {
+  color: var(--q-white);
+  background: var(--q-teal);
+  border-color: var(--q-teal);
+}
+
+.squarePresetRow strong {
+  font-size: 1.05rem;
+}
+
+.squarePresetRow span {
+  font-size: 0.9rem;
+}
+
+.controlHelp,
+.calculatorFootnote {
+  color: var(--q-ink-soft);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.largeLayoutWarning {
+  margin: 0.75rem 0 0;
+  padding: 0.85rem;
+  color: var(--q-ink);
+  background: rgba(227, 165, 46, 0.15);
+  border-left: 4px solid var(--q-gold);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.methodCutTicket {
+  display: grid;
+  gap: 0;
+  margin-top: 0.75rem;
+  background: var(--q-white);
+  border: 1px solid var(--q-line);
+  border-radius: 0.45rem;
+}
+
+.methodCutTicket p {
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.55fr) 1fr;
+  gap: 0.8rem;
+  margin: 0;
+  padding: 0.8rem;
+  border-bottom: 1px solid var(--q-line);
+}
+
+.methodCutTicket p:last-child {
+  border-bottom: 0;
+}
+
+.methodCutTicket span {
+  color: var(--q-teal-dark);
+  font-weight: 800;
+}
+
+.methodCutTicket strong {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sourceLinkList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.sourceLinkList a {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+  color: var(--q-white);
+  background: rgba(255, 255, 255, 0.075);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 0.5rem;
+}
+
+.sourceLinkList strong {
+  color: var(--q-gold);
+  font-size: 1.08rem;
+}
+
+.sourceLinkList span {
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.guideRoot :where(h1, h2, h3, blockquote),
+.guideGate h1 {
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+}
+
+.homeHeroCopy h1 {
+  max-width: 18ch;
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: clamp(2.4rem, 4vw, 3.6rem);
+  font-weight: 760;
+  line-height: 1.02;
+  letter-spacing: -0.045em;
+}
+
+.pageIntroCopy h1 {
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: clamp(2.25rem, 4vw, 3.35rem);
+  font-weight: 760;
+  line-height: 1.02;
+  letter-spacing: -0.045em;
+}
+
+.blockRecipeCopy h1 {
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: clamp(2.5rem, 4.5vw, 3.8rem);
+  font-weight: 760;
+  line-height: 1;
+}
+
+.sectionHeading h2,
+.recipeSectionHead h2 {
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: clamp(1.75rem, 2.8vw, 2.45rem);
+  font-weight: 760;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+}
+
+.pageLead,
+.sectionHeading > p:last-child,
+.note p,
+.stepInstructionBody > p,
+.stepInstructionBody li,
+.methodCardGrid p,
+.sequenceGrid p,
+.sequenceGrid li,
+.rulerStepGrid p,
+.standardRulerGrid p,
+.blockCard p,
+.precutCard > p,
+.largeSteps p,
+.finishInfoGrid p,
+.formulaCardGrid p,
+.onePackGrid p,
+.presetCaveat,
+.recipeSources p {
+  font-size: 1.03rem;
+  line-height: 1.62;
+}
+
+.quickTable {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.quickTable thead th {
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: 0.86rem;
+  font-weight: 800;
+  letter-spacing: 0.035em;
+}
+
+.quickTable tbody th,
+.quickTable td {
+  font-size: 1rem;
+}
+
+.eyebrow,
+.fieldLabel > span,
+.controlGroup legend,
+.stepCard header small,
+.stepCheckpoint span,
+.cutTicketGrid li,
+.resultTiles span,
+.resultTiles small,
+.finishedTopBanner span,
+.finishedTopBanner small {
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-weight: 780;
+  letter-spacing: 0.04em;
+}
+
+.fieldLabel > span,
+.controlGroup legend,
+.stepCard header small,
+.stepCheckpoint span,
+.resultTiles span,
+.resultTiles small,
+.finishedTopBanner span,
+.finishedTopBanner small {
+  font-size: 0.88rem;
+}
+
+.fieldLabel input,
+.fieldLabel select,
+.searchField input {
+  min-height: 52px;
+  font-size: 1.15rem;
+  font-weight: 780;
+}
+
+.resultTiles strong {
+  font-size: 1.7rem;
+  font-weight: 800;
+}
+
+.finishedTopBanner strong,
+.metric strong,
+.pageIntroFormula strong,
+.cutTicketGrid li,
+.quickTable {
+  font-variant-numeric: tabular-nums;
+}
+
+.cutTicketGrid li {
+  font-size: 0.94rem;
+  line-height: 1.5;
+}
+
+.stepCard h3 {
+  font-size: 1.45rem;
+  line-height: 1.18;
+}
+
+.stepCheckpoint strong {
+  font-size: 1.03rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .fusiblePlannerLayout,
+  .sourceLinkList {
+    grid-template-columns: 1fr;
+  }
+
+  .squarePresetRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .fusiblePlannerResults {
+    padding: 0.65rem;
+  }
+
+  .methodCutTicket p {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
   }
 }
 

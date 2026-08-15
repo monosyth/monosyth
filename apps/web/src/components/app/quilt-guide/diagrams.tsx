@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { BlockStepDiagramKind } from "@/lib/quilting/data";
 
 import styles from "./quilt-guide.module.css";
 
@@ -126,16 +127,21 @@ function Grid({
 }
 
 function LogCabin({ offset = false }: { offset?: boolean }) {
+  const dark = offset ? COLORS.featureDark : COLORS.feature;
   const rounds = [
-    { x: 40, y: 40, w: 40, h: 40, fill: COLORS.accent },
-    { x: 80, y: 40, w: 20, h: 40, fill: COLORS.feature },
-    { x: 40, y: 80, w: 60, h: 20, fill: COLORS.background },
-    { x: 20, y: 40, w: 20, h: 60, fill: offset ? COLORS.featureDark : COLORS.feature },
-    { x: 20, y: 20, w: 80, h: 20, fill: COLORS.background },
-    { x: 100, y: 20, w: 20, h: 80, fill: COLORS.feature },
-    { x: 20, y: 100, w: 100, h: 20, fill: COLORS.background },
-    { x: 0, y: 20, w: 20, h: 100, fill: offset ? COLORS.featureDark : COLORS.feature },
-    { x: 0, y: 0, w: 120, h: 20, fill: COLORS.background },
+    { x: 45, y: 45, w: 30, h: 30, fill: COLORS.accent },
+    { x: 75, y: 45, w: 15, h: 30, fill: COLORS.background },
+    { x: 45, y: 75, w: 45, h: 15, fill: COLORS.background },
+    { x: 30, y: 45, w: 15, h: 45, fill: dark },
+    { x: 30, y: 30, w: 60, h: 15, fill: dark },
+    { x: 90, y: 30, w: 15, h: 60, fill: COLORS.background },
+    { x: 30, y: 90, w: 75, h: 15, fill: COLORS.background },
+    { x: 15, y: 30, w: 15, h: 75, fill: dark },
+    { x: 15, y: 15, w: 90, h: 15, fill: dark },
+    { x: 105, y: 15, w: 15, h: 90, fill: COLORS.background },
+    { x: 15, y: 105, w: 105, h: 15, fill: COLORS.background },
+    { x: 0, y: 15, w: 15, h: 105, fill: dark },
+    { x: 0, y: 0, w: 120, h: 15, fill: dark },
   ];
   return (
     <g stroke={COLORS.cream} strokeWidth="0.8">
@@ -362,6 +368,95 @@ function PatternForSlug({ slug }: { slug: string }) {
   }
   if (slug === "snowball") return <Snowball />;
   if (slug === "bear-paw") return <BearPaw />;
+  if (slug === "economy-block") {
+    return (
+      <g stroke={COLORS.cream} strokeWidth="0.8">
+        <rect width="120" height="120" fill={COLORS.background} />
+        <polygon points="60,0 120,60 60,120 0,60" fill={COLORS.accent} />
+        <rect x="30" y="30" width="60" height="60" fill={COLORS.feature} />
+      </g>
+    );
+  }
+  if (slug === "maple-leaf") {
+    const map: (Corner | "f" | "b" | "stem")[] = ["b", "sw", "se", "se", "f", "f", "ne", "f", "stem"];
+    return <Grid size={3} cells={(x, y, size, row, column) => {
+      const token = map[row * 3 + column];
+      if (token === "stem") return <g><Square x={x} y={y} size={size} fill={COLORS.background} /><polygon points={`${x},${y + size} ${x + 8},${y + size} ${x + size},${y}`} fill={COLORS.feature} /></g>;
+      if (token === "f" || token === "b") return <Square x={x} y={y} size={size} fill={token === "f" ? COLORS.feature : COLORS.background} />;
+      return <Hst x={x} y={y} size={size} corner={token} />;
+    }} />;
+  }
+  if (slug === "maple-star") {
+    return (
+      <g stroke={COLORS.cream} strokeWidth="0.8">
+        <Square x={40} y={40} size={40} fill={COLORS.feature} />
+        <g><Square x={0} y={0} size={20} fill={COLORS.accent} /><Square x={20} y={0} size={20} fill={COLORS.background} /><rect x={0} y={20} width={40} height={20} fill={COLORS.background} /></g>
+        <g transform="rotate(90 60 60)"><Square x={0} y={0} size={20} fill={COLORS.accent} /><Square x={20} y={0} size={20} fill={COLORS.background} /><rect x={0} y={20} width={40} height={20} fill={COLORS.background} /></g>
+        <g transform="rotate(180 60 60)"><Square x={0} y={0} size={20} fill={COLORS.accent} /><Square x={20} y={0} size={20} fill={COLORS.background} /><rect x={0} y={20} width={40} height={20} fill={COLORS.background} /></g>
+        <g transform="rotate(270 60 60)"><Square x={0} y={0} size={20} fill={COLORS.accent} /><Square x={20} y={0} size={20} fill={COLORS.background} /><rect x={0} y={20} width={40} height={20} fill={COLORS.background} /></g>
+        <g><rect x="40" y="0" width="40" height="40" fill={COLORS.background} /><polygon points="40,0 60,40 80,0" fill={COLORS.accent} /></g>
+        <g transform="rotate(90 60 60)"><rect x="40" y="0" width="40" height="40" fill={COLORS.background} /><polygon points="40,0 60,40 80,0" fill={COLORS.accent} /></g>
+        <g transform="rotate(180 60 60)"><rect x="40" y="0" width="40" height="40" fill={COLORS.background} /><polygon points="40,0 60,40 80,0" fill={COLORS.accent} /></g>
+        <g transform="rotate(270 60 60)"><rect x="40" y="0" width="40" height="40" fill={COLORS.background} /><polygon points="40,0 60,40 80,0" fill={COLORS.accent} /></g>
+      </g>
+    );
+  }
+  if (slug === "turnstile") {
+    const quadrant = <g stroke={COLORS.cream} strokeWidth="0.8"><rect width="60" height="30" fill={COLORS.background} /><polygon points="0,30 30,0 60,30" fill={COLORS.feature} /><rect y="30" width="60" height="30" fill={COLORS.accent} /></g>;
+    return <g>{quadrant}<g transform="rotate(90 60 60)">{quadrant}</g><g transform="rotate(180 60 60)">{quadrant}</g><g transform="rotate(270 60 60)">{quadrant}</g></g>;
+  }
+  if (slug === "bow-tie") {
+    return (
+      <g stroke={COLORS.cream} strokeWidth="0.8">
+        <Square x={0} y={0} size={60} fill={COLORS.feature} />
+        <Square x={60} y={60} size={60} fill={COLORS.feature} />
+        <Square x={60} y={0} size={60} fill={COLORS.background} />
+        <polygon points="60,60 90,60 60,30" fill={COLORS.feature} />
+        <Square x={0} y={60} size={60} fill={COLORS.background} />
+        <polygon points="60,60 30,60 60,90" fill={COLORS.feature} />
+      </g>
+    );
+  }
+  if (slug === "pinwheel-star") {
+    const map: (Corner | "b")[] = ["b", "ne", "nw", "b", "se", "ne", "se", "sw", "ne", "nw", "sw", "nw", "b", "se", "sw", "b"];
+    return <Grid size={4} cells={(x, y, size, row, column) => {
+      const token = map[row * 4 + column];
+      return token === "b" ? <Square x={x} y={y} size={size} fill={COLORS.background} /> : <Hst x={x} y={y} size={size} corner={token} />;
+    }} />;
+  }
+  if (slug === "basket") {
+    return (
+      <g stroke={COLORS.cream} strokeWidth="0.9">
+        <rect width="120" height="120" fill={COLORS.background} />
+        <polygon points="5,40 80,115 5,115" fill={COLORS.feature} />
+        <path d="M58 10 110 62" stroke={COLORS.accent} strokeWidth="15" />
+        <path d="M58 10 110 62" stroke={COLORS.cream} strokeWidth="0.9" />
+        <path d="M40 5v110M80 5v110M5 40h110M5 80h110" fill="none" opacity="0.7" />
+      </g>
+    );
+  }
+  if (slug === "heart") {
+    return (
+      <g stroke={COLORS.cream} strokeWidth="0.8">
+        <rect width="120" height="120" fill={COLORS.feature} />
+        <polygon points="0,0 30,0 0,30" fill={COLORS.background} />
+        <polygon points="30,0 60,0 60,30" fill={COLORS.background} />
+        <polygon points="60,0 90,0 60,30" fill={COLORS.background} />
+        <polygon points="90,0 120,0 120,30" fill={COLORS.background} />
+        <polygon points="0,60 60,120 0,120" fill={COLORS.background} />
+        <polygon points="120,60 60,120 120,120" fill={COLORS.background} />
+        <path d="M60 0v120" />
+      </g>
+    );
+  }
+  if (slug === "annies-choice") {
+    const map: Corner[] = ["ne", "nw", "sw", "se", "nw", "sw", "ne", "se", "ne", "se", "nw", "sw", "sw", "se", "ne", "nw"];
+    return <Grid size={4} cells={(x, y, size, row, column) => <Hst x={x} y={y} size={size} corner={map[row * 4 + column]} />} />;
+  }
+  if (slug === "butterfly-cross") {
+    const corner = (x: number, y: number, rotate: number) => <g transform={`translate(${x} ${y}) rotate(${rotate} 25 25)`}><Hst x={0} y={0} size={25} corner="se" /><Square x={25} y={0} size={25} fill={COLORS.background} /><Square x={0} y={25} size={25} fill={COLORS.feature} /><Hst x={25} y={25} size={25} corner="nw" /></g>;
+    return <g>{corner(0, 0, 0)}{corner(70, 0, 90)}{corner(70, 70, 180)}{corner(0, 70, 270)}<rect x="50" width="20" height="120" fill={COLORS.background} stroke={COLORS.cream} /><rect y="50" width="120" height="20" fill={COLORS.background} stroke={COLORS.cream} /><rect x="50" y="50" width="20" height="20" fill={COLORS.accent} stroke={COLORS.cream} /></g>;
+  }
   if (slug === "disappearing-nine-patch") {
     return <g stroke={COLORS.cream} strokeWidth="0.9">
       <rect width="60" height="60" fill={COLORS.feature} /><rect x="60" width="30" height="60" fill={COLORS.gold} /><rect x="90" width="30" height="60" fill={COLORS.background} />
@@ -483,12 +578,45 @@ export function BlockStepDiagram({
   name,
   unitType,
   stage,
+  diagram,
 }: {
   slug: string;
   name: string;
   unitType: string;
   stage: number;
+  diagram?: BlockStepDiagramKind;
 }) {
+  if (diagram) {
+    const artwork = (() => {
+      if (diagram === "cut-pieces") return <g><rect x="4" y="12" width="34" height="48" fill={COLORS.feature} /><text x="21" y="39" textAnchor="middle" fill="white" fontSize="8" fontWeight="700">A</text><rect x="43" y="20" width="54" height="32" fill={COLORS.background} stroke={COLORS.line} /><text x="70" y="39" textAnchor="middle" fill={COLORS.line} fontSize="8" fontWeight="700">B</text><rect x="102" y="8" width="30" height="56" fill={COLORS.accent} /><text x="117" y="39" textAnchor="middle" fill="white" fontSize="8" fontWeight="700">C</text><path d="M4 68h128" stroke={COLORS.line} strokeDasharray="4 3" /><text x="68" y="82" textAnchor="middle" fill={COLORS.line} fontSize="7">COUNT AND LABEL BEFORE SEWING</text></g>;
+      if (diagram === "hst-mark") return <g><rect x="12" y="12" width="66" height="66" fill={COLORS.feature} /><rect x="18" y="18" width="66" height="66" fill={COLORS.background} fillOpacity="0.78" stroke={COLORS.line} /><path d="M18 84 84 18" stroke={COLORS.featureDark} strokeWidth="2" /><path d="M13 79 79 13M23 89 89 23" stroke={COLORS.accent} strokeWidth="1.4" strokeDasharray="4 3" /><text x="106" y="42" textAnchor="middle" fill={COLORS.line} fontSize="8" fontWeight="700">SEW ¼″</text><text x="106" y="54" textAnchor="middle" fill={COLORS.line} fontSize="8">BOTH SIDES</text></g>;
+      if (diagram === "hst-cut") return <g><rect x="5" y="16" width="56" height="56" fill={COLORS.feature} /><path d="M5 72 61 16" stroke="white" strokeWidth="2" strokeDasharray="4 3" /><path d="M67 44h15" stroke={COLORS.line} strokeWidth="2" markerEnd="url(#step-arrow-explicit)" /><Hst x={88} y={10} size={42} corner="se" /><Hst x={88} y={54} size={42} corner="nw" /></g>;
+      if (diagram === "hst-trim") return <g><Hst x={32} y={8} size={74} corner="se" /><rect x="27" y="3" width="84" height="84" fill="none" stroke={COLORS.accent} strokeWidth="2" /><path d="M27 87 111 3" stroke={COLORS.accent} strokeDasharray="3 3" /><text x="69" y="101" textAnchor="middle" fill={COLORS.line} fontSize="8" fontWeight="700">45° LINE ON THE SEAM</text></g>;
+      if (diagram === "hst-eight") return <g><rect x="4" y="10" width="72" height="72" fill={COLORS.feature} /><path d="M4 10 76 82M76 10 4 82M40 10v72M4 46h72" stroke="white" strokeWidth="1.5" strokeDasharray="4 2" /><path d="M81 46h10" stroke={COLORS.line} strokeWidth="2" markerEnd="url(#step-arrow-explicit)" />{Array.from({ length: 8 }, (_, i) => <g key={i} transform={`translate(${96 + (i % 2) * 19} ${7 + Math.floor(i / 2) * 20}) scale(.15)`}><Hst x={0} y={0} size={120} corner={i % 2 ? "nw" : "se"} /></g>)}</g>;
+      if (diagram === "flying-geese-mark") return <g><rect x="8" y="25" width="92" height="46" fill={COLORS.background} stroke={COLORS.line} /><Square x={8} y={25} size={46} fill={COLORS.feature} /><path d="M8 71 54 25" stroke="white" strokeWidth="2" strokeDasharray="4 3" /><path d="M58 48h15" stroke={COLORS.line} strokeWidth="2" markerEnd="url(#step-arrow-explicit)" /><text x="112" y="43" textAnchor="middle" fill={COLORS.line} fontSize="8" fontWeight="700">SEW</text><text x="112" y="55" textAnchor="middle" fill={COLORS.line} fontSize="8">THEN CHECK</text><text x="112" y="67" textAnchor="middle" fill={COLORS.line} fontSize="8">BEFORE TRIM</text></g>;
+      if (diagram === "flying-geese-unit") return <g><rect x="18" y="24" width="104" height="52" fill={COLORS.background} stroke={COLORS.line} /><polygon points="18,76 70,24 122,76" fill={COLORS.feature} /><path d="M70 18v64" stroke={COLORS.accent} strokeDasharray="3 3" /><text x="70" y="94" textAnchor="middle" fill={COLORS.line} fontSize="8" fontWeight="700">KEEP ¼″ ABOVE THE POINT</text></g>;
+      if (diagram === "strip-set") return <g>{[COLORS.feature, COLORS.accent, COLORS.background].map((fill, i) => <rect key={fill} x="8" y={13 + i * 25} width="124" height="25" fill={fill} stroke={COLORS.cream} />)}<path d="M8 7h124M8 4v6M132 4v6" stroke={COLORS.line} /><text x="70" y="101" textAnchor="middle" fill={COLORS.line} fontSize="8" fontWeight="700">PRESS · MEASURE · KEEP STRAIGHT</text></g>;
+      if (diagram === "subcut") return <g>{[COLORS.feature, COLORS.accent, COLORS.background].map((fill, i) => <rect key={fill} x="8" y={13 + i * 22} width="124" height="22" fill={fill} stroke={COLORS.cream} />)}{[8,39,70,101,132].map((x) => <path key={x} d={`M${x} 9v72`} stroke={COLORS.line} strokeWidth="1.4" strokeDasharray="4 2" />)}<text x="70" y="97" textAnchor="middle" fill={COLORS.line} fontSize="8" fontWeight="700">SQUARE ONE END · CUT EQUAL UNITS</text></g>;
+      if (diagram === "log-rounds") return <g transform="translate(25 -3) scale(.75)"><LogCabin /></g>;
+      if (diagram === "square-in-square") return <g><rect x="25" y="4" width="88" height="88" fill={COLORS.background} stroke={COLORS.line} /><polygon points="69,4 113,48 69,92 25,48" fill={COLORS.accent} /><rect x="47" y="26" width="44" height="44" fill={COLORS.feature} /><path d="M19 48h100" stroke={COLORS.accent} strokeDasharray="3 3" /><text x="69" y="105" textAnchor="middle" fill={COLORS.line} fontSize="8" fontWeight="700">CENTER OPPOSITE PAIRS</text></g>;
+      if (diagram === "stem-unit") return <g><rect x="34" y="5" width="72" height="72" fill={COLORS.background} stroke={COLORS.line} /><polygon points="34,77 48,77 106,5 92,5" fill={COLORS.feature} /><path d="M27 84 113 -2" stroke={COLORS.accent} strokeDasharray="3 3" /><text x="70" y="98" textAnchor="middle" fill={COLORS.line} fontSize="8" fontWeight="700">CENTER STEM · THEN TRIM</text></g>;
+      if (diagram === "snowball-corner") return <g><rect x="26" y="7" width="80" height="80" fill={COLORS.feature} /><Square x={26} y={7} size={38} fill={COLORS.background} /><path d="M26 45 64 7" stroke={COLORS.line} strokeWidth="2" strokeDasharray="4 3" /><path d="M29 48 67 10" stroke={COLORS.accent} strokeWidth="1.5" /><text x="69" y="102" textAnchor="middle" fill={COLORS.line} fontSize="8" fontWeight="700">FLIP TO CHECK · THEN TRIM ¼″</text></g>;
+      if (diagram === "heart-halves") return <g><rect x="12" y="8" width="50" height="76" fill={COLORS.feature} /><rect x="78" y="8" width="50" height="76" fill={COLORS.feature} /><polygon points="12,8 37,8 12,33" fill={COLORS.background} /><polygon points="62,8 37,8 62,33" fill={COLORS.background} /><polygon points="12,46 62,84 12,84" fill={COLORS.background} /><polygon points="78,8 103,8 78,33" fill={COLORS.background} /><polygon points="128,8 103,8 128,33" fill={COLORS.background} /><polygon points="128,46 78,84 128,84" fill={COLORS.background} /><path d="M70 2v88" stroke={COLORS.accent} strokeDasharray="4 3" /><text x="70" y="103" textAnchor="middle" fill={COLORS.line} fontSize="8" fontWeight="700">MAKE MIRROR IMAGES</text></g>;
+      if (diagram === "corner-units") return <g><g transform="translate(8 7) scale(.62)"><PatternForSlug slug={slug} /></g><path d="M88 48h14" stroke={COLORS.line} strokeWidth="2" markerEnd="url(#step-arrow-explicit)" /><rect x="108" y="24" width="24" height="24" fill={COLORS.feature} /><rect x="108" y="50" width="24" height="24" fill={COLORS.background} stroke={COLORS.line} /><text x="70" y="101" textAnchor="middle" fill={COLORS.line} fontSize="8" fontWeight="700">MAKE MATCHING SUBUNITS FIRST</text></g>;
+      if (diagram === "quadrants") return <g><g transform="translate(28 -2) scale(.7)"><PatternForSlug slug={slug} /></g><path d="M70 0v84M28 42h84" stroke={COLORS.accent} strokeWidth="1.5" strokeDasharray="4 3" /><text x="70" y="101" textAnchor="middle" fill={COLORS.line} fontSize="8" fontWeight="700">ROTATE WHOLE QUADRANTS</text></g>;
+      if (diagram === "layout") return <g><g transform="translate(28 -2) scale(.7)"><PatternForSlug slug={slug} /><rect x=".6" y=".6" width="118.8" height="118.8" fill="none" stroke={COLORS.line} strokeWidth="1.5" /></g><text x="70" y="101" textAnchor="middle" fill={COLORS.line} fontSize="8" fontWeight="700">CHECK EVERY UNIT BEFORE SEWING</text></g>;
+      if (diagram === "rows") return <g><g transform="translate(28 -2) scale(.7)"><PatternForSlug slug={slug} /><rect x=".6" y=".6" width="118.8" height="118.8" fill="none" stroke={COLORS.line} strokeWidth="1.5" /></g><text x="70" y="101" textAnchor="middle" fill={COLORS.line} fontSize="8" fontWeight="700">FOLLOW THIS MAP · JOIN IN ROWS</text></g>;
+      return <g><g transform="translate(28 -2) scale(.7)"><PatternForSlug slug={slug} /><rect x=".6" y=".6" width="118.8" height="118.8" fill="none" stroke={COLORS.line} strokeWidth="1.5" /></g><text x="70" y="101" textAnchor="middle" fill={COLORS.line} fontSize="8" fontWeight="700">{name.toUpperCase()} · FINAL RAW SIZE</text></g>;
+    })();
+
+    return (
+      <svg className={styles.stepSvg} viewBox="0 0 140 108" role="img" aria-label={`${name}: ${diagram.replaceAll("-", " ")} diagram`}>
+        <defs><marker id="step-arrow-explicit" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0 0 5 2.5 0 5Z" fill={COLORS.line} /></marker></defs>
+        {artwork}
+      </svg>
+    );
+  }
+
   if (stage === 0) {
     return (
       <svg className={styles.stepSvg} viewBox="0 0 120 90" aria-hidden="true">

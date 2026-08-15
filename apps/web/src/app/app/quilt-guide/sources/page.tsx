@@ -34,6 +34,13 @@ const SOURCE_GROUPS = [
       "Product dimensions, markings, and stated capacity are kept model-specific. The cutting chapter identifies the three exact rulers in Scott’s kit while keeping safety limits tied to each manufacturer.",
     sources: RESEARCH_SOURCES.slice(10, 14),
   },
+  {
+    eyebrow: "Construction methods",
+    title: "Fusible-grid piecing",
+    description:
+      "These manufacturer and extension references support the place, fuse, fold, sew, clip, alternate, and cross-sew sequence used for the table-runner method.",
+    sources: RESEARCH_SOURCES.slice(14, 18),
+  },
 ] as const;
 
 const GLOSSARY = [
@@ -60,9 +67,9 @@ export default function SourcesPage() {
   return (
     <>
       <PageIntro
-        chapter="07"
+        chapter="08"
         eyebrow="Sources, terms + scope"
-        title="Know what is measured, sourced, and assumed."
+        title="Sources, definitions, and formula limits"
         intro="The guide combines manufacturer documentation, established quilting instruction, and transparent geometry. This page shows which claims come from which source—and where the fabric in front of you must overrule a nominal label."
       >
         <div className={styles.pageIntroFormula}>
@@ -171,7 +178,7 @@ export default function SourcesPage() {
         <div className={styles.guideLinkGrid}>
           <GuideLinkCard href="/app/quilt-guide" number="00" title="Open the workbench" body="Return to the at-a-glance charts and full guide map." meta="All chapters" accent="gold" />
           <GuideLinkCard href="/app/quilt-guide/triangle-school" number="02" title="Check triangle math" body="Compare exact and trim-friendly HST, QST, and Flying Geese starts." meta="Formula calculators" accent="teal" />
-          <GuideLinkCard href="/app/quilt-guide/ruler-cutting" number="05" title="Set up a cutting batch" body="Follow standard-ruler and generic slotted-ruler workflows safely." meta="Square · strip · subcut" accent="tomato" />
+          <GuideLinkCard href="/app/quilt-guide/ruler-cutting" number="06" title="Set up a cutting batch" body="Follow standard-ruler and generic slotted-ruler workflows safely." meta="Square · strip · subcut" accent="tomato" />
         </div>
       </section>
     </>

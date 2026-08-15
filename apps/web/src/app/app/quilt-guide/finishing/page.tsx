@@ -8,7 +8,7 @@ export const metadata = { title: "Borders, Backing & Binding" };
 export default function FinishingPage() {
   return (
     <>
-      <PageIntro chapter="06" eyebrow="Finish the quilt" title="Measure the real top. Then finish the math." intro="Calculate backing in both panel orientations, conservative binding strips and yardage, and borders that fit the quilt you actually sewed—not only the dimensions the pattern predicted.">
+      <PageIntro chapter="07" eyebrow="Borders, backing, and binding" title="Calculate finishing measurements from the sewn top" intro="Calculate backing in both panel orientations, conservative binding strips and yardage, and borders that fit the quilt you actually sewed—not only the dimensions the pattern predicted.">
         <div className={styles.pageIntroFormula}><span>BACKING DEFAULT</span><strong>TOP + 4″ / SIDE</strong><small>editable · your longarmer’s requirement wins</small></div>
       </PageIntro>
       <section className={styles.contentSection}><FinishingCalculator /></section>
@@ -34,7 +34,7 @@ export default function FinishingPage() {
       </section>
 
       <section className={`${styles.contentSection} ${styles.darkSection}`}>
-        <SectionHeading eyebrow="Binding bench card" title="Straight-grain double-fold binding" />
+        <SectionHeading eyebrow="Binding steps" title="Straight-grain double-fold binding" />
         <div className={styles.bindingSteps}>
           <article><b>1</b><strong>Find perimeter</strong><p>2 × (finished width + finished height).</p></article>
           <article><b>2</b><strong>Add working buffer</strong><p>This guide adds 20″ for four corners, joins, overlap, and tails.</p></article>

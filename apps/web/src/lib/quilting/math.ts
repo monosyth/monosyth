@@ -251,6 +251,90 @@ export function quiltGridPlan({
   };
 }
 
+export type FusibleGridPlan = {
+  cutSquare: number;
+  finishedCell: number;
+  columns: number;
+  rows: number;
+  squares: number;
+  layoutWidth: number;
+  layoutLength: number;
+  centerRawWidth: number;
+  centerRawLength: number;
+  centerFinishedWidth: number;
+  centerFinishedLength: number;
+  runnerFinishedWidth: number;
+  runnerFinishedLength: number;
+  targetRunnerLength: number;
+  packs: number;
+  spareSquares: number;
+  firstDirectionSeams: number;
+  secondDirectionSeams: number;
+};
+
+/**
+ * Plans a straight-set fusible-grid panel made from equal squares.
+ * The fused layout uses the full cut-square footprint. Every internal seam
+ * consumes 1/2 inch; the outer 1/4-inch allowances remain until the center is
+ * enclosed by borders or binding.
+ */
+export function fusibleGridPlan({
+  tableLength,
+  runnerWidth,
+  endDrop,
+  cutSquare,
+  borderFinished,
+  packCount,
+}: {
+  tableLength: number;
+  runnerWidth: number;
+  endDrop: number;
+  cutSquare: number;
+  borderFinished: number;
+  packCount: number;
+}): FusibleGridPlan {
+  const table = Math.max(1, tableLength);
+  const width = Math.max(1, runnerWidth);
+  const drop = Math.max(0, endDrop);
+  const square = Math.max(1, cutSquare);
+  const border = Math.max(0, borderFinished);
+  const bundle = Math.max(1, Math.ceil(packCount));
+  const finishedCell = finishedFromCut(square);
+  const targetRunnerLength = table + drop * 2;
+  const targetCenterWidth = Math.max(finishedCell, width - border * 2);
+  const targetCenterLength = Math.max(
+    finishedCell,
+    targetRunnerLength - border * 2,
+  );
+  const columns = Math.max(1, Math.ceil(targetCenterWidth / finishedCell));
+  const rows = Math.max(1, Math.ceil(targetCenterLength / finishedCell));
+  const centerFinishedWidth = columns * finishedCell;
+  const centerFinishedLength = rows * finishedCell;
+  const squares = columns * rows;
+  const packs = Math.ceil(squares / bundle);
+
+  return {
+    cutSquare: square,
+    finishedCell,
+    columns,
+    rows,
+    squares,
+    layoutWidth: columns * square,
+    layoutLength: rows * square,
+    centerRawWidth: centerFinishedWidth + ENCLOSED_SEAM_LOSS,
+    centerRawLength: centerFinishedLength + ENCLOSED_SEAM_LOSS,
+    centerFinishedWidth,
+    centerFinishedLength,
+    runnerFinishedWidth: centerFinishedWidth + border * 2,
+    runnerFinishedLength: centerFinishedLength + border * 2,
+    targetRunnerLength,
+    packs,
+    spareSquares: packs * bundle - squares,
+    firstDirectionSeams: Math.max(0, columns - 1),
+    secondDirectionSeams: Math.max(0, rows - 1),
+  };
+}
+
 function requiredPanels(span: number, usableWidth: number, seamAllowance: number) {
   const netPanelWidth = usableWidth - seamAllowance * 2;
   return Math.max(

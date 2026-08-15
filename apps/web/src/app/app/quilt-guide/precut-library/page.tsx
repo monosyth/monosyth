@@ -7,22 +7,22 @@ import { PRECUTS } from "@/lib/quilting/data";
 
 import styles from "@/components/app/quilt-guide/quilt-guide.module.css";
 
-export const metadata = { title: "Precut Atlas" };
+export const metadata = { title: "Precut Sizes and Conversions" };
 
 export default function PrecutLibraryPage() {
   return (
     <>
-      <PageIntro chapter="01" eyebrow="Precut atlas" title="Know the stack before you cut it." intro="Nominal sizes, direct finished footprints, pack-count caveats, efficient subcuts, and the fix for mixing 10″, 5″, and 2½″ squares without surprise seam loss.">
+      <PageIntro chapter="01" eyebrow="Precut fabric" title="Precut sizes and conversions" intro="Standard cut sizes, finished patch sizes, pack-count differences, efficient subcuts, and calculations for mixing 10″, 5″, and 2½″ squares.">
         <div className={styles.pageIntroFormula}><span>ORDINARY PATCH</span><strong>CUT − ½″ = FINISH</strong><small>when all four sides enter ¼″ seams</small></div>
       </PageIntro>
 
       <figure className={styles.chapterPhoto}>
-        <Image src="/quilt-guide/precut-flatlay.png" alt="Photoreal precut quilting cotton stacks, strips, small squares, HST units, and a rotary cutter" fill sizes="100vw" />
+        <Image src="/quilt-guide/precut-flatlay.png" alt="Photoreal precut quilting cotton stacks, strips, small squares, HST units, and a rotary cutter" fill priority sizes="100vw" />
         <figcaption>Original studio image · Actual products can vary in count, pinking, and usable dimensions.</figcaption>
       </figure>
 
       <section className={styles.contentSection}>
-        <SectionHeading eyebrow="The atlas" title="Seven useful ways fabric arrives" description="Brand names are included for recognition. The dimension—not the nickname—is the calculator input." />
+        <SectionHeading eyebrow="Standard sizes" title="Common quilting precuts" description="Brand names are included for recognition. The dimension—not the nickname—is the calculator input." />
         <div className={styles.precutCardGrid}>
           {PRECUTS.map((precut, index) => (
             <article className={`${styles.precutCard} ${styles[`precut${precut.color[0].toUpperCase()}${precut.color.slice(1)}`]}`} key={precut.id}>
@@ -38,7 +38,7 @@ export default function PrecutLibraryPage() {
       </section>
 
       <section className={`${styles.contentSection} ${styles.paperSection}`}>
-        <SectionHeading eyebrow="Cutting equivalence" title="One large square contains the smaller cuts—before sewing" description="Area equivalence is helpful at the ruler. Once the small pieces are joined, every new seam changes the footprint." />
+        <SectionHeading eyebrow="Cutting equivalence" title="Subcutting large squares into smaller squares" description="Area equivalence applies before sewing. Once the small pieces are joined, every new seam changes the finished footprint." />
         <PrecutNestingDiagram />
         <div className={styles.equivalenceGrid}>
           <article><span>CUTTING AREA</span><strong>1 × 10″</strong><b>= 4 × 5″ = 16 × 2½″</b><p>True when subcutting the original square.</p></article>
@@ -51,7 +51,7 @@ export default function PrecutLibraryPage() {
       <section className={styles.contentSection}><PrecutGridCalculator /></section>
 
       <section className={styles.contentSection}>
-        <SectionHeading eyebrow="Quick conversions" title="Useful jobs for the precuts already on your shelf" />
+        <SectionHeading eyebrow="Precut reference chart" title="Common cuts and sewn results" />
         <div className={styles.quickTableWrap}>
           <table className={styles.quickTable}>
             <thead><tr><th>START WITH</th><th>CUT / METHOD</th><th>GET</th><th>FINISHED RESULT</th></tr></thead>

@@ -11,12 +11,12 @@ export const metadata = { title: "Efficient Ruler Cutting" };
 export default function RulerCuttingPage() {
   return (
     <>
-      <PageIntro chapter="05" eyebrow="Ruler cutting" title="Square once. Cut the whole batch." intro="Efficient workflows for a standard long quilting ruler and for slotted rulers such as Stripology®: align the fold, establish one clean edge, cut repeated widths, rotate the strip set, and subcut without doing arithmetic at every slot.">
+      <PageIntro chapter="06" eyebrow="Ruler cutting" title="Cut strips and repeated pieces accurately" intro="Efficient workflows for a standard long quilting ruler and for slotted rulers such as Stripology®: align the fold, establish one clean edge, cut repeated widths, rotate the strip set, and subcut without doing arithmetic at every slot.">
         <div className={styles.pageIntroFormula}><span>BATCH RULE</span><strong>SQUARE → STRIP → SUBCUT</strong><small>keep the fabric still as long as possible</small></div>
       </PageIntro>
 
       <section className={`${styles.contentSection} ${styles.paperSection}`}>
-        <SectionHeading eyebrow="Your ruler kit" title="Three rulers, three jobs—no duplicate measuring" description="These are the exact models in your sewing room. Start with the tool listed for the job, then use the other two only when their size or markings make the next cut easier." />
+        <SectionHeading eyebrow="Your ruler kit" title="Which of your three rulers to use" description="These are the exact models in your sewing room. Start with the tool listed for the job, then use the other two only when their size or markings make the next cut easier." />
         <div className={styles.rulerKitGrid}>
           <article>
             <div><span>01 · PRIMARY BATCH TOOL</span><strong>Stripology® XL</strong><small>CGRGE1XL · 22″ × 17¾″</small></div>
@@ -61,7 +61,7 @@ export default function RulerCuttingPage() {
       </section>
 
       <section className={styles.contentSection}>
-        <SectionHeading eyebrow="No-math cutting ticket" title="Tell the XL what you need" description="Enter the piece width and quantity. The ticket lists every cut for the first setup and tells you how many times to reset the fabric." />
+        <SectionHeading eyebrow="Stripology XL cutting ticket" title="Calculate the slots for repeated cuts" description="Enter the piece width and quantity. The ticket lists every cut for the first setup and tells you how many times to reset the fabric." />
         <RulerSlotPlanner />
       </section>
 

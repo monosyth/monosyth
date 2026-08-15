@@ -14,13 +14,13 @@ const ONE_PACK_GRIDS = [
 export default function QuiltPlannerPage() {
   return (
     <>
-      <PageIntro chapter="04" eyebrow="Target-size planner" title="Tell it where you want to land." intro="Enter the finished top you want, choose a block and optional sashing or border, then get the closest practical grid, actual dimensions, block count, precut pieces, and pack count.">
+      <PageIntro chapter="05" eyebrow="Quilt size planner" title="Calculate a quilt from the finished size" intro="Enter the finished top you want, choose a block and optional sashing or border, then get the closest practical grid, actual dimensions, block count, precut pieces, and pack count.">
         <div className={styles.pageIntroFormula}><span>CORE WIDTH</span><strong>BLOCKS + SASHING</strong><small>then add finished borders to both sides</small></div>
       </PageIntro>
       <section className={styles.contentSection}><QuiltPlanner /></section>
 
       <section className={`${styles.contentSection} ${styles.paperSection}`}>
-        <SectionHeading eyebrow="One-pack reality check" title="If every piece stays whole" description="These grids use a nominal 42-piece square pack with no sashing or borders. Actual pack counts remain editable in the planner." />
+        <SectionHeading eyebrow="Whole-precut examples" title="Finished sizes from one 42-piece pack" description="These grids use a nominal 42-piece square pack with no sashing or borders. Actual pack counts remain editable in the planner." />
         <div className={styles.onePackGrid}>
           {ONE_PACK_GRIDS.map((item) => <article key={item.precut}><span>{item.count} PIECES</span><h2>{item.precut}</h2><strong>{item.size}</strong><p>{item.grid} plain grid · ¼″ seams</p></article>)}
         </div>
@@ -28,7 +28,7 @@ export default function QuiltPlannerPage() {
       </section>
 
       <section className={styles.contentSection}>
-        <SectionHeading eyebrow="Sashing ticket" title="How many pieces sit between the blocks?" />
+        <SectionHeading eyebrow="Sashing piece count" title="Calculate the pieces between blocks" />
         <div className={styles.formulaCardGrid}>
           <article><span>VERTICAL SHORT SASHES</span><strong>rows × (columns − 1)</strong><p>Each is the raw block height long and cut at finished sashing width + ½″.</p></article>
           <article><span>HORIZONTAL SHORT SASHES</span><strong>columns × (rows − 1)</strong><p>Use this count when assembling with cornerstones at every intersection.</p></article>
@@ -38,7 +38,7 @@ export default function QuiltPlannerPage() {
       </section>
 
       <section className={`${styles.contentSection} ${styles.darkSection}`}>
-        <SectionHeading eyebrow="Plan in this order" title="A reliable route from target to cutting list" />
+        <SectionHeading eyebrow="Planning sequence" title="From target size to cutting list" />
         <ol className={styles.largeSteps}>
           <li><span>01</span><div><strong>Choose the real target</strong><p>Measure the bed, wall, person, or existing quilt—not just the category name.</p></div></li>
           <li><span>02</span><div><strong>Choose a finished block</strong><p>Use the block recipe’s FINISHES AT size, never its raw square-up size.</p></div></li>

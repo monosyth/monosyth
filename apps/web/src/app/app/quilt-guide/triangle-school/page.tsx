@@ -6,19 +6,19 @@ import { formatInches } from "@/lib/quilting/math";
 
 import styles from "@/components/app/quilt-guide/quilt-guide.module.css";
 
-export const metadata = { title: "Triangle School" };
+export const metadata = { title: "Triangle Unit Calculations" };
 
 export default function TriangleSchoolPage() {
   return (
     <>
-      <PageIntro chapter="02" eyebrow="Triangle school" title="Make the point. Keep the seam allowance." intro="Choose a finished unit and quantity. The guide gives a trim-friendly starting cut, exact benchmark, batch yield, trimming target, and construction map for HSTs, QSTs, and Flying Geese.">
+      <PageIntro chapter="02" eyebrow="Triangle unit calculations" title="HST, QST, and Flying Geese calculations" intro="Choose a finished unit and quantity. The guide gives a trim-friendly starting cut, exact benchmark, batch yield, trimming target, and construction map for HSTs, QSTs, and Flying Geese.">
         <div className={styles.pageIntroFormula}><span>HST · 2 AT ONCE</span><strong>FINISH + 1″</strong><small>trim-friendly start · trim to finish + ½″</small></div>
       </PageIntro>
 
       <section className={styles.contentSection}><TriangleCalculator /></section>
 
       <section className={`${styles.contentSection} ${styles.paperSection}`}>
-        <SectionHeading eyebrow="HST methods" title="Pick the batch that fits the job" description="Two-at-a-time is the everyday default. Eight-at-a-time is efficient for repeats. Four-at-a-time uses bias outer edges and rewards careful handling." />
+        <SectionHeading eyebrow="HST construction methods" title="Choose the number of units to make at once" description="Two-at-a-time is the everyday default. Eight-at-a-time is efficient for repeats. Four-at-a-time uses bias outer edges and requires careful handling." />
         <div className={styles.methodCardGrid}>
           <article><span>01</span><HstMethodDiagram method="two" /><h2>Two at a time</h2><p>Mark one diagonal, sew ¼″ on both sides, cut the marked line, press, and trim. Two equal squares make two HSTs.</p><strong>CUT · F + 1″ trim-friendly</strong></article>
           <article><span>02</span><HstMethodDiagram method="eight" /><h2>Eight at a time</h2><p>Mark both diagonals, sew beside both, then cut the square in half vertically, horizontally, and on both diagonals.</p><strong>CUT · 2 × (F + 1″)</strong></article>
@@ -28,7 +28,7 @@ export default function TriangleSchoolPage() {
       </section>
 
       <section className={styles.contentSection}>
-        <SectionHeading eyebrow="HST bench chart" title="Common finished sizes at a glance" description="All starting cuts shown here are the trim-friendly values used by the calculator." />
+        <SectionHeading eyebrow="HST size chart" title="Common finished and starting sizes" description="All starting cuts shown here are the trim-friendly values used by the calculator." />
         <div className={styles.quickTableWrap}>
           <table className={styles.quickTable}>
             <thead><tr><th>FINISHES AT</th><th>TRIM TO</th><th>2 AT A TIME · CUT</th><th>4 AT A TIME · CUT</th><th>8 AT A TIME · CUT</th></tr></thead>
@@ -38,7 +38,7 @@ export default function TriangleSchoolPage() {
       </section>
 
       <section className={styles.contentSection}>
-        <SectionHeading eyebrow="Unit choreography" title="The three sequences to memorize" />
+        <SectionHeading eyebrow="Construction diagrams" title="Steps for each triangle unit" />
         <div className={styles.sequenceGrid}>
           <article>
             <div className={styles.sequenceIcon}><i className={styles.hstShape} /></div>
@@ -59,7 +59,7 @@ export default function TriangleSchoolPage() {
       </section>
 
       <section className={`${styles.contentSection} ${styles.darkSection}`}>
-        <SectionHeading eyebrow="Point preservation" title="Four checks before the unit enters a block" />
+        <SectionHeading eyebrow="Accuracy checks" title="Check these four measurements before assembly" />
         <div className={styles.checkGrid}>
           <div><b>01</b><strong>Diagonal hits corners</strong><p>The HST seam or QST diagonal runs precisely corner to corner after trimming.</p></div>
           <div><b>02</b><strong>¼″ beyond the point</strong><p>A Flying Goose tip sits ¼″ below the raw edge so the next seam lands above it.</p></div>

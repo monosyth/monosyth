@@ -9,19 +9,21 @@ import { formatInches } from "@/lib/quilting/math";
 import styles from "@/components/app/quilt-guide/quilt-guide.module.css";
 
 export default function QuiltGuideHome() {
+  const referenceChecked = QUILT_BLOCKS.filter((block) => block.sources?.length).length;
+
   return (
     <>
       <section className={styles.homeHero}>
         <div className={styles.homeHeroCopy}>
-          <p className={styles.eyebrow}><span>00</span>Cut once. Sew calmly.</p>
-          <h1>Your no-math<br /><em>quilt desk.</em></h1>
-          <p>Choose the finished result. Get the starting cuts, trim size, unit yield, pack count, and a picture of what happens next—all built around a reliable ¼″ seam.</p>
+          <p className={styles.eyebrow}><span>00</span>Quilt reference guide</p>
+          <h1>Quilt calculations and block instructions</h1>
+          <p>Look up starting cuts, trim sizes, unit yields, precut conversions, finished quilt dimensions, and illustrated block instructions using a ¼″ seam allowance.</p>
           <div className={styles.heroActions}>
             <Link href="/app/quilt-guide/quilt-planner" className={styles.primaryAction}>Plan a quilt <span>→</span></Link>
             <Link href="/app/quilt-guide/block-library" className={styles.secondaryAction}>Browse {QUILT_BLOCKS.length} blocks</Link>
           </div>
           <div className={styles.heroProof}>
-            <span><i />25 named block recipes</span>
+            <span><i />{referenceChecked} source-checked blocks</span>
             <span><i />7 precut formats</span>
             <span><i />Research-linked formulas</span>
           </div>
@@ -41,7 +43,7 @@ export default function QuiltGuideHome() {
       </section>
 
       <section className={styles.contentSection}>
-        <SectionHeading eyebrow="Pick your question" title="Open the right page at the cutting table" description="Each chapter is a durable reference page with quick charts at the top and deeper instructions below." />
+        <SectionHeading eyebrow="Guide sections" title="Choose a subject" description="Each section starts with quick-reference information and continues with detailed instructions and calculators." />
         <div className={styles.guideLinkGrid}>
           <GuideLinkCard href="/app/quilt-guide/precut-library" number="01" title="I have precuts" body="See direct finished sizes, cut equivalence, seam-loss traps, pack grids, and mix-and-match fixes." meta="Layer · charm · mini · strips" accent="tomato">
             <div className={styles.miniPrecuts}><i /><i /><i /><i /></div>
@@ -49,23 +51,26 @@ export default function QuiltGuideHome() {
           <GuideLinkCard href="/app/quilt-guide/triangle-school" number="02" title="I need triangle units" body="Calculate 2-, 4-, or 8-at-a-time HSTs, QST hourglasses, and no-waste Flying Geese." meta="Cut · sew · trim" accent="teal">
             <div className={styles.miniHst}><i /><i /></div>
           </GuideLinkCard>
-          <GuideLinkCard href="/app/quilt-guide/block-library" number="03" title="I want a named block" body="Traditional and modern block recipes, each with its own cut list, unit map, and four illustrated steps." meta={`${QUILT_BLOCKS.length} complete recipes`} accent="gold">
+          <GuideLinkCard href="/app/quilt-guide/block-library" number="03" title="I want a named block" body="Traditional and modern block recipes with cut lists, unit diagrams, pressing directions, checkpoints, and source links." meta={`${referenceChecked} source-checked · ${QUILT_BLOCKS.length} total`} accent="gold">
             <BlockDiagram slug="sawtooth-star" name="Sawtooth Star" />
           </GuideLinkCard>
-          <GuideLinkCard href="/app/quilt-guide/quilt-planner" number="04" title="I know the final size" body="Enter the target top, block size, sashing, and border. Get a grid, exact result, pieces, and packs." meta="Target → blocks → packs" accent="lilac">
+          <GuideLinkCard href="/app/quilt-guide/construction-methods" number="04" title="I need a construction method" body="Compare standard row piecing with fusible-grid piecing, then plan a measured patchwork table runner." meta="Place · fuse · fold · sew" accent="tomato">
             <div className={styles.miniGrid}>{Array.from({ length: 20 }, (_, i) => <i key={i} />)}</div>
           </GuideLinkCard>
-          <GuideLinkCard href="/app/quilt-guide/ruler-cutting" number="05" title="I need to cut efficiently" body="Standard long-ruler and slotted-ruler workflows for WOF strips, repeated subcuts, and unit trimming." meta="Align · slot-cut · rotate" accent="teal">
+          <GuideLinkCard href="/app/quilt-guide/quilt-planner" number="05" title="I know the final size" body="Enter the target top, block size, sashing, and border. Get a grid, exact result, pieces, and packs." meta="Target → blocks → packs" accent="lilac">
+            <div className={styles.miniGrid}>{Array.from({ length: 20 }, (_, i) => <i key={i} />)}</div>
+          </GuideLinkCard>
+          <GuideLinkCard href="/app/quilt-guide/ruler-cutting" number="06" title="I need to cut efficiently" body="Standard long-ruler and slotted-ruler workflows for WOF strips, repeated subcuts, and unit trimming." meta="Align · slot-cut · rotate" accent="teal">
             <div className={styles.miniRuler}>{Array.from({ length: 7 }, (_, i) => <i key={i} />)}</div>
           </GuideLinkCard>
-          <GuideLinkCard href="/app/quilt-guide/finishing" number="06" title="I need to finish it" body="Calculate measured borders, backing panels in both orientations, and conservative binding yardage." meta="Borders · backing · binding" accent="tomato">
+          <GuideLinkCard href="/app/quilt-guide/finishing" number="07" title="I need to finish it" body="Calculate measured borders, backing panels in both orientations, and conservative binding yardage." meta="Borders · backing · binding" accent="tomato">
             <div className={styles.miniBinding}><i /><i /><i /></div>
           </GuideLinkCard>
         </div>
       </section>
 
       <section className={`${styles.contentSection} ${styles.paperSection}`}>
-        <SectionHeading eyebrow="The measurement model" title="Every answer labels the moment it belongs to" description="CUT is the piece under your ruler. TRIM TO is the unit before assembly. FINISHES AT is what remains after the next seams." />
+        <SectionHeading eyebrow="Measurement terms" title="Cut, unfinished, and finished sizes" description="CUT is the piece under your ruler. TRIM TO is the unit before assembly. FINISHES AT is what remains after the next seams." />
         <SeamMathDiagram />
         <div className={styles.metricGridFour}>
           <Metric label="SEAM" value="¼″" note="on each enclosed side" tone="tomato" />
@@ -73,11 +78,11 @@ export default function QuiltGuideHome() {
           <Metric label="FINISH → CUT" value="+ ½″" note="ordinary square or rectangle" tone="gold" />
           <Metric label="HST TRIM" value="F + ½″" note="unfinished square target" tone="lilac" />
         </div>
-        <Note title="The seam-loss trap" tone="gold">Four 5″ charms have the same cutting area as one 10″ square, but a sewn 2 × 2 charm grid finishes at 9″—not 9½″. The Precut Atlas shows when to trim the large patch or add 1″-cut internal sashing.</Note>
+        <Note title="Seam loss when sizes are mixed" tone="gold">Four 5″ charms have the same cutting area as one 10″ square, but a sewn 2 × 2 charm grid finishes at 9″—not 9½″. The precut section shows when to trim the large patch or add 1″-cut internal sashing.</Note>
       </section>
 
       <section className={styles.contentSection}>
-        <SectionHeading eyebrow="Quick HST look" title="Trim-friendly starts for common finished units" description="These starts deliberately include room to square up. The triangle chapter also shows exact tight-cut values and batch math." />
+        <SectionHeading eyebrow="HST quick chart" title="Trim-friendly starting squares" description="These starts deliberately include room to square up. The triangle section also shows exact tight-cut values and batch math." />
         <div className={styles.quickTableWrap}>
           <table className={styles.quickTable}>
             <thead><tr><th>FINISHES AT</th><th>TRIM TO</th><th>2 AT A TIME · CUT</th><th>4 AT A TIME · CUT</th><th>8 AT A TIME · CUT</th></tr></thead>
