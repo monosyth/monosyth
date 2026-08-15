@@ -1,0 +1,7 @@
+# Project-local Codex permissions for the trusted Monosyth Labs repository.
+# Keep work inside this repository writable and ask before broader access.
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+
+[sandbox_workspace_write]
+writable_roots = ["/Users/scottwaite/monosythlabs"]

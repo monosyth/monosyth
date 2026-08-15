@@ -8,7 +8,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { ProfileEditor } from "@/components/app/profile-editor";
 
 type ProjectAccent = "amber" | "cyan" | "magenta" | "red";
-type ProjectGlyphKind = "neon" | "possum" | "sewing" | "weather";
+type ProjectGlyphKind = "neon" | "possum" | "quilt" | "sewing" | "weather";
 
 type StudioProject = {
   name: string;
@@ -21,6 +21,15 @@ type StudioProject = {
 };
 
 const studioProjects: readonly StudioProject[] = [
+  {
+    name: "Quilt field guide",
+    href: "/app/quilt-guide",
+    label: "Open guide",
+    details: "Precut math, 25 named block recipes + cutting plans",
+    meta: "Sewing studio / Quilt reference",
+    accent: "cyan" as const,
+    glyph: "quilt" as const,
+  },
   {
     name: "Boxy bag builder",
     href: "/app/boxy-bag",
@@ -428,6 +437,31 @@ function ProjectGlyph({ kind }: { kind: ProjectGlyphKind }) {
           fill="#fff"
           opacity="0.92"
         />
+      </svg>
+    );
+  }
+
+  if (kind === "quilt") {
+    return (
+      <svg viewBox="0 0 64 64" width="42" height="42" aria-hidden="true">
+        <defs>
+          <linearGradient id="proj-quilt-a" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#4de1ff" />
+            <stop offset="100%" stopColor="#2dd4bf" />
+          </linearGradient>
+          <linearGradient id="proj-quilt-b" x1="1" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#facc15" />
+            <stop offset="100%" stopColor="#fb7185" />
+          </linearGradient>
+        </defs>
+        <rect x="8" y="8" width="48" height="48" rx="5" fill="#15102f" stroke="#fef3c7" strokeWidth="2" />
+        <path d="M10 10h22L10 32Z" fill="url(#proj-quilt-a)" />
+        <path d="M32 10h22v22Z" fill="url(#proj-quilt-b)" />
+        <path d="M10 32h22v22Z" fill="url(#proj-quilt-b)" />
+        <path d="M54 32v22H32Z" fill="url(#proj-quilt-a)" />
+        <path d="M32 10v44M10 32h44" fill="none" stroke="#fef3c7" strokeWidth="1.5" />
+        <path d="M10 10 54 54M54 10 10 54" fill="none" stroke="#fef3c7" strokeWidth="1" strokeDasharray="2.5 3" opacity="0.72" />
+        <circle cx="32" cy="32" r="5" fill="#fef3c7" />
       </svg>
     );
   }
