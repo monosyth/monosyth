@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 import { PrecutNestingDiagram } from "@/components/app/quilt-guide/diagrams";
 import { PrecutGridCalculator, PrecutMixer } from "@/components/app/quilt-guide/precut-tools";
@@ -15,6 +16,11 @@ export default function PrecutLibraryPage() {
       <PageIntro chapter="01" eyebrow="Precut fabric" title="Precut sizes and conversions" intro="Standard cut sizes, finished patch sizes, pack-count differences, efficient subcuts, and calculations for mixing 10″, 5″, and 2½″ squares.">
         <div className={styles.pageIntroFormula}><span>ORDINARY PATCH</span><strong>CUT − ½″ = FINISH</strong><small>when all four sides enter ¼″ seams</small></div>
       </PageIntro>
+
+      <section className={styles.preCutOutcomeLink}>
+        <div><strong>Have pieces in front of you?</strong><span>Calculate what they make, how many units you get, and the final block-grid size.</span></div>
+        <Link href="/app/quilt-guide/fabric-outcomes">Open fabric outcomes →</Link>
+      </section>
 
       <figure className={styles.chapterPhoto}>
         <Image src="/quilt-guide/real-quilting-tools.jpg" alt="Real rotary cutter, scissors, measuring tape, pins, thread, and sewing notions arranged on a green cutting mat" fill priority sizes="100vw" />

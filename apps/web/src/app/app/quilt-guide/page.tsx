@@ -19,7 +19,7 @@ export default function QuiltGuideHome() {
           <h1>Quilt calculations and block instructions</h1>
           <p>Look up starting cuts, trim sizes, unit yields, precut conversions, finished quilt dimensions, and illustrated block instructions using a ¼″ seam allowance.</p>
           <div className={styles.heroActions}>
-            <Link href="/app/quilt-guide/quilt-planner" className={styles.primaryAction}>Plan a quilt <span>→</span></Link>
+            <Link href="/app/quilt-guide/fabric-outcomes" className={styles.primaryAction}>Start with my fabric <span>→</span></Link>
             <Link href="/app/quilt-guide/block-library" className={styles.secondaryAction}>Browse {QUILT_BLOCKS.length} blocks</Link>
           </div>
           <div className={styles.heroProof}>
@@ -45,6 +45,9 @@ export default function QuiltGuideHome() {
       <section className={styles.contentSection}>
         <SectionHeading eyebrow="Guide sections" title="Choose a subject" description="Each section starts with quick-reference information and continues with detailed instructions and calculators." />
         <div className={styles.guideLinkGrid}>
+          <GuideLinkCard href="/app/quilt-guide/fabric-outcomes" number="01A" title="I know what pieces I have" body="Enter the cut size and quantity. See unit yield, trim size, block dimensions, starting pieces required, and the finished patchwork center." meta="Fabric → units → blocks → size" accent="teal">
+            <div className={styles.miniGrid}>{Array.from({ length: 9 }, (_, i) => <i key={i} />)}</div>
+          </GuideLinkCard>
           <GuideLinkCard href="/app/quilt-guide/precut-library" number="01" title="I have precuts" body="See direct finished sizes, cut equivalence, seam-loss traps, pack grids, and mix-and-match fixes." meta="Layer · charm · mini · strips" accent="tomato">
             <div className={styles.miniPrecuts}><i /><i /><i /><i /></div>
           </GuideLinkCard>

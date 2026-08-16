@@ -52,6 +52,10 @@ export function roundTo(value: number, increment = 0.125) {
   return Math.round(value / increment) * increment;
 }
 
+export function roundDownTo(value: number, increment = 0.125) {
+  return Math.max(0, Math.floor((value + Number.EPSILON) / increment) * increment);
+}
+
 export function formatInches(value: number, denominator = 8) {
   if (!Number.isFinite(value)) return "—";
 
@@ -90,6 +94,225 @@ export function unfinishedFromFinished(finishedSize: number) {
 
 export function plainPatchGridFinished(cutSize: number, count: number) {
   return Math.max(0, count) * finishedFromCut(cutSize);
+}
+
+export type FabricOutcomeMethod = "plain" | "hst-two" | "hst-four" | "hst-eight" | "qst";
+
+export type FabricOutcomePlan = {
+  method: FabricOutcomeMethod;
+  startSize: number;
+  startCount: number;
+  piecesPerBatch: number;
+  batches: number;
+  leftoverStartPieces: number;
+  yieldPerBatch: number;
+  totalUnits: number;
+  exactMaximumFinished: number;
+  practicalFinished: number;
+  trimTo: number;
+  biasEdges: boolean;
+  gridOptions: readonly {
+    rows: number;
+    columns: number;
+    unitsUsed: number;
+    unitsLeft: number;
+    finishedWidth: number;
+    finishedHeight: number;
+  }[];
+};
+
+/**
+ * Answers the fabric-first question: given equal starting squares, what can
+ * they reliably become? The practical result deliberately keeps trimming room
+ * and rounds down to an easy ruler increment. The exact result is shown only
+ * as a geometric ceiling, not as the recommended cut target.
+ */
+export function fabricOutcomePlan({
+  startSize,
+  startCount,
+  method,
+  easyIncrement = 0.5,
+}: {
+  startSize: number;
+  startCount: number;
+  method: FabricOutcomeMethod;
+  easyIncrement?: 0.25 | 0.5;
+}): FabricOutcomePlan {
+  const start = Math.max(1, startSize);
+  const count = Math.max(1, Math.floor(startCount));
+  let piecesPerBatch = 1;
+  let yieldPerBatch = 1;
+  let exactMaximumFinished = finishedFromCut(start);
+  let workingMaximum = exactMaximumFinished;
+  let biasEdges = false;
+
+  if (method === "hst-two") {
+    piecesPerBatch = 2;
+    yieldPerBatch = 2;
+    exactMaximumFinished = Math.max(0, start - 0.875);
+    workingMaximum = exactMaximumFinished - 0.125;
+  } else if (method === "hst-four") {
+    piecesPerBatch = 2;
+    yieldPerBatch = 4;
+    exactMaximumFinished = Math.max(0, (start - 0.5) / Math.SQRT2 - 0.5);
+    workingMaximum = exactMaximumFinished - 0.125;
+    biasEdges = true;
+  } else if (method === "hst-eight") {
+    piecesPerBatch = 2;
+    yieldPerBatch = 8;
+    exactMaximumFinished = Math.max(0, start / 2 - 0.875);
+    workingMaximum = exactMaximumFinished - 0.125;
+  } else if (method === "qst") {
+    piecesPerBatch = 2;
+    yieldPerBatch = 2;
+    exactMaximumFinished = Math.max(0, start - 1.25);
+    workingMaximum = exactMaximumFinished - 0.25;
+  }
+
+  const practicalFinished = roundDownTo(Math.max(0, workingMaximum), easyIncrement);
+  const batches = Math.floor(count / piecesPerBatch);
+  const totalUnits = batches * yieldPerBatch;
+  const gridOptions = [2, 3, 4].map((rows) => {
+    const columns = Math.floor(totalUnits / rows);
+    const unitsUsed = rows * columns;
+    return {
+      rows,
+      columns,
+      unitsUsed,
+      unitsLeft: totalUnits - unitsUsed,
+      finishedWidth: columns * practicalFinished,
+      finishedHeight: rows * practicalFinished,
+    };
+  }).filter((option) => option.columns > 0 && practicalFinished > 0);
+
+  return {
+    method,
+    startSize: start,
+    startCount: count,
+    piecesPerBatch,
+    batches,
+    leftoverStartPieces: count - batches * piecesPerBatch,
+    yieldPerBatch,
+    totalUnits,
+    exactMaximumFinished,
+    practicalFinished,
+    trimTo: practicalFinished ? unfinishedFromFinished(practicalFinished) : 0,
+    biasEdges,
+    gridOptions,
+  };
+}
+
+export function squareSubcutPlan({
+  parentSize,
+  parentCount,
+  subcutSize,
+}: {
+  parentSize: number;
+  parentCount: number;
+  subcutSize: number;
+}) {
+  const parent = Math.max(1, parentSize);
+  const count = Math.max(1, Math.floor(parentCount));
+  const subcut = Math.min(parent, Math.max(0.5, subcutSize));
+  const across = Math.floor(parent / subcut);
+  const perParent = across * across;
+  return {
+    across,
+    perParent,
+    totalPieces: perParent * count,
+    finishedEach: finishedFromCut(subcut),
+    usedWidth: across * subcut,
+    remainderPerSide: parent - across * subcut,
+  };
+}
+
+export function stripSetOutcomePlan({
+  stripWidth,
+  usableLength,
+  stripCount,
+}: {
+  stripWidth: number;
+  usableLength: number;
+  stripCount: number;
+}) {
+  const width = Math.max(0.75, stripWidth);
+  const length = Math.max(1, usableLength);
+  const count = Math.max(2, Math.floor(stripCount));
+  const rawSetWidth = count * width - (count - 1) * ENCLOSED_SEAM_LOSS;
+  const finishedSetWidth = count * finishedFromCut(width);
+  const squareSubcuts = Math.max(0, Math.floor(length / rawSetWidth));
+  return {
+    stripWidth: width,
+    usableLength: length,
+    stripCount: count,
+    rawSetWidth,
+    finishedSetWidth,
+    squareSubcuts,
+    squareUnitRaw: rawSetWidth,
+    squareUnitFinished: finishedFromCut(rawSetWidth),
+    remainderLength: length - squareSubcuts * rawSetWidth,
+  };
+}
+
+export function unitProjectPlan({
+  unitFinished,
+  availableUnits,
+  yieldPerBatch,
+  piecesPerBatch,
+  unitRowsPerBlock,
+  unitColumnsPerBlock,
+  plainCellsPerBlock,
+  blockRows,
+  blockColumns,
+}: {
+  unitFinished: number;
+  availableUnits: number;
+  yieldPerBatch: number;
+  piecesPerBatch: number;
+  unitRowsPerBlock: number;
+  unitColumnsPerBlock: number;
+  plainCellsPerBlock: number;
+  blockRows: number;
+  blockColumns: number;
+}) {
+  const unit = Math.max(0, unitFinished);
+  const units = Math.max(0, Math.floor(availableUnits));
+  const yieldCount = Math.max(1, Math.floor(yieldPerBatch));
+  const batchPieces = Math.max(1, Math.floor(piecesPerBatch));
+  const unitRows = Math.max(1, Math.floor(unitRowsPerBlock));
+  const unitColumns = Math.max(1, Math.floor(unitColumnsPerBlock));
+  const cellsPerBlock = unitRows * unitColumns;
+  const plainCells = Math.min(cellsPerBlock - 1, Math.max(0, Math.floor(plainCellsPerBlock)));
+  const piecedUnitsPerBlock = cellsPerBlock - plainCells;
+  const rows = Math.max(1, Math.floor(blockRows));
+  const columns = Math.max(1, Math.floor(blockColumns));
+  const requestedBlocks = rows * columns;
+  const requiredUnits = requestedBlocks * piecedUnitsPerBlock;
+  const requiredBatches = Math.ceil(requiredUnits / yieldCount);
+  const maxBlocks = Math.floor(units / piecedUnitsPerBlock);
+
+  return {
+    unitRowsPerBlock: unitRows,
+    unitColumnsPerBlock: unitColumns,
+    cellsPerBlock,
+    plainCellsPerBlock: plainCells,
+    piecedUnitsPerBlock,
+    blockRows: rows,
+    blockColumns: columns,
+    requestedBlocks,
+    requiredUnits,
+    requiredBatches,
+    requiredStartingPieces: requiredBatches * batchPieces,
+    producedForRequirement: requiredBatches * yieldCount,
+    spareFromRequirement: requiredBatches * yieldCount - requiredUnits,
+    maxBlocks,
+    enoughUnits: units >= requiredUnits,
+    unitsShortOrLeft: units - requiredUnits,
+    blockFinishedWidth: unitColumns * unit,
+    blockFinishedHeight: unitRows * unit,
+    projectFinishedWidth: columns * unitColumns * unit,
+    projectFinishedHeight: rows * unitRows * unit,
+  };
 }
 
 export function hstPlan(
