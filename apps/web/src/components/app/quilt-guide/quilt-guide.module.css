@@ -4850,6 +4850,235 @@
   font-weight: 850;
 }
 
+.packPurchaseSummary {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.7fr) minmax(0, 1.3fr);
+  gap: 1rem 1.25rem;
+  margin-top: 1rem;
+  padding: 1.15rem;
+  color: var(--q-white);
+  background: var(--q-navy);
+  border-top: 5px solid var(--q-gold);
+  border-radius: 0.55rem;
+}
+
+.packMathMissing {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 1rem;
+  padding: 1.1rem;
+  background: rgba(227, 165, 46, 0.12);
+  border: 2px solid var(--q-gold);
+  border-radius: 0.55rem;
+}
+
+.packMathMissing span {
+  color: var(--q-tomato);
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: 0.92rem;
+  font-weight: 900;
+  letter-spacing: 0.045em;
+}
+
+.packMathMissing strong {
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: 1.35rem;
+  line-height: 1.25;
+}
+
+.packMathMissing p {
+  margin: 0;
+  color: var(--q-ink-soft);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.packPurchaseSummary > div:first-child {
+  display: grid;
+  align-content: center;
+  gap: 0.25rem;
+}
+
+.packPurchaseSummary > div:first-child span {
+  color: rgba(255, 255, 255, 0.76);
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: 0.92rem;
+  font-weight: 850;
+  letter-spacing: 0.045em;
+}
+
+.packPurchaseSummary > div:first-child strong {
+  color: var(--q-gold);
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: clamp(2.4rem, 4.5vw, 3.8rem);
+  font-weight: 900;
+  line-height: 0.95;
+}
+
+.packPurchaseSummary > div:first-child b {
+  font-size: 1.05rem;
+}
+
+.packPurchaseSummary dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.packPurchaseSummary dl > div {
+  display: grid;
+  gap: 0.12rem;
+  padding: 0.7rem 0.8rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.packPurchaseSummary dt {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.packPurchaseSummary dd {
+  margin: 0;
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.packPurchaseSummary > p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.packHelpLink {
+  margin: 0.8rem 0 0;
+  color: var(--q-ink-soft);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.packHelpLink a {
+  color: var(--q-teal-dark);
+  font-weight: 850;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.resultTiles .packResultTile {
+  background: rgba(227, 165, 46, 0.14);
+  box-shadow: inset 0 4px 0 var(--q-gold);
+}
+
+.selectedBlockSummary {
+  display: grid;
+  grid-template-columns: minmax(11rem, 0.55fr) minmax(0, 1.2fr) auto;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.7rem;
+  padding: 0.9rem 1rem;
+  background: rgba(22, 116, 113, 0.08);
+  border: 1px solid rgba(22, 116, 113, 0.25);
+  border-radius: 0.45rem;
+}
+
+.selectedBlockSummary > div {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.selectedBlockSummary strong {
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: 1.15rem;
+}
+
+.selectedBlockSummary span,
+.selectedBlockSummary p,
+.selectedBlockSummary a {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.selectedBlockSummary span,
+.selectedBlockSummary p { color: var(--q-ink-soft); }
+.selectedBlockSummary p { margin: 0; }
+.selectedBlockSummary a { color: var(--q-teal-dark); font-weight: 850; }
+
+.blockMaterialTotals {
+  padding: 1.15rem;
+  background: var(--q-paper-deep);
+  border: 1px solid var(--q-line-strong);
+  border-radius: 0.55rem;
+}
+
+.blockMaterialTotalsHead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+
+.blockMaterialTotalsHead span {
+  color: var(--q-teal-dark);
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: 0.9rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+}
+
+.blockMaterialTotalsHead h3 {
+  margin: 0.2rem 0 0;
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: 1.45rem;
+  font-weight: 850;
+}
+
+.blockMaterialTotalsHead a {
+  color: var(--q-teal-dark);
+  font-size: 1rem;
+  font-weight: 850;
+}
+
+.blockMaterialGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.blockMaterialGrid article {
+  padding: 0.9rem;
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid var(--q-line);
+  border-radius: 0.4rem;
+}
+
+.blockMaterialGrid article > strong {
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: 1.1rem;
+}
+
+.blockMaterialGrid ul {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.55rem 0 0;
+  padding-left: 1.15rem;
+}
+
+.blockMaterialGrid li,
+.blockMaterialTotals > p,
+.blockMaterialTotals > small {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.blockMaterialTotals > p { margin: 0.9rem 0 0.3rem; }
+.blockMaterialTotals > small { display: block; color: var(--q-ink-soft); }
+
 @media (max-width: 760px) {
   .auditCoverageGrid { grid-template-columns: 1fr; }
   .preCutOutcomeLink,
@@ -4861,6 +5090,9 @@
   .fabricBlockResult,
   .fabricProjectResult { grid-template-columns: 1fr; }
   .fabricProjectNumbers dl { grid-template-columns: 1fr; }
+  .packPurchaseSummary { grid-template-columns: 1fr; }
+  .selectedBlockSummary { grid-template-columns: 1fr; }
+  .blockMaterialGrid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 900px) {

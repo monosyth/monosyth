@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { QUILT_BLOCKS } from "@/lib/quilting/data";
 import { formatInches, quiltGridPlan } from "@/lib/quilting/math";
 
 import { QuiltGridDiagram } from "./diagrams";
@@ -28,6 +30,7 @@ const PACKS = [
 export function QuiltPlanner() {
   const [targetWidth, setTargetWidth] = useState(54);
   const [targetHeight, setTargetHeight] = useState(72);
+  const [blockSlug, setBlockSlug] = useState("custom");
   const [blockFinished, setBlockFinished] = useState(9.5);
   const [sashingFinished, setSashingFinished] = useState(0);
   const [borderFinished, setBorderFinished] = useState(0);
@@ -37,9 +40,13 @@ export function QuiltPlanner() {
   const [piecesPerBlock, setPiecesPerBlock] = useState(1);
 
   const plan = useMemo(() => quiltGridPlan({ targetWidth, targetHeight, blockFinished, sashingFinished, borderFinished, fit }), [targetWidth, targetHeight, blockFinished, sashingFinished, borderFinished, fit]);
+  const packMathReady = piecesPerBlock > 0;
   const piecesNeeded = plan.blocks * piecesPerBlock;
-  const packsNeeded = Math.ceil(piecesNeeded / packCount);
-  const piecesLeft = packsNeeded * packCount - piecesNeeded;
+  const packsNeeded = packMathReady ? Math.ceil(piecesNeeded / packCount) : 0;
+  const piecesSupplied = packsNeeded * packCount;
+  const piecesLeft = piecesSupplied - piecesNeeded;
+  const selectedPack = PACKS.find((item) => item.id === packId) ?? PACKS[0];
+  const selectedBlock = QUILT_BLOCKS.find((block) => block.slug === blockSlug);
 
   function choosePreset(width: number, height: number) {
     setTargetWidth(width);
@@ -50,6 +57,18 @@ export function QuiltPlanner() {
     setPackId(nextId);
     const pack = PACKS.find((item) => item.id === nextId);
     if (pack) setPackCount(pack.count);
+    if (blockSlug !== "custom") setPiecesPerBlock(0);
+  }
+
+  function chooseBlock(nextSlug: string) {
+    setBlockSlug(nextSlug);
+    const block = QUILT_BLOCKS.find((item) => item.slug === nextSlug);
+    if (block) {
+      setBlockFinished(parseDisplayInches(block.finishedSize));
+      setPiecesPerBlock(0);
+    } else {
+      setPiecesPerBlock(1);
+    }
   }
 
   return (
@@ -74,9 +93,23 @@ export function QuiltPlanner() {
             </div>
           </fieldset>
           <fieldset className={styles.controlGroup}>
-            <legend>2 · Construction</legend>
+            <legend>2 · Block and construction</legend>
+            <label className={styles.fieldLabel}>
+              <span>Named block · optional</span>
+              <select value={blockSlug} onChange={(event) => chooseBlock(event.target.value)}>
+                <option value="custom">Custom block size</option>
+                {QUILT_BLOCKS.map((block) => <option key={block.slug} value={block.slug}>{block.name} · {block.finishedSize} finished</option>)}
+              </select>
+            </label>
+            {selectedBlock ? (
+              <div className={styles.selectedBlockSummary}>
+                <div><strong>{selectedBlock.name}</strong><span>{selectedBlock.unitType} · {selectedBlock.difficulty}</span></div>
+                <p>{selectedBlock.summary}</p>
+                <Link href={`/app/quilt-guide/block-library/${selectedBlock.slug}`}>Open the full block recipe →</Link>
+              </div>
+            ) : null}
             <div className={styles.inputGridThree}>
-              <NumberInput label="Finished block" value={blockFinished} onChange={setBlockFinished} step={0.5} min={0.5} />
+              <NumberInput label={selectedBlock ? "Finished block · from recipe" : "Finished block"} value={blockFinished} onChange={(value) => { setBlockFinished(value); setBlockSlug("custom"); }} step={0.5} min={0.5} />
               <NumberInput label="Finished sashing" value={sashingFinished} onChange={setSashingFinished} step={0.25} />
               <NumberInput label="Finished border" value={borderFinished} onChange={setBorderFinished} step={0.25} />
             </div>
@@ -90,8 +123,31 @@ export function QuiltPlanner() {
             <div className={styles.inputGridThree}>
               <label className={styles.fieldLabel}><span>Precut type</span><select value={packId} onChange={(event) => choosePack(event.target.value)}>{PACKS.map((pack) => <option key={pack.id} value={pack.id}>{pack.label}</option>)}</select></label>
               <label className={styles.fieldLabel}><span>Actual count / pack</span><input type="number" min="1" max="1000" step="1" value={packCount} onChange={(event) => setPackCount(clampInteger(event.target.valueAsNumber, 1, 1000, 1))} /></label>
-              <label className={styles.fieldLabel}><span>Pieces / block</span><input type="number" min="1" max="1000" step="1" value={piecesPerBlock} onChange={(event) => setPiecesPerBlock(clampInteger(event.target.valueAsNumber, 1, 1000, 1))} /></label>
+              <label className={styles.fieldLabel}><span>Pieces from this pack / block</span><input type="number" min="0" max="1000" step="1" value={piecesPerBlock} onChange={(event) => setPiecesPerBlock(clampInteger(event.target.valueAsNumber, 0, 1000, 0))} /></label>
             </div>
+            {packMathReady ? (
+              <div className={styles.packPurchaseSummary} aria-live="polite">
+                <div>
+                  <span>BUY FOR THE BLOCKS</span>
+                  <strong>{packsNeeded} {packsNeeded === 1 ? "PACK" : "PACKS"}</strong>
+                  <b>of {selectedPack.label}</b>
+                </div>
+                <dl>
+                  <div><dt>Blocks</dt><dd>{plan.blocks}</dd></div>
+                  <div><dt>Pieces required</dt><dd>{piecesNeeded}</dd></div>
+                  <div><dt>Pieces supplied</dt><dd>{piecesSupplied}</dd></div>
+                  <div><dt>Pieces left</dt><dd>{piecesLeft}</dd></div>
+                </dl>
+                <p>This covers the entered pieces from the selected pack used inside the blocks only. Other fabrics, sashing, borders, backing, and binding are separate.</p>
+              </div>
+            ) : (
+              <div className={styles.packMathMissing} aria-live="polite">
+                <span>ONE INPUT NEEDED</span>
+                <strong>Enter how many {selectedPack.label} one block consumes.</strong>
+                <p>A named block can mix precuts, yardage, and multiple fabrics. The planner will not invent one pack number and risk telling you to buy the wrong amount.</p>
+              </div>
+            )}
+            <p className={styles.packHelpLink}>Not sure how many precut pieces one block uses? <Link href="/app/quilt-guide/fabric-outcomes">Work forward from the fabric first →</Link></p>
           </fieldset>
         </div>
 
@@ -106,13 +162,31 @@ export function QuiltPlanner() {
             <div><span>GRID</span><strong>{plan.columns} × {plan.rows}</strong><small>columns × rows</small></div>
             <div><span>BLOCKS</span><strong>{plan.blocks}</strong><small>finished at {formatInches(blockFinished)}</small></div>
             <div><span>PRECUTS</span><strong>{piecesNeeded}</strong><small>{piecesPerBlock} per block</small></div>
-            <div><span>PACKS</span><strong>{packsNeeded}</strong><small>{piecesLeft} pieces left</small></div>
+            <div className={styles.packResultTile}><span>PACKS TO BUY</span><strong>{packMathReady ? packsNeeded : "—"}</strong><small>{packMathReady ? `${piecesSupplied} supplied · ${piecesLeft} left` : "enter pieces / block"}</small></div>
           </div>
           <div className={styles.cutSummary}>
             <p><span className={styles.cutLabel}>CUT SASHING</span><strong>{sashingFinished > 0 ? `${formatInches(sashingFinished + 0.5)} wide` : "None"}</strong></p>
             <p><span className={styles.cutLabel}>CUT BORDER</span><strong>{borderFinished > 0 ? `${formatInches(borderFinished + 0.5)} wide` : "None"}</strong></p>
             <small>Cut widths include the two ¼″ seam allowances. Measure the real quilt center before cutting final border lengths.</small>
           </div>
+          {selectedBlock ? (
+            <section className={styles.blockMaterialTotals} aria-labelledby="whole-quilt-cutting-title">
+              <div className={styles.blockMaterialTotalsHead}>
+                <div><span>SELECTED BLOCK · {plan.blocks} TOTAL</span><h3 id="whole-quilt-cutting-title">Whole-quilt block cutting totals</h3></div>
+                <Link href={`/app/quilt-guide/block-library/${selectedBlock.slug}`}>Instructions →</Link>
+              </div>
+              <div className={styles.blockMaterialGrid}>
+                {selectedBlock.cuts.map((group) => (
+                  <article key={group.fabric}>
+                    <strong>{group.fabric}</strong>
+                    <ul>{group.cuts.map((cut) => <li key={cut}>{scaleCutForBlocks(cut, plan.blocks)}</li>)}</ul>
+                  </article>
+                ))}
+              </div>
+              <p><strong>Precut note:</strong> {selectedBlock.precutNote}</p>
+              <small>Totals multiply the published one-block cut list by {plan.blocks}. They do not perform two-dimensional nesting inside a layer square or yardage cut; use the pack field only for the precut pieces you know one block consumes.</small>
+            </section>
+          ) : null}
         </div>
       </div>
     </section>
@@ -135,4 +209,19 @@ function clampInteger(value: number, min: number, max: number, fallback: number)
 function formatDelta(value: number, dimension: string) {
   if (Math.abs(value) < 0.001) return `exact ${dimension}`;
   return `${formatInches(Math.abs(value))} ${value > 0 ? "over" : "under"} ${dimension}`;
+}
+
+function parseDisplayInches(value: string) {
+  const fractions: Record<string, number> = { "⅛": 0.125, "¼": 0.25, "⅜": 0.375, "½": 0.5, "⅝": 0.625, "¾": 0.75, "⅞": 0.875 };
+  const whole = Number(value.match(/\d+/)?.[0] ?? 0);
+  const fraction = Object.entries(fractions).find(([symbol]) => value.includes(symbol))?.[1] ?? 0;
+  return whole + fraction;
+}
+
+function scaleCutForBlocks(cut: string, blocks: number) {
+  const standard = cut.match(/^(\d+)(?:\s+needed)?\s*[—-]\s*(.+)$/);
+  if (standard) return `${Number(standard[1]) * blocks} — ${standard[2]}`;
+  const optional = cut.match(/^Optional:\s*(\d+)\s+(.+)$/i);
+  if (optional) return `Optional: up to ${Number(optional[1]) * blocks} ${optional[2]}`;
+  return `${blocks} blocks × ${cut}`;
 }
