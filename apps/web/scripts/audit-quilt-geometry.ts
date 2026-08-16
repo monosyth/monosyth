@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { auditBlockLibrary } from "../src/lib/quilting/block-geometry";
 import { QUILT_BLOCKS } from "../src/lib/quilting/data";
 import { fabricOutcomePlan, squareSubcutPlan, stripSetOutcomePlan, unitProjectPlan } from "../src/lib/quilting/math";
+import { getRulerProfile, rulerCutPlan } from "../src/lib/quilting/rulers";
 
 const audits = auditBlockLibrary(QUILT_BLOCKS);
 const failures = audits.filter((audit) => audit.status === "fail");
@@ -64,3 +65,28 @@ assert.equal(threeRailStripSet.rawSetWidth, 6.5);
 assert.equal(threeRailStripSet.squareSubcuts, 6);
 
 console.log("Fabric-first checks: charm Magic 8, nested block layouts, square subcuts, and strip sets passed.");
+
+const mini = getRulerProfile("stripology-mini");
+const miniJellyStrips = rulerCutPlan({ ruler: mini, pieceWidth: 2.5, quantity: 16 });
+assert.equal(miniJellyStrips.directSlots, true);
+assert.equal(miniJellyStrips.piecesPerSetup, 2);
+assert.equal(miniJellyStrips.setups, 8);
+assert.deepEqual(miniJellyStrips.slots, [0, 2.5, 5]);
+
+const miniQuarterOffset = rulerCutPlan({ ruler: mini, pieceWidth: 2.25, quantity: 16 });
+assert.equal(miniQuarterOffset.directSlots, false);
+assert.equal(miniQuarterOffset.supportedOffset, true);
+assert.equal(miniQuarterOffset.piecesPerSetup, 1);
+assert.equal(miniQuarterOffset.setups, 16);
+
+const quartersMini = getRulerProfile("stripology-quarters-mini");
+const quartersDirect = rulerCutPlan({ ruler: quartersMini, pieceWidth: 2.25, quantity: 16 });
+assert.equal(quartersDirect.directSlots, true);
+assert.equal(quartersDirect.piecesPerSetup, 2);
+assert.deepEqual(quartersDirect.slots, [0, 2.25, 4.5]);
+
+const fiskars = getRulerProfile("fiskars-624");
+assert.equal(rulerCutPlan({ ruler: fiskars, pieceWidth: 6.5, quantity: 1 }).valid, false);
+assert.equal(rulerCutPlan({ ruler: fiskars, pieceWidth: 5, quantity: 4 }).standard, true);
+
+console.log("Ruler-profile checks: Mini direct slots, offset cuts, Quarters Mini, and long-ruler reach passed.");

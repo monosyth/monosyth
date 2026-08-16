@@ -16,22 +16,22 @@ export default function RulerCuttingPage() {
       </PageIntro>
 
       <section className={`${styles.contentSection} ${styles.paperSection}`}>
-        <SectionHeading eyebrow="Your ruler kit" title="Which of your three rulers to use" description="These are the exact models in your sewing room. Start with the tool listed for the job, then use the other two only when their size or markings make the next cut easier." />
+        <SectionHeading eyebrow="Your ruler kit" title="The three rulers you actually own" description="The Mini handles small repeated cuts and unit trimming. The long Fiskars ruler establishes WOF-length edges and strips. The 6½″ × 12½″ Creative Grids ruler checks individual pieces and diagonals." />
         <div className={styles.rulerKitGrid}>
           <article>
-            <div><span>01 · PRIMARY BATCH TOOL</span><strong>Stripology® XL</strong><small>CGRGE1XL · 22″ × 17¾″</small></div>
-            <RulerProfileDiagram kind="stripology-xl" />
-            <h2>Reach for it first</h2>
-            <p>Batch-cut WOF strips, turn strip sets into repeated squares or rectangles, work from 10″ precuts, cut diamonds or triangles, and square blocks up to 12½″.</p>
-            <strong>Best handoff → use the 6½″ × 12½″ ruler to inspect or trim individual units.</strong>
-            <a href="https://gequiltdesigns.com/products/stripology-xl-ruler-by-ge-designs" target="_blank" rel="noreferrer">Official ruler details ↗</a>
+            <div><span>01 · SMALL BATCH TOOL</span><strong>Stripology® Squared Mini</strong><small>CGRGE3 · 8½″ × 12½″</small></div>
+            <RulerProfileDiagram kind="stripology-mini" />
+            <h2>Use it for small repeated pieces</h2>
+            <p>Cut folded fat quarters or fat eighths into strips, subcut strips and small precuts, use quarter/eighth offset markings, and square sewn units through 6½″. Its slits are 9½″ long.</p>
+            <strong>Best handoff → make long WOF cuts with the Fiskars ruler, then use the Mini for repeated subcuts.</strong>
+            <a href="https://www.creativegridsusa.com/products/CGRGE3" target="_blank" rel="noreferrer">Official CGRGE3 details ↗</a>
           </article>
           <article>
             <div><span>02 · PRECISION BENCH TOOL</span><strong>Creative Grids® rectangle</strong><small>CGR612 · 6½″ × 12½″</small></div>
             <RulerProfileDiagram kind="creative-grids-612" />
             <h2>Reach for it to finish</h2>
             <p>Subcut short strips, trim blocks, center fussy cuts, check ¼″ seam allowances, and use the 45° lines for HSTs, Flying Geese, or on-point squares. Its 30°/60° line handles diamonds.</p>
-            <strong>Best handoff → batch first on the XL; verify the first unit here before cutting the rest.</strong>
+            <strong>Best handoff → batch small pieces on the Mini; verify the first sewn unit here before cutting the rest.</strong>
             <a href="https://www.creativegridsusa.com/products/CGR612" target="_blank" rel="noreferrer">Official ruler details ↗</a>
           </article>
           <article>
@@ -43,7 +43,7 @@ export default function RulerCuttingPage() {
             <a href="https://www.amazon.com/dp/B0C8BMVL93" target="_blank" rel="noreferrer">Your exact model listing ↗</a>
           </article>
         </div>
-        <Note title="Your default workflow" tone="gold">Use the Fiskars ruler to check or establish a long fold-aligned edge, the Stripology XL to make the repeated batch, and the Creative Grids 6½″ × 12½″ to trim and inspect the first sewn unit. You do not need all three for every cut.</Note>
+        <Note title="Your default workflow" tone="gold">Use the Fiskars ruler for a long fold-aligned edge or WOF strip. Move the resulting strip, fat quarter, or small precut to the Stripology Mini for repeated subcuts. Use the Creative Grids 6½″ × 12½″ ruler to trim and inspect the first sewn unit. You do not need all three for every cut.</Note>
       </section>
 
       <section className={styles.contentSection}>
@@ -57,33 +57,33 @@ export default function RulerCuttingPage() {
             </article>
           ))}
         </div>
-        <Note title="Stripology® XL manufacturer capability" tone="teal">The 22″ × 17¾″ XL ruler has 14¾″ cutting slots at ½″ intervals, with additional quarter-inch markings. GE Designs says it can cut up to eight 2½″ strips or fourteen 1½″ strips without moving the ruler. Treat those as this product’s capabilities, not a universal layer or safety limit.</Note>
+        <Note title="Your Stripology® Mini’s working range" tone="teal">The CGRGE3 measures 8½″ × 12½″, has 9½″-long slits at ½″ intervals, includes quarter-, eighth-, and three-eighth offset markings, and squares units through 6½″. GE Designs says it can cut four 1½″ strips without moving the ruler. Those are Mini-specific capabilities—not XL capacities.</Note>
       </section>
 
       <section className={styles.contentSection}>
-        <SectionHeading eyebrow="Stripology XL cutting ticket" title="Calculate the slots for repeated cuts" description="Enter the piece width and quantity. The ticket lists every cut for the first setup and tells you how many times to reset the fabric." />
+        <SectionHeading eyebrow="Ruler selector + cutting ticket" title="Choose the ruler that is on your mat" description="Your Stripology Mini is selected first. Change rulers and the ticket recalculates the usable span, physical slot spacing, offset-cut method, and number of resets." />
         <RulerSlotPlanner />
       </section>
 
       <section className={`${styles.contentSection} ${styles.paperSection}`}>
-        <SectionHeading eyebrow="Six jobs on your XL" title="Set up once for the work in front of you" description="Each picture is an original bench diagram—not a reproduction of a book or pattern. Exact quarter-inch offsets and specialty marks should still be read from the chart supplied with your ruler." />
+        <SectionHeading eyebrow="Six useful cutting jobs" title="Use the Mini where its size helps" description="These are original bench diagrams, not reproductions of a book. The examples below are sized for your Mini; select a different ruler in the calculator when the material or required reach is larger." />
         <div className={styles.methodCardGrid}>
-          <article><span>01</span><RulerJobDiagram job="wof-strips" /><h2>Yardage → WOF strips</h2><p>Put the lower fold closest to you. Align both folds to one horizontal ruler line, leave the uneven raw edge just left of 0, cut 0 upward, then follow the marked slot ticket.</p><strong>CHECK · Open the first strip. A V at the fold means realign before batch cutting.</strong></article>
+          <article><span>01</span><RulerJobDiagram job="wof-strips" /><h2>Fat quarter → strips</h2><p>Follow the CGRGE3 fold diagram: fold the fat quarter lengthwise, then into four layers. Align the lower fold at 0, keep the upper fold parallel, square the raw end, and cut the selected slots.</p><strong>CHECK · Open the first strip. A V at a fold means realign before batch cutting.</strong></article>
           <article><span>02</span><RulerJobDiagram job="subcut-strips" /><h2>Loose strips → pieces</h2><p>Stack only a comfortable number of equal-width strips. Align their clean ends just left of 0, then subcut the largest required rectangles before smaller leftovers.</p><strong>CHECK · Count every piece before shifting the remaining strip stack.</strong></article>
           <article><span>03</span><RulerJobDiagram job="strip-set" /><h2>Sewn strip set → units</h2><p>Press the set flat. Align one long seam—not a wavy outside edge—with a horizontal line, square the leading end at 0, and crosscut the unit width from the ticket.</p><strong>CHECK · A seam that drifts from the ruler line needs pressing or resewing first.</strong></article>
-          <article><span>04</span><RulerJobDiagram job="ten-square" /><h2>Trim a 10″ square</h2><p>Use the ruler’s 10″ square-up reference. Align two fabric edges, shave only what is needed, rotate the square 180°, then place the clean edges on the target guides and trim the last two.</p><strong>CHECK · Measure the result before treating every precut in the pack the same way.</strong></article>
-          <article><span>05</span><RulerJobDiagram job="square-block" /><h2>Square a sewn block</h2><p>Center the block in its target-size box, matching useful seams or diagonals to printed guides. Share the trim across opposing sides; trim two, rotate, and finish the other two.</p><strong>CHECK · Your XL supports blocks through 12½″; use the CGR612 for smaller units.</strong></article>
-          <article><span>06</span><RulerJobDiagram job="diamonds" /><h2>Cut 45° or 60° diamonds</h2><p>Cut the strip to the pattern’s stated height first. Align the required angle guide with the strip edge, establish one bias edge, then make parallel cuts at the pattern’s stated width.</p><strong>CHECK · Bias edges stretch. Lift and press—never drag—the cut diamonds.</strong></article>
+          <article><span>04</span><RulerJobDiagram job="ten-square" /><h2>Trim a 5″ square</h2><p>Center the nominal charm inside the Mini’s 5″ guides. Shave only what is necessary, rotate 180°, align the two clean edges, and trim the remaining sides.</p><strong>CHECK · Measure pinked precuts before deciding whether any trimming is needed.</strong></article>
+          <article><span>05</span><RulerJobDiagram job="square-block" /><h2>Square a sewn unit</h2><p>Center the unit in its target-size box, matching seams or diagonals to the printed guides. Trim two opposing sides, rotate, and trim the other two.</p><strong>CHECK · Your Mini squares whole-inch units through 6″ and half-inch units through 6½″.</strong></article>
+          <article><span>06</span><RulerJobDiagram job="diamonds" /><h2>Cut a 45° angle</h2><p>Cut the strip to the pattern’s stated height first. Align the Mini’s 45° guide with the strip edge, establish one bias edge, then make the next parallel cut at the required width.</p><strong>CHECK · Use your long ruler for 60° work; bias edges stretch, so lift instead of dragging.</strong></article>
         </div>
       </section>
 
       <section className={`${styles.contentSection} ${styles.paperSection}`}>
         <SectionHeading eyebrow="Fast cut tickets" title="Mark the slots—not the fabric" description="Place a removable ruler sticker or dry-erase mark above each target slot. Read the sequence left to right before the rotary cutter opens." />
         <div className={styles.cutTicketExamples}>
-          <article><span>JELLY-ROLL WIDTH</span><h2>2½″ strips</h2><div className={styles.slotCode}><b>0</b><i /><b>2½</b><i /><b>5</b><i /><b>7½</b><i /><b>10</b></div><p>Cut at every 2½″ interval. With the XL product, square first, then use its square-marked 2½″ sequence.</p></article>
-          <article><span>CHARM-STYLE SQUARES</span><h2>5″ × 5″</h2><div className={styles.slotCode}><b>0</b><i /><b>5</b><i /><b>10</b><i /><b>15</b><i /><b>20</b></div><p>Cut 5″ WOF strips first. Rotate the strip stack and subcut at 5″ intervals.</p></article>
-          <article><span>HST STARTS</span><h2>5″ squares → 4″ HST</h2><div className={styles.slotCode}><b>0</b><i /><b>5</b><i /><b>10</b><i /><b>15</b></div><p>Subcut 5″ pairs, mark one diagonal, make two at a time, and trim each unit to 4½″.</p></article>
-          <article><span>RAIL FENCE</span><h2>3 strips → 6½″ units</h2><div className={styles.slotCode}><b>0</b><i /><b>6½</b><i /><b>13</b><i /><b>19½</b></div><p>Sew three 2½″ strips, press, measure the actual set, then crosscut square units at 6½″.</p></article>
+          <article><span>MINI · DIRECT SLOTS</span><h2>2½″ strips</h2><div className={styles.slotCode}><b>0</b><i /><b>2½</b><i /><b>5</b></div><p>The Mini yields two 2½″ widths in this conservative setup. Reset the clean edge at 0 for the next pair.</p></article>
+          <article><span>MINI · ONE PER SETUP</span><h2>5″ × 5″</h2><div className={styles.slotCode}><b>0</b><i /><b>5</b><i /><b>RESET</b></div><p>Cut a 5″ strip first, rotate it, square at 0, and subcut one 5″ square before resetting.</p></article>
+          <article><span>MINI · QUARTER OFFSET</span><h2>2¼″ square</h2><div className={styles.slotCode}><b>ALIGN ¼</b><i /><b>CUT 2¼</b><i /><b>RESET</b></div><p>Turn to the quarter-cut side and follow the printed dotted-line setup. This is one offset cut at a time, not a 0–2¼–4½ multi-slot batch.</p></article>
+          <article><span>MINI · FULL REACH</span><h2>6½″ unit</h2><div className={styles.slotCode}><b>0</b><i /><b>6½</b></div><p>Press and measure the strip set, square its leading edge at 0, then crosscut one 6½″ unit per setup.</p></article>
         </div>
       </section>
 

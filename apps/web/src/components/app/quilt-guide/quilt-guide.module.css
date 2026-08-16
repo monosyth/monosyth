@@ -1787,8 +1787,8 @@
 }
 
 .resultStrip span {
-  color: rgba(255, 255, 255, 0.64);
-  font: 500 0.7rem/1.35 var(--font-ibm-plex-mono), monospace;
+  color: rgba(255, 255, 255, 0.86);
+  font: 700 0.82rem/1.35 var(--font-space-grotesk), Arial, sans-serif;
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }
@@ -1821,15 +1821,17 @@
 
 .solutionGrid h3 {
   margin: 0.55rem 0 0;
-  font-family: var(--font-playfair-display), Georgia, serif;
-  font-size: 1.35rem;
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: 1.45rem;
+  font-weight: 800;
   line-height: 1.1;
 }
 
 .solutionGrid p {
   margin-bottom: 0;
   color: var(--q-ink-soft);
-  font-size: 0.9rem;
+  font-size: 1rem;
+  line-height: 1.55;
 }
 
 .cutLabel,
@@ -3167,6 +3169,67 @@
   gap: 0.8rem;
 }
 
+.rulerChooser {
+  display: grid;
+  grid-template-columns: minmax(16rem, 0.8fr) minmax(18rem, 1.2fr);
+  align-items: stretch;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.rulerChooser .fieldLabel {
+  align-content: center;
+  padding: 1rem;
+  background: var(--q-paper-deep);
+  border: 1px solid var(--q-line);
+  border-radius: 0.55rem;
+}
+
+.rulerChooser .fieldLabel > span {
+  color: var(--q-teal-dark);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.rulerChooser select {
+  min-height: 58px;
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: 1.08rem;
+  font-weight: 750;
+}
+
+.rulerProfileReadout {
+  display: grid;
+  align-content: center;
+  gap: 0.35rem;
+  padding: 1rem 1.15rem;
+  color: var(--q-white);
+  background: var(--q-navy);
+  border-radius: 0.55rem;
+}
+
+.rulerProfileReadout > span,
+.rulerProfileReadout > small {
+  color: rgba(255, 255, 255, 0.82);
+  font: 700 0.78rem/1.45 var(--font-ibm-plex-mono), monospace;
+  letter-spacing: 0.055em;
+}
+
+.rulerProfileReadout > strong {
+  color: var(--q-gold);
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: clamp(1.45rem, 2.5vw, 2rem);
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.rulerProfileReadout > p {
+  margin: 0;
+  color: var(--q-white);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
 .rulerKitGrid article {
   display: flex;
   flex-direction: column;
@@ -3185,7 +3248,7 @@
 .rulerKitGrid article > div:first-child span,
 .rulerKitGrid article > div:first-child small {
   color: var(--q-teal-dark);
-  font: 700 0.7rem/1.35 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.8rem/1.35 var(--font-ibm-plex-mono), monospace;
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }
@@ -3206,21 +3269,23 @@
 
 .rulerKitGrid h2 {
   margin: 0.2rem 0 0;
-  font-family: var(--font-playfair-display), Georgia, serif;
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
   font-size: 1.35rem;
+  font-weight: 800;
 }
 
 .rulerKitGrid p {
   flex: 1;
   color: var(--q-ink-soft);
-  font-size: 0.9rem;
+  font-size: 1rem;
+  line-height: 1.55;
 }
 
 .rulerKitGrid article > strong {
   padding-top: 0.75rem;
   color: var(--q-teal-dark);
   border-top: 1px solid var(--q-line);
-  font: 700 0.72rem/1.5 var(--font-ibm-plex-mono), monospace;
+  font: 700 0.82rem/1.5 var(--font-ibm-plex-mono), monospace;
 }
 
 .rulerKitGrid a {
@@ -3260,8 +3325,9 @@
 
 .rulerStepGrid h2 {
   margin: 0;
-  font-family: var(--font-playfair-display), Georgia, serif;
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
   font-size: 1.55rem;
+  font-weight: 800;
 }
 
 .rulerStepGrid .wideDiagram {
@@ -3298,13 +3364,15 @@
 
 .cutTicketExamples h2 {
   margin: 0.45rem 0;
-  font-family: var(--font-playfair-display), Georgia, serif;
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
   font-size: 1.7rem;
+  font-weight: 800;
 }
 
 .cutTicketExamples p {
   color: var(--q-ink-soft);
-  font-size: 0.9rem;
+  font-size: 1rem;
+  line-height: 1.55;
 }
 
 .slotCode {
@@ -3316,7 +3384,7 @@
   color: var(--q-white);
   background: var(--q-navy);
   border-radius: 0.4rem;
-  font: 600 0.72rem/1.2 var(--font-ibm-plex-mono), monospace;
+  font: 750 0.92rem/1.2 var(--font-space-grotesk), Arial, sans-serif;
   scrollbar-width: thin;
 }
 
@@ -3929,6 +3997,7 @@
   .cutTicketGrid,
   .stepCardGrid,
   .recipeFinishGrid,
+  .rulerChooser,
   .rulerKitGrid,
   .rulerStepGrid,
   .cutTicketExamples,

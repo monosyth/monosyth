@@ -30,17 +30,17 @@ const SOURCE_GROUPS = [
   },
   {
     eyebrow: "Efficient cutting",
-    title: "Your Stripology®, Creative Grids®, and Fiskars® rulers",
+    title: "Your rulers and selectable Stripology® profiles",
     description:
-      "Product dimensions, markings, and stated capacity are kept model-specific. The cutting chapter identifies the three exact rulers in Scott’s kit while keeping safety limits tied to each manufacturer.",
-    sources: RESEARCH_SOURCES.slice(10, 14),
+      "The CGRGE3 Mini is Scott’s owned slotted ruler. Other Stripology profiles remain selectable references, and every product keeps its own dimensions, marks, and working limits.",
+    sources: RESEARCH_SOURCES.slice(10, 17),
   },
   {
     eyebrow: "Construction methods",
     title: "Fusible-grid piecing",
     description:
       "These manufacturer and extension references support the place, fuse, fold, sew, clip, alternate, and cross-sew sequence used for the table-runner method.",
-    sources: RESEARCH_SOURCES.slice(14, 18),
+    sources: RESEARCH_SOURCES.slice(17, 21),
   },
 ] as const;
 

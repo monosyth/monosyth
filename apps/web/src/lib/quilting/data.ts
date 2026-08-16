@@ -1123,9 +1123,24 @@ export const RESEARCH_SOURCES = [
     use: "Usable WOF, strip count, and binding yardage workflow.",
   },
   {
-    title: "GE Designs — Stripology® XL CGRGE1XL",
-    url: "https://gequiltdesigns.com/products/stripology-xl-ruler-by-ge-designs",
-    use: "Creator specifications, capacity, dimensions, and supported cutting jobs for Scott’s slotted ruler.",
+    title: "Creative Grids — Stripology® Squared Mini CGRGE3",
+    url: "https://www.creativegridsusa.com/products/CGRGE3",
+    use: "Official dimensions, ½-inch slot spacing, offset markings, 9½-inch slit length, and 6½-inch square-up range for Scott’s owned slotted ruler.",
+  },
+  {
+    title: "Creative Grids — Stripology® XL CGRGE1XL",
+    url: "https://www.creativegridsusa.com/products/CGRGE1XL",
+    use: "Official XL dimensions, slot spacing, angle guides, and 12½-inch square-up range used by the optional ruler profile.",
+  },
+  {
+    title: "Creative Grids — Stripology® Squared CGRGE2",
+    url: "https://www.creativegridsusa.com/products/CGRGE2",
+    use: "Official dimensions, slot spacing, offset marks, and square-up range used by the optional ruler profile.",
+  },
+  {
+    title: "Creative Grids — Stripology® Quarters Mini CGRGE4",
+    url: "https://www.creativegridsusa.com/products/CGRGE4",
+    use: "Official quarter-inch slot spacing, eighth-inch markings, dimensions, and 6¼-inch working range used by the optional ruler profile.",
   },
   {
     title: "GE Designs — Stripology 101",

@@ -836,22 +836,26 @@ export function RulerCutDiagram({ stage }: { stage: 1 | 2 | 3 | 4 }) {
 export function RulerProfileDiagram({
   kind,
 }: {
-  kind: "stripology-xl" | "creative-grids-612" | "fiskars-624";
+  kind: "stripology-mini" | "stripology-xl" | "creative-grids-612" | "fiskars-624";
 }) {
-  if (kind === "stripology-xl") {
+  if (kind === "stripology-mini" || kind === "stripology-xl") {
+    const isMini = kind === "stripology-mini";
+    const rulerX = isMini ? 142 : 54;
+    const rulerWidth = isMini ? 236 : 412;
+    const slotCount = isMini ? 14 : 21;
     return (
-      <svg className={styles.wideDiagram} viewBox="0 0 520 230" role="img" aria-label="Illustration of a Stripology XL slotted quilting ruler measuring approximately 22 by 17 and three-quarter inches">
-        <rect x="54" y="34" width="412" height="158" rx="5" fill="#d7edf0" fillOpacity="0.82" stroke={COLORS.accent} strokeWidth="2" />
-        {Array.from({ length: 21 }, (_, index) => (
-          <path key={index} d={`M${66 + index * 19.2} 48v128`} stroke={index % 5 === 0 ? COLORS.navy : COLORS.accent} strokeWidth={index % 5 === 0 ? 3.2 : 1.7} strokeLinecap="round" opacity={index % 5 === 0 ? 0.9 : 0.62} />
+      <svg className={styles.wideDiagram} viewBox="0 0 520 230" role="img" aria-label={isMini ? "Illustration of the Stripology Squared Mini CGRGE3, measuring 8 and one-half by 12 and one-half inches, with 9 and one-half inch cutting slits" : "Illustration of a Stripology XL slotted quilting ruler measuring approximately 22 by 17 and three-quarter inches"}>
+        <rect x={rulerX} y="34" width={rulerWidth} height="158" rx="5" fill="#d7edf0" fillOpacity="0.82" stroke={COLORS.accent} strokeWidth="2" />
+        {Array.from({ length: slotCount }, (_, index) => (
+          <path key={index} d={`M${rulerX + 12 + index * ((rulerWidth - 24) / Math.max(1, slotCount - 1))} 48v128`} stroke={index % 5 === 0 ? COLORS.navy : COLORS.accent} strokeWidth={index % 5 === 0 ? 3.2 : 1.7} strokeLinecap="round" opacity={index % 5 === 0 ? 0.9 : 0.62} />
         ))}
         {Array.from({ length: 7 }, (_, index) => (
-          <path key={index} d={`M66 ${58 + index * 18}h384`} stroke={COLORS.accent} strokeWidth="0.8" opacity="0.45" />
+          <path key={index} d={`M${rulerX + 12} ${58 + index * 18}h${rulerWidth - 24}`} stroke={COLORS.accent} strokeWidth="0.8" opacity="0.45" />
         ))}
-        <path d="M54 207h412M54 202v10M466 202v10" stroke={COLORS.line} />
-        <text x="260" y="224" textAnchor="middle" fill={COLORS.line} fontSize="11">22″ wide · 17¾″ tall · 14¾″ cutting slots</text>
-        <text x="260" y="116" textAnchor="middle" fill={COLORS.navy} fontSize="17" fontWeight="700">BATCH CUTTER</text>
-        <text x="260" y="136" textAnchor="middle" fill={COLORS.navy} fontSize="11">square · strip · subcut</text>
+        <path d={`M${rulerX} 207h${rulerWidth}M${rulerX} 202v10M${rulerX + rulerWidth} 202v10`} stroke={COLORS.line} />
+        <text x="260" y="224" textAnchor="middle" fill={COLORS.line} fontSize="11">{isMini ? "8½″ × 12½″ · 9½″ cutting slits · squares through 6½″" : "22″ wide · 17¾″ tall · 14¾″ cutting slots"}</text>
+        <text x="260" y="116" textAnchor="middle" fill={COLORS.navy} fontSize="17" fontWeight="700">{isMini ? "SMALL-BATCH CUTTER" : "BATCH CUTTER"}</text>
+        <text x="260" y="136" textAnchor="middle" fill={COLORS.navy} fontSize="11">{isMini ? "fat quarter · small units · trim" : "square · strip · subcut"}</text>
       </svg>
     );
   }
@@ -936,14 +940,14 @@ export function RulerJobDiagram({ job }: { job: RulerJob }) {
 
   if (job === "ten-square") {
     return (
-      <svg className={styles.wideDiagram} viewBox="0 0 420 190" role="img" aria-label="A ten-inch fabric square positioned inside a square-up guide for two-side trimming and rotation">
+      <svg className={styles.wideDiagram} viewBox="0 0 420 190" role="img" aria-label="A five-inch fabric square positioned inside a square-up guide for two-side trimming and rotation">
         <rect x="124" y="24" width="150" height="150" fill={COLORS.pink} stroke={COLORS.line} strokeWidth="1.5" transform="rotate(-1 199 99)" />
         <rect x="120" y="20" width="158" height="158" fill="#d7edf0" fillOpacity="0.38" stroke={COLORS.accent} strokeWidth="2" />
         {[0, 1, 2, 3, 4].map((index) => <path key={index} d={`M${120 + index * 39.5} 20v158M120 ${20 + index * 39.5}h158`} stroke={COLORS.accent} strokeWidth="0.8" opacity="0.52" />)}
         <path d="M112 20h174M278 12v174" stroke={COLORS.featureDark} strokeWidth="3" />
         <path d="M304 64c25 18 25 55 0 73" fill="none" stroke={COLORS.navy} strokeWidth="2" />
         <path d="m301 131 3 9 7-6" fill="none" stroke={COLORS.navy} strokeWidth="2" />
-        <text x="199" y="103" textAnchor="middle" fill={COLORS.navy} fontWeight="700" fontSize="15">10″ SQUARE</text>
+        <text x="199" y="103" textAnchor="middle" fill={COLORS.navy} fontWeight="700" fontSize="15">5″ SQUARE</text>
         <text x="199" y="187" textAnchor="middle" fill={COLORS.line} fontSize="11">trim two sides · rotate · trim the other two</text>
       </svg>
     );
@@ -967,18 +971,18 @@ export function RulerJobDiagram({ job }: { job: RulerJob }) {
 
   if (job === "diamonds") {
     return (
-      <svg className={styles.wideDiagram} viewBox="0 0 420 190" role="img" aria-label="A fabric strip cut on a sixty-degree guide into repeated diamond shapes">
+      <svg className={styles.wideDiagram} viewBox="0 0 420 190" role="img" aria-label="A fabric strip cut on a forty-five-degree guide into repeated diagonal pieces">
         <rect x="28" y="56" width="364" height="82" fill={COLORS.feature} opacity="0.92" />
-        {[-8, 66, 140, 214, 288, 362].map((x) => <path key={x} d={`M${x} 138  ${x + 48} 56`} stroke={COLORS.cream} strokeWidth="3" />)}
-        <path d="M62 145 110 48M62 145h112" fill="none" stroke={COLORS.navy} strokeWidth="2" />
-        <text x="110" y="160" textAnchor="middle" fill={COLORS.navy} fontWeight="700" fontSize="11">60° GUIDE</text>
+        {[-54, 28, 110, 192, 274, 356].map((x) => <path key={x} d={`M${x} 138  ${x + 82} 56`} stroke={COLORS.cream} strokeWidth="3" />)}
+        <path d="M62 145 144 63M62 145h112" fill="none" stroke={COLORS.navy} strokeWidth="2" />
+        <text x="118" y="160" textAnchor="middle" fill={COLORS.navy} fontWeight="700" fontSize="11">45° GUIDE</text>
         <text x="250" y="181" textAnchor="middle" fill={COLORS.line} fontSize="11">first angle establishes every parallel cut</text>
       </svg>
     );
   }
 
   return (
-    <svg className={styles.wideDiagram} viewBox="0 0 420 190" role="img" aria-label="Folded width-of-fabric yardage aligned parallel beneath a slotted ruler for repeated strip cuts">
+    <svg className={styles.wideDiagram} viewBox="0 0 420 190" role="img" aria-label="A folded fat quarter aligned parallel beneath a small slotted ruler for repeated strip cuts">
       <rect x="22" y="48" width="376" height="96" fill={COLORS.feature} opacity="0.9" />
       <path d="M22 70h376M22 123h376" stroke={COLORS.cream} strokeWidth="2" strokeDasharray="6 4" />
       <SlottedOverlay x={42} y={24} width={330} height={144} />
