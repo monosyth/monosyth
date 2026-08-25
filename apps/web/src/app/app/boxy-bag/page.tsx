@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
 
-import { BoxyBagBuilder } from "@/components/app/boxy-bag-builder";
+import { BagPatternStudio } from "@/components/app/bag-pattern-studio";
 
 export const metadata: Metadata = {
-  title: "Boxy Bag Builder · Monosyth Studio",
-  description: "A private sewing calculator for custom boxy zipper bags.",
+  title: "Bag Pattern Studio · Monosyth Studio",
+  description:
+    "A private vector drafting studio for tote and zipper bag patterns, seam allowances, boxed corners, and fabric layouts.",
   robots: {
     index: false,
     follow: false,
   },
 };
 
-export default function BoxyBagPage() {
-  return <BoxyBagBuilder />;
+export default function BagPatternPage() {
+  return <BagPatternStudio />;
 }
