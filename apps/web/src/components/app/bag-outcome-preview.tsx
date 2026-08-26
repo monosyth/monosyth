@@ -4,17 +4,24 @@ import { useId, useState } from "react";
 
 import styles from "@/components/app/bag-outcome-preview.module.css";
 import {
+  calculatePanelStitchGeometry,
   clamp,
   formatDecimal,
   formatInches,
   type BagClosure,
   type BagPatternPlan,
 } from "@/lib/sewing/bag-pattern";
+import type { OuterPanelComposition } from "@/lib/sewing/panel-composition";
+import type { HandleMaterial } from "@/lib/sewing/tote-handle";
 
-type PreviewView = "left" | "front" | "right";
+type PreviewView = "left" | "front" | "back" | "right";
 
 export type BagOutcomeOptions = {
+  handleMaterial: HandleMaterial;
   handleDrop: number;
+  handleWidth: number;
+  handleInset: number;
+  handleAttachmentDepth: number;
   sideZipperLength: number;
   zipperGap: number;
   recessDepth: number;
@@ -26,10 +33,16 @@ type Point = {
   y: number;
 };
 
+type SurfaceWindow = {
+  top: { start: number; end: number };
+  bottom: { start: number; end: number };
+};
+
 type BagOutcomePreviewProps = {
   plan: BagPatternPlan;
   closure: BagClosure;
   options: BagOutcomeOptions;
+  composition: OuterPanelComposition;
 };
 
 const viewChoices: ReadonlyArray<{
@@ -38,7 +51,8 @@ const viewChoices: ReadonlyArray<{
   detail: string;
 }> = [
   { id: "left", label: "Left", detail: "left three-quarter view" },
-  { id: "front", label: "Front", detail: "straight-on view" },
+  { id: "front", label: "Front", detail: "straight-on front view" },
+  { id: "back", label: "Back", detail: "straight-on back view" },
   { id: "right", label: "Right", detail: "right three-quarter view" },
 ];
 
@@ -51,7 +65,7 @@ const closureLabels: Record<BagClosure, string> = {
 };
 
 const closureNotes: Record<BagClosure, string> = {
-  "open-tote": "The dark top plane is the finished opening; handle drop is scaled from the rim.",
+  "open-tote": "The handle width, center inset, attachment depth, and inside drop all scale from the same finished rim marks used by the 2D panel.",
   "top-zipper": "The two full flat top seams meet at the zipper ridge, so this closure changes the top silhouette.",
   "side-zipper": "The zipper is positioned on the visible side panel; choose Left or Right to inspect it.",
   "zipper-gusset": "The highlighted top panel spans the standing rim, with two gusset strips meeting at the measured reveal.",
@@ -75,6 +89,198 @@ function midpoint(from: Point, to: Point): Point {
 
 function points(pointsToJoin: Point[]) {
   return pointsToJoin.map((point) => `${point.x},${point.y}`).join(" ");
+}
+
+function pointOnQuad(
+  quad: [Point, Point, Point, Point],
+  across: number,
+  down: number,
+) {
+  const left = lerp(quad[0], quad[3], down);
+  const right = lerp(quad[1], quad[2], down);
+  return lerp(left, right, across);
+}
+
+function SurfaceBuild({
+  quad,
+  composition,
+  plan,
+  window,
+  reverseColumns = false,
+  face,
+}: {
+  quad: [Point, Point, Point, Point];
+  composition: OuterPanelComposition;
+  plan: BagPatternPlan;
+  window: SurfaceWindow;
+  reverseColumns?: boolean;
+  face: "front" | "back";
+}) {
+  const pieced =
+    composition.design.mode !== "solid" &&
+    (composition.design.scope === "both" ||
+      composition.design.scope === face);
+  const contrastRatio = composition.design.contrastEnabled
+    ? clamp(
+        1 -
+          composition.design.contrastRise /
+            Math.max(plan.finishedHeight, composition.design.contrastRise),
+        0,
+        1,
+      )
+    : 1;
+  const colors = ["#b8abff", "#ff9ab3", "#68e5e6", "#f6c563", "#c8e982"];
+  const rawColumnBoundaries =
+    composition.design.mode === "vertical-strips" ||
+    composition.design.mode === "block-grid"
+      ? [0, ...composition.columnSeams, composition.targetWidth]
+      : [0, composition.targetWidth];
+  const piecedRawBottom =
+    plan.topTakeUp + plan.finishedHeight * contrastRatio;
+  const rawRowBoundaries =
+    composition.design.mode === "horizontal-strips" ||
+    composition.design.mode === "block-grid"
+      ? [
+          0,
+          ...composition.rowSeams.filter(
+            (seam) => seam < piecedRawBottom - 0.001,
+          ),
+          piecedRawBottom,
+        ]
+      : [0, piecedRawBottom];
+  const horizontalWindowMin = Math.min(
+    window.top.start,
+    window.top.end,
+    window.bottom.start,
+    window.bottom.end,
+  );
+  const horizontalWindowMax = Math.max(
+    window.top.start,
+    window.top.end,
+    window.bottom.start,
+    window.bottom.end,
+  );
+  const visibleColumnSegments = rawColumnBoundaries
+    .slice(0, -1)
+    .map((left, index) => ({
+      left,
+      right: rawColumnBoundaries[index + 1],
+      globalIndex: index,
+    }))
+    .filter(
+      (segment) =>
+        segment.right > horizontalWindowMin + 0.001 &&
+        segment.left < horizontalWindowMax - 0.001,
+    );
+  const visibleRowSegments = rawRowBoundaries
+    .slice(0, -1)
+    .map((top, index) => ({
+      top,
+      bottom: rawRowBoundaries[index + 1],
+      globalIndex: index,
+    }))
+    .filter(
+      (segment) =>
+        segment.bottom > plan.topTakeUp + 0.001 &&
+        segment.top < piecedRawBottom - 0.001,
+    )
+    .map((segment) => ({
+      ...segment,
+      topRatio: clamp(
+        (Math.max(segment.top, plan.topTakeUp) - plan.topTakeUp) /
+          Math.max(0.001, plan.finishedHeight),
+        0,
+        contrastRatio,
+      ),
+      bottomRatio: clamp(
+        (Math.min(segment.bottom, piecedRawBottom) - plan.topTakeUp) /
+          Math.max(0.001, plan.finishedHeight),
+        0,
+        contrastRatio,
+      ),
+    }));
+  const cellPolygons: Array<{ key: string; corners: Point[]; color: string }> = [];
+
+  const projectRawX = (rawX: number, down: number) => {
+    const windowStart =
+      window.top.start +
+      (window.bottom.start - window.top.start) * down;
+    const windowEnd =
+      window.top.end +
+      (window.bottom.end - window.top.end) * down;
+    const rawWidth = windowEnd - windowStart;
+    const safeWidth = Math.abs(rawWidth) < 0.001
+      ? rawWidth < 0
+        ? -0.001
+        : 0.001
+      : rawWidth;
+    const ratio = clamp((rawX - windowStart) / safeWidth, 0, 1);
+    return reverseColumns ? 1 - ratio : ratio;
+  };
+
+  if (pieced) {
+    for (const row of visibleRowSegments) {
+      for (const column of visibleColumnSegments) {
+        cellPolygons.push({
+          key: `cell-${row.globalIndex}-${column.globalIndex}`,
+          corners: [
+            pointOnQuad(
+              quad,
+              projectRawX(column.left, row.topRatio),
+              row.topRatio,
+            ),
+            pointOnQuad(
+              quad,
+              projectRawX(column.right, row.topRatio),
+              row.topRatio,
+            ),
+            pointOnQuad(
+              quad,
+              projectRawX(column.right, row.bottomRatio),
+              row.bottomRatio,
+            ),
+            pointOnQuad(
+              quad,
+              projectRawX(column.left, row.bottomRatio),
+              row.bottomRatio,
+            ),
+          ],
+          color:
+            colors[
+              (row.globalIndex * 2 + column.globalIndex) % colors.length
+            ],
+        });
+      }
+    }
+  }
+
+  return (
+    <g className={styles.outcomeSurfaceBuild} aria-hidden="true">
+      {cellPolygons.map((cell) => (
+        <polygon key={cell.key} points={points(cell.corners)} fill={cell.color} />
+      ))}
+      {composition.design.contrastEnabled ? (
+        <>
+          <polygon
+            className={styles.outcomeContrastFace}
+            points={points([
+              pointOnQuad(quad, 0, contrastRatio),
+              pointOnQuad(quad, 1, contrastRatio),
+              pointOnQuad(quad, 1, 1),
+              pointOnQuad(quad, 0, 1),
+            ])}
+          />
+          <line
+            className={styles.outcomeContrastJoin}
+            x1={pointOnQuad(quad, 0, contrastRatio).x}
+            y1={pointOnQuad(quad, 0, contrastRatio).y}
+            x2={pointOnQuad(quad, 1, contrastRatio).x}
+            y2={pointOnQuad(quad, 1, contrastRatio).y}
+          />
+        </>
+      ) : null}
+    </g>
+  );
 }
 
 function shiftedSegment(from: Point, to: Point, distance: number) {
@@ -157,6 +363,7 @@ export function BagOutcomePreview({
   plan,
   closure,
   options,
+  composition,
 }: BagOutcomePreviewProps) {
   const [view, setView] = useState<PreviewView>("right");
   const rawId = useId().replaceAll(":", "");
@@ -182,8 +389,8 @@ export function BagOutcomePreview({
     ? Math.max(0.5, plan.finishedTopOpening)
     : safeTopWidth;
   const direction = view === "left" ? -1 : view === "right" ? 1 : 0;
-  const depthXModel = safeDepth * (view === "front" ? 0 : 0.72) * direction;
-  const depthYModel = -safeDepth * (view === "front" ? 0.82 : 0.75);
+  const depthXModel = safeDepth * (direction === 0 ? 0 : 0.72) * direction;
+  const depthYModel = -safeDepth * (direction === 0 ? 0.82 : 0.75);
   const handleModel = closure === "open-tote"
     ? Math.max(0.5, options.handleDrop)
     : 0;
@@ -213,11 +420,78 @@ export function BagOutcomePreview({
   const backBottomRight = add(frontBottomRight, depthVector);
   const backTopLeft = add(frontTopLeft, topDepthVector);
   const backTopRight = add(frontTopRight, topDepthVector);
-  const visibleSide = direction < 0
+  const visibleSide: [Point, Point, Point, Point] = direction < 0
     ? [frontTopLeft, backTopLeft, backBottomLeft, frontBottomLeft]
     : [frontTopRight, backTopRight, backBottomRight, frontBottomRight];
-  const frontFace = [frontTopLeft, frontTopRight, frontBottomRight, frontBottomLeft];
-  const topFace = [frontTopLeft, frontTopRight, backTopRight, backTopLeft];
+  const frontFace: [Point, Point, Point, Point] = [frontTopLeft, frontTopRight, frontBottomRight, frontBottomLeft];
+  const topFace: [Point, Point, Point, Point] = [frontTopLeft, frontTopRight, backTopRight, backTopLeft];
+  const sideFrontTop = direction < 0 ? frontTopLeft : frontTopRight;
+  const sideBackTop = direction < 0 ? backTopLeft : backTopRight;
+  const sideFrontBottom = direction < 0 ? frontBottomLeft : frontBottomRight;
+  const sideBackBottom = direction < 0 ? backBottomLeft : backBottomRight;
+  const sideMidTop = midpoint(sideFrontTop, sideBackTop);
+  const sideMidBottom = midpoint(sideFrontBottom, sideBackBottom);
+  const frontSideHalf: [Point, Point, Point, Point] = [
+    sideFrontTop,
+    sideMidTop,
+    sideMidBottom,
+    sideFrontBottom,
+  ];
+  const backSideHalf: [Point, Point, Point, Point] = [
+    sideMidTop,
+    sideBackTop,
+    sideBackBottom,
+    sideMidBottom,
+  ];
+  const blankMinX = Math.min(0, plan.leftTopInset);
+  const stitchGeometry = calculatePanelStitchGeometry(plan);
+  const toBlankX = (rawX: number) => rawX - blankMinX;
+  const flatTopLeft = toBlankX(stitchGeometry.topLeft.x);
+  const flatTopRight = toBlankX(stitchGeometry.topRight.x);
+  const frontWindow: SurfaceWindow = {
+    top: topCollapsesToZipper
+      ? { start: flatTopLeft, end: flatTopRight }
+      : {
+          start: toBlankX(
+            stitchGeometry.topLeft.x + plan.finishedDepth / 2,
+          ),
+          end: toBlankX(
+            stitchGeometry.topRight.x - plan.finishedDepth / 2,
+          ),
+        },
+    bottom: {
+      start: toBlankX(
+        stitchGeometry.leftSideBottom.x + plan.finishedDepth / 2,
+      ),
+      end: toBlankX(
+        stitchGeometry.rightSideBottom.x - plan.finishedDepth / 2,
+      ),
+    },
+  };
+  const leftSideWindow: SurfaceWindow = {
+    top: topCollapsesToZipper
+      ? { start: flatTopLeft, end: flatTopLeft }
+      : { start: flatTopLeft, end: frontWindow.top.start },
+    bottom: {
+      start: toBlankX(stitchGeometry.leftSideBottom.x),
+      end: frontWindow.bottom.start,
+    },
+  };
+  const rightSideWindow: SurfaceWindow = {
+    top: topCollapsesToZipper
+      ? { start: flatTopRight, end: flatTopRight }
+      : { start: frontWindow.top.end, end: flatTopRight },
+    bottom: {
+      start: frontWindow.bottom.end,
+      end: toBlankX(stitchGeometry.rightSideBottom.x),
+    },
+  };
+  const visibleSideWindow = direction < 0
+    ? leftSideWindow
+    : rightSideWindow;
+  const visibleFlatFace: "front" | "back" = view === "back"
+    ? "back"
+    : "front";
   const topZipFrom = topCollapsesToZipper
     ? frontTopLeft
     : lerp(frontTopLeft, backTopLeft, 0.5);
@@ -233,11 +507,22 @@ export function BagOutcomePreview({
     from: lerp(frontTopLeft, backTopLeft, 0.5 + gussetGapRatio / 2),
     to: lerp(frontTopRight, backTopRight, 0.5 + gussetGapRatio / 2),
   };
-  const handleHeight = handleModel * scale;
-  const frontHandleLeft = lerp(frontTopLeft, frontTopRight, 0.27);
-  const frontHandleRight = lerp(frontTopLeft, frontTopRight, 0.73);
-  const backHandleLeft = lerp(backTopLeft, backTopRight, 0.27);
-  const backHandleRight = lerp(backTopLeft, backTopRight, 0.73);
+  const handleHeight = (handleModel + Math.max(0, options.handleWidth) / 2) * scale;
+  const handleInsetRatio = clamp(
+    options.handleInset / Math.max(bodyTopWidth, 0.5),
+    0,
+    0.5,
+  );
+  const handleStrokeWidth = clamp(options.handleWidth * scale, 6, 26);
+  const handleAttachmentHeight = clamp(
+    options.handleAttachmentDepth * scale,
+    8,
+    Math.max(8, height),
+  );
+  const frontHandleLeft = lerp(frontTopLeft, frontTopRight, handleInsetRatio);
+  const frontHandleRight = lerp(frontTopRight, frontTopLeft, handleInsetRatio);
+  const backHandleLeft = lerp(backTopLeft, backTopRight, handleInsetRatio);
+  const backHandleRight = lerp(backTopRight, backTopLeft, handleInsetRatio);
   const widthDimensionY = bottomY + 29;
   const heightDimensionX = Math.min(frontBottomLeft.x, backBottomLeft.x, frontTopLeft.x, backTopLeft.x) - 34;
   const depthDimensionShift = direction < 0 ? -17 : 17;
@@ -258,6 +543,7 @@ export function BagOutcomePreview({
   const viewDetail = viewChoices.find((choice) => choice.id === view)?.detail ?? "three-quarter view";
   const title = `${closureLabels[closure]} — ${viewDetail}`;
   const accessibleDimensions = `${formatInches(plan.finishedBaseWidth)} wide by ${formatInches(plan.finishedHeight)} high by ${formatInches(plan.finishedDepth)} deep`;
+  const outerBuildLabel = `${composition.modeLabel}${composition.design.mode !== "solid" ? ` on the ${composition.scopeLabel}` : ""}${composition.design.contrastEnabled ? ` with a ${formatInches(composition.design.contrastRise)} contrast bottom` : ""}`;
 
   const recessedEndRatio = clamp(
     options.recessEndGap / Math.max(standingTopWidth, 0.5),
@@ -322,7 +608,7 @@ export function BagOutcomePreview({
           className={styles.outcomeSvg}
           viewBox="0 0 720 430"
           role="img"
-          aria-label={`${title}. ${accessibleDimensions}.${closure === "side-zipper" && view === "front" ? " The side zipper is hidden in this view." : ""}`}
+          aria-label={`${title}. ${accessibleDimensions}. Outer build: ${outerBuildLabel}.${closure === "open-tote" ? ` Handles are ${formatInches(options.handleWidth)} wide, centered ${formatInches(options.handleInset)} from each finished corner, and secured ${formatInches(options.handleAttachmentDepth)} below the rim.` : ""}${closure === "side-zipper" && direction === 0 ? " The side zipper is hidden in this view." : ""}`}
           preserveAspectRatio="xMidYMid meet"
         >
           <title>{title}</title>
@@ -363,11 +649,40 @@ export function BagOutcomePreview({
             <path
               d={`M ${backHandleLeft.x} ${backHandleLeft.y} C ${backHandleLeft.x} ${backHandleLeft.y - handleHeight * 4 / 3} ${backHandleRight.x} ${backHandleRight.y - handleHeight * 4 / 3} ${backHandleRight.x} ${backHandleRight.y}`}
               className={styles.outcomeHandleBack}
+              style={{
+                strokeWidth: handleStrokeWidth,
+                stroke: options.handleMaterial === "webbing" ? "#d8d2c1" : "#786bca",
+              }}
             />
           ) : null}
 
-          {view !== "front" ? (
-            <polygon points={points(visibleSide)} fill={`url(#${sideGradientId})`} className={styles.outcomeFace} />
+          {direction !== 0 ? (
+            <>
+              <polygon points={points(visibleSide)} fill={`url(#${sideGradientId})`} className={styles.outcomeFace} />
+              <SurfaceBuild
+                quad={frontSideHalf}
+                composition={composition}
+                plan={plan}
+                window={visibleSideWindow}
+                reverseColumns={direction < 0}
+                face="front"
+              />
+              <SurfaceBuild
+                quad={backSideHalf}
+                composition={composition}
+                plan={plan}
+                window={visibleSideWindow}
+                reverseColumns={direction > 0}
+                face="back"
+              />
+              <line
+                className={styles.outcomeSideJoin}
+                x1={sideMidTop.x}
+                y1={sideMidTop.y}
+                x2={sideMidBottom.x}
+                y2={sideMidBottom.y}
+              />
+            </>
           ) : null}
           {!topCollapsesToZipper ? (
             <polygon
@@ -412,6 +727,14 @@ export function BagOutcomePreview({
 
           <polygon points={points(frontFace)} fill={`url(#${frontGradientId})`} className={styles.outcomeFace} />
           <polygon points={points(frontFace)} fill={`url(#${weaveId})`} className={styles.outcomeWeave} />
+          <SurfaceBuild
+            quad={frontFace}
+            composition={composition}
+            plan={plan}
+            window={frontWindow}
+            reverseColumns={view === "back"}
+            face={visibleFlatFace}
+          />
 
           {closure === "top-zipper" ? (
             <ZipperLine
@@ -430,17 +753,34 @@ export function BagOutcomePreview({
               <path
                 d={`M ${frontHandleLeft.x} ${frontHandleLeft.y} C ${frontHandleLeft.x} ${frontHandleLeft.y - handleHeight * 4 / 3} ${frontHandleRight.x} ${frontHandleRight.y - handleHeight * 4 / 3} ${frontHandleRight.x} ${frontHandleRight.y}`}
                 className={styles.outcomeHandle}
+                style={{
+                  strokeWidth: handleStrokeWidth,
+                  stroke: options.handleMaterial === "webbing" ? "#f1ecdd" : "#9f91f2",
+                }}
               />
               {[frontHandleLeft, frontHandleRight].map((attachment, index) => (
                 <g key={index}>
-                  <rect x={attachment.x - 7} y={attachment.y + 4} width="14" height="30" rx="3" fill="rgba(41,33,77,.55)" stroke="#d4ceff" strokeWidth="1" />
-                  <path d={`M ${attachment.x - 5} ${attachment.y + 15} L ${attachment.x + 5} ${attachment.y + 24} M ${attachment.x + 5} ${attachment.y + 15} L ${attachment.x - 5} ${attachment.y + 24}`} stroke="#f6ba4c" strokeWidth="1.2" />
+                  <rect
+                    x={attachment.x - handleStrokeWidth / 2}
+                    y={attachment.y}
+                    width={handleStrokeWidth}
+                    height={handleAttachmentHeight}
+                    rx="3"
+                    fill={options.handleMaterial === "webbing" ? "rgba(239,233,215,.72)" : "rgba(41,33,77,.55)"}
+                    stroke={options.handleMaterial === "webbing" ? "#fffaf0" : "#d4ceff"}
+                    strokeWidth="1"
+                  />
+                  <path
+                    d={`M ${attachment.x - handleStrokeWidth * 0.34} ${attachment.y + handleAttachmentHeight * 0.43} L ${attachment.x + handleStrokeWidth * 0.34} ${attachment.y + handleAttachmentHeight * 0.76} M ${attachment.x + handleStrokeWidth * 0.34} ${attachment.y + handleAttachmentHeight * 0.43} L ${attachment.x - handleStrokeWidth * 0.34} ${attachment.y + handleAttachmentHeight * 0.76}`}
+                    stroke="#f6ba4c"
+                    strokeWidth="1.2"
+                  />
                 </g>
               ))}
             </g>
           ) : null}
 
-          {closure === "side-zipper" && view !== "front" ? (
+          {closure === "side-zipper" && direction !== 0 ? (
             <ZipperLine from={sideZipStart} to={sideZipEnd} accent="#ff7194" label={`${formatInches(options.sideZipperLength)} SIDE ZIP`} />
           ) : null}
 
@@ -485,15 +825,17 @@ export function BagOutcomePreview({
           </strong>
         </div>
         <div>
-          <span>Side angles</span>
-          <strong>{formatDecimal(plan.leftTopAngle, 1)}° / {formatDecimal(plan.rightTopAngle, 1)}°</strong>
+          <span>{closure === "open-tote" ? "Handle width / inset / depth" : "Side angles"}</span>
+          <strong>{closure === "open-tote"
+            ? `${formatInches(options.handleWidth)} / ${formatInches(options.handleInset)} / ${formatInches(options.handleAttachmentDepth)}`
+            : `${formatDecimal(plan.leftTopAngle, 1)}° / ${formatDecimal(plan.rightTopAngle, 1)}°`}</strong>
         </div>
         <div className={styles.outcomeClosureReadout}>
-          <span>Selected build</span>
-          <strong>{closureLabels[closure]}</strong>
+          <span>Closure + outer build</span>
+          <strong>{closureLabels[closure]} · {composition.modeLabel}{composition.design.contrastEnabled ? " + contrast" : ""}</strong>
         </div>
       </div>
-      <p className={styles.outcomeNote}><strong>{closureNotes[closure]}</strong> This is a proportional concept view based on stitch-line dimensions; fabric drape, foam, and turn-of-cloth can change the sewn silhouette.</p>
+      <p className={styles.outcomeNote}><strong>{closureNotes[closure]}</strong> The surface preview follows the selected {outerBuildLabel.toLowerCase()}. This is a proportional concept view based on stitch-line dimensions; fabric drape, foam, and turn-of-cloth can change the sewn silhouette.</p>
     </section>
   );
 }

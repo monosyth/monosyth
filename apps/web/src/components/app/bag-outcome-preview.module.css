@@ -51,7 +51,7 @@
 
 .outcomeViewButtons {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: .25rem;
   flex: 0 0 auto;
   padding: .22rem;
@@ -61,7 +61,7 @@
 }
 
 .outcomeViewButtons button {
-  min-width: 3.35rem;
+  min-width: 3rem;
   padding: .45rem .48rem;
   border: 1px solid transparent;
   border-radius: .46rem;
@@ -147,6 +147,37 @@
 .outcomeWeave {
   pointer-events: none;
   opacity: .62;
+}
+
+.outcomeSurfaceBuild {
+  pointer-events: none;
+}
+
+.outcomeSurfaceBuild polygon {
+  opacity: .76;
+  stroke: rgba(17, 28, 44, .55);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.outcomeSurfaceBuild .outcomeContrastFace {
+  fill: #173447;
+  opacity: .98;
+  stroke: rgba(136, 214, 223, .45);
+}
+
+.outcomeContrastJoin {
+  stroke: #f6ba4c;
+  stroke-width: 1.6;
+  stroke-dasharray: 5 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.outcomeSideJoin {
+  stroke: rgba(246, 186, 76, .82);
+  stroke-width: 1.35;
+  stroke-dasharray: 4 3;
+  vector-effect: non-scaling-stroke;
 }
 
 .outcomeHandle,

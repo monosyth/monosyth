@@ -12,6 +12,7 @@ import {
 
 import styles from "@/app/app/boxy-bag/bag-studio.module.css";
 import { BagOutcomePreview } from "@/components/app/bag-outcome-preview";
+import { BagPanelComposer } from "@/components/app/bag-panel-composer";
 import { useAuth } from "@/components/auth/auth-provider";
 import {
   calculateBagPatternPlan,
@@ -27,6 +28,18 @@ import {
   type BagPatternDraft,
   type BagPatternPlan,
 } from "@/lib/sewing/bag-pattern";
+import {
+  calculateOuterPanelComposition,
+  defaultOuterPanelDesign,
+  type OuterPanelComposition,
+  type OuterPanelDesign,
+} from "@/lib/sewing/panel-composition";
+import {
+  calculateToteHandlePlan,
+  handlePlacementInstruction,
+  type ToteHandleOptions,
+  type ToteHandlePlan,
+} from "@/lib/sewing/tote-handle";
 
 type SizeBasis = "finished" | "cut";
 type ToolMode = "select" | "shape";
@@ -40,8 +53,7 @@ type DragHandle =
   | "shape-left"
   | "shape-right";
 
-type ClosureOptions = {
-  handleDrop: number;
+type ClosureOptions = ToteHandleOptions & {
   sideZipperLength: number;
   zipperGap: number;
   recessDepth: number;
@@ -49,7 +61,7 @@ type ClosureOptions = {
 };
 
 type CutPiece = {
-  material: "outer" | "lining" | "interfacing";
+  material: "outer" | "contrast" | "lining" | "interfacing" | "handle";
   name: string;
   quantity: number;
   width: number;
@@ -107,7 +119,11 @@ const defaultDraft = draftFromFinishedSize({
 });
 
 const defaultClosureOptions: ClosureOptions = {
+  handleMaterial: "webbing",
   handleDrop: 11,
+  handleWidth: 1.5,
+  handleInset: 3.5,
+  handleAttachmentDepth: 4,
   sideZipperLength: 8,
   zipperGap: 0.25,
   recessDepth: 1.5,
@@ -116,16 +132,6 @@ const defaultClosureOptions: ClosureOptions = {
 
 function cleanInput(value: number, fallback = 0) {
   return Number.isFinite(value) ? value : fallback;
-}
-
-function patternPieceNote(plan: BagPatternPlan) {
-  const shaping =
-    Math.abs(plan.leftTopInset) > 0.001 ||
-    Math.abs(plan.rightTopInset) > 0.001;
-  if (!shaping) {
-    return "Cut the two bottom corner squares from each panel.";
-  }
-  return `Start from the bounding rectangle; move the top-left ${formatInches(plan.leftTopInset)} and top-right ${formatInches(plan.rightTopInset)} before joining the side lines.`;
 }
 
 function standingTopRimWidth(plan: BagPatternPlan) {
@@ -150,16 +156,11 @@ function getCutPieces(
   plan: BagPatternPlan,
   closure: BagClosure,
   options: ClosureOptions,
+  composition: OuterPanelComposition,
+  handlePlan: ToteHandlePlan,
 ): CutPiece[] {
   const pieces: CutPiece[] = [
-    {
-      material: "outer",
-      name: "Main body panel",
-      quantity: 2,
-      width: plan.boundingCutWidth,
-      height: plan.cutHeight,
-      note: patternPieceNote(plan),
-    },
+    ...composition.cutPieces,
     {
       material: "lining",
       name: "Main lining panel",
@@ -180,12 +181,14 @@ function getCutPieces(
 
   if (closure === "open-tote") {
     pieces.push({
-      material: "outer",
-      name: "Handle strip",
+      material: options.handleMaterial === "webbing" ? "handle" : "outer",
+      name: options.handleMaterial === "webbing" ? "Webbing handle" : "Quarter-fold fabric handle",
       quantity: 2,
-      width: 4,
-      height: options.handleDrop * 2 + 10,
-      note: "Folds to a 1-inch handle with 5 inches captured at each end.",
+      width: handlePlan.cutWidth,
+      height: handlePlan.cutLength,
+      note: options.handleMaterial === "webbing"
+        ? `Finished ${formatInches(options.handleWidth)} wide; includes 1/2 inch turned under at each end and 1/2 inch total matching allowance.`
+        : `Quarter-fold to ${formatInches(options.handleWidth)} finished width; includes end turns and pressing allowance.`,
     });
   }
 
@@ -261,8 +264,10 @@ function zipperNote(
   options: ClosureOptions,
 ) {
   switch (closure) {
-    case "open-tote":
-      return `Handles: cut for a ${formatInches(options.handleDrop)} drop, or substitute webbing.`;
+    case "open-tote": {
+      const handlePlan = calculateToteHandlePlan(plan, options);
+      return `Handles: cut 2 ${options.handleMaterial === "webbing" ? "webbing lengths" : "fabric strips"} at ${formatInches(handlePlan.cutLength)} × ${formatInches(handlePlan.cutWidth)}. Place centers ${formatInches(options.handleInset)} from each finished front corner, ${formatInches(handlePlan.centerSpacing)} apart; secure ${formatInches(options.handleAttachmentDepth)} below the rim for a ${formatInches(options.handleDrop)} inside drop.`;
+    }
     case "top-zipper":
       return `Flat-top zipper: use ${formatInches(plan.finishedTopOpening + 2)} or longer and trim after the tabs are added.`;
     case "side-zipper":
@@ -277,7 +282,7 @@ function zipperNote(
 function closureTeaching(closure: BagClosure) {
   switch (closure) {
     case "open-tote":
-      return "The top take-up is one matching seam allowance for a lined rim. A double-fold hem needs its own larger top allowance.";
+      return "The top take-up is one matching seam allowance for a lined rim. Center each handle on the marks and reinforce the full box-and-X area from behind; a double-fold hem needs its own larger top allowance.";
     case "top-zipper":
       return "The two flat top stitch lines meet at the zipper, collapsing the opening into a ridge. Zipper length means the teeth/stop span, not the loose tape beyond it.";
     case "side-zipper":
@@ -294,6 +299,8 @@ function buildPlanText(
   closure: BagClosure,
   options: ClosureOptions,
   pieces: CutPiece[],
+  composition: OuterPanelComposition,
+  handlePlan: ToteHandlePlan,
 ) {
   const closureLabel =
     closureChoices.find((choice) => choice.id === closure)?.label ?? closure;
@@ -309,6 +316,19 @@ function buildPlanText(
     `Raw-edge corner square: ${formatInches(plan.cornerCut)} × ${formatInches(plan.cornerCut)}`,
     `Corner rule: ${formatInches(plan.cornerCut)} × 2 = ${formatInches(plan.finishedDepth)} finished depth`,
     "",
+    "OUTER PANEL BUILD",
+    `${composition.modeLabel}${composition.design.mode !== "solid" ? ` — ${composition.scopeLabel}` : ""}`,
+    ...(composition.design.mode !== "solid"
+      ? [
+          `Piecing allowance: ${formatInches(composition.design.piecingAllowance)} (separate from the bag seam allowance)`,
+          `Assembled slab: ${formatInches(composition.sewnWidth)} × ${formatInches(composition.sewnHeight)}; final outer blank: ${formatInches(composition.targetWidth)} × ${formatInches(composition.targetHeight)}`,
+        ]
+      : []),
+    ...(composition.design.contrastEnabled
+      ? [`Contrast bottom: ${formatInches(composition.design.contrastRise)} finished rise; cut band height ${formatInches(composition.contrastCutHeight)}; join allowance ${formatInches(composition.design.piecingAllowance)}`]
+      : []),
+    ...composition.instructions.map((instruction, index) => `${index + 1}. ${instruction}`),
+    "",
     "CUT LIST",
     ...pieces.map(
       (piece) =>
@@ -316,6 +336,12 @@ function buildPlanText(
     ),
     "",
     zipperNote(plan, closure, options),
+    ...(closure === "open-tote"
+      ? [
+          handlePlacementInstruction(handlePlan),
+          `Flat-panel center marks: ${formatInches(handlePlan.rawLeftCenter)} and ${formatInches(handlePlan.rawRightCenter)} from the panel's left raw edge; finished rim line ${formatInches(handlePlan.rawRimY)} below the raw top.`,
+        ]
+      : []),
     "",
     "REFERENCE",
     "Corner squares are measured from the raw side and bottom edges. This shortcut assumes the side, bottom, and corner seams use the same allowance.",
@@ -326,7 +352,12 @@ function buildPlanText(
   return lines.join("\n");
 }
 
-function downloadPatternSvg(plan: BagPatternPlan) {
+function downloadPatternSvg(
+  plan: BagPatternPlan,
+  composition: OuterPanelComposition,
+  closure: BagClosure,
+  handlePlan: ToteHandlePlan,
+) {
   const pixelsPerInch = 96;
   const margin = 0.75;
   const footer = 1.75;
@@ -368,8 +399,58 @@ function downloadPatternSvg(plan: BagPatternPlan) {
     `L ${x(stitchGeometry.leftSideBottom.x)} ${y(stitchGeometry.leftSideBottom.y)}`,
     "Z",
   ].join(" ");
+  const compositionBottom = composition.contrastJoinY ?? h;
+  const compositionLines: string[] = [];
+  const blankMinX = minX;
+  const blankWidth = plan.boundingCutWidth;
+
+  if (composition.design.mode === "vertical-strips") {
+    for (const seamX of composition.columnSeams) {
+      const lineX = blankMinX + seamX;
+      compositionLines.push(
+        `<line x1="${x(lineX)}" y1="${y(0)}" x2="${x(lineX)}" y2="${y(compositionBottom)}"/>`,
+      );
+    }
+  }
+  if (
+    composition.design.mode === "horizontal-strips" ||
+    composition.design.mode === "block-grid"
+  ) {
+    for (const lineY of composition.rowSeams) {
+      compositionLines.push(
+        `<line x1="${x(blankMinX)}" y1="${y(lineY)}" x2="${x(blankMinX + blankWidth)}" y2="${y(lineY)}"/>`,
+      );
+    }
+  }
+  if (composition.design.mode === "block-grid") {
+    for (const seamX of composition.columnSeams) {
+      const lineX = blankMinX + seamX;
+      compositionLines.push(
+        `<line x1="${x(lineX)}" y1="${y(0)}" x2="${x(lineX)}" y2="${y(compositionBottom)}"/>`,
+      );
+    }
+  }
+
+  const contrastMarkup = composition.contrastJoinY === null
+    ? ""
+    : `<rect x="${x(blankMinX)}" y="${y(composition.contrastJoinY)}" width="${blankWidth * scale}" height="${(h - composition.contrastJoinY) * scale}" fill="#d9edf0" clip-path="url(#cut-shape)"/>
+  <line x1="${x(blankMinX)}" y1="${y(composition.contrastJoinY)}" x2="${x(blankMinX + blankWidth)}" y2="${y(composition.contrastJoinY)}" stroke="#b95c00" stroke-width="2" stroke-dasharray="10 6" clip-path="url(#cut-shape)"/>`;
+  const compositionMarkup = compositionLines.length
+    ? `<g fill="none" stroke="#7458a8" stroke-width="1.5" stroke-dasharray="5 4" clip-path="url(#cut-shape)">${compositionLines.join("\n")}</g>`
+    : "";
+  const handleMarkup = closure === "open-tote"
+    ? [handlePlan.rawLeftCenter, handlePlan.rawRightCenter]
+        .map(
+          (center) => `<rect x="${x(center - handlePlan.handleWidth / 2)}" y="${y(handlePlan.rawRimY)}" width="${handlePlan.handleWidth * scale}" height="${handlePlan.handleAttachmentDepth * scale}" fill="none" stroke="#b95c00" stroke-width="2" stroke-dasharray="8 5" clip-path="url(#cut-shape)"/>
+  <line x1="${x(center)}" y1="${y(0)}" x2="${x(center)}" y2="${y(handlePlan.rawAttachmentEndY)}" stroke="#b95c00" stroke-width="1.5" stroke-dasharray="4 4" clip-path="url(#cut-shape)"/>`,
+        )
+        .join("\n")
+    : "";
   const calibrationY = (plan.cutHeight + margin + 0.35) * scale;
   const labelX = pageWidth * scale - margin * scale;
+  const compositionScope = composition.design.mode === "solid"
+    ? "FRONT + BACK"
+    : composition.scopeLabel.toUpperCase();
   const fileName = `monosyth-bag-panel-${formatDecimal(plan.cutWidth)}x${formatDecimal(plan.cutHeight)}.svg`;
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${pageWidth}in" height="${pageHeight}in" viewBox="0 0 ${pageWidth * scale} ${pageHeight * scale}">
@@ -377,11 +458,16 @@ function downloadPatternSvg(plan: BagPatternPlan) {
   <defs><clipPath id="cut-shape"><path d="${outline}"/></clipPath></defs>
   <path d="${outline}" fill="#fffdf8" stroke="#151c32" stroke-width="2"/>
   <path d="${outline}" fill="none" stroke="#f6b94b" stroke-opacity=".24" stroke-width="${seam * 2}" clip-path="url(#cut-shape)"/>
+  ${contrastMarkup}
+  ${compositionMarkup}
   <path d="${stitchOutline}" fill="none" stroke="#147d91" stroke-width="2" stroke-dasharray="8 6" stroke-linejoin="round"/>
+  ${handleMarkup}
   <line x1="${x(w / 2)}" y1="${y(0.8)}" x2="${x(w / 2)}" y2="${y(h - 1)}" stroke="#65708b" stroke-width="1.5" stroke-dasharray="14 8"/>
-  <text x="${x(w / 2)}" y="${y(h / 2)}" text-anchor="middle" font-family="monospace" font-size="18" fill="#151c32">MAIN PANEL · CUT 2 OUTER + 2 LINING</text>
+  <text x="${x(w / 2)}" y="${y(h / 2)}" text-anchor="middle" font-family="monospace" font-size="18" fill="#151c32">MAIN PANEL · ${composition.modeLabel.toUpperCase()} · ${compositionScope}</text>
   <text x="${x(w / 2)}" y="${y(h / 2) + 28}" text-anchor="middle" font-family="monospace" font-size="14" fill="#65708b">CUT LINE SOLID · STITCH LINE DASHED · GRAINLINE CENTER</text>
   <text x="${x(w / 2)}" y="${y(h / 2) + 54}" text-anchor="middle" font-family="monospace" font-size="14" fill="#65708b">CORNER ${formatInches(c)} · SEAM ${formatInches(plan.seamAllowance)}</text>
+  ${closure === "open-tote" ? `<text x="${x(w / 2)}" y="${y(h / 2) + 80}" text-anchor="middle" font-family="monospace" font-size="14" fill="#b95c00">HANDLE MARKS REPEAT ON BOTH OUTER FACES</text>
+  <text x="${x(w / 2)}" y="${y(h / 2) + 102}" text-anchor="middle" font-family="monospace" font-size="14" fill="#b95c00">CENTERS ${formatInches(handlePlan.handleInset)} FROM FINISHED FRONT CORNERS · ${formatInches(handlePlan.handleWidth)} WIDE</text>` : ""}
   <rect x="${margin * scale}" y="${calibrationY}" width="${scale}" height="${scale}" fill="none" stroke="#151c32" stroke-width="2"/>
   <text x="${margin * scale}" y="${calibrationY - 10}" font-family="monospace" font-size="13" fill="#151c32">1-INCH CALIBRATION SQUARE</text>
   <text x="${labelX}" y="${calibrationY + 36}" text-anchor="end" font-family="monospace" font-size="13" fill="#151c32">PRINT AT ACTUAL SIZE / 100%</text>
@@ -476,6 +562,9 @@ function Handle({
 function PatternCanvas({
   draft,
   plan,
+  composition,
+  closure,
+  handlePlan,
   mirror,
   snapStep,
   toolMode,
@@ -484,6 +573,9 @@ function PatternCanvas({
 }: {
   draft: BagPatternDraft;
   plan: BagPatternPlan;
+  composition: OuterPanelComposition;
+  closure: BagClosure;
+  handlePlan: ToteHandlePlan;
   mirror: boolean;
   snapStep: SnapStep;
   toolMode: ToolMode;
@@ -543,6 +635,13 @@ function PatternCanvas({
     `L ${stitchX(stitchGeometry.leftSideBottom.x)} ${stitchY(stitchGeometry.leftSideBottom.y)}`,
     "Z",
   ].join(" ");
+  const blankMinX = Math.min(0, plan.leftTopInset);
+  const blankWidth = plan.boundingCutWidth;
+  const compositionBottom = composition.contrastJoinY ?? plan.cutHeight;
+  const compositionTopY = stitchY(0);
+  const compositionBottomY = stitchY(compositionBottom);
+  const blankLeft = stitchX(blankMinX);
+  const blankRight = stitchX(blankMinX + blankWidth);
 
   function beginDrag(
     handle: DragHandle,
@@ -768,7 +867,7 @@ function PatternCanvas({
         className={styles.patternCanvas}
         viewBox="0 0 760 520"
         role="img"
-        aria-label={`Editable bag panel, ${formatInches(plan.cutWidth)} by ${formatInches(plan.cutHeight)}, with ${formatInches(plan.seamAllowance)} seam allowance and ${formatInches(plan.cornerCut)} boxed corner cutouts`}
+        aria-label={`Editable bag panel, ${formatInches(plan.cutWidth)} by ${formatInches(plan.cutHeight)}, with ${formatInches(plan.seamAllowance)} seam allowance, ${formatInches(plan.cornerCut)} boxed corner cutouts, and a ${composition.modeLabel.toLowerCase()} outer build${composition.design.contrastEnabled ? " with a contrast bottom" : ""}${closure === "open-tote" ? " plus measured handle marks" : ""}`}
         onPointerMove={pointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
@@ -793,6 +892,32 @@ function PatternCanvas({
 
         <path className={styles.panelShadow} d={outline} transform="translate(5 7)" />
         <path className={styles.panelFill} d={outline} />
+        <g className={styles.compositionOverlay} clipPath="url(#panel-clip)" aria-hidden="true">
+          {composition.contrastJoinY !== null ? (
+            <rect
+              className={styles.compositionContrast}
+              x={blankLeft}
+              y={compositionBottomY}
+              width={blankRight - blankLeft}
+              height={bottom - compositionBottomY}
+            />
+          ) : null}
+          {composition.design.mode === "vertical-strips" || composition.design.mode === "block-grid"
+            ? composition.columnSeams.map((seamX, index) => {
+                const lineX = blankLeft + seamX * scale;
+                return <line key={`column-${index}`} x1={lineX} y1={compositionTopY} x2={lineX} y2={compositionBottomY} />;
+              })
+            : null}
+          {composition.design.mode === "horizontal-strips" || composition.design.mode === "block-grid"
+            ? composition.rowSeams.map((seamY, index) => {
+                const lineY = stitchY(seamY);
+                return <line key={`row-${index}`} x1={blankLeft} y1={lineY} x2={blankRight} y2={lineY} />;
+              })
+            : null}
+          {composition.contrastJoinY !== null ? (
+            <line className={styles.compositionJoin} x1={blankLeft} y1={compositionBottomY} x2={blankRight} y2={compositionBottomY} />
+          ) : null}
+        </g>
         <path
           className={styles.allowanceBand}
           d={outline}
@@ -802,6 +927,34 @@ function PatternCanvas({
         <path className={styles.cutLine} d={outline} />
 
         <path className={styles.stitchLines} d={stitchOutline} />
+
+        {closure === "open-tote" ? (
+          <g className={styles.handlePlacementMarks} clipPath="url(#panel-clip)" aria-hidden="true">
+            {[handlePlan.rawLeftCenter, handlePlan.rawRightCenter].map((center, index) => (
+              <g key={index}>
+                <rect
+                  x={stitchX(center - handlePlan.handleWidth / 2)}
+                  y={stitchY(handlePlan.rawRimY)}
+                  width={handlePlan.handleWidth * scale}
+                  height={handlePlan.handleAttachmentDepth * scale}
+                  rx="3"
+                />
+                <line
+                  x1={stitchX(center)}
+                  y1={top}
+                  x2={stitchX(center)}
+                  y2={stitchY(handlePlan.rawAttachmentEndY)}
+                />
+                <path
+                  d={`M ${stitchX(center - handlePlan.handleWidth * 0.34)} ${stitchY(handlePlan.rawRimY + handlePlan.handleAttachmentDepth * 0.48)} L ${stitchX(center + handlePlan.handleWidth * 0.34)} ${stitchY(handlePlan.rawRimY + handlePlan.handleAttachmentDepth * 0.78)} M ${stitchX(center + handlePlan.handleWidth * 0.34)} ${stitchY(handlePlan.rawRimY + handlePlan.handleAttachmentDepth * 0.48)} L ${stitchX(center - handlePlan.handleWidth * 0.34)} ${stitchY(handlePlan.rawRimY + handlePlan.handleAttachmentDepth * 0.78)}`}
+                />
+              </g>
+            ))}
+            <text x={centerX} y={stitchY(handlePlan.rawAttachmentEndY) + 17}>
+              HANDLE CENTERS · {formatInches(handlePlan.handleInset)} FROM FINISHED FRONT CORNERS · {formatInches(handlePlan.centerSpacing)} APART
+            </text>
+          </g>
+        ) : null}
 
         <g className={styles.grainLine}>
           <line x1={centerX} y1={top + 58} x2={centerX} y2={bottom - 72} />
@@ -844,7 +997,7 @@ function PatternCanvas({
 
         <g className={styles.panelLabel}>
           <text x={centerX} y={centerY - 14}>MAIN BODY PANEL</text>
-          <text x={centerX} y={centerY + 14}>CUT 2 OUTER · CUT 2 LINING</text>
+          <text x={centerX} y={centerY + 14}>{composition.modeLabel.toUpperCase()} · {composition.design.mode === "solid" ? "BOTH FACES" : composition.scopeLabel.toUpperCase()}</text>
           <text x={centerX} y={centerY + 39}>SOLID = CUT · DASHED = STITCH</text>
         </g>
 
@@ -869,13 +1022,25 @@ function PatternCanvas({
         <span><i className={styles.legendStitch} /> stitch line</span>
         <span><i className={styles.legendAllowance} /> seam allowance</span>
         <span><i className={styles.legendGrain} /> grain / center</span>
+        {composition.design.mode !== "solid" ? <span><i className={styles.legendPiecing} /> piecing seams</span> : null}
+        {composition.design.contrastEnabled ? <span><i className={styles.legendContrast} /> contrast join</span> : null}
+        {closure === "open-tote" ? <span><i className={styles.legendHandle} /> handle placement</span> : null}
       </div>
     </div>
   );
 }
 
-function FabricLayoutPanel({ plan }: { plan: BagPatternPlan }) {
+function FabricLayoutPanel({
+  plan,
+  composition,
+}: {
+  plan: BagPatternPlan;
+  composition: OuterPanelComposition;
+}) {
   const layout = calculateBodyFabricLayout(plan);
+  const customOuter =
+    composition.design.mode !== "solid" ||
+    composition.design.contrastEnabled;
   const pieceStyle = {
     "--piece-ratio": `${Math.max(0.5, Math.min(2.2, plan.boundingCutWidth / plan.cutHeight))}`,
     "--piece-width": `${Math.min(96, Math.max(24, (plan.boundingCutWidth / Math.max(layout.usableWidth, 1)) * 100))}%`,
@@ -889,17 +1054,37 @@ function FabricLayoutPanel({ plan }: { plan: BagPatternPlan }) {
           <h2 id="fabric-layout-title">Start at the bolt</h2>
         </div>
         <div className={styles.yardageReadout}>
-          <span>Body fabric</span>
+          <span>{customOuter ? "Lining panels" : "Body fabric"}</span>
           <strong>{layout.fits ? formatYards(layout.buyYards) : "too narrow"}</strong>
         </div>
       </header>
 
       {layout.fits ? (
         <div className={styles.fabricGrid}>
-          {(["Outer", "Lining"] as const).map((layer) => (
-            <article className={styles.fabricRoll} key={layer}>
+          {customOuter ? (
+            <article className={`${styles.fabricRoll} ${styles.fabricRecipe}`}>
               <div className={styles.fabricRollHead}>
-                <strong>{layer} fabric</strong>
+                <strong>Outer build recipe</strong>
+                <span>Cut by fabric group · quantities include selected faces</span>
+              </div>
+              <div className={styles.fabricRecipeRows}>
+                {composition.cutPieces.map((piece) => (
+                  <div key={`${piece.material}-${piece.name}`}>
+                    <span className={styles[`material_${piece.material}`]}>{piece.quantity}×</span>
+                    <strong>{piece.name}</strong>
+                    <b>{formatInches(piece.width)} × {formatInches(piece.height)}</b>
+                  </div>
+                ))}
+              </div>
+              <footer>
+                <span>Assemble before shaping</span>
+                <strong>Trim to {formatInches(composition.targetWidth)} × {formatInches(composition.targetHeight)}</strong>
+              </footer>
+            </article>
+          ) : (
+            <article className={styles.fabricRoll}>
+              <div className={styles.fabricRollHead}>
+                <strong>Outer fabric</strong>
                 <span>{formatInches(plan.fabricWidth)} bolt · {formatInches(layout.usableWidth)} usable</span>
               </div>
               <div className={`${styles.fabricBed} ${layout.piecesAcross === 2 ? styles.fabricAcross : styles.fabricStacked}`}>
@@ -919,7 +1104,30 @@ function FabricLayoutPanel({ plan }: { plan: BagPatternPlan }) {
                 <strong>{formatInches(layout.lengthInches)} minimum length</strong>
               </footer>
             </article>
-          ))}
+          )}
+
+          <article className={styles.fabricRoll}>
+            <div className={styles.fabricRollHead}>
+              <strong>Lining fabric</strong>
+              <span>{formatInches(plan.fabricWidth)} bolt · {formatInches(layout.usableWidth)} usable</span>
+            </div>
+            <div className={`${styles.fabricBed} ${layout.piecesAcross === 2 ? styles.fabricAcross : styles.fabricStacked}`}>
+              <span className={styles.selvageLeft}>selvage</span>
+              <span className={styles.selvageRight}>selvage</span>
+              {[1, 2].map((piece) => (
+                <div className={styles.fabricPiece} style={pieceStyle} key={piece}>
+                  <span>Panel {piece}</span>
+                  <small>{formatInches(plan.boundingCutWidth)} × {formatInches(plan.cutHeight)}</small>
+                  <i>grain ↑</i>
+                </div>
+              ))}
+              <span className={styles.offcutNote}>Keep both lining panels on the same grain direction.</span>
+            </div>
+            <footer>
+              <span>{layout.piecesAcross === 2 ? "2 panels across" : "1 panel across · 2 rows"}</span>
+              <strong>{formatInches(layout.lengthInches)} minimum length</strong>
+            </footer>
+          </article>
         </div>
       ) : (
         <div className={styles.fabricWarning}>
@@ -927,7 +1135,7 @@ function FabricLayoutPanel({ plan }: { plan: BagPatternPlan }) {
           <p>Choose wider fabric, piece the panel, or rotate only if the print, nap, and grain allow it.</p>
         </div>
       )}
-      <p className={styles.fabricFinePrint}>Conservative body-panel estimate, rounded up to the next ⅛ yard. Directional prints, repeats, straps, matching, and shrinkage can require more.</p>
+      <p className={styles.fabricFinePrint}>{customOuter ? "The yardage readout covers the two full lining panels. Outer piecing can use scraps, precuts, or several fabrics, so use the exact cut groups above rather than one misleading bolt total. " : "Conservative body-panel estimate, rounded up to the next ⅛ yard. "}Directional prints, repeats, straps, matching, and shrinkage can require more.</p>
     </section>
   );
 }
@@ -938,15 +1146,24 @@ export function BagPatternStudio() {
   const [basis, setBasis] = useState<SizeBasis>("finished");
   const [draft, setDraft] = useState<BagPatternDraft>(defaultDraft);
   const [closureOptions, setClosureOptions] = useState<ClosureOptions>(defaultClosureOptions);
+  const [outerDesign, setOuterDesign] = useState<OuterPanelDesign>(defaultOuterPanelDesign);
   const [mirror, setMirror] = useState(true);
   const [toolMode, setToolMode] = useState<ToolMode>("select");
   const [snapStep, setSnapStep] = useState<SnapStep>(0.25);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
 
   const plan = useMemo(() => calculateBagPatternPlan(draft), [draft]);
+  const composition = useMemo(
+    () => calculateOuterPanelComposition(plan, outerDesign),
+    [plan, outerDesign],
+  );
+  const handlePlan = useMemo(
+    () => calculateToteHandlePlan(plan, closureOptions),
+    [plan, closureOptions],
+  );
   const pieces = useMemo(
-    () => getCutPieces(plan, closure, closureOptions),
-    [plan, closure, closureOptions],
+    () => getCutPieces(plan, closure, closureOptions, composition, handlePlan),
+    [plan, closure, closureOptions, composition, handlePlan],
   );
   const closureWarnings = useMemo(() => {
     const warnings: string[] = [];
@@ -994,9 +1211,64 @@ export function BagPatternStudio() {
         "The zipper recess must be shallower than the finished bag height.",
       );
     }
+    if (closure === "open-tote") {
+      warnings.push(...handlePlan.warnings);
+    }
     return warnings;
-  }, [closure, closureOptions, plan]);
-  const ready = plan.valid && closureWarnings.length === 0;
+  }, [closure, closureOptions, handlePlan.warnings, plan]);
+  const ready =
+    plan.valid &&
+    composition.valid &&
+    closureWarnings.length === 0;
+  const handleBuildAdvisories = useMemo(() => {
+    if (closure !== "open-tote") return [];
+    const advisories = [...handlePlan.advisories];
+    if (
+      composition.design.contrastEnabled &&
+      closureOptions.handleAttachmentDepth >=
+        plan.finishedHeight - composition.design.contrastRise
+    ) {
+      advisories.push(
+        "The handle attachment crosses the contrast-bottom join. Reinforce that seam or shorten the attachment depth.",
+      );
+    }
+    if (
+      composition.design.mode === "vertical-strips" ||
+      composition.design.mode === "block-grid"
+    ) {
+      const blankMinX = Math.min(0, plan.leftTopInset);
+      const centers = [handlePlan.rawLeftCenter, handlePlan.rawRightCenter];
+      const seamUnderHandle = composition.columnSeams
+        .map((seamX) => blankMinX + seamX)
+        .some((seamX) =>
+        centers.some(
+          (center) =>
+            Math.abs(seamX - center) <= handlePlan.handleWidth / 2 + 0.125,
+        ),
+      );
+      if (seamUnderHandle) {
+        advisories.push(
+          "A vertical piecing seam sits under a handle leg. Add backing behind the box-and-X or shift the handle inset slightly.",
+        );
+      }
+    }
+    if (
+      composition.design.mode === "horizontal-strips" ||
+      composition.design.mode === "block-grid"
+    ) {
+      const seamThroughHandle = composition.rowSeams.some(
+        (seamY) =>
+          seamY >= handlePlan.rawRimY &&
+          seamY <= handlePlan.rawAttachmentEndY,
+      );
+      if (seamThroughHandle) {
+        advisories.push(
+          "A horizontal piecing seam crosses the handle attachment box. Reinforce the full area before stitching the handle.",
+        );
+      }
+    }
+    return advisories;
+  }, [closure, closureOptions.handleAttachmentDepth, composition, handlePlan, plan]);
 
   function updateDraft(next: BagPatternDraft) {
     setDraft(next);
@@ -1089,13 +1361,21 @@ export function BagPatternStudio() {
     setToolMode("select");
     setSnapStep(0.25);
     setClosureOptions(defaultClosureOptions);
+    setOuterDesign(defaultOuterPanelDesign);
     setCopyState("idle");
   }
 
   async function copyPlan() {
     try {
       await navigator.clipboard.writeText(
-        buildPlanText(plan, closure, closureOptions, pieces),
+        buildPlanText(
+          plan,
+          closure,
+          closureOptions,
+          pieces,
+          composition,
+          handlePlan,
+        ),
       );
       setCopyState("copied");
     } catch {
@@ -1146,7 +1426,7 @@ export function BagPatternStudio() {
           <div className={styles.topActions}>
             <button type="button" onClick={resetDraft}>Reset</button>
             <button type="button" onClick={() => window.print()}>Print plan</button>
-            <button type="button" className={styles.downloadButton} disabled={!plan.valid} onClick={() => downloadPatternSvg(plan)}>Body-panel SVG</button>
+            <button type="button" className={styles.downloadButton} disabled={!ready} onClick={() => downloadPatternSvg(plan, composition, closure, handlePlan)}>Body-panel SVG</button>
           </div>
         </header>
 
@@ -1287,7 +1567,23 @@ export function BagPatternStudio() {
                 </div>
               </div>
               {closure === "open-tote" ? (
-                <MeasurementField label="Handle drop" hint="rim to top of handle" value={closureOptions.handleDrop} min={3} onChange={(value) => setClosureOptions((current) => ({ ...current, handleDrop: Math.max(3, value) }))} />
+                <div className={styles.handleControls}>
+                  <div className={styles.handleMaterialToggle} role="group" aria-label="Handle material">
+                    <button type="button" aria-pressed={closureOptions.handleMaterial === "webbing"} onClick={() => setClosureOptions((current) => ({ ...current, handleMaterial: "webbing" }))}>Webbing</button>
+                    <button type="button" aria-pressed={closureOptions.handleMaterial === "fabric"} onClick={() => setClosureOptions((current) => ({ ...current, handleMaterial: "fabric" }))}>Folded fabric</button>
+                  </div>
+                  <div className={styles.handleFieldGrid}>
+                    <MeasurementField label="Handle width" hint="finished edge to edge" value={closureOptions.handleWidth} min={0.25} onChange={(value) => setClosureOptions((current) => ({ ...current, handleWidth: Math.max(0.25, value) }))} />
+                    <MeasurementField label="Corner inset" hint="front corner to center" value={closureOptions.handleInset} min={0} onChange={(value) => setClosureOptions((current) => ({ ...current, handleInset: Math.max(0, value) }))} />
+                    <MeasurementField label="Attachment depth" hint="rim to bottom of stitching" value={closureOptions.handleAttachmentDepth} min={0.5} onChange={(value) => setClosureOptions((current) => ({ ...current, handleAttachmentDepth: Math.max(0.5, value) }))} />
+                    <MeasurementField label="Handle drop" hint="inside rim-to-apex clearance" value={closureOptions.handleDrop} min={1} onChange={(value) => setClosureOptions((current) => ({ ...current, handleDrop: Math.max(1, value) }))} />
+                  </div>
+                  <div className={styles.handleReadout}>
+                    <span><small>Centers apart</small><strong>{formatInches(handlePlan.centerSpacing)}</strong></span>
+                    <span><small>Cut each</small><strong>{formatInches(handlePlan.cutLength)} × {formatInches(handlePlan.cutWidth)}</strong></span>
+                  </div>
+                  <p className={styles.handlePlacementCopy}>Mark each handle center {formatInches(handlePlan.handleInset)} in from the finished front-corner fold, then secure it {formatInches(handlePlan.handleAttachmentDepth)} below the rim.</p>
+                </div>
               ) : null}
               {closure === "side-zipper" ? (
                 <MeasurementField label="Opening length" hint="between zipper stops" value={closureOptions.sideZipperLength} min={3} onChange={(value) => setClosureOptions((current) => ({ ...current, sideZipperLength: Math.max(3, value) }))} />
@@ -1334,6 +1630,9 @@ export function BagPatternStudio() {
             <PatternCanvas
               draft={draft}
               plan={plan}
+              composition={composition}
+              closure={closure}
+              handlePlan={handlePlan}
               mirror={mirror}
               snapStep={snapStep}
               toolMode={toolMode}
@@ -1358,13 +1657,24 @@ export function BagPatternStudio() {
               </div>
             </div>
 
+            <BagPanelComposer
+              plan={plan}
+              value={outerDesign}
+              composition={composition}
+              onChange={(value) => {
+                setOuterDesign(value);
+                setCopyState("idle");
+              }}
+            />
+
             <BagOutcomePreview
               plan={plan}
               closure={closure}
               options={closureOptions}
+              composition={composition}
             />
 
-            <FabricLayoutPanel plan={plan} />
+            <FabricLayoutPanel plan={plan} composition={composition} />
           </section>
 
           <aside className={styles.resultPanel}>
@@ -1409,7 +1719,7 @@ export function BagPatternStudio() {
 
             {!ready ? (
               <section className={styles.warningList}>
-                {[...plan.warnings, ...closureWarnings].map((warning) => <p key={warning}>{warning}</p>)}
+                {[...plan.warnings, ...composition.warnings, ...closureWarnings].map((warning) => <p key={warning}>{warning}</p>)}
               </section>
             ) : null}
 
@@ -1439,13 +1749,14 @@ export function BagPatternStudio() {
               <span>Hardware + construction</span>
               <strong>{zipperNote(plan, closure, closureOptions)}</strong>
               <p>Directional fabric: keep grain arrows parallel. Thick foam or vinyl: make a scrap corner because turn-of-cloth can reduce the inside size.</p>
+              {handleBuildAdvisories.map((advisory) => <b key={advisory}>{advisory}</b>)}
               {closure !== "open-tote" ? <b>Before closing the shell, open the zipper at least halfway.</b> : null}
             </section>
 
             <div className={styles.resultActions}>
               <button type="button" onClick={() => void copyPlan()} disabled={!ready}>{copyState === "copied" ? "Copied ✓" : copyState === "error" ? "Copy failed" : "Copy cut plan"}</button>
               <button type="button" onClick={() => window.print()}>Print</button>
-              <button type="button" className={styles.primaryAction} disabled={!plan.valid} onClick={() => downloadPatternSvg(plan)}>Download body-panel SVG</button>
+              <button type="button" className={styles.primaryAction} disabled={!ready} onClick={() => downloadPatternSvg(plan, composition, closure, handlePlan)}>Download body-panel SVG</button>
             </div>
           </aside>
         </div>

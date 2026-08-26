@@ -283,6 +283,19 @@
 .insetFields .measureField { padding: .48rem .5rem; }
 .closureOptions > .measureField, .fabricInput .measureField { margin-top: .55rem; padding: .5rem; }
 .closureTeaching { padding-top: .5rem; border-top: 1px solid rgba(132, 151, 167, .12); }
+.handleControls { display: grid; gap: .45rem; margin-top: .58rem; }
+.handleMaterialToggle { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .28rem; padding: .24rem; border: 1px solid rgba(132, 151, 167, .18); border-radius: .58rem; background: rgba(7, 16, 25, .58); }
+.handleMaterialToggle button { padding: .46rem .35rem; border: 1px solid transparent; border-radius: .42rem; color: #8499a5; background: transparent; cursor: pointer; font: 650 .5rem/1 var(--font-ibm-plex-mono), monospace; }
+.handleMaterialToggle button[aria-pressed="true"] { border-color: var(--amber); color: #251b08; background: var(--amber); }
+.handleMaterialToggle button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.handleFieldGrid { display: grid; grid-template-columns: 1fr; gap: .36rem; }
+.handleFieldGrid .measureField { padding: .48rem .5rem; }
+.handleReadout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .32rem; }
+.handleReadout span { min-width: 0; padding: .48rem; border: 1px solid rgba(246, 186, 76, .17); border-radius: .5rem; background: rgba(246, 186, 76, .045); }
+.handleReadout small, .handleReadout strong { display: block; }
+.handleReadout small { color: #718695; font: 550 .43rem/1.15 var(--font-ibm-plex-mono), monospace; text-transform: uppercase; }
+.handleReadout strong { margin-top: .22rem; overflow: hidden; color: var(--amber); font: 650 .55rem/1.2 var(--font-ibm-plex-mono), monospace; text-overflow: ellipsis; white-space: nowrap; }
+.handlePlacementCopy { margin: 0; padding: .52rem; border-left: 2px solid var(--cyan); color: #8397a3; background: rgba(79, 227, 230, .04); font-size: .53rem; line-height: 1.42; }
 
 .canvasToolbar {
   display: grid;
@@ -319,6 +332,15 @@
 .centerGuide { stroke: #6e7f8c; stroke-opacity: .24; stroke-width: 1; stroke-dasharray: 5 7; }
 .panelShadow { fill: #273340; opacity: .17; }
 .panelFill { fill: #fffdf7; stroke: none; }
+.compositionOverlay { pointer-events: none; }
+.compositionOverlay line { stroke: #7752bd; stroke-width: 1.25; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
+.compositionOverlay .compositionJoin { stroke: #b95c00; stroke-width: 1.8; stroke-dasharray: 8 5; }
+.compositionContrast { fill: #d8eaed; opacity: .9; }
+.handlePlacementMarks { pointer-events: none; }
+.handlePlacementMarks rect { fill: rgba(246, 186, 76, .14); stroke: #b95c00; stroke-width: 1.6; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; }
+.handlePlacementMarks line, .handlePlacementMarks path { fill: none; stroke: #b95c00; stroke-width: 1.2; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+.handlePlacementMarks path { stroke-dasharray: none; }
+.handlePlacementMarks text { fill: #8f4900; paint-order: stroke; stroke: #fffdf7; stroke-width: 3; text-anchor: middle; font: 700 8px/1 var(--font-ibm-plex-mono), monospace; letter-spacing: .45px; }
 .allowanceBand { fill: none; stroke: var(--amber); stroke-opacity: .23; stroke-linejoin: bevel; }
 .cutLine { fill: none; stroke: #b4385d; stroke-width: 2.3; stroke-linejoin: round; }
 .stitchLines { fill: none; stroke: #177c8e; stroke-width: 1.8; stroke-dasharray: 7 5; stroke-linejoin: round; }
@@ -357,6 +379,9 @@
 .legendStitch { border-top: 2px dashed #177c8e; }
 .legendAllowance { height: 7px !important; background: rgba(246, 186, 76, .42); }
 .legendGrain { border-top: 1px dashed #627584; }
+.legendPiecing { border-top: 2px dashed #7752bd; }
+.legendContrast { border-top: 3px dashed #b95c00; }
+.legendHandle { height: 7px !important; border: 1px dashed #b95c00; background: rgba(246, 186, 76, .14); }
 
 .liveStrip { display: grid; grid-template-columns: 1fr auto 1fr auto 1.25fr; align-items: stretch; gap: .4rem; margin-top: .62rem; }
 .liveStrip > div { min-width: 0; padding: .65rem .7rem; border: 1px solid rgba(132, 151, 167, .15); border-radius: .68rem; background: rgba(13, 24, 37, .76); }
@@ -393,6 +418,12 @@
 .selvageRight { right: 0; }
 .offcutNote { position: absolute; left: 1.1rem; right: 1.1rem; bottom: .28rem; overflow: hidden; color: rgba(56, 45, 24, .72); font: 600 .42rem/1.2 var(--font-ibm-plex-mono), monospace; text-overflow: ellipsis; white-space: nowrap; }
 .fabricRoll footer strong { color: #b7c8cf; font-weight: 600; }
+.fabricRecipeRows { display: grid; align-content: start; min-height: 11rem; padding: .58rem; border-top: 1px solid rgba(132, 151, 167, .11); border-bottom: 1px solid rgba(132, 151, 167, .11); background: rgba(17, 30, 45, .5); }
+.fabricRecipeRows > div { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .42rem; padding: .48rem .36rem; border-bottom: 1px solid rgba(132, 151, 167, .1); }
+.fabricRecipeRows > div:last-child { border-bottom: 0; }
+.fabricRecipeRows span { display: grid; place-items: center; width: 1.55rem; height: 1.55rem; border-radius: .42rem; color: #071019; font: 800 .48rem/1 var(--font-ibm-plex-mono), monospace; }
+.fabricRecipeRows strong { overflow: hidden; color: #d9e5e8; font-size: .56rem; text-overflow: ellipsis; white-space: nowrap; }
+.fabricRecipeRows b { color: var(--amber); font: 650 .5rem/1.2 var(--font-ibm-plex-mono), monospace; white-space: nowrap; }
 .fabricFinePrint { margin: .58rem 0 0; color: #6f8392; font-size: .5rem; line-height: 1.4; }
 .fabricWarning { margin-top: .7rem; padding: .8rem; border: 1px solid rgba(255, 113, 148, .28); border-radius: .7rem; background: rgba(255, 113, 148, .07); }
 .fabricWarning strong { color: #ffb0c2; font-size: .72rem; }
@@ -438,8 +469,10 @@
 .cutRows article:last-child { border-bottom: 0; }
 .materialDot { display: grid; place-items: center; width: 1.65rem; height: 1.65rem; border-radius: .46rem; color: #071019; font: 800 .52rem/1 var(--font-ibm-plex-mono), monospace; }
 .material_outer { background: var(--violet); }
+.material_contrast { background: #8ad5df; }
 .material_lining { background: var(--cyan); }
 .material_interfacing { background: var(--amber); }
+.material_handle { background: #efe6cc; }
 .cutRows article div { min-width: 0; }
 .cutRows strong, .cutRows b, .cutRows small { display: block; }
 .cutRows strong { color: #dde8ea; font-size: .64rem; }
@@ -518,10 +551,13 @@
   .snapControl { justify-self: start; }
   .toolbarHint { grid-column: auto; }
   .measureField { grid-template-columns: 1fr 5.5rem; }
+  .handleReadout { grid-template-columns: 1fr; }
   .patternCanvas { min-height: 18rem; }
   .canvasLegend { gap: .45rem .7rem; }
   .fabricAcross { grid-template-columns: 1fr; }
   .finishedCard > div { grid-template-columns: 1fr; }
+  .fabricRecipeRows > div { grid-template-columns: auto minmax(0, 1fr); }
+  .fabricRecipeRows b { grid-column: 2; white-space: normal; }
 }
 
 @media (prefers-reduced-motion: reduce) {
