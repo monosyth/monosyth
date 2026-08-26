@@ -224,7 +224,9 @@ export function BagPanelComposer({
   const update = (patch: Partial<OuterPanelDesign>) =>
     onChange({ ...value, ...patch });
   const selectedBlockCount =
-    composition.piecedPanelCount * value.rows * value.columns;
+    composition.piecedPanelCount *
+    composition.design.rows *
+    composition.design.columns;
 
   return (
     <section className={styles.composer} aria-labelledby="outer-panel-build-title">
@@ -292,16 +294,34 @@ export function BagPanelComposer({
                 <CountField label="Rows" value={value.rows} onChange={(rows) => update({ rows })} />
                 <CountField label="Columns" value={value.columns} onChange={(columns) => update({ columns })} />
                 <InchField
-                  label="Square size"
-                  hint={value.blockSizeBasis === "cut" ? "before sewing" : "visible in grid"}
+                  label={value.blockSizeBasis === "cut" ? "Square size you have" : "Finished square size"}
+                  hint={value.blockSizeBasis === "cut" ? "fabric edge to edge, before sewing" : "visible after the seams are sewn"}
                   value={value.blockSize}
                   min={0.5}
                   onChange={(blockSize) => update({ blockSize })}
                 />
               </div>
-              <div className={styles.segmented} aria-label="Square size meaning">
-                <button type="button" aria-pressed={value.blockSizeBasis === "cut"} onClick={() => update({ blockSizeBasis: "cut" })}>Cut size</button>
-                <button type="button" aria-pressed={value.blockSizeBasis === "finished"} onClick={() => update({ blockSizeBasis: "finished" })}>Finished in grid</button>
+              <p className={styles.sizeBasisPrompt}>What does the square number mean?</p>
+              <div className={`${styles.segmented} ${styles.sizeBasis}`} aria-label="How the square size is measured">
+                <button type="button" aria-pressed={value.blockSizeBasis === "cut"} onClick={() => update({ blockSizeBasis: "cut" })}>
+                  <strong>Cut / precut size</strong>
+                  <small>the fabric pieces I have</small>
+                </button>
+                <button type="button" aria-pressed={value.blockSizeBasis === "finished"} onClick={() => update({ blockSizeBasis: "finished" })}>
+                  <strong>Finished / visible size</strong>
+                  <small>the block after piecing</small>
+                </button>
+              </div>
+              <div className={styles.seamResult} aria-live="polite">
+                <span>After {formatInches(composition.design.piecingAllowance)} seams</span>
+                <strong>
+                  {formatInches(composition.blockCutSize)} × {formatInches(composition.blockCutSize)} cut
+                  <b aria-hidden="true">→</b>
+                  {formatInches(composition.blockFinishedSize)} × {formatInches(composition.blockFinishedSize)} finished in grid
+                </strong>
+                <small>
+                  {formatInches(composition.blockCutSize)} − {formatInches(composition.design.piecingAllowance)} − {formatInches(composition.design.piecingAllowance)} = {formatInches(composition.blockFinishedSize)} each way. Outside blocks may be cropped when the slab is trimmed to the bag panel.
+                </small>
               </div>
               <button
                 type="button"
@@ -363,8 +383,8 @@ export function BagPanelComposer({
             ) : null}
             {value.mode === "block-grid" ? (
               <div>
-                <span>Squares to cut</span>
-                <strong>{selectedBlockCount} at {formatInches(composition.blockCutSize)}</strong>
+                <span>Squares needed</span>
+                <strong>{selectedBlockCount} at {formatInches(composition.blockCutSize)} cut → {formatInches(composition.blockFinishedSize)} finished</strong>
               </div>
             ) : null}
             {value.contrastEnabled ? (

@@ -268,7 +268,9 @@ export function calculateOuterPanelComposition(
 
     if (blockFinishedSize <= 0) {
       warnings.push(
-        "The block size must be larger than twice the piecing allowance.",
+        design.blockSizeBasis === "cut"
+          ? `The physical cut square must be larger than twice the piecing allowance—more than ${formatInches(piecingAllowance * 2)} for these seams.`
+          : "The finished block size must be greater than zero.",
       );
     }
     if (sewnWidth + 0.001 < requiredPiecedWidth) {
@@ -288,9 +290,10 @@ export function calculateOuterPanelComposition(
       quantity: piecedPanelCount * rows * columns,
       width: blockCutSize,
       height: blockCutSize,
-      note: `${rows} rows × ${columns} columns per selected face; each square finishes ${formatInches(blockFinishedSize)} in the grid.`,
+      note: `${rows} rows × ${columns} columns per selected face; fully enclosed squares finish ${formatInches(blockFinishedSize)} in the grid. Outside squares may be cropped during center trimming.`,
     });
     instructions.push(
+      `Start with ${formatInches(blockCutSize)} × ${formatInches(blockCutSize)} squares. With ${formatInches(piecingAllowance)} seams, each fully enclosed block becomes ${formatInches(blockFinishedSize)} × ${formatInches(blockFinishedSize)} in the sewn grid.`,
       `Arrange ${rows} labeled rows × ${columns} columns for each selected face. Join squares into rows, then join the rows with ${formatInches(piecingAllowance)} seams.`,
     );
   }
