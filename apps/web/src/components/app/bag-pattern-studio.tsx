@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import styles from "@/app/app/boxy-bag/bag-studio.module.css";
+import { BagOutcomePreview } from "@/components/app/bag-outcome-preview";
 import { useAuth } from "@/components/auth/auth-provider";
 import {
   calculateBagPatternPlan,
@@ -127,6 +128,24 @@ function patternPieceNote(plan: BagPatternPlan) {
   return `Start from the bounding rectangle; move the top-left ${formatInches(plan.leftTopInset)} and top-right ${formatInches(plan.rightTopInset)} before joining the side lines.`;
 }
 
+function standingTopRimWidth(plan: BagPatternPlan) {
+  return Math.max(0, plan.finishedTopOpening - plan.finishedDepth);
+}
+
+function finishedSideSeamLength(plan: BagPatternPlan) {
+  return Math.hypot(
+    plan.finishedHeight,
+    (standingTopRimWidth(plan) - plan.finishedBaseWidth) / 2,
+  );
+}
+
+function recessedPanelFinishedLength(
+  plan: BagPatternPlan,
+  endGap: number,
+) {
+  return Math.max(0, standingTopRimWidth(plan) - endGap * 2);
+}
+
 function getCutPieces(
   plan: BagPatternPlan,
   closure: BagClosure,
@@ -185,7 +204,7 @@ function getCutPieces(
     const stripWidth =
       Math.max(0, plan.finishedDepth - options.zipperGap) / 2 +
       plan.seamAllowance * 2;
-    const stripLength = plan.finishedTopOpening + 1;
+    const stripLength = standingTopRimWidth(plan) + 1;
     pieces.push(
       {
         material: "outer",
@@ -193,7 +212,7 @@ function getCutPieces(
         quantity: 2,
         width: stripLength,
         height: stripWidth,
-        note: "Make slightly long, assemble around the zipper, then trim to the body stitch span.",
+        note: "Make slightly long, assemble around the zipper, then trim to the standing rim span between side seams.",
       },
       {
         material: "lining",
@@ -207,9 +226,9 @@ function getCutPieces(
   }
 
   if (closure === "recessed-zipper") {
-    const finishedLength = Math.max(
-      1,
-      plan.finishedTopOpening - options.recessEndGap * 2,
+    const finishedLength = recessedPanelFinishedLength(
+      plan,
+      options.recessEndGap,
     );
     const stripLength = finishedLength + plan.seamAllowance * 2;
     const stripWidth = options.recessDepth + plan.seamAllowance * 2;
@@ -245,13 +264,13 @@ function zipperNote(
     case "open-tote":
       return `Handles: cut for a ${formatInches(options.handleDrop)} drop, or substitute webbing.`;
     case "top-zipper":
-      return `Zipper: use ${formatInches(plan.finishedTopOpening + 2)} or longer and trim after the tabs are added.`;
+      return `Flat-top zipper: use ${formatInches(plan.finishedTopOpening + 2)} or longer and trim after the tabs are added.`;
     case "side-zipper":
       return `Side-seam zipper opening: ${formatInches(options.sideZipperLength)}. Keep both stops clear of the boxed-corner zone.`;
     case "zipper-gusset":
-      return `Zipper: ${formatInches(plan.finishedTopOpening + 2)} or longer. Finished reveal between folds: ${formatInches(options.zipperGap)}.`;
+      return `Zipper: ${formatInches(standingTopRimWidth(plan) + 2)} or longer. Finished reveal between folds: ${formatInches(options.zipperGap)}.`;
     case "recessed-zipper":
-      return `Inset zipper panel: ${formatInches(Math.max(1, plan.finishedTopOpening - options.recessEndGap * 2))} finished length with ${formatInches(options.recessEndGap)} free at each end.`;
+      return `Inset zipper panel: ${formatInches(recessedPanelFinishedLength(plan, options.recessEndGap))} finished length with ${formatInches(options.recessEndGap)} free at each end.`;
   }
 }
 
@@ -260,7 +279,7 @@ function closureTeaching(closure: BagClosure) {
     case "open-tote":
       return "The top take-up is one matching seam allowance for a lined rim. A double-fold hem needs its own larger top allowance.";
     case "top-zipper":
-      return "The zipper seam lives at the top stitch line. Zipper length means the teeth/stop span, not the loose tape beyond it.";
+      return "The two flat top stitch lines meet at the zipper, collapsing the opening into a ridge. Zipper length means the teeth/stop span, not the loose tape beyond it.";
     case "side-zipper":
       return "A zipper replacing part of a side seam changes sewing order, not the shell dimensions. A welt pocket is a separate pattern system.";
     case "zipper-gusset":
@@ -284,7 +303,8 @@ function buildPlanText(
     "",
     `Finished base: ${formatInches(plan.finishedBaseWidth)} W × ${formatInches(plan.finishedHeight)} H × ${formatInches(plan.finishedDepth)} D`,
     `Flat/top width before shaping: ${formatInches(plan.finishedFlatWidth)}`,
-    `Finished top opening after shaping: ${formatInches(plan.finishedTopOpening)}`,
+    `Flat top seam after shaping: ${formatInches(plan.finishedTopOpening)}`,
+    `Approximate standing rim width: ${formatInches(standingTopRimWidth(plan))}`,
     `Seam allowance: ${formatInches(plan.seamAllowance)}`,
     `Raw-edge corner square: ${formatInches(plan.cornerCut)} × ${formatInches(plan.cornerCut)}`,
     `Corner rule: ${formatInches(plan.cornerCut)} × 2 = ${formatInches(plan.finishedDepth)} finished depth`,
@@ -932,7 +952,8 @@ export function BagPatternStudio() {
     const warnings: string[] = [];
     if (
       closure === "side-zipper" &&
-      closureOptions.sideZipperLength > Math.max(0, plan.finishedHeight - 1)
+      closureOptions.sideZipperLength >
+        Math.max(0, finishedSideSeamLength(plan) - 1)
     ) {
       warnings.push(
         "Shorten the side zipper so its stops stay clear of the top join and boxed-corner zone.",
@@ -948,10 +969,29 @@ export function BagPatternStudio() {
     }
     if (
       closure === "recessed-zipper" &&
-      closureOptions.recessEndGap * 2 >= plan.finishedTopOpening
+      recessedPanelFinishedLength(
+        plan,
+        closureOptions.recessEndGap,
+      ) < 1
     ) {
       warnings.push(
-        "The two recessed-panel end gaps consume the entire top opening.",
+        "Leave at least 1 inch of usable recessed zipper panel after both end gaps.",
+      );
+    }
+    if (
+      closure !== "top-zipper" &&
+      standingTopRimWidth(plan) <= 0
+    ) {
+      warnings.push(
+        "This top shaping leaves no usable standing rim for this closure.",
+      );
+    }
+    if (
+      closure === "recessed-zipper" &&
+      closureOptions.recessDepth >= plan.finishedHeight
+    ) {
+      warnings.push(
+        "The zipper recess must be shallower than the finished bag height.",
       );
     }
     return warnings;
@@ -1261,7 +1301,7 @@ export function BagPatternStudio() {
                   <MeasurementField label="End gap" hint="free space at each side seam" value={closureOptions.recessEndGap} min={0.25} onChange={(value) => setClosureOptions((current) => ({ ...current, recessEndGap: Math.max(0.25, value) }))} />
                 </>
               ) : null}
-              {closure === "top-zipper" ? <p className={styles.optionOnlyNote}>The zipper uses the full finished top-opening span; extra tape is added for handling and trimming.</p> : null}
+              {closure === "top-zipper" ? <p className={styles.optionOnlyNote}>The zipper uses the full flat top seam; extra tape is added for handling and trimming.</p> : null}
               <p className={styles.closureTeaching}>{closureTeaching(closure)}</p>
             </section>
 
@@ -1318,6 +1358,12 @@ export function BagPatternStudio() {
               </div>
             </div>
 
+            <BagOutcomePreview
+              plan={plan}
+              closure={closure}
+              options={closureOptions}
+            />
+
             <FabricLayoutPanel plan={plan} />
           </section>
 
@@ -1335,7 +1381,7 @@ export function BagPatternStudio() {
               <strong>{formatInches(plan.finishedBaseWidth)} W × {formatInches(plan.finishedHeight)} H × {formatInches(plan.finishedDepth)} D</strong>
               <div>
                 <span><small>Bottom footprint</small><b>{formatInches(plan.finishedBaseWidth)} × {formatInches(plan.finishedDepth)}</b></span>
-                <span><small>Top opening</small><b>{formatInches(plan.finishedTopOpening)}</b></span>
+                <span><small>Flat top seam</small><b>{formatInches(plan.finishedTopOpening)}</b></span>
                 <span><small>Approx. volume</small><b>{Math.round(plan.volumeCubicInches / 61)} L</b></span>
               </div>
             </section>
