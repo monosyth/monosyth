@@ -1,6 +1,12 @@
 "use client";
 
-import { useId, useState } from "react";
+import {
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type PointerEvent,
+} from "react";
 
 import styles from "@/components/app/bag-outcome-preview.module.css";
 import {
@@ -50,11 +56,13 @@ const viewChoices: ReadonlyArray<{
   label: string;
   detail: string;
 }> = [
-  { id: "left", label: "Left", detail: "left three-quarter view" },
   { id: "front", label: "Front", detail: "straight-on front view" },
-  { id: "back", label: "Back", detail: "straight-on back view" },
   { id: "right", label: "Right", detail: "right three-quarter view" },
+  { id: "back", label: "Back", detail: "straight-on back view" },
+  { id: "left", label: "Left", detail: "left three-quarter view" },
 ];
+
+const spinViewOrder = viewChoices.map((choice) => choice.id);
 
 const closureLabels: Record<BagClosure, string> = {
   "open-tote": "Open tote + handles",
@@ -366,6 +374,15 @@ export function BagOutcomePreview({
   composition,
 }: BagOutcomePreviewProps) {
   const [view, setView] = useState<PreviewView>("right");
+  const [isSpinning, setIsSpinning] = useState(false);
+  const spinDragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startIndex: number;
+    lastIndex: number;
+    stepWidth: number;
+  } | null>(null);
+  const viewButtonRefs = useRef<Partial<Record<PreviewView, HTMLButtonElement | null>>>({});
   const rawId = useId().replaceAll(":", "");
   const markerId = `outcome-arrow-${rawId}`;
   const frontGradientId = `outcome-front-${rawId}`;
@@ -373,6 +390,67 @@ export function BagOutcomePreview({
   const topGradientId = `outcome-top-${rawId}`;
   const weaveId = `outcome-weave-${rawId}`;
   const shadowId = `outcome-shadow-${rawId}`;
+
+  const chooseView = (nextView: PreviewView) => {
+    setView(nextView);
+  };
+
+  const beginSpin = (event: PointerEvent<HTMLDivElement>) => {
+    if (!event.isPrimary || event.button !== 0) return;
+    const startIndex = Math.max(0, spinViewOrder.indexOf(view));
+    spinDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startIndex,
+      lastIndex: startIndex,
+      stepWidth: clamp(event.currentTarget.clientWidth / 7, 56, 96),
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setIsSpinning(true);
+  };
+
+  const continueSpin = (event: PointerEvent<HTMLDivElement>) => {
+    const drag = spinDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const steps = Math.round((drag.startX - event.clientX) / drag.stepWidth);
+    const nextIndex =
+      ((drag.startIndex + steps) % spinViewOrder.length +
+        spinViewOrder.length) %
+      spinViewOrder.length;
+    if (nextIndex === drag.lastIndex) return;
+    drag.lastIndex = nextIndex;
+    setView(spinViewOrder[nextIndex]);
+  };
+
+  const finishSpin = (event: PointerEvent<HTMLDivElement>) => {
+    const drag = spinDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    spinDragRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setIsSpinning(false);
+  };
+
+  const navigateViews = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) => {
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      nextIndex = (index + 1) % spinViewOrder.length;
+    }
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      nextIndex = (index - 1 + spinViewOrder.length) % spinViewOrder.length;
+    }
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = spinViewOrder.length - 1;
+    if (nextIndex === null) return;
+    event.preventDefault();
+    const nextView = spinViewOrder[nextIndex];
+    chooseView(nextView);
+    viewButtonRefs.current[nextView]?.focus();
+  };
 
   const safeWidth = Math.max(0.5, plan.finishedBaseWidth);
   // One flat panel spans the front plus half of each side once the bag stands.
@@ -587,15 +665,19 @@ export function BagOutcomePreview({
         <div>
           <p>Live 3D vector</p>
           <h2 id={`outcome-title-${rawId}`}>Finished outcome preview</h2>
-          <span>Shaped from the same finished dimensions as your cut pattern.</span>
+          <span>Shaped from the same finished dimensions. Drag the bag left or right to spin, or choose an exact view.</span>
         </div>
         <div className={styles.outcomeViewButtons} role="group" aria-label="Choose a 3D preview view">
           {viewChoices.map((choice) => (
             <button
               key={choice.id}
+              ref={(node) => {
+                viewButtonRefs.current[choice.id] = node;
+              }}
               type="button"
               aria-pressed={view === choice.id}
-              onClick={() => setView(choice.id)}
+              onClick={() => chooseView(choice.id)}
+              onKeyDown={(event) => navigateViews(event, spinViewOrder.indexOf(choice.id))}
             >
               {choice.label}
             </button>
@@ -603,7 +685,14 @@ export function BagOutcomePreview({
         </div>
       </header>
 
-      <div className={styles.outcomeStage}>
+      <div
+        className={`${styles.outcomeStage} ${isSpinning ? styles.outcomeStageSpinning : ""}`}
+        onPointerDown={beginSpin}
+        onPointerMove={continueSpin}
+        onPointerUp={finishSpin}
+        onPointerCancel={finishSpin}
+        onLostPointerCapture={finishSpin}
+      >
         <svg
           className={styles.outcomeSvg}
           viewBox="0 0 720 430"
@@ -808,6 +897,9 @@ export function BagOutcomePreview({
 
         <div className={styles.outcomeBadge} aria-hidden="true">
           <i /> live vector
+        </div>
+        <div className={styles.outcomeSpinHint} aria-hidden="true">
+          <i>↔</i> drag to spin · snaps to 4 views
         </div>
       </div>
 

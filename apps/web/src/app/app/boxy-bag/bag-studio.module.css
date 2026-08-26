@@ -395,9 +395,24 @@
 .fabricSection { margin-top: .75rem; padding: .85rem; border: 1px solid rgba(132, 151, 167, .16); border-radius: .9rem; background: rgba(13, 24, 37, .72); }
 .sectionHeader { align-items: center; }
 .yardageReadout { text-align: right; }
-.yardageReadout span, .yardageReadout strong { display: block; }
+.yardageReadout span, .yardageReadout strong, .yardageReadout small { display: block; }
 .yardageReadout span { color: #718695; font: 500 .48rem/1 var(--font-ibm-plex-mono), monospace; text-transform: uppercase; }
 .yardageReadout strong { margin-top: .22rem; color: var(--amber); font: 650 .9rem/1 var(--font-ibm-plex-mono), monospace; }
+.yardageReadout small { margin-top: .18rem; color: #8b9ba4; font: 550 .42rem/1.2 var(--font-ibm-plex-mono), monospace; }
+.fabricSourceControls { display: grid; gap: .5rem; margin-top: .72rem; }
+.fabricSourceToggle { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .28rem; padding: .24rem; border: 1px solid rgba(132, 151, 167, .18); border-radius: .68rem; background: rgba(7, 16, 25, .68); }
+.fabricSourceToggle button { min-width: 0; padding: .5rem .55rem; border: 1px solid transparent; border-radius: .48rem; color: #8195a1; background: transparent; cursor: pointer; text-align: left; }
+.fabricSourceToggle strong, .fabricSourceToggle small { display: block; }
+.fabricSourceToggle strong { font-size: .57rem; }
+.fabricSourceToggle small { margin-top: .14rem; font: 500 .43rem/1.25 var(--font-ibm-plex-mono), monospace; }
+.fabricSourceToggle button[aria-pressed="true"] { color: #07131d; border-color: var(--cyan); background: var(--cyan); }
+.fabricSourceToggle button[aria-pressed="true"] small { color: rgba(7, 19, 29, .65); }
+.fabricSourceToggle button:focus-visible, .fatQuarterOrientation button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.fatQuarterSettings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(11rem, .85fr); gap: .45rem; }
+.fatQuarterSettings .measureField { padding: .48rem .52rem; }
+.fatQuarterOrientation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .25rem; padding: .24rem; border: 1px solid rgba(246, 186, 76, .2); border-radius: .62rem; background: rgba(246, 186, 76, .045); }
+.fatQuarterOrientation button { min-width: 0; padding: .42rem .36rem; border: 1px solid transparent; border-radius: .42rem; color: #8d9da6; background: transparent; cursor: pointer; font: 650 .45rem/1.25 var(--font-ibm-plex-mono), monospace; }
+.fatQuarterOrientation button[aria-pressed="true"] { color: #2b1e05; border-color: var(--amber); background: var(--amber); }
 .fabricGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; margin-top: .72rem; }
 .fabricRoll { overflow: hidden; min-width: 0; border: 1px solid rgba(132, 151, 167, .15); border-radius: .72rem; background: #0a1621; }
 .fabricRollHead, .fabricRoll footer { display: flex; justify-content: space-between; gap: .5rem; padding: .55rem .62rem; }
@@ -424,10 +439,31 @@
 .fabricRecipeRows span { display: grid; place-items: center; width: 1.55rem; height: 1.55rem; border-radius: .42rem; color: #071019; font: 800 .48rem/1 var(--font-ibm-plex-mono), monospace; }
 .fabricRecipeRows strong { overflow: hidden; color: #d9e5e8; font-size: .56rem; text-overflow: ellipsis; white-space: nowrap; }
 .fabricRecipeRows b { color: var(--amber); font: 650 .5rem/1.2 var(--font-ibm-plex-mono), monospace; white-space: nowrap; }
+.fatQuarterIntro { display: grid; gap: .2rem; margin-top: .65rem; padding: .62rem .68rem; border-left: 2px solid var(--cyan); color: #8195a1; background: rgba(79, 227, 230, .045); }
+.fatQuarterIntro span { color: var(--cyan); font: 650 .46rem/1.2 var(--font-ibm-plex-mono), monospace; letter-spacing: .06em; text-transform: uppercase; }
+.fatQuarterIntro strong { color: #d9e7e9; font: 650 .62rem/1.25 var(--font-ibm-plex-mono), monospace; }
+.fatQuarterIntro small { font-size: .47rem; line-height: 1.4; }
+.fatQuarterGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; margin-top: .62rem; }
+.fatQuarterCard { overflow: hidden; min-width: 0; border: 1px solid rgba(132, 151, 167, .15); border-radius: .72rem; background: #0a1621; }
+.fatQuarterCard footer { display: flex; justify-content: space-between; gap: .5rem; padding: .55rem .62rem; color: #728696; font: 500 .45rem/1.3 var(--font-ibm-plex-mono), monospace; }
+.fatQuarterCard footer strong { color: #b7c8cf; font-weight: 600; text-align: right; }
+.fatQuarterRows { display: grid; align-content: start; min-height: 8.5rem; padding: .54rem; border-top: 1px solid rgba(132, 151, 167, .11); border-bottom: 1px solid rgba(132, 151, 167, .11); background: rgba(17, 30, 45, .5); }
+.fatQuarterRows > div { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .18rem .44rem; padding: .48rem .36rem; border-bottom: 1px solid rgba(132, 151, 167, .1); }
+.fatQuarterRows > div:last-child { border-bottom: 0; }
+.fatQuarterRows > div > span { display: grid; grid-row: 1 / 3; place-items: center; width: 1.55rem; height: 1.55rem; border-radius: .42rem; color: #071019; font: 800 .48rem/1 var(--font-ibm-plex-mono), monospace; }
+.fatQuarterRows > div > div { min-width: 0; }
+.fatQuarterRows strong, .fatQuarterRows small { display: block; }
+.fatQuarterRows strong { overflow: hidden; color: #d9e5e8; font-size: .54rem; text-overflow: ellipsis; white-space: nowrap; }
+.fatQuarterRows small { margin-top: .1rem; color: #748894; font: 550 .43rem/1.2 var(--font-ibm-plex-mono), monospace; }
+.fatQuarterRows b { color: var(--amber); font: 650 .48rem/1.2 var(--font-ibm-plex-mono), monospace; white-space: nowrap; }
+.fatQuarterRows em { grid-column: 2 / -1; color: #718693; font: 550 .41rem/1.25 var(--font-ibm-plex-mono), monospace; font-style: normal; }
 .fabricFinePrint { margin: .58rem 0 0; color: #6f8392; font-size: .5rem; line-height: 1.4; }
 .fabricWarning { margin-top: .7rem; padding: .8rem; border: 1px solid rgba(255, 113, 148, .28); border-radius: .7rem; background: rgba(255, 113, 148, .07); }
 .fabricWarning strong { color: #ffb0c2; font-size: .72rem; }
 .fabricWarning p { margin: .3rem 0 0; color: #8d9ea8; font-size: .59rem; line-height: 1.45; }
+.fabricAdvisory { display: grid; gap: .25rem; margin-top: .58rem; padding: .62rem .68rem; border: 1px solid rgba(246, 186, 76, .2); border-radius: .62rem; background: rgba(246, 186, 76, .045); }
+.fabricAdvisory p { margin: 0; color: #8396a0; font-size: .51rem; line-height: 1.4; }
+.fabricAdvisory strong { color: var(--amber); }
 
 .finishedCard, .mathCard, .cutList, .notionCard { margin-top: .75rem; border: 1px solid rgba(132, 151, 167, .16); border-radius: .84rem; background: rgba(7, 16, 25, .58); }
 .finishedCard { padding: .78rem; border-color: rgba(246, 186, 76, .26); background: linear-gradient(145deg, rgba(246, 186, 76, .08), rgba(7, 16, 25, .58)); }
@@ -518,7 +554,9 @@
   .closureRail { grid-template-columns: 1fr; }
   .closureChoices { overflow-x: auto; grid-template-columns: repeat(5, minmax(10rem, 1fr)); padding-bottom: .25rem; }
   .workbench { grid-template-columns: minmax(16rem, 18.5rem) minmax(27rem, 1fr); }
-  .fabricGrid { grid-template-columns: 1fr; }
+  .fabricGrid, .fatQuarterGrid { grid-template-columns: 1fr; }
+  .fatQuarterSettings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fatQuarterOrientation { grid-column: 1 / -1; }
   .patternCanvas { min-height: 24rem; }
 }
 
@@ -555,9 +593,13 @@
   .patternCanvas { min-height: 18rem; }
   .canvasLegend { gap: .45rem .7rem; }
   .fabricAcross { grid-template-columns: 1fr; }
+  .fabricSourceToggle, .fatQuarterSettings, .fatQuarterOrientation { grid-template-columns: 1fr; }
+  .fatQuarterOrientation { grid-column: auto; }
   .finishedCard > div { grid-template-columns: 1fr; }
   .fabricRecipeRows > div { grid-template-columns: auto minmax(0, 1fr); }
   .fabricRecipeRows b { grid-column: 2; white-space: normal; }
+  .fatQuarterRows > div { grid-template-columns: auto minmax(0, 1fr); }
+  .fatQuarterRows b, .fatQuarterRows em { grid-column: 2; white-space: normal; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -567,7 +609,7 @@
 
 @media print {
   .page { color: #111; background: white; }
-  .page::before, .topBar, .closureRail, .controlPanel, .canvasToolbar, .resultActions, .appFooter, .toolbarHint { display: none !important; }
+  .page::before, .topBar, .closureRail, .controlPanel, .canvasToolbar, .resultActions, .appFooter, .toolbarHint, .fabricSourceControls { display: none !important; }
   .workbench { display: block; }
   .canvasColumn, .resultPanel { padding: .35in; border: 0; background: white; }
   .canvasFrame, .fabricSection, .finishedCard, .mathCard, .cutList, .notionCard { break-inside: avoid; border-color: #bbb; box-shadow: none; background: white; color: #111; }

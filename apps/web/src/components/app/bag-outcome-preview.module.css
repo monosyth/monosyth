@@ -93,9 +93,16 @@
   position: relative;
   min-height: 18rem;
   overflow: hidden;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
   background:
     radial-gradient(ellipse at 50% 48%, rgba(156, 140, 255, .1), transparent 44%),
     linear-gradient(180deg, rgba(8, 18, 29, .28), rgba(6, 14, 23, .82));
+}
+
+.outcomeStageSpinning {
+  cursor: grabbing;
 }
 
 .outcomeStage::before {
@@ -266,6 +273,32 @@
   box-shadow: 0 0 .55rem rgba(188, 232, 89, .68);
 }
 
+.outcomeSpinHint {
+  position: absolute;
+  z-index: 2;
+  left: .72rem;
+  bottom: .66rem;
+  display: flex;
+  align-items: center;
+  gap: .34rem;
+  padding: .38rem .5rem;
+  border: 1px solid rgba(79, 227, 230, .2);
+  border-radius: 999px;
+  color: #95afb8;
+  background: rgba(7, 16, 25, .76);
+  backdrop-filter: blur(8px);
+  font: 650 .44rem/1 var(--font-ibm-plex-mono), monospace;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.outcomeSpinHint i {
+  color: var(--cyan);
+  font-size: .68rem;
+  font-style: normal;
+}
+
 .outcomeReadout {
   display: grid;
   grid-template-columns: 1.25fr 1fr 1fr 1.2fr;
@@ -359,6 +392,11 @@
     font-size: .68rem;
     white-space: normal;
   }
+
+  .outcomeSpinHint {
+    max-width: calc(100% - 8.5rem);
+    white-space: nowrap;
+  }
 }
 
 @media (max-width: 520px) {
@@ -401,7 +439,8 @@
   }
 
   .outcomeViewButtons,
-  .outcomeBadge {
+  .outcomeBadge,
+  .outcomeSpinHint {
     display: none;
   }
 

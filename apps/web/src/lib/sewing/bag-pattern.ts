@@ -49,6 +49,22 @@ export type FabricLayout = {
   fits: boolean;
 };
 
+export type FatQuarterPieceLayout = {
+  usableWidth: number;
+  usableLength: number;
+  pieceWidth: number;
+  pieceHeight: number;
+  quantity: number;
+  piecesAcross: number;
+  rows: number;
+  piecesPerFatQuarter: number;
+  fatQuartersNeeded: number;
+  rotated: boolean;
+  clearanceWidth: number;
+  clearanceLength: number;
+  fits: boolean;
+};
+
 export type PatternPoint = {
   x: number;
   y: number;
@@ -348,6 +364,87 @@ export function calculateBodyFabricLayout(
     lengthInches,
     buyYards,
     fits: true,
+  };
+}
+
+export function calculateFatQuarterPieceLayout({
+  usableWidth,
+  usableLength,
+  pieceWidth,
+  pieceHeight,
+  quantity,
+  allowRotation = false,
+}: {
+  usableWidth: number;
+  usableLength: number;
+  pieceWidth: number;
+  pieceHeight: number;
+  quantity: number;
+  allowRotation?: boolean;
+}): FatQuarterPieceLayout {
+  const safeUsableWidth = Number.isFinite(usableWidth)
+    ? Math.max(0, usableWidth)
+    : 0;
+  const safeUsableLength = Number.isFinite(usableLength)
+    ? Math.max(0, usableLength)
+    : 0;
+  const safePieceWidth = Number.isFinite(pieceWidth)
+    ? Math.max(0, pieceWidth)
+    : 0;
+  const safePieceHeight = Number.isFinite(pieceHeight)
+    ? Math.max(0, pieceHeight)
+    : 0;
+  const safeQuantity = Number.isFinite(quantity)
+    ? Math.max(0, Math.ceil(quantity))
+    : 0;
+
+  const orientation = (rotated: boolean) => {
+    const width = rotated ? safePieceHeight : safePieceWidth;
+    const height = rotated ? safePieceWidth : safePieceHeight;
+    const piecesAcross = width > 0
+      ? Math.floor((safeUsableWidth + EPSILON) / width)
+      : 0;
+    const rows = height > 0
+      ? Math.floor((safeUsableLength + EPSILON) / height)
+      : 0;
+    return {
+      rotated,
+      width,
+      height,
+      piecesAcross,
+      rows,
+      capacity: piecesAcross * rows,
+    };
+  };
+
+  const upright = orientation(false);
+  const sideways = allowRotation ? orientation(true) : null;
+  const chosen = sideways && sideways.capacity > upright.capacity
+    ? sideways
+    : upright;
+  const fits = safeQuantity === 0 || chosen.capacity > 0;
+  const fatQuartersNeeded = fits && safeQuantity > 0
+    ? Math.ceil(safeQuantity / chosen.capacity)
+    : 0;
+
+  return {
+    usableWidth: safeUsableWidth,
+    usableLength: safeUsableLength,
+    pieceWidth: safePieceWidth,
+    pieceHeight: safePieceHeight,
+    quantity: safeQuantity,
+    piecesAcross: chosen.piecesAcross,
+    rows: chosen.rows,
+    piecesPerFatQuarter: chosen.capacity,
+    fatQuartersNeeded,
+    rotated: chosen.rotated,
+    clearanceWidth: fits
+      ? Math.max(0, safeUsableWidth - chosen.piecesAcross * chosen.width)
+      : 0,
+    clearanceLength: fits
+      ? Math.max(0, safeUsableLength - chosen.rows * chosen.height)
+      : 0,
+    fits,
   };
 }
 
