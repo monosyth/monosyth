@@ -8,7 +8,7 @@ import type { HandleMaterial } from "@/lib/sewing/tote-handle";
 export type BagStudioSizeBasis = "finished" | "cut";
 export type BagStudioFabricSource = "bolt" | "fat-quarters";
 export type BagStudioToolMode = "select" | "shape";
-export type BagStudioSnapStep = 0 | 0.125 | 0.25 | 0.5;
+export type BagStudioSnapStep = 0 | 0.125 | 0.25 | 0.5 | 1;
 export type BagStudioTab = "studio" | "saved";
 export type SideZipperSide = "left" | "right";
 
@@ -78,7 +78,7 @@ const closures: BagClosure[] = [
 const sizeBases: BagStudioSizeBasis[] = ["finished", "cut"];
 const fabricSources: BagStudioFabricSource[] = ["bolt", "fat-quarters"];
 const toolModes: BagStudioToolMode[] = ["select", "shape"];
-const snapSteps: BagStudioSnapStep[] = [0, 0.125, 0.25, 0.5];
+const snapSteps: BagStudioSnapStep[] = [0, 0.125, 0.25, 0.5, 1];
 const tabs: BagStudioTab[] = ["studio", "saved"];
 const handleMaterials: HandleMaterial[] = ["webbing", "fabric"];
 const zipperSides: SideZipperSide[] = ["left", "right"];

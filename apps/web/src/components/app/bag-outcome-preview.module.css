@@ -476,3 +476,26 @@
     stroke: white;
   }
 }
+
+/* Readable orbit controls and outcome details. */
+.outcomeHeader p,
+.outcomeBadge,
+.outcomeSpinHint,
+.outcomeReadout span { font-size: var(--type-meta, .75rem); }
+.outcomeHeader h2 { font-size: var(--type-section, 1.25rem); }
+.outcomeHeader > div:first-child > span,
+.outcomeNote { font-size: var(--type-body, .875rem); line-height: 1.5; }
+.outcomeViewButtons button {
+  min-width: 3.6rem;
+  min-height: 2.75rem;
+  font-size: var(--type-body, .875rem);
+}
+.outcomeReadout strong {
+  overflow: visible;
+  font-size: var(--type-body, .875rem);
+  line-height: 1.35;
+  text-overflow: clip;
+  white-space: normal;
+}
+.outcomeBadge,
+.outcomeSpinHint { padding: .48rem .62rem; }

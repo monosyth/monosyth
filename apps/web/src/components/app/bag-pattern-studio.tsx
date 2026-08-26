@@ -63,6 +63,7 @@ import {
 type SizeBasis = BagStudioSizeBasis;
 type ToolMode = BagStudioToolMode;
 type SnapStep = BagStudioSnapStep;
+type StudioStep = "cuts" | "build" | "plan";
 type DragHandle =
   | "left"
   | "right"
@@ -124,6 +125,32 @@ const closureChoices: ReadonlyArray<{
 const seamPresets = [0.25, 0.375, 0.5] as const;
 const cornerPresets = [1, 1.5, 2, 2.5, 3] as const;
 
+const studioSteps: ReadonlyArray<{
+  id: StudioStep;
+  number: string;
+  label: string;
+  description: string;
+}> = [
+  {
+    id: "cuts",
+    number: "1",
+    label: "Easy cuts",
+    description: "Choose simple starting rectangles, seams, corners, and shape.",
+  },
+  {
+    id: "build",
+    number: "2",
+    label: "Panels + opening",
+    description: "Build the outer panels, place handles, and choose the closure.",
+  },
+  {
+    id: "plan",
+    number: "3",
+    label: "Fabric + cut plan",
+    description: "Lay pieces on yardage or fat quarters, then print the plan.",
+  },
+] as const;
+
 const defaultDraft = draftFromFinishedSize({
   baseWidth: 14,
   height: 12,
@@ -154,13 +181,13 @@ const defaultFabricSettings: BagStudioFabricSettings = {
 
 const defaultStudioSnapshot: BagStudioSnapshot = {
   closure: "open-tote",
-  basis: "finished",
+  basis: "cut",
   draft: defaultDraft,
   closureOptions: defaultClosureOptions,
   outerDesign: defaultOuterPanelDesign,
   mirror: true,
   toolMode: "select",
-  snapStep: 0.25,
+  snapStep: 0.5,
   fabricSettings: defaultFabricSettings,
   previewYaw: 30,
 };
@@ -1081,6 +1108,113 @@ function PatternCanvas({
   );
 }
 
+function FatQuarterLayoutDiagram({
+  name,
+  fit,
+}: {
+  name: string;
+  fit: ReturnType<typeof calculateFatQuarterPieceLayout>;
+}) {
+  if (!fit.fits || fit.piecesPerFatQuarter === 0) {
+    const widthShortfall = Math.max(0, fit.pieceWidth - fit.usableWidth);
+    const lengthShortfall = Math.max(0, fit.pieceHeight - fit.usableLength);
+    return (
+      <div className={styles.fatQuarterNoFit}>
+        <div
+          className={styles.fatQuarterSheet}
+          style={{ aspectRatio: `${fit.usableWidth || 1} / ${fit.usableLength || 1}` }}
+          aria-hidden="true"
+        >
+          <span>usable fat quarter</span>
+          <b>piece does not fit</b>
+        </div>
+        <p>
+          {widthShortfall > 0 || lengthShortfall > 0
+            ? `Needs ${widthShortfall > 0 ? `${formatInches(widthShortfall)} more width` : ""}${widthShortfall > 0 && lengthShortfall > 0 ? " and " : ""}${lengthShortfall > 0 ? `${formatInches(lengthShortfall)} more length` : ""}.`
+            : "Use yardage, a larger precut, or piece this section."}
+        </p>
+      </div>
+    );
+  }
+
+  const placedWidth = fit.rotated ? fit.pieceHeight : fit.pieceWidth;
+  const placedHeight = fit.rotated ? fit.pieceWidth : fit.pieceHeight;
+  const sheetIndexes = fit.fatQuartersNeeded <= 4
+    ? Array.from({ length: fit.fatQuartersNeeded }, (_, index) => index)
+    : [0, fit.fatQuartersNeeded - 1];
+  const hiddenSheetCount = Math.max(0, fit.fatQuartersNeeded - 2);
+
+  return (
+    <div className={styles.fatQuarterLayout}>
+      <div className={styles.fatQuarterLayoutMeta}>
+        <span>Body-piece cutting layout</span>
+        <strong>
+          Full sheet: {fit.piecesAcross} across × {fit.rows} rows
+          {fit.rotated ? " · uniform 90° turn" : " · grain upright"}
+        </strong>
+      </div>
+      <div className={styles.fatQuarterSheets}>
+        {sheetIndexes.map((sheetIndex, visibleIndex) => {
+          const usedCount = Math.min(
+            fit.piecesPerFatQuarter,
+            Math.max(0, fit.quantity - sheetIndex * fit.piecesPerFatQuarter),
+          );
+          const usedColumns = Math.min(fit.piecesAcross, usedCount);
+          const usedRows = Math.ceil(usedCount / fit.piecesAcross);
+          return (
+            <div className={styles.fatQuarterSheetWrap} key={sheetIndex}>
+              {visibleIndex === 1 && hiddenSheetCount > 0 ? (
+                <p className={styles.fatQuarterRepeat}>
+                  Repeat the full layout for {hiddenSheetCount} middle fat quarter{hiddenSheetCount === 1 ? "" : "s"}
+                </p>
+              ) : null}
+              <div className={styles.fatQuarterSheetTitle}>
+                <strong>FQ {sheetIndex + 1} of {fit.fatQuartersNeeded}</strong>
+                <span>{usedCount} piece{usedCount === 1 ? "" : "s"}</span>
+              </div>
+              <div
+                className={styles.fatQuarterSheet}
+                style={{ aspectRatio: `${fit.usableWidth} / ${fit.usableLength}` }}
+                role="img"
+                aria-label={`${name}, fat quarter ${sheetIndex + 1}: ${usedCount} pieces arranged up to ${usedColumns} across by ${usedRows} row${usedRows === 1 ? "" : "s"}${fit.rotated ? ", turned 90 degrees" : ""}.`}
+              >
+                <span className={styles.fatQuarterGrain}>lengthwise grain ↑</span>
+                {Array.from({ length: usedCount }, (_, pieceIndex) => {
+                  const column = pieceIndex % fit.piecesAcross;
+                  const row = Math.floor(pieceIndex / fit.piecesAcross);
+                  const pieceStyle = {
+                    left: `${(column * placedWidth / fit.usableWidth) * 100}%`,
+                    top: `${(row * placedHeight / fit.usableLength) * 100}%`,
+                    width: `${(placedWidth / fit.usableWidth) * 100}%`,
+                    height: `${(placedHeight / fit.usableLength) * 100}%`,
+                  } as CSSProperties;
+                  return (
+                    <span
+                      className={styles.fatQuarterPiece}
+                      style={pieceStyle}
+                      key={pieceIndex}
+                      title={`${name} ${pieceIndex + 1}: ${formatInches(fit.pieceWidth)} × ${formatInches(fit.pieceHeight)}`}
+                    >
+                      {usedCount <= 24 ? <b>{pieceIndex + 1}</b> : null}
+                      {pieceIndex === 0 ? (
+                        <small>{formatInches(fit.pieceWidth)} × {formatInches(fit.pieceHeight)}</small>
+                      ) : null}
+                      {usedCount <= 12 ? <i>{fit.rotated ? "grain →" : "grain ↑"}</i> : null}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <p className={styles.fatQuarterLayoutNote}>
+        Pieces are aligned to squared edges for simple shared cuts. This is a conservative, uniform-orientation layout. Different piece types are calculated separately, so their offcuts are not reused in the purchase count.
+      </p>
+    </div>
+  );
+}
+
 function FabricLayoutPanel({
   plan,
   composition,
@@ -1176,14 +1310,27 @@ function FabricLayoutPanel({
     (total, role) => total + role.count,
     0,
   );
+  const conservativeFatQuarterEstimate = fatQuarterRoles.some(
+    (role) => role.rows.length > 1,
+  );
   const fatQuarterRoleSummary = fatQuarterRoles
-    .map((role) => `${role.count} ${role.material === "outer" ? "outer" : role.material}`)
+    .map((role) => `${role.rows.length > 1 ? "up to " : ""}${role.count} ${role.material === "outer" ? "outer" : role.material}`)
     .join(" + ");
   const tightFatQuarterRows = fatQuarterRows.filter(
-    (row) =>
-      row.fit.fits &&
-      row.fit.quantity >= row.fit.piecesPerFatQuarter &&
-      Math.min(row.fit.clearanceWidth, row.fit.clearanceLength) < 0.25,
+    (row) => {
+      if (!row.fit.fits || row.fit.quantity === 0) return false;
+      const placedWidth = row.fit.rotated ? row.fit.pieceHeight : row.fit.pieceWidth;
+      const placedHeight = row.fit.rotated ? row.fit.pieceWidth : row.fit.pieceHeight;
+      const firstSheetCount = Math.min(
+        row.fit.quantity,
+        row.fit.piecesPerFatQuarter,
+      );
+      const usedColumns = Math.min(row.fit.piecesAcross, firstSheetCount);
+      const usedRows = Math.ceil(firstSheetCount / row.fit.piecesAcross);
+      const actualWidthClearance = row.fit.usableWidth - usedColumns * placedWidth;
+      const actualLengthClearance = row.fit.usableLength - usedRows * placedHeight;
+      return Math.min(actualWidthClearance, actualLengthClearance) < 0.25;
+    },
   );
   const rotatedFatQuarterRows = fatQuarterRows.filter(
     (row) => row.fit.rotated,
@@ -1197,7 +1344,7 @@ function FabricLayoutPanel({
     <section className={styles.fabricSection} aria-labelledby="fabric-layout-title">
       <header className={styles.sectionHeader}>
         <div>
-          <p>02 / Fabric map</p>
+          <p>03 / Fabric map</p>
           <h2 id="fabric-layout-title">
             {source === "bolt" ? "Start at the bolt" : "Start with fat quarters"}
           </h2>
@@ -1212,7 +1359,7 @@ function FabricLayoutPanel({
             {source === "bolt"
               ? layout.fits ? formatYards(layout.buyYards) : "too narrow"
               : allFatQuarterPiecesFit
-                ? `${fatQuarterTotal} FQ${fatQuarterTotal === 1 ? "" : "s"} total`
+                ? `${conservativeFatQuarterEstimate ? "up to " : ""}${fatQuarterTotal} FQ${fatQuarterTotal === 1 ? "" : "s"}${conservativeFatQuarterEstimate ? " conservative" : " total"}`
                 : "check fit"}
           </strong>
           {source === "fat-quarters" ? (
@@ -1388,36 +1535,39 @@ function FabricLayoutPanel({
               <article className={styles.fatQuarterCard} key={role.material}>
                 <div className={styles.fabricRollHead}>
                   <strong>{role.label}</strong>
-                  <span>{role.fits ? `${role.count} FQ${role.count === 1 ? "" : "s"}` : "check fit"}</span>
+                  <span>{role.fits ? `${role.rows.length > 1 ? "up to " : ""}${role.count} FQ${role.count === 1 ? "" : "s"}` : "check fit"}</span>
                 </div>
                 <div className={styles.fatQuarterRows}>
                   {role.rows.map((row) => (
-                    <div key={`${row.material}-${row.name}`}>
-                      <span className={styles[`material_${row.material}`]}>{row.quantity}×</span>
-                      <div>
-                        <strong>{row.name}</strong>
-                        <small>{formatInches(row.width)} × {formatInches(row.height)} each</small>
+                    <section className={styles.fatQuarterPiecePlan} key={`${row.material}-${row.name}`}>
+                      <div className={styles.fatQuarterPieceSummary}>
+                        <span className={styles[`material_${row.material}`]}>{row.quantity}×</span>
+                        <div>
+                          <strong>{row.name}</strong>
+                          <small>{formatInches(row.width)} × {formatInches(row.height)} each</small>
+                        </div>
+                        <b>
+                          {row.fit.fits
+                            ? `${row.fit.piecesPerFatQuarter}/FQ · ${row.fit.fatQuartersNeeded} needed`
+                            : "no single FQ fits"}
+                        </b>
+                        <em>
+                          {row.fit.rotated
+                            ? "turned 90° as one uniform grid"
+                            : row.fitsOnlyRotated
+                              ? "fits only if rotation is allowed"
+                              : row.fit.fits
+                                ? `${row.fit.piecesAcross} across × ${row.fit.rows} row${row.fit.rows === 1 ? "" : "s"}`
+                                : "use yardage or piece this section"}
+                        </em>
                       </div>
-                      <b>
-                        {row.fit.fits
-                          ? `${row.fit.piecesPerFatQuarter}/FQ · ${row.fit.fatQuartersNeeded} needed`
-                          : "no single FQ fits"}
-                      </b>
-                      <em>
-                        {row.fit.rotated
-                          ? "turned 90°"
-                          : row.fitsOnlyRotated
-                            ? "fits only if rotation is allowed"
-                            : row.fit.fits
-                              ? `${row.fit.piecesAcross} across × ${row.fit.rows} row${row.fit.rows === 1 ? "" : "s"}`
-                              : "use yardage or piece this section"}
-                      </em>
-                    </div>
+                      <FatQuarterLayoutDiagram name={row.name} fit={row.fit} />
+                    </section>
                   ))}
                 </div>
                 <footer>
                   <span>{formatInches(fatQuarterWidth)} × {formatInches(fatQuarterLength)} usable</span>
-                  <strong>{role.rows.length > 1 ? "Separate counts · offcuts not shared" : "Uniform-piece fit"}</strong>
+                  <strong>{role.rows.length > 1 ? "Conservative counts · offcuts not shared" : "Uniform-piece fit"}</strong>
                 </footer>
               </article>
             ))}
@@ -1460,13 +1610,13 @@ function FabricLayoutPanel({
 export function BagPatternStudio() {
   const { status, user } = useAuth();
   const [closure, setClosure] = useState<BagClosure>("open-tote");
-  const [basis, setBasis] = useState<SizeBasis>("finished");
+  const [basis, setBasis] = useState<SizeBasis>("cut");
   const [draft, setDraft] = useState<BagPatternDraft>(defaultDraft);
   const [closureOptions, setClosureOptions] = useState<ClosureOptions>(defaultClosureOptions);
   const [outerDesign, setOuterDesign] = useState<OuterPanelDesign>(defaultOuterPanelDesign);
   const [mirror, setMirror] = useState(true);
   const [toolMode, setToolMode] = useState<ToolMode>("select");
-  const [snapStep, setSnapStep] = useState<SnapStep>(0.25);
+  const [snapStep, setSnapStep] = useState<SnapStep>(0.5);
   const [fabricSettings, setFabricSettings] = useState<BagStudioFabricSettings>(
     defaultFabricSettings,
   );
@@ -1474,6 +1624,7 @@ export function BagPatternStudio() {
     defaultStudioSnapshot.previewYaw,
   );
   const [activeTab, setActiveTab] = useState<BagStudioTab>("studio");
+  const [activeStudioStep, setActiveStudioStep] = useState<StudioStep>("cuts");
   const [bagName, setBagName] = useState("");
   const [activeSavedBagId, setActiveSavedBagId] = useState<string | null>(null);
   const [savedBags, setSavedBags] = useState<SavedBagDesign[]>([]);
@@ -1672,6 +1823,21 @@ export function BagPatternStudio() {
     plan.valid &&
     composition.valid &&
     closureWarnings.length === 0;
+  const activeStepIndex = studioSteps.findIndex(
+    (step) => step.id === activeStudioStep,
+  );
+  const activeStep = studioSteps[activeStepIndex] ?? studioSteps[0];
+  const easyCutGrid = snapStep === 0 ? 0.5 : snapStep;
+  const cutsMatchGrid = [
+    draft.cutWidth,
+    draft.cutHeight,
+    draft.cornerCut,
+    draft.leftTopInset,
+    draft.rightTopInset,
+  ].every(
+    (measurement) =>
+      Math.abs(measurement - snapMeasurement(measurement, easyCutGrid)) < 0.001,
+  );
   const handleBuildAdvisories = useMemo(() => {
     if (closure !== "open-tote") return [];
     const advisories = [...handlePlan.advisories];
@@ -1861,6 +2027,37 @@ export function BagPatternStudio() {
     setCopyState("idle");
   }
 
+  function makeCutsEasy() {
+    const grid = snapStep === 0 ? 0.5 : snapStep;
+    const cutWidth = Math.max(3, snapMeasurement(draft.cutWidth, grid));
+    const cutHeight = Math.max(3, snapMeasurement(draft.cutHeight, grid));
+    const maximumCorner = Math.max(
+      0.5,
+      Math.min(5, cutHeight / 2 - 0.5, cutWidth / 2 - draft.seamAllowance),
+    );
+    updateDraft({
+      ...draft,
+      cutWidth,
+      cutHeight,
+      cornerCut: clamp(
+        snapMeasurement(draft.cornerCut, grid),
+        0.5,
+        maximumCorner,
+      ),
+      leftTopInset: snapMeasurement(draft.leftTopInset, grid),
+      rightTopInset: snapMeasurement(draft.rightTopInset, grid),
+    });
+    setBasis("cut");
+    if (snapStep === 0) setSnapStep(0.5);
+  }
+
+  function goToStudioStep(step: StudioStep) {
+    setActiveStudioStep(step);
+    window.requestAnimationFrame(() => {
+      document.getElementById(`studio-step-${step}`)?.focus();
+    });
+  }
+
   function updateFinished(
     key: "baseWidth" | "height" | "depth",
     value: number,
@@ -1905,6 +2102,14 @@ export function BagPatternStudio() {
 
   function updateSeamAllowance(value: number) {
     const seamAllowance = clamp(cleanInput(value), 0.125, 1);
+    if (basis === "cut") {
+      updateDraft({
+        ...draft,
+        seamAllowance,
+        topTakeUp: seamAllowance,
+      });
+      return;
+    }
     updateDraft({
       ...draft,
       seamAllowance,
@@ -1942,6 +2147,7 @@ export function BagPatternStudio() {
   function resetDraft() {
     if (!confirmReplaceWorkingCopy("Resetting the measurements")) return;
     applySnapshot(defaultStudioSnapshot);
+    setActiveStudioStep("cuts");
     setSaveState("idle");
   }
 
@@ -1950,6 +2156,7 @@ export function BagPatternStudio() {
     applySnapshot(defaultStudioSnapshot);
     setBagName("");
     setActiveSavedBagId(null);
+    setActiveStudioStep("cuts");
     showWorkspaceTab("studio", true);
     setSaveState("idle");
   }
@@ -1976,6 +2183,7 @@ export function BagPatternStudio() {
 
   function printPlan() {
     showWorkspaceTab("studio");
+    setActiveStudioStep("plan");
     window.requestAnimationFrame(() => window.print());
   }
 
@@ -2147,9 +2355,50 @@ export function BagPatternStudio() {
           aria-labelledby="bag-studio-tab"
           hidden={activeTab !== "studio"}
         >
-        <section className={styles.closureRail} aria-labelledby="closure-title">
+        <section
+          className={styles.studioGuide}
+          aria-labelledby="studio-step-heading"
+          id={`studio-step-${activeStudioStep}`}
+          tabIndex={-1}
+        >
+          <div className={styles.studioGuideIntro}>
+            <p>Guided workspace</p>
+            <h2 id="studio-step-heading">{activeStep.label}</h2>
+            <span>{activeStep.description}</span>
+          </div>
+          <nav className={styles.studioStepNav} aria-label="Bag design steps">
+            {studioSteps.map((step) => (
+              <button
+                type="button"
+                key={step.id}
+                aria-current={activeStudioStep === step.id ? "step" : undefined}
+                onClick={() => goToStudioStep(step.id)}
+              >
+                <b>{step.number}</b>
+                <span>
+                  <strong>{step.label}</strong>
+                  <small>{step.description}</small>
+                </span>
+              </button>
+            ))}
+          </nav>
+          <div className={styles.studioSummary}>
+            <span>
+              <small>Start by cutting</small>
+              <strong>{formatInches(plan.boundingCutWidth)} × {formatInches(plan.cutHeight)}</strong>
+            </span>
+            <i aria-hidden="true">→</i>
+            <span>
+              <small>Expected sewn size</small>
+              <strong>{formatInches(plan.finishedBaseWidth)} W × {formatInches(plan.finishedHeight)} H × {formatInches(plan.finishedDepth)} D</strong>
+            </span>
+            <b className={ready ? styles.validBadge : styles.invalidBadge}>{ready ? "READY" : "CHECK"}</b>
+          </div>
+        </section>
+
+        <section className={styles.closureRail} aria-labelledby="closure-title" hidden={activeStudioStep !== "build"}>
           <div className={styles.railTitle}>
-            <span>01</span>
+            <span>02</span>
             <div>
               <p id="closure-title">Choose the opening</p>
               <small>Body math stays visible while the closure kit changes.</small>
@@ -2173,24 +2422,59 @@ export function BagPatternStudio() {
           </div>
         </section>
 
-        <div className={styles.workbench}>
+        <div className={`${styles.workbench} ${styles[`workbench_${activeStudioStep}`]}`}>
           <aside className={styles.controlPanel}>
             <div className={styles.panelTitle}>
               <div>
-                <p>Draft controls</p>
-                <h2>Size + seam</h2>
+                <p>Step {activeStep.number} controls</p>
+                <h2>
+                  {activeStudioStep === "cuts"
+                    ? "Easy cutting sizes"
+                    : activeStudioStep === "build"
+                      ? "Opening details"
+                      : "Fabric setup"}
+                </h2>
               </div>
-              <span className={styles.stepBadge}>¼″ grid</span>
+              <span className={styles.stepBadge}>
+                {snapStep === 0 ? "free sizing" : `${formatInches(snapStep)} cut grid`}
+              </span>
             </div>
 
+            <div className={styles.studioStepContent} hidden={activeStudioStep !== "cuts"}>
+            <section className={styles.cutFirstCard}>
+              <header>
+                <div>
+                  <p>Start here</p>
+                  <h3>Cut the easy rectangle first</h3>
+                </div>
+                <span>{cutsMatchGrid ? "easy-grid ready" : "off-grid cuts"}</span>
+              </header>
+              <strong>{formatInches(plan.boundingCutWidth)} wide × {formatInches(plan.cutHeight)} tall</strong>
+              <ol>
+                <li>
+                  {composition.design.mode === "solid" && !composition.design.contrastEnabled
+                    ? "Cut 2 outer rectangles and 2 lining rectangles."
+                    : `Build the selected outer panels, trim each to ${formatInches(composition.targetWidth)} × ${formatInches(composition.targetHeight)}, and cut 2 lining rectangles.`}
+                </li>
+                <li>Mark and remove a {formatInches(draft.cornerCut)} square from both bottom corners.</li>
+                <li>Sew with a {formatInches(draft.seamAllowance)} seam allowance.</li>
+              </ol>
+              <p>The finished measurements below are allowed to be unusual. The measurements you cut stay practical.</p>
+              {!cutsMatchGrid ? (
+                <button type="button" onClick={makeCutsEasy}>
+                  Round body cuts to the nearest {formatInches(easyCutGrid)}
+                </button>
+              ) : null}
+            </section>
+
             <div className={styles.basisToggle} aria-label="Sizing direction">
-              <button type="button" aria-pressed={basis === "finished"} onClick={() => setBasis("finished")}>
-                <strong>Finished bag</strong>
-                <small>size → pattern</small>
-              </button>
               <button type="button" aria-pressed={basis === "cut"} onClick={() => setBasis("cut")}>
-                <strong>Cut panel</strong>
-                <small>pattern → size</small>
+                <strong>Easy cut sizes</strong>
+                <small>fabric first → sewn result</small>
+              </button>
+              <button type="button" aria-pressed={basis === "finished"} onClick={() => setBasis("finished")}>
+                <strong>Exact finished size</strong>
+                <small>result first → calculated cuts</small>
               </button>
             </div>
 
@@ -2203,9 +2487,9 @@ export function BagPatternStudio() {
                 </>
               ) : (
                 <>
-                  <MeasurementField label="Panel cut width" hint="raw edge to raw edge" value={draft.cutWidth} min={3} onChange={(value) => updateDraft({ ...draft, cutWidth: Math.max(0, value) })} />
-                  <MeasurementField label="Panel cut height" hint="raw top to raw bottom" value={draft.cutHeight} min={3} onChange={(value) => updateDraft({ ...draft, cutHeight: Math.max(0, value) })} />
-                  <MeasurementField label="Corner square" hint="measure from both raw edges" value={draft.cornerCut} min={0.5} onChange={(value) => updateDraft({ ...draft, cornerCut: Math.max(0, value) })} />
+                  <MeasurementField label="Panel cut width" hint="raw edge to raw edge" value={draft.cutWidth} min={3} step={snapStep === 0 ? 0.125 : snapStep} onChange={(value) => updateDraft({ ...draft, cutWidth: Math.max(0, value) })} />
+                  <MeasurementField label="Panel cut height" hint="raw top to raw bottom" value={draft.cutHeight} min={3} step={snapStep === 0 ? 0.125 : snapStep} onChange={(value) => updateDraft({ ...draft, cutHeight: Math.max(0, value) })} />
+                  <MeasurementField label="Corner square" hint="measure from both raw edges" value={draft.cornerCut} min={0.5} step={snapStep === 0 ? 0.125 : snapStep} onChange={(value) => updateDraft({ ...draft, cornerCut: Math.max(0, value) })} />
                 </>
               )}
             </div>
@@ -2270,13 +2554,14 @@ export function BagPatternStudio() {
                 </button>
               </div>
               <div className={styles.insetFields}>
-                <MeasurementField label="Left inset" hint={`${Math.round(plan.leftTopAngle)}° top angle`} value={draft.leftTopInset} min={-3} onChange={(value) => updateInset("left", value)} />
-                <MeasurementField label="Right inset" hint={`${Math.round(plan.rightTopAngle)}° top angle`} value={draft.rightTopInset} min={-3} onChange={(value) => updateInset("right", value)} />
+                <MeasurementField label="Left inset" hint={`${Math.round(plan.leftTopAngle)}° top angle`} value={draft.leftTopInset} min={-3} step={snapStep === 0 ? 0.125 : snapStep} onChange={(value) => updateInset("left", value)} />
+                <MeasurementField label="Right inset" hint={`${Math.round(plan.rightTopAngle)}° top angle`} value={draft.rightTopInset} min={-3} step={snapStep === 0 ? 0.125 : snapStep} onChange={(value) => updateInset("right", value)} />
               </div>
               <p>Positive values narrow the top; negative values flare it. Mirror keeps both stitch-line angles identical.</p>
             </section>
+            </div>
 
-            <section className={styles.closureOptions}>
+            <section className={styles.closureOptions} hidden={activeStudioStep !== "build"}>
               <div className={styles.subhead}>
                 <div>
                   <span>{closureChoices.find((choice) => choice.id === closure)?.label}</span>
@@ -2324,23 +2609,25 @@ export function BagPatternStudio() {
               <p className={styles.closureTeaching}>{closureTeaching(closure)}</p>
             </section>
 
-            <section className={styles.fabricInput}>
+            <section className={styles.fabricInput} hidden={activeStudioStep !== "plan"}>
               <MeasurementField label="Fabric bolt width" hint="nominal width before selvages" value={draft.fabricWidth} min={20} step={1} onChange={(value) => updateDraft({ ...draft, fabricWidth: Math.max(20, value) })} />
             </section>
           </aside>
 
           <section className={styles.canvasColumn}>
+            <div className={styles.cutCanvasWorkspace} hidden={activeStudioStep !== "cuts"}>
             <div className={styles.canvasToolbar}>
               <div className={styles.toolButtons} aria-label="Vector tools">
                 <button type="button" aria-pressed={toolMode === "select"} onClick={() => setToolMode("select")}><i aria-hidden="true">↖</i><span>Select</span><small>resize edges</small></button>
                 <button type="button" aria-pressed={toolMode === "shape"} onClick={() => setToolMode("shape")}><i aria-hidden="true">⌁</i><span>Vector pen</span><small>angles + corners</small></button>
               </div>
               <div className={styles.snapControl}>
-                <label htmlFor="snap-step">Snap</label>
+                <label htmlFor="snap-step">Cut grid</label>
                 <select id="snap-step" value={snapStep} onChange={(event) => setSnapStep(Number(event.target.value) as SnapStep)}>
+                  <option value={1}>Whole inch</option>
+                  <option value={0.5}>½ inch</option>
                   <option value={0.25}>¼ inch</option>
                   <option value={0.125}>⅛ inch</option>
-                  <option value={0.5}>½ inch</option>
                   <option value={0}>Free</option>
                 </select>
               </div>
@@ -2379,7 +2666,9 @@ export function BagPatternStudio() {
                 <strong>{formatInches(plan.finishedBaseWidth)} × {formatInches(plan.finishedDepth)}</strong>
               </div>
             </div>
+            </div>
 
+            <div className={styles.buildWorkspace} hidden={activeStudioStep !== "build"}>
             <BagPanelComposer
               plan={plan}
               value={outerDesign}
@@ -2398,16 +2687,19 @@ export function BagPatternStudio() {
               yaw={previewYaw}
               onYawChange={setPreviewYaw}
             />
+            </div>
 
+            <div className={styles.fabricWorkspace} hidden={activeStudioStep !== "plan"}>
             <FabricLayoutPanel
               plan={plan}
               composition={composition}
               settings={fabricSettings}
               onSettingsChange={setFabricSettings}
             />
+            </div>
           </section>
 
-          <aside className={styles.resultPanel}>
+          <aside className={styles.resultPanel} hidden={activeStudioStep !== "plan"}>
             <div className={styles.resultTitle}>
               <div>
                 <p>Live outcome</p>
@@ -2490,6 +2782,27 @@ export function BagPatternStudio() {
             </div>
           </aside>
         </div>
+        <nav className={styles.studioStepFooter} aria-label="Continue through bag design steps">
+          <button
+            type="button"
+            disabled={activeStepIndex <= 0}
+            onClick={() => goToStudioStep(studioSteps[activeStepIndex - 1]?.id ?? "cuts")}
+          >
+            ← Previous step
+          </button>
+          <p>
+            <span>Step {activeStep.number} of {studioSteps.length}</span>
+            <strong>{activeStep.label}</strong>
+          </p>
+          <button
+            type="button"
+            className={styles.studioNextButton}
+            disabled={activeStepIndex >= studioSteps.length - 1}
+            onClick={() => goToStudioStep(studioSteps[activeStepIndex + 1]?.id ?? "plan")}
+          >
+            Next step →
+          </button>
+        </nav>
         </div>
 
         <section

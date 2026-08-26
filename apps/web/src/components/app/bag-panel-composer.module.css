@@ -626,3 +626,42 @@
     color: #111;
   }
 }
+
+/* Keep the panel builder readable inside the guided studio. */
+.composer button { min-height: 2.75rem; }
+.header p,
+.ready,
+.check,
+.controls legend,
+.sizeBasisPrompt,
+.seamResult > span,
+.metrics span,
+.workflow span { font-size: var(--type-meta, .75rem); }
+.header h2 { font-size: var(--type-section, 1.25rem); }
+.header > div > span,
+.modeGrid button small,
+.sizeBasis button small,
+.seamResult > small,
+.field small,
+.contrastControl small,
+.allowanceNote,
+.warnings p { font-size: var(--type-support, .8125rem); line-height: 1.5; }
+.modeGrid button strong,
+.segmented button,
+.sizeBasis button strong,
+.seamResult > strong,
+.field,
+.fitButton,
+.contrastControl strong,
+.metrics strong,
+.workflow strong,
+.workflow ol { font-size: var(--type-body, .875rem); line-height: 1.45; }
+.field input { min-height: 2.75rem; font-size: var(--type-control, 1rem); }
+.inchInput b { font-size: var(--type-meta, .75rem); }
+.modeGrid button { min-height: 5rem; }
+.modeGrid button small,
+.sizeBasis button small,
+.field small,
+.contrastControl small { overflow: visible; text-overflow: clip; white-space: normal; }
+.panelFigure text { font-size: 12px; }
+.workflow li { margin-top: .42rem; }

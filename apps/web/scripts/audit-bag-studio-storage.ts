@@ -83,6 +83,7 @@ const custom: BagStudioSnapshot = {
     blockSizeBasis: "cut",
     contrastEnabled: true,
   },
+  snapStep: 1,
   fabricSettings: {
     source: "fat-quarters",
     fatQuarterWidth: 22,
@@ -120,6 +121,7 @@ same(restored.savedBags[0]?.snapshot.closureOptions.sideZipperSide, "left", "sid
 same(restored.savedBags[0]?.snapshot.fabricSettings.source, "fat-quarters", "fat-quarter mode survives a save");
 same(restored.savedBags[0]?.snapshot.outerDesign.blockSizeBasis, "cut", "cut-square interpretation survives a save");
 same(restored.savedBags[0]?.snapshot.previewYaw, 350, "3D orbit position survives a save");
+same(restored.savedBags[0]?.snapshot.snapStep, 1, "whole-inch cutting grid survives a save");
 
 const repaired = normalizeBagStudioSnapshot(
   {
