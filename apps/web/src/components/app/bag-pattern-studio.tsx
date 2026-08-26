@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import {
+  startTransition,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -10,7 +12,7 @@ import {
   type PointerEvent,
 } from "react";
 
-import styles from "@/app/app/boxy-bag/bag-studio.module.css";
+import styles from "@/app/app/bag-studio/bag-studio.module.css";
 import { BagOutcomePreview } from "@/components/app/bag-outcome-preview";
 import { BagPanelComposer } from "@/components/app/bag-panel-composer";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -41,11 +43,26 @@ import {
   type ToteHandleOptions,
   type ToteHandlePlan,
 } from "@/lib/sewing/tote-handle";
+import {
+  BAG_STUDIO_SCHEMA_VERSION,
+  MAX_SAVED_BAGS,
+  createSavedBagId,
+  readBagStudioState,
+  writeBagStudioState,
+  type BagStudioClosureOptions,
+  type BagStudioFabricSettings,
+  type BagStudioSizeBasis,
+  type BagStudioSnapshot,
+  type BagStudioSnapStep,
+  type BagStudioStoredState,
+  type BagStudioTab,
+  type BagStudioToolMode,
+  type SavedBagDesign,
+} from "@/lib/sewing/bag-studio-storage";
 
-type SizeBasis = "finished" | "cut";
-type FabricSource = "bolt" | "fat-quarters";
-type ToolMode = "select" | "shape";
-type SnapStep = 0 | 0.125 | 0.25 | 0.5;
+type SizeBasis = BagStudioSizeBasis;
+type ToolMode = BagStudioToolMode;
+type SnapStep = BagStudioSnapStep;
 type DragHandle =
   | "left"
   | "right"
@@ -55,12 +72,7 @@ type DragHandle =
   | "shape-left"
   | "shape-right";
 
-type ClosureOptions = ToteHandleOptions & {
-  sideZipperLength: number;
-  zipperGap: number;
-  recessDepth: number;
-  recessEndGap: number;
-};
+type ClosureOptions = BagStudioClosureOptions & ToteHandleOptions;
 
 type CutPiece = {
   material: "outer" | "contrast" | "lining" | "interfacing" | "handle";
@@ -127,13 +139,50 @@ const defaultClosureOptions: ClosureOptions = {
   handleInset: 3.5,
   handleAttachmentDepth: 4,
   sideZipperLength: 8,
+  sideZipperSide: "right",
   zipperGap: 0.25,
   recessDepth: 1.5,
   recessEndGap: 0.5,
 };
 
+const defaultFabricSettings: BagStudioFabricSettings = {
+  source: "bolt",
+  fatQuarterWidth: 21,
+  fatQuarterLength: 18,
+  allowFatQuarterRotation: false,
+};
+
+const defaultStudioSnapshot: BagStudioSnapshot = {
+  closure: "open-tote",
+  basis: "finished",
+  draft: defaultDraft,
+  closureOptions: defaultClosureOptions,
+  outerDesign: defaultOuterPanelDesign,
+  mirror: true,
+  toolMode: "select",
+  snapStep: 0.25,
+  fabricSettings: defaultFabricSettings,
+  previewYaw: 30,
+};
+
 function cleanInput(value: number, fallback = 0) {
   return Number.isFinite(value) ? value : fallback;
+}
+
+function savedBagCopyName(name: string, savedBags: SavedBagDesign[]) {
+  const base = `${name.trim() || "Untitled bag"} copy`;
+  const existing = new Set(savedBags.map((saved) => saved.name.toLocaleLowerCase()));
+  if (!existing.has(base.toLocaleLowerCase())) return base;
+  let suffix = 2;
+  while (existing.has(`${base} ${suffix}`.toLocaleLowerCase())) suffix += 1;
+  return `${base} ${suffix}`;
+}
+
+function formatSavedBagTime(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
 }
 
 function standingTopRimWidth(plan: BagPatternPlan) {
@@ -273,7 +322,7 @@ function zipperNote(
     case "top-zipper":
       return `Flat-top zipper: use ${formatInches(plan.finishedTopOpening + 2)} or longer and trim after the tabs are added.`;
     case "side-zipper":
-      return `Side-seam zipper opening: ${formatInches(options.sideZipperLength)}. Keep both stops clear of the boxed-corner zone.`;
+      return `${options.sideZipperSide === "left" ? "Left" : "Right"} side-seam zipper opening: ${formatInches(options.sideZipperLength)}. Keep both stops clear of the boxed-corner zone.`;
     case "zipper-gusset":
       return `Zipper: ${formatInches(standingTopRimWidth(plan) + 2)} or longer. Finished reveal between folds: ${formatInches(options.zipperGap)}.`;
     case "recessed-zipper":
@@ -1035,14 +1084,20 @@ function PatternCanvas({
 function FabricLayoutPanel({
   plan,
   composition,
+  settings,
+  onSettingsChange,
 }: {
   plan: BagPatternPlan;
   composition: OuterPanelComposition;
+  settings: BagStudioFabricSettings;
+  onSettingsChange: (settings: BagStudioFabricSettings) => void;
 }) {
-  const [source, setSource] = useState<FabricSource>("bolt");
-  const [fatQuarterWidth, setFatQuarterWidth] = useState(21);
-  const [fatQuarterLength, setFatQuarterLength] = useState(18);
-  const [allowFatQuarterRotation, setAllowFatQuarterRotation] = useState(false);
+  const {
+    source,
+    fatQuarterWidth,
+    fatQuarterLength,
+    allowFatQuarterRotation,
+  } = settings;
   const layout = calculateBodyFabricLayout(plan);
   const customOuter =
     composition.design.mode !== "solid" ||
@@ -1171,7 +1226,7 @@ function FabricLayoutPanel({
           <button
             type="button"
             aria-pressed={source === "bolt"}
-            onClick={() => setSource("bolt")}
+            onClick={() => onSettingsChange({ ...settings, source: "bolt" })}
           >
             <strong>Bolt yardage</strong>
             <small>continuous width of fabric</small>
@@ -1179,7 +1234,9 @@ function FabricLayoutPanel({
           <button
             type="button"
             aria-pressed={source === "fat-quarters"}
-            onClick={() => setSource("fat-quarters")}
+            onClick={() =>
+              onSettingsChange({ ...settings, source: "fat-quarters" })
+            }
           >
             <strong>Fat quarters</strong>
             <small>finite precut rectangles</small>
@@ -1193,27 +1250,47 @@ function FabricLayoutPanel({
               hint="across the fat quarter"
               value={fatQuarterWidth}
               min={1}
-              onChange={(value) => setFatQuarterWidth(Math.max(1, value))}
+              onChange={(value) =>
+                onSettingsChange({
+                  ...settings,
+                  fatQuarterWidth: Math.max(1, value),
+                })
+              }
             />
             <MeasurementField
               label="Usable length"
               hint="along the lengthwise grain"
               value={fatQuarterLength}
               min={1}
-              onChange={(value) => setFatQuarterLength(Math.max(1, value))}
+              onChange={(value) =>
+                onSettingsChange({
+                  ...settings,
+                  fatQuarterLength: Math.max(1, value),
+                })
+              }
             />
             <div className={styles.fatQuarterOrientation} role="group" aria-label="Fat-quarter piece orientation">
               <button
                 type="button"
                 aria-pressed={!allowFatQuarterRotation}
-                onClick={() => setAllowFatQuarterRotation(false)}
+                onClick={() =>
+                  onSettingsChange({
+                    ...settings,
+                    allowFatQuarterRotation: false,
+                  })
+                }
               >
                 Keep grain upright
               </button>
               <button
                 type="button"
                 aria-pressed={allowFatQuarterRotation}
-                onClick={() => setAllowFatQuarterRotation(true)}
+                onClick={() =>
+                  onSettingsChange({
+                    ...settings,
+                    allowFatQuarterRotation: true,
+                  })
+                }
               >
                 Rotation allowed
               </button>
@@ -1226,7 +1303,7 @@ function FabricLayoutPanel({
         layout.fits ? (
           <div className={styles.fabricGrid}>
             {customOuter ? (
-              <article className={`${styles.fabricRoll} ${styles.fabricRecipe}`}>
+              <article className={styles.fabricRoll}>
                 <div className={styles.fabricRollHead}>
                   <strong>Outer build recipe</strong>
                   <span>Cut by fabric group · quantities include selected faces</span>
@@ -1381,7 +1458,7 @@ function FabricLayoutPanel({
 }
 
 export function BagPatternStudio() {
-  const { status } = useAuth();
+  const { status, user } = useAuth();
   const [closure, setClosure] = useState<BagClosure>("open-tote");
   const [basis, setBasis] = useState<SizeBasis>("finished");
   const [draft, setDraft] = useState<BagPatternDraft>(defaultDraft);
@@ -1390,7 +1467,142 @@ export function BagPatternStudio() {
   const [mirror, setMirror] = useState(true);
   const [toolMode, setToolMode] = useState<ToolMode>("select");
   const [snapStep, setSnapStep] = useState<SnapStep>(0.25);
+  const [fabricSettings, setFabricSettings] = useState<BagStudioFabricSettings>(
+    defaultFabricSettings,
+  );
+  const [previewYaw, setPreviewYaw] = useState(
+    defaultStudioSnapshot.previewYaw,
+  );
+  const [activeTab, setActiveTab] = useState<BagStudioTab>("studio");
+  const [bagName, setBagName] = useState("");
+  const [activeSavedBagId, setActiveSavedBagId] = useState<string | null>(null);
+  const [savedBags, setSavedBags] = useState<SavedBagDesign[]>([]);
+  const [savedSearch, setSavedSearch] = useState("");
+  const [storageReady, setStorageReady] = useState(false);
+  const [hydratedOwnerId, setHydratedOwnerId] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<
+    "idle" | "saved" | "error" | "limit"
+  >("idle");
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const workspaceTabRefs = useRef<
+    Partial<Record<BagStudioTab, HTMLButtonElement | null>>
+  >({});
+
+  const currentSnapshot = useMemo<BagStudioSnapshot>(
+    () => ({
+      closure,
+      basis,
+      draft,
+      closureOptions,
+      outerDesign,
+      mirror,
+      toolMode,
+      snapStep,
+      fabricSettings,
+      previewYaw,
+    }),
+    [
+      basis,
+      closure,
+      closureOptions,
+      draft,
+      fabricSettings,
+      mirror,
+      outerDesign,
+      previewYaw,
+      snapStep,
+      toolMode,
+    ],
+  );
+
+  const storedState = useMemo<BagStudioStoredState>(
+    () => ({
+      schemaVersion: BAG_STUDIO_SCHEMA_VERSION,
+      workingCopy: {
+        name: bagName,
+        activeSavedBagId,
+        activeTab,
+        snapshot: currentSnapshot,
+      },
+      savedBags,
+    }),
+    [activeSavedBagId, activeTab, bagName, currentSnapshot, savedBags],
+  );
+
+  const activeSavedBag = useMemo(
+    () => savedBags.find((saved) => saved.id === activeSavedBagId) ?? null,
+    [activeSavedBagId, savedBags],
+  );
+  const workingDraftHasChanges =
+    bagName.trim().length > 0 ||
+    JSON.stringify(currentSnapshot) !== JSON.stringify(defaultStudioSnapshot);
+  const hasUnsavedChanges = activeSavedBag
+    ? activeSavedBag.name !== bagName.trim() ||
+      JSON.stringify(activeSavedBag.snapshot) !== JSON.stringify(currentSnapshot)
+    : workingDraftHasChanges;
+  const filteredSavedBags = useMemo(() => {
+    const query = savedSearch.trim().toLocaleLowerCase();
+    return [...savedBags]
+      .filter((saved) => !query || saved.name.toLocaleLowerCase().includes(query))
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+  }, [savedBags, savedSearch]);
+
+  useEffect(() => {
+    if (status !== "signed_in" || !user?.uid) return;
+    const ownerId = user.uid;
+    const persisted = readBagStudioState(defaultStudioSnapshot, ownerId);
+
+    startTransition(() => {
+      const snapshot = persisted.workingCopy.snapshot;
+      setClosure(snapshot.closure);
+      setBasis(snapshot.basis);
+      setDraft(snapshot.draft);
+      setClosureOptions(snapshot.closureOptions);
+      setOuterDesign(snapshot.outerDesign);
+      setMirror(snapshot.mirror);
+      setToolMode(snapshot.toolMode);
+      setSnapStep(snapshot.snapStep);
+      setFabricSettings(snapshot.fabricSettings);
+      setPreviewYaw(snapshot.previewYaw);
+      setBagName(persisted.workingCopy.name);
+      setActiveSavedBagId(persisted.workingCopy.activeSavedBagId);
+      setActiveTab(persisted.workingCopy.activeTab);
+      setSavedBags(persisted.savedBags);
+      setStorageReady(true);
+      setHydratedOwnerId(ownerId);
+    });
+  }, [status, user?.uid]);
+
+  useEffect(() => {
+    if (
+      !storageReady ||
+      !user?.uid ||
+      hydratedOwnerId !== user.uid
+    ) {
+      return;
+    }
+    const ownerId = user.uid;
+    const timeout = window.setTimeout(() => {
+      setSaveState(writeBagStudioState(storedState, ownerId) ? "saved" : "error");
+    }, 240);
+    return () => window.clearTimeout(timeout);
+  }, [hydratedOwnerId, storageReady, storedState, user?.uid]);
+
+  useEffect(() => {
+    if (
+      !storageReady ||
+      !user?.uid ||
+      hydratedOwnerId !== user.uid
+    ) {
+      return;
+    }
+    const ownerId = user.uid;
+    const persistWorkingCopy = () => {
+      writeBagStudioState(storedState, ownerId);
+    };
+    window.addEventListener("pagehide", persistWorkingCopy);
+    return () => window.removeEventListener("pagehide", persistWorkingCopy);
+  }, [hydratedOwnerId, storageReady, storedState, user?.uid]);
 
   const plan = useMemo(() => calculateBagPatternPlan(draft), [draft]);
   const composition = useMemo(
@@ -1510,6 +1722,140 @@ export function BagPatternStudio() {
     return advisories;
   }, [closure, closureOptions.handleAttachmentDepth, composition, handlePlan, plan]);
 
+  function applySnapshot(snapshot: BagStudioSnapshot) {
+    setClosure(snapshot.closure);
+    setBasis(snapshot.basis);
+    setDraft(snapshot.draft);
+    setClosureOptions(snapshot.closureOptions);
+    setOuterDesign(snapshot.outerDesign);
+    setMirror(snapshot.mirror);
+    setToolMode(snapshot.toolMode);
+    setSnapStep(snapshot.snapStep);
+    setFabricSettings(snapshot.fabricSettings);
+    setPreviewYaw(snapshot.previewYaw);
+    setCopyState("idle");
+  }
+
+  function saveCurrentBag(asNew = false) {
+    const cleanName = bagName.replace(/\s+/g, " ").trim().slice(0, 80);
+    if (!cleanName) {
+      setSaveState("error");
+      return;
+    }
+    const now = new Date().toISOString();
+    const existing = asNew
+      ? null
+      : savedBags.find((saved) => saved.id === activeSavedBagId) ?? null;
+
+    if (existing) {
+      setSavedBags((current) =>
+        current.map((saved) =>
+          saved.id === existing.id
+            ? {
+                ...saved,
+                name: cleanName,
+                updatedAt: now,
+                snapshot: currentSnapshot,
+              }
+            : saved,
+        ),
+      );
+      setBagName(cleanName);
+      setSaveState("saved");
+      return;
+    }
+
+    if (savedBags.length >= MAX_SAVED_BAGS) {
+      setSaveState("limit");
+      return;
+    }
+    const id = createSavedBagId();
+    const next: SavedBagDesign = {
+      id,
+      name: cleanName,
+      createdAt: now,
+      updatedAt: now,
+      snapshot: currentSnapshot,
+    };
+    setSavedBags((current) => [next, ...current]);
+    setActiveSavedBagId(id);
+    setBagName(cleanName);
+    setSaveState("saved");
+  }
+
+  function saveCurrentAsCopy() {
+    if (savedBags.length >= MAX_SAVED_BAGS) {
+      setSaveState("limit");
+      return;
+    }
+    const copyName = savedBagCopyName(bagName, savedBags);
+    const now = new Date().toISOString();
+    const id = createSavedBagId();
+    const copy: SavedBagDesign = {
+      id,
+      name: copyName,
+      createdAt: now,
+      updatedAt: now,
+      snapshot: currentSnapshot,
+    };
+    setSavedBags((current) => [copy, ...current]);
+    setActiveSavedBagId(id);
+    setBagName(copyName);
+    setSaveState("saved");
+  }
+
+  function showWorkspaceTab(tab: BagStudioTab, focus = false) {
+    setActiveTab(tab);
+    if (focus) workspaceTabRefs.current[tab]?.focus();
+  }
+
+  function confirmReplaceWorkingCopy(action: string) {
+    if (!hasUnsavedChanges) return true;
+    return window.confirm(
+      `Your current changes are not in a named save. ${action} will replace them. Continue?`,
+    );
+  }
+
+  function loadSavedBag(saved: SavedBagDesign) {
+    applySnapshot(saved.snapshot);
+    setBagName(saved.name);
+    setActiveSavedBagId(saved.id);
+    showWorkspaceTab("studio", true);
+    setSaveState("saved");
+  }
+
+  function openSavedBag(saved: SavedBagDesign) {
+    if (!confirmReplaceWorkingCopy(`Opening “${saved.name}”`)) return;
+    loadSavedBag(saved);
+  }
+
+  function duplicateSavedBag(saved: SavedBagDesign) {
+    if (savedBags.length >= MAX_SAVED_BAGS) {
+      setSaveState("limit");
+      return;
+    }
+    if (!confirmReplaceWorkingCopy(`Duplicating “${saved.name}”`)) return;
+    const now = new Date().toISOString();
+    const copy: SavedBagDesign = {
+      ...saved,
+      id: createSavedBagId(),
+      name: savedBagCopyName(saved.name, savedBags),
+      createdAt: now,
+      updatedAt: now,
+    };
+    setSavedBags((current) => [copy, ...current]);
+    loadSavedBag(copy);
+  }
+
+  function removeSavedBag(saved: SavedBagDesign) {
+    if (!window.confirm(`Remove “${saved.name}” from this browser?`)) return;
+    setSavedBags((current) => current.filter((candidate) => candidate.id !== saved.id));
+    if (activeSavedBagId === saved.id) {
+      setActiveSavedBagId(null);
+      setSaveState("idle");
+    }
+  }
+
   function updateDraft(next: BagPatternDraft) {
     setDraft(next);
     setCopyState("idle");
@@ -1594,15 +1940,43 @@ export function BagPatternStudio() {
   }
 
   function resetDraft() {
-    setDraft(defaultDraft);
-    setClosure("open-tote");
-    setBasis("finished");
-    setMirror(true);
-    setToolMode("select");
-    setSnapStep(0.25);
-    setClosureOptions(defaultClosureOptions);
-    setOuterDesign(defaultOuterPanelDesign);
-    setCopyState("idle");
+    if (!confirmReplaceWorkingCopy("Resetting the measurements")) return;
+    applySnapshot(defaultStudioSnapshot);
+    setSaveState("idle");
+  }
+
+  function startNewBag() {
+    if (!confirmReplaceWorkingCopy("Starting a new bag")) return;
+    applySnapshot(defaultStudioSnapshot);
+    setBagName("");
+    setActiveSavedBagId(null);
+    showWorkspaceTab("studio", true);
+    setSaveState("idle");
+  }
+
+  function navigateWorkspaceTabs(
+    event: KeyboardEvent<HTMLButtonElement>,
+    currentTab: BagStudioTab,
+  ) {
+    const order: BagStudioTab[] = ["studio", "saved"];
+    const currentIndex = order.indexOf(currentTab);
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      nextIndex = (currentIndex + 1) % order.length;
+    }
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      nextIndex = (currentIndex - 1 + order.length) % order.length;
+    }
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = order.length - 1;
+    if (nextIndex === null) return;
+    event.preventDefault();
+    showWorkspaceTab(order[nextIndex], true);
+  }
+
+  function printPlan() {
+    showWorkspaceTab("studio");
+    window.requestAnimationFrame(() => window.print());
   }
 
   async function copyPlan() {
@@ -1648,6 +2022,17 @@ export function BagPatternStudio() {
     );
   }
 
+  if (!storageReady || hydratedOwnerId !== user?.uid) {
+    return (
+      <main className={styles.page}>
+        <div className={styles.loadingCard}>
+          <span className={styles.spinner} aria-hidden="true" />
+          Opening your last bag settings…
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className={styles.page}>
       <div className={styles.appShell}>
@@ -1656,7 +2041,7 @@ export function BagPatternStudio() {
             <Link href="/app" aria-label="Back to Monosyth Studio" className={styles.brandMark}>MS</Link>
             <div>
               <p>Monosyth sewing studio</p>
-              <h1>Bag Pattern Studio <span>beta</span></h1>
+              <h1>Modular Bag Studio <span>beta</span></h1>
             </div>
           </div>
           <div className={styles.topStatus}>
@@ -1664,12 +2049,104 @@ export function BagPatternStudio() {
             <b>inches</b>
           </div>
           <div className={styles.topActions}>
+            <button type="button" onClick={startNewBag}>New bag</button>
             <button type="button" onClick={resetDraft}>Reset</button>
-            <button type="button" onClick={() => window.print()}>Print plan</button>
+            <button type="button" onClick={printPlan}>Print plan</button>
             <button type="button" className={styles.downloadButton} disabled={!ready} onClick={() => downloadPatternSvg(plan, composition, closure, handlePlan)}>Body-panel SVG</button>
           </div>
         </header>
 
+        <nav className={styles.workspaceNav} aria-label="Modular Bag Studio sections">
+          <div role="tablist" aria-label="Workspace">
+            <button
+              ref={(node) => {
+                workspaceTabRefs.current.studio = node;
+              }}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "studio"}
+              aria-controls="bag-studio-workspace"
+              id="bag-studio-tab"
+              tabIndex={activeTab === "studio" ? 0 : -1}
+              onClick={() => showWorkspaceTab("studio")}
+              onKeyDown={(event) => navigateWorkspaceTabs(event, "studio")}
+            >
+              <strong>Design studio</strong>
+              <small>pattern, 3D outcome + fabric</small>
+            </button>
+            <button
+              ref={(node) => {
+                workspaceTabRefs.current.saved = node;
+              }}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "saved"}
+              aria-controls="saved-bags-workspace"
+              id="saved-bags-tab"
+              tabIndex={activeTab === "saved" ? 0 : -1}
+              onClick={() => showWorkspaceTab("saved")}
+              onKeyDown={(event) => navigateWorkspaceTabs(event, "saved")}
+            >
+              <strong>Saved bags</strong>
+              <small>{savedBags.length} named design{savedBags.length === 1 ? "" : "s"}</small>
+            </button>
+          </div>
+          <p>One core bag system · swap the size, shape, panels, handles, bottom, and closure.</p>
+        </nav>
+
+        <section className={styles.projectBar} aria-label="Current bag design">
+          <label>
+            <span>Current bag name</span>
+            <input
+              type="text"
+              value={bagName}
+              maxLength={80}
+              placeholder="e.g. Patchwork market tote"
+              onChange={(event) => {
+                setBagName(event.target.value);
+                setSaveState("idle");
+              }}
+            />
+          </label>
+          <div className={styles.projectSaveStatus} aria-live="polite">
+            <span>{activeSavedBag ? "Named design" : "Working draft"}</span>
+            <strong>
+              {saveState === "limit"
+                ? `The ${MAX_SAVED_BAGS}-bag local limit is full`
+                : saveState === "error"
+                ? bagName.trim()
+                  ? "Could not save locally"
+                  : "Add a name before saving"
+                : activeSavedBag
+                  ? hasUnsavedChanges
+                    ? "Changes waiting to be updated"
+                    : `Saved ${formatSavedBagTime(activeSavedBag.updatedAt)}`
+                  : storageReady
+                    ? "Last settings saved automatically"
+                    : "Opening your last settings…"}
+            </strong>
+            <small>Private to this browser and your signed-in Monosyth profile.</small>
+          </div>
+          <div className={styles.projectActions}>
+            <button
+              type="button"
+              className={styles.projectPrimaryAction}
+              onClick={() => saveCurrentBag(false)}
+            >
+              {activeSavedBag ? "Update bag" : "Save named bag"}
+            </button>
+            {activeSavedBag ? (
+              <button type="button" onClick={saveCurrentAsCopy}>Save as copy</button>
+            ) : null}
+          </div>
+        </section>
+
+        <div
+          id="bag-studio-workspace"
+          role="tabpanel"
+          aria-labelledby="bag-studio-tab"
+          hidden={activeTab !== "studio"}
+        >
         <section className={styles.closureRail} aria-labelledby="closure-title">
           <div className={styles.railTitle}>
             <span>01</span>
@@ -1826,7 +2303,13 @@ export function BagPatternStudio() {
                 </div>
               ) : null}
               {closure === "side-zipper" ? (
-                <MeasurementField label="Opening length" hint="between zipper stops" value={closureOptions.sideZipperLength} min={3} onChange={(value) => setClosureOptions((current) => ({ ...current, sideZipperLength: Math.max(3, value) }))} />
+                <div className={styles.sideZipperControls}>
+                  <MeasurementField label="Opening length" hint="between zipper stops" value={closureOptions.sideZipperLength} min={3} onChange={(value) => setClosureOptions((current) => ({ ...current, sideZipperLength: Math.max(3, value) }))} />
+                  <div className={styles.handleMaterialToggle} role="group" aria-label="Side zipper location">
+                    <button type="button" aria-pressed={closureOptions.sideZipperSide === "left"} onClick={() => setClosureOptions((current) => ({ ...current, sideZipperSide: "left" }))}>Left side</button>
+                    <button type="button" aria-pressed={closureOptions.sideZipperSide === "right"} onClick={() => setClosureOptions((current) => ({ ...current, sideZipperSide: "right" }))}>Right side</button>
+                  </div>
+                </div>
               ) : null}
               {closure === "zipper-gusset" ? (
                 <MeasurementField label="Zipper reveal" hint="finished gap between folds" value={closureOptions.zipperGap} min={0} onChange={(value) => setClosureOptions((current) => ({ ...current, zipperGap: Math.max(0, value) }))} />
@@ -1912,9 +2395,16 @@ export function BagPatternStudio() {
               closure={closure}
               options={closureOptions}
               composition={composition}
+              yaw={previewYaw}
+              onYawChange={setPreviewYaw}
             />
 
-            <FabricLayoutPanel plan={plan} composition={composition} />
+            <FabricLayoutPanel
+              plan={plan}
+              composition={composition}
+              settings={fabricSettings}
+              onSettingsChange={setFabricSettings}
+            />
           </section>
 
           <aside className={styles.resultPanel}>
@@ -2000,10 +2490,80 @@ export function BagPatternStudio() {
             </div>
           </aside>
         </div>
+        </div>
+
+        <section
+          className={styles.savedLibrary}
+          id="saved-bags-workspace"
+          role="tabpanel"
+          aria-labelledby="saved-bags-tab"
+          hidden={activeTab !== "saved"}
+        >
+          <header className={styles.savedLibraryHeader}>
+            <div>
+              <p>Named patterns</p>
+              <h2>Your saved bags</h2>
+              <span>Open a design to continue from every saved measurement, panel choice, closure setting, fabric plan, and 3D angle.</span>
+            </div>
+            <button type="button" className={styles.projectPrimaryAction} onClick={startNewBag}>+ New bag</button>
+          </header>
+
+          {savedBags.length ? (
+            <label className={styles.savedSearch}>
+              <span>Find a saved bag</span>
+              <input
+                type="search"
+                value={savedSearch}
+                placeholder="Search by name"
+                onChange={(event) => setSavedSearch(event.target.value)}
+              />
+            </label>
+          ) : null}
+
+          {filteredSavedBags.length ? (
+            <div className={styles.savedBagGrid}>
+              {filteredSavedBags.map((saved) => {
+                const savedPlan = calculateBagPatternPlan(saved.snapshot.draft);
+                const closureLabel = closureChoices.find(
+                  (choice) => choice.id === saved.snapshot.closure,
+                )?.label;
+                return (
+                  <article className={styles.savedBagCard} key={saved.id}>
+                    <div className={styles.savedBagCardTop}>
+                      <span>{closureLabel}</span>
+                      {saved.id === activeSavedBagId ? <b>OPEN</b> : null}
+                    </div>
+                    <h3>{saved.name}</h3>
+                    <strong>{formatInches(savedPlan.finishedBaseWidth)} W × {formatInches(savedPlan.finishedHeight)} H × {formatInches(savedPlan.finishedDepth)} D</strong>
+                    <dl>
+                      <div><dt>Outer</dt><dd>{saved.snapshot.outerDesign.mode.replaceAll("-", " ")}</dd></div>
+                      <div><dt>Fabric</dt><dd>{saved.snapshot.fabricSettings.source === "fat-quarters" ? "fat quarters" : `${formatInches(saved.snapshot.draft.fabricWidth)} bolt`}</dd></div>
+                      <div><dt>Updated</dt><dd>{formatSavedBagTime(saved.updatedAt)}</dd></div>
+                    </dl>
+                    <div className={styles.savedBagActions}>
+                      <button type="button" className={styles.projectPrimaryAction} onClick={() => openSavedBag(saved)}>Open</button>
+                      <button type="button" onClick={() => duplicateSavedBag(saved)}>Duplicate</button>
+                      <button type="button" className={styles.savedBagRemove} onClick={() => removeSavedBag(saved)}>Remove</button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className={styles.savedEmptyState}>
+              <span aria-hidden="true">◇</span>
+              <h3>{savedBags.length ? "No names match that search." : "No named bags yet."}</h3>
+              <p>Your latest working settings are already restored automatically. Give a design a name in the studio when you want to keep it as a reusable pattern.</p>
+              <button type="button" onClick={() => showWorkspaceTab("studio", true)}>Return to design studio</button>
+            </div>
+          )}
+
+          <p className={styles.savedLocalNote}>These early saves stay only in this browser, under your signed-in Monosyth profile. They are not published or shared.</p>
+        </section>
 
         <footer className={styles.appFooter}>
-          <span>Monosyth / Bag Pattern Studio</span>
-          <p>Draft on stitch lines. Add the allowance. Cut once.</p>
+          <span>Monosyth / Modular Bag Studio</span>
+          <p>One bag grammar. Many useful constructions.</p>
           <Link href="/app">← Back to Studio</Link>
         </footer>
       </div>

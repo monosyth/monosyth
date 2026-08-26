@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  startTransition,
+  useEffect,
   useId,
   useRef,
   useState,
@@ -29,6 +31,7 @@ export type BagOutcomeOptions = {
   handleInset: number;
   handleAttachmentDepth: number;
   sideZipperLength: number;
+  sideZipperSide: "left" | "right";
   zipperGap: number;
   recessDepth: number;
   recessEndGap: number;
@@ -37,6 +40,14 @@ export type BagOutcomeOptions = {
 type Point = {
   x: number;
   y: number;
+};
+
+type Point3 = Point & {
+  z: number;
+};
+
+type ProjectedPoint = Point & {
+  depth: number;
 };
 
 type SurfaceWindow = {
@@ -49,20 +60,26 @@ type BagOutcomePreviewProps = {
   closure: BagClosure;
   options: BagOutcomeOptions;
   composition: OuterPanelComposition;
+  yaw: number;
+  onYawChange: (yaw: number) => void;
 };
 
 const viewChoices: ReadonlyArray<{
   id: PreviewView;
   label: string;
   detail: string;
+  yaw: number;
 }> = [
-  { id: "front", label: "Front", detail: "straight-on front view" },
-  { id: "right", label: "Right", detail: "right three-quarter view" },
-  { id: "back", label: "Back", detail: "straight-on back view" },
-  { id: "left", label: "Left", detail: "left three-quarter view" },
+  { id: "front", label: "Front", detail: "straight-on front view", yaw: 0 },
+  { id: "right", label: "Right", detail: "straight-on right side", yaw: 90 },
+  { id: "back", label: "Back", detail: "straight-on back view", yaw: 180 },
+  { id: "left", label: "Left", detail: "straight-on left side", yaw: 270 },
 ];
 
-const spinViewOrder = viewChoices.map((choice) => choice.id);
+const ORBIT_STEP = 10;
+const ORBIT_STEPS = 360 / ORBIT_STEP;
+const PROJECTION_PITCH = 0.3;
+const ANGLE_EPSILON = 0.0001;
 
 const closureLabels: Record<BagClosure, string> = {
   "open-tote": "Open tote + handles",
@@ -367,20 +384,102 @@ function DimensionLine({
   );
 }
 
+function normalizeYaw(value: number) {
+  const finite = Number.isFinite(value) ? value : 0;
+  return ((finite % 360) + 360) % 360;
+}
+
+function quantizeYaw(value: number) {
+  return normalizeYaw(Math.round(normalizeYaw(value) / ORBIT_STEP) * ORBIT_STEP);
+}
+
+function circularAngleDistance(left: number, right: number) {
+  return Math.abs(((normalizeYaw(left) - normalizeYaw(right) + 540) % 360) - 180);
+}
+
+function lerp3(from: Point3, to: Point3, amount: number): Point3 {
+  return {
+    x: from.x + (to.x - from.x) * amount,
+    y: from.y + (to.y - from.y) * amount,
+    z: from.z + (to.z - from.z) * amount,
+  };
+}
+
+function projectPoint3(
+  point: Point3,
+  yaw: number,
+  scale: number,
+  baseline: number,
+): ProjectedPoint {
+  const radians = (yaw * Math.PI) / 180;
+  const cosine = Math.cos(radians);
+  const sine = Math.sin(radians);
+  const rotatedX = point.x * cosine + point.z * sine;
+  const depth = -point.x * sine + point.z * cosine;
+  return {
+    x: 360 + rotatedX * scale,
+    y: baseline - point.y * scale - depth * PROJECTION_PITCH * scale,
+    depth,
+  };
+}
+
+function projectQuad(
+  quad: [Point3, Point3, Point3, Point3],
+  yaw: number,
+  scale: number,
+  baseline: number,
+): [ProjectedPoint, ProjectedPoint, ProjectedPoint, ProjectedPoint] {
+  return quad.map((point) =>
+    projectPoint3(point, yaw, scale, baseline)
+  ) as [ProjectedPoint, ProjectedPoint, ProjectedPoint, ProjectedPoint];
+}
+
+function averageDepth(pointsToAverage: ProjectedPoint[]) {
+  return pointsToAverage.reduce((total, point) => total + point.depth, 0) /
+    Math.max(1, pointsToAverage.length);
+}
+
+function yawDescription(value: number) {
+  const yaw = quantizeYaw(value);
+  const exact = viewChoices.find(
+    (choice) => circularAngleDistance(choice.yaw, yaw) < ANGLE_EPSILON,
+  );
+  if (exact) return exact.detail;
+  if (yaw < 90) return `front-right orbit view, ${yaw}° from front`;
+  if (yaw < 180) return `back-right orbit view, ${180 - yaw}° from back`;
+  if (yaw < 270) return `back-left orbit view, ${yaw - 180}° from back`;
+  return `front-left orbit view, ${360 - yaw}° from front`;
+}
+
+type ProjectedBodySurface = {
+  id: string;
+  quad: [ProjectedPoint, ProjectedPoint, ProjectedPoint, ProjectedPoint];
+  face: "front" | "back";
+  window: SurfaceWindow;
+  reverseColumns: boolean;
+  side: boolean;
+  depth: number;
+};
+
 export function BagOutcomePreview({
   plan,
   closure,
   options,
   composition,
+  yaw: externalYaw,
+  onYawChange,
 }: BagOutcomePreviewProps) {
-  const [view, setView] = useState<PreviewView>("right");
+  const [previewYaw, setPreviewYaw] = useState(() => quantizeYaw(externalYaw));
   const [isSpinning, setIsSpinning] = useState(false);
+  const previewYawRef = useRef(previewYaw);
   const spinDragRef = useRef<{
     pointerId: number;
     startX: number;
-    startIndex: number;
-    lastIndex: number;
+    startYaw: number;
+    lastYaw: number;
+    pendingYaw: number;
     stepWidth: number;
+    animationFrame: number | null;
   } | null>(null);
   const viewButtonRefs = useRef<Partial<Record<PreviewView, HTMLButtonElement | null>>>({});
   const rawId = useId().replaceAll(":", "");
@@ -391,19 +490,41 @@ export function BagOutcomePreview({
   const weaveId = `outcome-weave-${rawId}`;
   const shadowId = `outcome-shadow-${rawId}`;
 
-  const chooseView = (nextView: PreviewView) => {
-    setView(nextView);
+  useEffect(() => {
+    const nextYaw = quantizeYaw(externalYaw);
+    if (circularAngleDistance(nextYaw, previewYawRef.current) < ANGLE_EPSILON) {
+      return;
+    }
+    previewYawRef.current = nextYaw;
+    startTransition(() => setPreviewYaw(nextYaw));
+  }, [externalYaw]);
+
+  useEffect(() => {
+    return () => {
+      const animationFrame = spinDragRef.current?.animationFrame;
+      if (animationFrame !== null && animationFrame !== undefined) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+    };
+  }, []);
+
+  const chooseYaw = (nextValue: number, commit = true) => {
+    const nextYaw = quantizeYaw(nextValue);
+    previewYawRef.current = nextYaw;
+    setPreviewYaw(nextYaw);
+    if (commit) onYawChange(nextYaw);
   };
 
   const beginSpin = (event: PointerEvent<HTMLDivElement>) => {
     if (!event.isPrimary || event.button !== 0) return;
-    const startIndex = Math.max(0, spinViewOrder.indexOf(view));
     spinDragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
-      startIndex,
-      lastIndex: startIndex,
-      stepWidth: clamp(event.currentTarget.clientWidth / 7, 56, 96),
+      startYaw: previewYawRef.current,
+      lastYaw: previewYawRef.current,
+      pendingYaw: previewYawRef.current,
+      stepWidth: clamp(event.currentTarget.clientWidth / ORBIT_STEPS, 8, 20),
+      animationFrame: null,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
     setIsSpinning(true);
@@ -413,22 +534,31 @@ export function BagOutcomePreview({
     const drag = spinDragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     const steps = Math.round((drag.startX - event.clientX) / drag.stepWidth);
-    const nextIndex =
-      ((drag.startIndex + steps) % spinViewOrder.length +
-        spinViewOrder.length) %
-      spinViewOrder.length;
-    if (nextIndex === drag.lastIndex) return;
-    drag.lastIndex = nextIndex;
-    setView(spinViewOrder[nextIndex]);
+    const nextYaw = quantizeYaw(drag.startYaw + steps * ORBIT_STEP);
+    if (circularAngleDistance(nextYaw, drag.lastYaw) < ANGLE_EPSILON) return;
+    drag.lastYaw = nextYaw;
+    drag.pendingYaw = nextYaw;
+    if (drag.animationFrame !== null) return;
+    drag.animationFrame = window.requestAnimationFrame(() => {
+      const active = spinDragRef.current;
+      if (!active || active.pointerId !== event.pointerId) return;
+      active.animationFrame = null;
+      chooseYaw(active.pendingYaw, false);
+    });
   };
 
   const finishSpin = (event: PointerEvent<HTMLDivElement>) => {
     const drag = spinDragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
+    if (drag.animationFrame !== null) {
+      window.cancelAnimationFrame(drag.animationFrame);
+    }
+    const finalYaw = drag.pendingYaw;
     spinDragRef.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
+    chooseYaw(finalYaw);
     setIsSpinning(false);
   };
 
@@ -438,18 +568,37 @@ export function BagOutcomePreview({
   ) => {
     let nextIndex: number | null = null;
     if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-      nextIndex = (index + 1) % spinViewOrder.length;
+      nextIndex = (index + 1) % viewChoices.length;
     }
     if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-      nextIndex = (index - 1 + spinViewOrder.length) % spinViewOrder.length;
+      nextIndex = (index - 1 + viewChoices.length) % viewChoices.length;
     }
     if (event.key === "Home") nextIndex = 0;
-    if (event.key === "End") nextIndex = spinViewOrder.length - 1;
+    if (event.key === "End") nextIndex = viewChoices.length - 1;
     if (nextIndex === null) return;
     event.preventDefault();
-    const nextView = spinViewOrder[nextIndex];
-    chooseView(nextView);
-    viewButtonRefs.current[nextView]?.focus();
+    const nextChoice = viewChoices[nextIndex];
+    chooseYaw(nextChoice.yaw);
+    viewButtonRefs.current[nextChoice.id]?.focus();
+  };
+
+  const rotateWithKeyboard = (event: KeyboardEvent<HTMLDivElement>) => {
+    const current = normalizeYaw(previewYawRef.current);
+    let next: number | null = null;
+    const fineStep = event.shiftKey ? ORBIT_STEP * 3 : ORBIT_STEP;
+    if (event.key === "ArrowRight" || event.key === "ArrowUp") {
+      next = normalizeYaw(current + fineStep);
+    }
+    if (event.key === "ArrowLeft" || event.key === "ArrowDown") {
+      next = normalizeYaw(current - fineStep);
+    }
+    if (event.key === "PageUp") next = normalizeYaw(current + 90);
+    if (event.key === "PageDown") next = normalizeYaw(current - 90);
+    if (event.key === "Home") next = 0;
+    if (event.key === "End") next = 360 - ORBIT_STEP;
+    if (next === null) return;
+    event.preventDefault();
+    chooseYaw(next);
   };
 
   const safeWidth = Math.max(0.5, plan.finishedBaseWidth);
@@ -466,61 +615,41 @@ export function BagOutcomePreview({
   const bodyTopWidth = topCollapsesToZipper
     ? Math.max(0.5, plan.finishedTopOpening)
     : safeTopWidth;
-  const direction = view === "left" ? -1 : view === "right" ? 1 : 0;
-  const depthXModel = safeDepth * (direction === 0 ? 0 : 0.72) * direction;
-  const depthYModel = -safeDepth * (direction === 0 ? 0.82 : 0.75);
+  const normalizedYaw = quantizeYaw(previewYaw);
+  const radians = (normalizedYaw * Math.PI) / 180;
+  const cosine = Math.cos(radians);
+  const sine = Math.sin(radians);
+  const frontVisible = cosine > ANGLE_EPSILON;
+  const backVisible = cosine < -ANGLE_EPSILON;
+  const rightVisible = sine > ANGLE_EPSILON;
+  const leftVisible = sine < -ANGLE_EPSILON;
   const handleModel = closure === "open-tote"
     ? Math.max(0.5, options.handleDrop)
     : 0;
-  const modelWidth = Math.max(safeWidth, bodyTopWidth) + Math.abs(depthXModel) + 3.4;
-  const modelHeight = safeHeight + Math.abs(depthYModel) + handleModel + 2;
+  const widestBody = Math.max(safeWidth, bodyTopWidth);
+  const orbitDiagonal = Math.hypot(widestBody, safeDepth);
+  const modelWidth = orbitDiagonal + 3.4;
+  const modelHeight =
+    safeHeight + handleModel + orbitDiagonal * PROJECTION_PITCH + 2;
   const scale = Math.min(480 / modelWidth, 290 / modelHeight, 32);
-  const baseWidth = safeWidth * scale;
-  const topWidth = bodyTopWidth * scale;
-  const height = safeHeight * scale;
-  const depthVector = { x: depthXModel * scale, y: depthYModel * scale };
-  const topDepthVector = topCollapsesToZipper
-    ? { x: 0, y: 0 }
-    : depthVector;
-  const zipperRidgeOffset = topCollapsesToZipper
-    ? { x: depthVector.x / 2, y: depthVector.y / 2 }
-    : { x: 0, y: 0 };
-  const frontCenterX = 360 - depthVector.x / 2;
-  const bottomY = 352;
-  const topCenterShift = ((plan.leftTopInset - plan.rightTopInset) / 2) * scale;
-  const frontTopCenterX = frontCenterX + topCenterShift + zipperRidgeOffset.x;
-  const frontTopY = bottomY - height + zipperRidgeOffset.y;
-  const frontBottomLeft = { x: frontCenterX - baseWidth / 2, y: bottomY };
-  const frontBottomRight = { x: frontCenterX + baseWidth / 2, y: bottomY };
-  const frontTopLeft = { x: frontTopCenterX - topWidth / 2, y: frontTopY };
-  const frontTopRight = { x: frontTopCenterX + topWidth / 2, y: frontTopY };
-  const backBottomLeft = add(frontBottomLeft, depthVector);
-  const backBottomRight = add(frontBottomRight, depthVector);
-  const backTopLeft = add(frontTopLeft, topDepthVector);
-  const backTopRight = add(frontTopRight, topDepthVector);
-  const visibleSide: [Point, Point, Point, Point] = direction < 0
-    ? [frontTopLeft, backTopLeft, backBottomLeft, frontBottomLeft]
-    : [frontTopRight, backTopRight, backBottomRight, frontBottomRight];
-  const frontFace: [Point, Point, Point, Point] = [frontTopLeft, frontTopRight, frontBottomRight, frontBottomLeft];
-  const topFace: [Point, Point, Point, Point] = [frontTopLeft, frontTopRight, backTopRight, backTopLeft];
-  const sideFrontTop = direction < 0 ? frontTopLeft : frontTopRight;
-  const sideBackTop = direction < 0 ? backTopLeft : backTopRight;
-  const sideFrontBottom = direction < 0 ? frontBottomLeft : frontBottomRight;
-  const sideBackBottom = direction < 0 ? backBottomLeft : backBottomRight;
-  const sideMidTop = midpoint(sideFrontTop, sideBackTop);
-  const sideMidBottom = midpoint(sideFrontBottom, sideBackBottom);
-  const frontSideHalf: [Point, Point, Point, Point] = [
-    sideFrontTop,
-    sideMidTop,
-    sideMidBottom,
-    sideFrontBottom,
-  ];
-  const backSideHalf: [Point, Point, Point, Point] = [
-    sideMidTop,
-    sideBackTop,
-    sideBackBottom,
-    sideMidBottom,
-  ];
+  const baseline = 352 - (orbitDiagonal / 2) * PROJECTION_PITCH * scale;
+  const topCenterShift = (plan.leftTopInset - plan.rightTopInset) / 2;
+  const frontTopZ = topCollapsesToZipper ? 0 : -safeDepth / 2;
+  const backTopZ = topCollapsesToZipper ? 0 : safeDepth / 2;
+  const frontTopLeft3: Point3 = { x: topCenterShift - bodyTopWidth / 2, y: safeHeight, z: frontTopZ };
+  const frontTopRight3: Point3 = { x: topCenterShift + bodyTopWidth / 2, y: safeHeight, z: frontTopZ };
+  const backTopLeft3: Point3 = { x: topCenterShift - bodyTopWidth / 2, y: safeHeight, z: backTopZ };
+  const backTopRight3: Point3 = { x: topCenterShift + bodyTopWidth / 2, y: safeHeight, z: backTopZ };
+  const frontBottomLeft3: Point3 = { x: -safeWidth / 2, y: 0, z: -safeDepth / 2 };
+  const frontBottomRight3: Point3 = { x: safeWidth / 2, y: 0, z: -safeDepth / 2 };
+  const backBottomLeft3: Point3 = { x: -safeWidth / 2, y: 0, z: safeDepth / 2 };
+  const backBottomRight3: Point3 = { x: safeWidth / 2, y: 0, z: safeDepth / 2 };
+  const rightMidTop3 = lerp3(frontTopRight3, backTopRight3, 0.5);
+  const rightMidBottom3 = lerp3(frontBottomRight3, backBottomRight3, 0.5);
+  const leftMidTop3 = lerp3(frontTopLeft3, backTopLeft3, 0.5);
+  const leftMidBottom3 = lerp3(frontBottomLeft3, backBottomLeft3, 0.5);
+  const project = (point: Point3) =>
+    projectPoint3(point, normalizedYaw, scale, baseline);
   const blankMinX = Math.min(0, plan.leftTopInset);
   const stitchGeometry = calculatePanelStitchGeometry(plan);
   const toBlankX = (rawX: number) => rawX - blankMinX;
@@ -564,28 +693,103 @@ export function BagOutcomePreview({
       end: toBlankX(stitchGeometry.rightSideBottom.x),
     },
   };
-  const visibleSideWindow = direction < 0
-    ? leftSideWindow
-    : rightSideWindow;
-  const visibleFlatFace: "front" | "back" = view === "back"
-    ? "back"
-    : "front";
-  const topZipFrom = topCollapsesToZipper
-    ? frontTopLeft
-    : lerp(frontTopLeft, backTopLeft, 0.5);
-  const topZipTo = topCollapsesToZipper
-    ? frontTopRight
-    : lerp(frontTopRight, backTopRight, 0.5);
+  const bodySurfaces: ProjectedBodySurface[] = [];
+  const addSurface = (
+    id: string,
+    quad3: [Point3, Point3, Point3, Point3],
+    face: "front" | "back",
+    window: SurfaceWindow,
+    reverseColumns: boolean,
+    side: boolean,
+  ) => {
+    const quad = projectQuad(quad3, normalizedYaw, scale, baseline);
+    bodySurfaces.push({
+      id,
+      quad,
+      face,
+      window,
+      reverseColumns,
+      side,
+      depth: averageDepth(quad),
+    });
+  };
+
+  if (frontVisible) {
+    addSurface(
+      "front",
+      [frontTopLeft3, frontTopRight3, frontBottomRight3, frontBottomLeft3],
+      "front",
+      frontWindow,
+      false,
+      false,
+    );
+  }
+  if (backVisible) {
+    addSurface(
+      "back",
+      [backTopLeft3, backTopRight3, backBottomRight3, backBottomLeft3],
+      "back",
+      frontWindow,
+      true,
+      false,
+    );
+  }
+  if (rightVisible) {
+    addSurface(
+      "right-front",
+      [frontTopRight3, rightMidTop3, rightMidBottom3, frontBottomRight3],
+      "front",
+      rightSideWindow,
+      false,
+      true,
+    );
+    addSurface(
+      "right-back",
+      [rightMidTop3, backTopRight3, backBottomRight3, rightMidBottom3],
+      "back",
+      leftSideWindow,
+      false,
+      true,
+    );
+  }
+  if (leftVisible) {
+    addSurface(
+      "left-front",
+      [frontTopLeft3, leftMidTop3, leftMidBottom3, frontBottomLeft3],
+      "front",
+      leftSideWindow,
+      true,
+      true,
+    );
+    addSurface(
+      "left-back",
+      [leftMidTop3, backTopLeft3, backBottomLeft3, leftMidBottom3],
+      "back",
+      rightSideWindow,
+      true,
+      true,
+    );
+  }
+  bodySurfaces.sort((left, right) => right.depth - left.depth);
+
+  const topFace = projectQuad(
+    [frontTopLeft3, frontTopRight3, backTopRight3, backTopLeft3],
+    normalizedYaw,
+    scale,
+    baseline,
+  );
+  const topZipFrom = project(lerp3(frontTopLeft3, backTopLeft3, 0.5));
+  const topZipTo = project(lerp3(frontTopRight3, backTopRight3, 0.5));
   const gussetGapRatio = clamp(options.zipperGap / safeDepth, 0, 0.98);
   const gussetSeamA = {
-    from: lerp(frontTopLeft, backTopLeft, 0.5 - gussetGapRatio / 2),
-    to: lerp(frontTopRight, backTopRight, 0.5 - gussetGapRatio / 2),
+    from: project(lerp3(frontTopLeft3, backTopLeft3, 0.5 - gussetGapRatio / 2)),
+    to: project(lerp3(frontTopRight3, backTopRight3, 0.5 - gussetGapRatio / 2)),
   };
   const gussetSeamB = {
-    from: lerp(frontTopLeft, backTopLeft, 0.5 + gussetGapRatio / 2),
-    to: lerp(frontTopRight, backTopRight, 0.5 + gussetGapRatio / 2),
+    from: project(lerp3(frontTopLeft3, backTopLeft3, 0.5 + gussetGapRatio / 2)),
+    to: project(lerp3(frontTopRight3, backTopRight3, 0.5 + gussetGapRatio / 2)),
   };
-  const handleHeight = (handleModel + Math.max(0, options.handleWidth) / 2) * scale;
+  const handleHeight = handleModel + Math.max(0, options.handleWidth) / 2;
   const handleInsetRatio = clamp(
     options.handleInset / Math.max(bodyTopWidth, 0.5),
     0,
@@ -593,32 +797,40 @@ export function BagOutcomePreview({
   );
   const handleStrokeWidth = clamp(options.handleWidth * scale, 6, 26);
   const handleAttachmentHeight = clamp(
-    options.handleAttachmentDepth * scale,
-    8,
-    Math.max(8, height),
+    options.handleAttachmentDepth,
+    0.25,
+    safeHeight,
   );
-  const frontHandleLeft = lerp(frontTopLeft, frontTopRight, handleInsetRatio);
-  const frontHandleRight = lerp(frontTopRight, frontTopLeft, handleInsetRatio);
-  const backHandleLeft = lerp(backTopLeft, backTopRight, handleInsetRatio);
-  const backHandleRight = lerp(backTopRight, backTopLeft, handleInsetRatio);
-  const widthDimensionY = bottomY + 29;
-  const heightDimensionX = Math.min(frontBottomLeft.x, backBottomLeft.x, frontTopLeft.x, backTopLeft.x) - 34;
-  const depthDimensionShift = direction < 0 ? -17 : 17;
-  const depthDimensionAnchorFrom = direction < 0
-    ? frontBottomLeft
-    : frontBottomRight;
-  const depthDimensionAnchorTo = direction < 0
-    ? backBottomLeft
-    : backBottomRight;
-  const depthDimensionFrom = {
-    x: depthDimensionAnchorFrom.x + depthDimensionShift,
-    y: depthDimensionAnchorFrom.y + 14,
-  };
-  const depthDimensionTo = {
-    x: depthDimensionAnchorTo.x + depthDimensionShift,
-    y: depthDimensionAnchorTo.y + 14,
-  };
-  const viewDetail = viewChoices.find((choice) => choice.id === view)?.detail ?? "three-quarter view";
+  const handleCenters = [
+    frontTopLeft3.x + (frontTopRight3.x - frontTopLeft3.x) * handleInsetRatio,
+    frontTopRight3.x + (frontTopLeft3.x - frontTopRight3.x) * handleInsetRatio,
+  ];
+  const projectedHandles = ([
+    { face: "front" as const, z: frontTopZ },
+    { face: "back" as const, z: backTopZ },
+  ]).map((handle) => {
+    const from = project({ x: handleCenters[0], y: safeHeight, z: handle.z });
+    const to = project({ x: handleCenters[1], y: safeHeight, z: handle.z });
+    const controlFrom = project({
+      x: handleCenters[0],
+      y: safeHeight + handleHeight * 4 / 3,
+      z: handle.z,
+    });
+    const controlTo = project({
+      x: handleCenters[1],
+      y: safeHeight + handleHeight * 4 / 3,
+      z: handle.z,
+    });
+    return {
+      ...handle,
+      from,
+      to,
+      controlFrom,
+      controlTo,
+      depth: (from.depth + to.depth) / 2,
+    };
+  }).sort((left, right) => right.depth - left.depth);
+  const viewDetail = yawDescription(normalizedYaw);
   const title = `${closureLabels[closure]} — ${viewDetail}`;
   const accessibleDimensions = `${formatInches(plan.finishedBaseWidth)} wide by ${formatInches(plan.finishedHeight)} high by ${formatInches(plan.finishedDepth)} deep`;
   const outerBuildLabel = `${composition.modeLabel}${composition.design.mode !== "solid" ? ` on the ${composition.scopeLabel}` : ""}${composition.design.contrastEnabled ? ` with a ${formatInches(composition.design.contrastRise)} contrast bottom` : ""}`;
@@ -628,20 +840,29 @@ export function BagOutcomePreview({
     0,
     0.5,
   );
-  const recessedDrop = Math.max(0, options.recessDepth) * scale;
-  const recessFrontLeft = add(lerp(frontTopLeft, frontTopRight, recessedEndRatio), { x: 0, y: recessedDrop });
-  const recessFrontRight = add(lerp(frontTopRight, frontTopLeft, recessedEndRatio), { x: 0, y: recessedDrop });
-  const recessBackLeft = add(lerp(backTopLeft, backTopRight, recessedEndRatio), { x: 0, y: recessedDrop });
-  const recessBackRight = add(lerp(backTopRight, backTopLeft, recessedEndRatio), { x: 0, y: recessedDrop });
+  const recessedY = safeHeight - Math.max(0, options.recessDepth);
+  const recessFrontLeft = project({
+    ...lerp3(frontTopLeft3, frontTopRight3, recessedEndRatio),
+    y: recessedY,
+  });
+  const recessFrontRight = project({
+    ...lerp3(frontTopRight3, frontTopLeft3, recessedEndRatio),
+    y: recessedY,
+  });
+  const recessBackLeft = project({
+    ...lerp3(backTopLeft3, backTopRight3, recessedEndRatio),
+    y: recessedY,
+  });
+  const recessBackRight = project({
+    ...lerp3(backTopRight3, backTopLeft3, recessedEndRatio),
+    y: recessedY,
+  });
   const recessZipFrom = lerp(recessFrontLeft, recessBackLeft, 0.48);
   const recessZipTo = lerp(recessFrontRight, recessBackRight, 0.48);
 
-  const sideTop = direction < 0
-    ? lerp(frontTopLeft, backTopLeft, 0.56)
-    : lerp(frontTopRight, backTopRight, 0.56);
-  const sideBottom = direction < 0
-    ? lerp(frontBottomLeft, backBottomLeft, 0.56)
-    : lerp(frontBottomRight, backBottomRight, 0.56);
+  const zipperOnLeft = options.sideZipperSide === "left";
+  const sideTop3 = zipperOnLeft ? leftMidTop3 : rightMidTop3;
+  const sideBottom3 = zipperOnLeft ? leftMidBottom3 : rightMidBottom3;
   const sideSeamLength = Math.hypot(
     safeHeight,
     (bodyTopWidth - safeWidth) / 2,
@@ -652,11 +873,62 @@ export function BagOutcomePreview({
     1,
   );
   const sideZipStartRatio = (1 - sideZipRatio) / 2;
-  const sideZipStart = lerp(sideTop, sideBottom, sideZipStartRatio);
-  const sideZipEnd = lerp(
-    sideTop,
-    sideBottom,
+  const sideZipStart = project(lerp3(sideTop3, sideBottom3, sideZipStartRatio));
+  const sideZipEnd = project(lerp3(
+    sideTop3,
+    sideBottom3,
     sideZipStartRatio + sideZipRatio,
+  ));
+  const sideZipperVisible = zipperOnLeft ? leftVisible : rightVisible;
+  const visibleSideMidTop = rightVisible
+    ? project(rightMidTop3)
+    : leftVisible
+      ? project(leftMidTop3)
+      : null;
+  const visibleSideMidBottom = rightVisible
+    ? project(rightMidBottom3)
+    : leftVisible
+      ? project(leftMidBottom3)
+      : null;
+  const visibleFlatBottom = frontVisible
+    ? [project(frontBottomLeft3), project(frontBottomRight3)] as const
+    : backVisible
+      ? [project(backBottomLeft3), project(backBottomRight3)] as const
+      : null;
+  const visibleDepthBottom = rightVisible
+    ? [project(frontBottomRight3), project(backBottomRight3)] as const
+    : leftVisible
+      ? [project(frontBottomLeft3), project(backBottomLeft3)] as const
+      : null;
+  const handleFaceVisible = frontVisible ? "front" : backVisible ? "back" : null;
+  const visibleHandleZ = handleFaceVisible === "front" ? frontTopZ : backTopZ;
+  const attachmentQuads = handleFaceVisible
+    ? handleCenters.map((center, index) => {
+        const halfWidth = Math.max(0.1, options.handleWidth / 2);
+        const quad = projectQuad(
+          [
+            { x: center - halfWidth, y: safeHeight, z: visibleHandleZ },
+            { x: center + halfWidth, y: safeHeight, z: visibleHandleZ },
+            { x: center + halfWidth, y: safeHeight - handleAttachmentHeight, z: visibleHandleZ },
+            { x: center - halfWidth, y: safeHeight - handleAttachmentHeight, z: visibleHandleZ },
+          ],
+          normalizedYaw,
+          scale,
+          baseline,
+        );
+        return { index, quad };
+      })
+    : [];
+  const openTopInset = projectQuad(
+    [
+      lerp3(frontTopLeft3, frontTopRight3, 0.07),
+      lerp3(frontTopRight3, frontTopLeft3, 0.07),
+      lerp3(backTopRight3, backTopLeft3, 0.07),
+      lerp3(backTopLeft3, backTopRight3, 0.07),
+    ],
+    normalizedYaw,
+    scale,
+    baseline,
   );
 
   return (
@@ -665,7 +937,7 @@ export function BagOutcomePreview({
         <div>
           <p>Live 3D vector</p>
           <h2 id={`outcome-title-${rawId}`}>Finished outcome preview</h2>
-          <span>Shaped from the same finished dimensions. Drag the bag left or right to spin, or choose an exact view.</span>
+          <span>Shaped from the same finished dimensions. Drag through a full 360° orbit, use arrow keys, or choose an exact side.</span>
         </div>
         <div className={styles.outcomeViewButtons} role="group" aria-label="Choose a 3D preview view">
           {viewChoices.map((choice) => (
@@ -675,9 +947,9 @@ export function BagOutcomePreview({
                 viewButtonRefs.current[choice.id] = node;
               }}
               type="button"
-              aria-pressed={view === choice.id}
-              onClick={() => chooseView(choice.id)}
-              onKeyDown={(event) => navigateViews(event, spinViewOrder.indexOf(choice.id))}
+              aria-pressed={circularAngleDistance(normalizedYaw, choice.yaw) < ANGLE_EPSILON}
+              onClick={() => chooseYaw(choice.yaw)}
+              onKeyDown={(event) => navigateViews(event, viewChoices.findIndex((candidate) => candidate.id === choice.id))}
             >
               {choice.label}
             </button>
@@ -687,21 +959,16 @@ export function BagOutcomePreview({
 
       <div
         className={`${styles.outcomeStage} ${isSpinning ? styles.outcomeStageSpinning : ""}`}
-        onPointerDown={beginSpin}
-        onPointerMove={continueSpin}
-        onPointerUp={finishSpin}
-        onPointerCancel={finishSpin}
-        onLostPointerCapture={finishSpin}
       >
         <svg
           className={styles.outcomeSvg}
           viewBox="0 0 720 430"
           role="img"
-          aria-label={`${title}. ${accessibleDimensions}. Outer build: ${outerBuildLabel}.${closure === "open-tote" ? ` Handles are ${formatInches(options.handleWidth)} wide, centered ${formatInches(options.handleInset)} from each finished corner, and secured ${formatInches(options.handleAttachmentDepth)} below the rim.` : ""}${closure === "side-zipper" && direction === 0 ? " The side zipper is hidden in this view." : ""}`}
+          aria-label={`${title}. ${accessibleDimensions}. Outer build: ${outerBuildLabel}.${closure === "open-tote" ? ` Handles are ${formatInches(options.handleWidth)} wide, centered ${formatInches(options.handleInset)} from each finished corner, and secured ${formatInches(options.handleAttachmentDepth)} below the rim.` : ""}${closure === "side-zipper" && !sideZipperVisible ? ` The ${options.sideZipperSide} side zipper is hidden at this angle.` : ""}`}
           preserveAspectRatio="xMidYMid meet"
         >
           <title>{title}</title>
-          <desc>A dimension-driven concept drawing showing the finished bag volume, visible faces, selected closure, and width, height, and depth measurements.</desc>
+          <desc>A dimension-driven, 36-position orbit showing the finished bag volume, physical front, back, left, and right surfaces, selected closure, and relevant measurements.</desc>
           <defs>
             <linearGradient id={frontGradientId} x1="0" y1="0" x2="1" y2="1">
               <stop offset="0" stopColor="#9d8cff" />
@@ -732,11 +999,11 @@ export function BagOutcomePreview({
             <path d="M 68 372 H 654" />
             <path d="M 118 395 L 213 346 M 228 395 L 323 346 M 338 395 L 433 346 M 448 395 L 543 346 M 558 395 L 653 346" />
           </g>
-          <ellipse cx="360" cy="360" rx={Math.max(105, (baseWidth + Math.abs(depthVector.x)) * 0.54)} ry="24" fill="rgba(0,0,0,.34)" filter={`url(#${shadowId})`} />
+          <ellipse cx="360" cy="360" rx={Math.max(105, orbitDiagonal * scale * 0.48)} ry="24" fill="rgba(0,0,0,.34)" filter={`url(#${shadowId})`} />
 
           {closure === "open-tote" ? (
             <path
-              d={`M ${backHandleLeft.x} ${backHandleLeft.y} C ${backHandleLeft.x} ${backHandleLeft.y - handleHeight * 4 / 3} ${backHandleRight.x} ${backHandleRight.y - handleHeight * 4 / 3} ${backHandleRight.x} ${backHandleRight.y}`}
+              d={`M ${projectedHandles[0].from.x} ${projectedHandles[0].from.y} C ${projectedHandles[0].controlFrom.x} ${projectedHandles[0].controlFrom.y} ${projectedHandles[0].controlTo.x} ${projectedHandles[0].controlTo.y} ${projectedHandles[0].to.x} ${projectedHandles[0].to.y}`}
               className={styles.outcomeHandleBack}
               style={{
                 strokeWidth: handleStrokeWidth,
@@ -745,34 +1012,6 @@ export function BagOutcomePreview({
             />
           ) : null}
 
-          {direction !== 0 ? (
-            <>
-              <polygon points={points(visibleSide)} fill={`url(#${sideGradientId})`} className={styles.outcomeFace} />
-              <SurfaceBuild
-                quad={frontSideHalf}
-                composition={composition}
-                plan={plan}
-                window={visibleSideWindow}
-                reverseColumns={direction < 0}
-                face="front"
-              />
-              <SurfaceBuild
-                quad={backSideHalf}
-                composition={composition}
-                plan={plan}
-                window={visibleSideWindow}
-                reverseColumns={direction > 0}
-                face="back"
-              />
-              <line
-                className={styles.outcomeSideJoin}
-                x1={sideMidTop.x}
-                y1={sideMidTop.y}
-                x2={sideMidBottom.x}
-                y2={sideMidBottom.y}
-              />
-            </>
-          ) : null}
           {!topCollapsesToZipper ? (
             <polygon
               points={points(topFace)}
@@ -783,16 +1022,40 @@ export function BagOutcomePreview({
 
           {closure === "open-tote" ? (
             <polygon
-              points={points([
-                lerp(frontTopLeft, frontTopRight, 0.07),
-                lerp(frontTopRight, frontTopLeft, 0.07),
-                lerp(backTopRight, backTopLeft, 0.07),
-                lerp(backTopLeft, backTopRight, 0.07),
-              ])}
+              points={points(openTopInset)}
               fill="#071019"
               stroke="#f6ba4c"
               strokeWidth="1.5"
               opacity=".92"
+            />
+          ) : null}
+
+          {bodySurfaces.map((surface) => (
+            <g key={surface.id}>
+              <polygon
+                points={points(surface.quad)}
+                fill={`url(#${surface.side ? sideGradientId : frontGradientId})`}
+                className={styles.outcomeFace}
+              />
+              <polygon points={points(surface.quad)} fill={`url(#${weaveId})`} className={styles.outcomeWeave} />
+              <SurfaceBuild
+                quad={surface.quad}
+                composition={composition}
+                plan={plan}
+                window={surface.window}
+                reverseColumns={surface.reverseColumns}
+                face={surface.face}
+              />
+            </g>
+          ))}
+
+          {visibleSideMidTop && visibleSideMidBottom ? (
+            <line
+              className={styles.outcomeSideJoin}
+              x1={visibleSideMidTop.x}
+              y1={visibleSideMidTop.y}
+              x2={visibleSideMidBottom.x}
+              y2={visibleSideMidBottom.y}
             />
           ) : null}
 
@@ -807,23 +1070,12 @@ export function BagOutcomePreview({
 
           {closure === "recessed-zipper" ? (
             <g aria-hidden="true">
-              <line x1={frontTopLeft.x} y1={frontTopLeft.y} x2={recessFrontLeft.x} y2={recessFrontLeft.y} className={styles.outcomeRecessDrop} />
-              <line x1={frontTopRight.x} y1={frontTopRight.y} x2={recessFrontRight.x} y2={recessFrontRight.y} className={styles.outcomeRecessDrop} />
+              <line x1={project(frontTopLeft3).x} y1={project(frontTopLeft3).y} x2={recessFrontLeft.x} y2={recessFrontLeft.y} className={styles.outcomeRecessDrop} />
+              <line x1={project(frontTopRight3).x} y1={project(frontTopRight3).y} x2={recessFrontRight.x} y2={recessFrontRight.y} className={styles.outcomeRecessDrop} />
               <polygon points={points([recessFrontLeft, recessFrontRight, recessBackRight, recessBackLeft])} fill="#101a27" stroke="#4fe3e6" strokeWidth="1.4" />
               <ZipperLine from={recessZipFrom} to={recessZipTo} accent="#4fe3e6" label={`${formatInches(options.recessDepth)} RECESS`} />
             </g>
           ) : null}
-
-          <polygon points={points(frontFace)} fill={`url(#${frontGradientId})`} className={styles.outcomeFace} />
-          <polygon points={points(frontFace)} fill={`url(#${weaveId})`} className={styles.outcomeWeave} />
-          <SurfaceBuild
-            quad={frontFace}
-            composition={composition}
-            plan={plan}
-            window={frontWindow}
-            reverseColumns={view === "back"}
-            face={visibleFlatFace}
-          />
 
           {closure === "top-zipper" ? (
             <ZipperLine
@@ -834,72 +1086,105 @@ export function BagOutcomePreview({
           ) : null}
 
           {closure === "recessed-zipper" ? (
-            <path d={`M ${frontTopLeft.x} ${frontTopLeft.y} L ${frontTopRight.x} ${frontTopRight.y}`} className={styles.outcomeRecessLip} aria-hidden="true" />
+            <path d={`M ${project(frontTopLeft3).x} ${project(frontTopLeft3).y} L ${project(frontTopRight3).x} ${project(frontTopRight3).y}`} className={styles.outcomeRecessLip} aria-hidden="true" />
           ) : null}
 
           {closure === "open-tote" ? (
             <g aria-hidden="true">
+              {attachmentQuads.map((attachment) => (
+                <g key={attachment.index}>
+                  <polygon
+                    points={points(attachment.quad)}
+                    fill={options.handleMaterial === "webbing" ? "rgba(239,233,215,.72)" : "rgba(41,33,77,.55)"}
+                    stroke={options.handleMaterial === "webbing" ? "#fffaf0" : "#d4ceff"}
+                    strokeWidth="1"
+                  />
+                  <line
+                    x1={pointOnQuad(attachment.quad, 0.18, 0.4).x}
+                    y1={pointOnQuad(attachment.quad, 0.18, 0.4).y}
+                    x2={pointOnQuad(attachment.quad, 0.82, 0.78).x}
+                    y2={pointOnQuad(attachment.quad, 0.82, 0.78).y}
+                    stroke="#f6ba4c"
+                    strokeWidth="1.2"
+                  />
+                  <line
+                    x1={pointOnQuad(attachment.quad, 0.82, 0.4).x}
+                    y1={pointOnQuad(attachment.quad, 0.82, 0.4).y}
+                    x2={pointOnQuad(attachment.quad, 0.18, 0.78).x}
+                    y2={pointOnQuad(attachment.quad, 0.18, 0.78).y}
+                    stroke="#f6ba4c"
+                    strokeWidth="1.2"
+                  />
+                </g>
+              ))}
               <path
-                d={`M ${frontHandleLeft.x} ${frontHandleLeft.y} C ${frontHandleLeft.x} ${frontHandleLeft.y - handleHeight * 4 / 3} ${frontHandleRight.x} ${frontHandleRight.y - handleHeight * 4 / 3} ${frontHandleRight.x} ${frontHandleRight.y}`}
+                d={`M ${projectedHandles[1].from.x} ${projectedHandles[1].from.y} C ${projectedHandles[1].controlFrom.x} ${projectedHandles[1].controlFrom.y} ${projectedHandles[1].controlTo.x} ${projectedHandles[1].controlTo.y} ${projectedHandles[1].to.x} ${projectedHandles[1].to.y}`}
                 className={styles.outcomeHandle}
                 style={{
                   strokeWidth: handleStrokeWidth,
                   stroke: options.handleMaterial === "webbing" ? "#f1ecdd" : "#9f91f2",
                 }}
               />
-              {[frontHandleLeft, frontHandleRight].map((attachment, index) => (
-                <g key={index}>
-                  <rect
-                    x={attachment.x - handleStrokeWidth / 2}
-                    y={attachment.y}
-                    width={handleStrokeWidth}
-                    height={handleAttachmentHeight}
-                    rx="3"
-                    fill={options.handleMaterial === "webbing" ? "rgba(239,233,215,.72)" : "rgba(41,33,77,.55)"}
-                    stroke={options.handleMaterial === "webbing" ? "#fffaf0" : "#d4ceff"}
-                    strokeWidth="1"
-                  />
-                  <path
-                    d={`M ${attachment.x - handleStrokeWidth * 0.34} ${attachment.y + handleAttachmentHeight * 0.43} L ${attachment.x + handleStrokeWidth * 0.34} ${attachment.y + handleAttachmentHeight * 0.76} M ${attachment.x + handleStrokeWidth * 0.34} ${attachment.y + handleAttachmentHeight * 0.43} L ${attachment.x - handleStrokeWidth * 0.34} ${attachment.y + handleAttachmentHeight * 0.76}`}
-                    stroke="#f6ba4c"
-                    strokeWidth="1.2"
-                  />
-                </g>
-              ))}
             </g>
           ) : null}
 
-          {closure === "side-zipper" && direction !== 0 ? (
+          {closure === "side-zipper" && sideZipperVisible ? (
             <ZipperLine from={sideZipStart} to={sideZipEnd} accent="#ff7194" label={`${formatInches(options.sideZipperLength)} SIDE ZIP`} />
           ) : null}
 
-          <DimensionLine
-            from={{ x: frontBottomLeft.x, y: widthDimensionY }}
-            to={{ x: frontBottomRight.x, y: widthDimensionY }}
-            label={`${formatInches(plan.finishedBaseWidth)} W`}
-            markerId={markerId}
-          />
-          <DimensionLine
-            from={{ x: heightDimensionX, y: bottomY - height }}
-            to={{ x: heightDimensionX, y: frontBottomLeft.y }}
-            label={`${formatInches(plan.finishedHeight)} H`}
-            markerId={markerId}
-            textOffset={{ x: -15, y: 4 }}
-          />
-          <DimensionLine
-            from={depthDimensionFrom}
-            to={depthDimensionTo}
-            label={`${formatInches(plan.finishedDepth)} D`}
-            markerId={markerId}
-            textOffset={{ x: direction < 0 ? -7 : 7, y: -8 }}
-          />
+          {!isSpinning ? (
+            <>
+              {visibleFlatBottom && Math.abs(cosine) > 0.34 ? (
+                <DimensionLine
+                  from={add(visibleFlatBottom[0], { x: 0, y: 26 })}
+                  to={add(visibleFlatBottom[1], { x: 0, y: 26 })}
+                  label={`${formatInches(plan.finishedBaseWidth)} W`}
+                  markerId={markerId}
+                />
+              ) : null}
+              <DimensionLine
+                from={{ x: 82, y: baseline - safeHeight * scale }}
+                to={{ x: 82, y: baseline }}
+                label={`${formatInches(plan.finishedHeight)} H`}
+                markerId={markerId}
+                textOffset={{ x: -15, y: 4 }}
+              />
+              {visibleDepthBottom && Math.abs(sine) > 0.34 ? (
+                <DimensionLine
+                  from={add(visibleDepthBottom[0], { x: 0, y: 18 })}
+                  to={add(visibleDepthBottom[1], { x: 0, y: 18 })}
+                  label={`${formatInches(plan.finishedDepth)} D`}
+                  markerId={markerId}
+                />
+              ) : null}
+            </>
+          ) : null}
         </svg>
 
+        <div
+          className={styles.outcomeInteraction}
+          role="slider"
+          tabIndex={0}
+          aria-label="Rotate finished bag preview"
+          aria-orientation="horizontal"
+          aria-valuemin={0}
+          aria-valuemax={360 - ORBIT_STEP}
+          aria-valuenow={normalizedYaw}
+          aria-valuetext={`${viewDetail}, ${normalizedYaw} degrees around the bag`}
+          aria-describedby={`outcome-spin-help-${rawId}`}
+          onPointerDown={beginSpin}
+          onPointerMove={continueSpin}
+          onPointerUp={finishSpin}
+          onPointerCancel={finishSpin}
+          onLostPointerCapture={finishSpin}
+          onKeyDown={rotateWithKeyboard}
+        />
+
         <div className={styles.outcomeBadge} aria-hidden="true">
-          <i /> live vector
+          <i /> live vector · {normalizedYaw}°
         </div>
-        <div className={styles.outcomeSpinHint} aria-hidden="true">
-          <i>↔</i> drag to spin · snaps to 4 views
+        <div className={styles.outcomeSpinHint} id={`outcome-spin-help-${rawId}`}>
+          <i aria-hidden="true">↔</i> drag 360° · arrows adjust {ORBIT_STEP}°
         </div>
       </div>
 

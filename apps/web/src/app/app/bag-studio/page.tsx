@@ -3,15 +3,15 @@ import type { Metadata } from "next";
 import { BagPatternStudio } from "@/components/app/bag-pattern-studio";
 
 export const metadata: Metadata = {
-  title: "Bag Pattern Studio · Monosyth Studio",
+  title: "Modular Bag Studio · Monosyth Studio",
   description:
-    "A private vector drafting studio for tote and zipper bag patterns, seam allowances, boxed corners, and fabric layouts.",
+    "A modular vector drafting studio for tote and zipper bag structures, seam allowances, boxed corners, handles, panel builds, and fabric layouts.",
   robots: {
     index: false,
     follow: false,
   },
 };
 
-export default function BagPatternPage() {
+export default function BagStudioPage() {
   return <BagPatternStudio />;
 }

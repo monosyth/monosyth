@@ -93,16 +93,10 @@
   position: relative;
   min-height: 18rem;
   overflow: hidden;
-  cursor: grab;
-  touch-action: pan-y;
   user-select: none;
   background:
     radial-gradient(ellipse at 50% 48%, rgba(156, 140, 255, .1), transparent 44%),
     linear-gradient(180deg, rgba(8, 18, 29, .28), rgba(6, 14, 23, .82));
-}
-
-.outcomeStageSpinning {
-  cursor: grabbing;
 }
 
 .outcomeStage::before {
@@ -124,6 +118,28 @@
   width: 100%;
   height: auto;
   min-height: 18rem;
+}
+
+.outcomeInteraction {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  border: 0;
+  border-radius: .68rem;
+  outline: none;
+  background: transparent;
+  cursor: grab;
+  touch-action: pan-y pinch-zoom;
+  user-select: none;
+}
+
+.outcomeStageSpinning .outcomeInteraction {
+  cursor: grabbing;
+}
+
+.outcomeInteraction:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: -5px;
 }
 
 .outcomeSvg line,
@@ -248,7 +264,7 @@
 
 .outcomeBadge {
   position: absolute;
-  z-index: 2;
+  z-index: 4;
   right: .72rem;
   bottom: .66rem;
   display: flex;
@@ -263,6 +279,7 @@
   font: 650 .45rem/1 var(--font-ibm-plex-mono), monospace;
   letter-spacing: .09em;
   text-transform: uppercase;
+  pointer-events: none;
 }
 
 .outcomeBadge i {
@@ -275,7 +292,7 @@
 
 .outcomeSpinHint {
   position: absolute;
-  z-index: 2;
+  z-index: 4;
   left: .72rem;
   bottom: .66rem;
   display: flex;
@@ -439,6 +456,7 @@
   }
 
   .outcomeViewButtons,
+  .outcomeInteraction,
   .outcomeBadge,
   .outcomeSpinHint {
     display: none;

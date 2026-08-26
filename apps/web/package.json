@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "audit:bag-studio": "tsx scripts/audit-bag-pattern-math.ts && tsx scripts/audit-bag-studio-storage.ts",
     "audit:quilting": "tsx scripts/audit-quilt-geometry.ts",
     "camera:capture": "node scripts/capture-station-camera.mjs"
   },

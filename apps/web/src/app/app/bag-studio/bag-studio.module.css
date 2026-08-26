@@ -111,6 +111,76 @@
 .topActions .downloadButton { border-color: rgba(246, 186, 76, .42); color: #ffe3a7; background: rgba(246, 186, 76, .08); }
 .topActions button:disabled, .resultActions button:disabled { opacity: .36; cursor: not-allowed; }
 
+.workspaceNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .62rem clamp(1rem, 2vw, 2rem);
+  border-bottom: 1px solid rgba(132, 151, 167, .15);
+  background: rgba(9, 20, 31, .92);
+}
+.workspaceNav > div { display: flex; gap: .32rem; padding: .22rem; border: 1px solid rgba(132, 151, 167, .18); border-radius: .72rem; background: #07121c; }
+.workspaceNav button { min-width: 9.5rem; padding: .48rem .62rem; border: 1px solid transparent; border-radius: .52rem; color: #8296a2; background: transparent; cursor: pointer; text-align: left; }
+.workspaceNav button strong, .workspaceNav button small { display: block; }
+.workspaceNav button strong { font-size: .62rem; }
+.workspaceNav button small { margin-top: .12rem; font: 500 .45rem/1.2 var(--font-ibm-plex-mono), monospace; }
+.workspaceNav button[aria-selected="true"] { color: #071019; border-color: var(--cyan); background: var(--cyan); }
+.workspaceNav button[aria-selected="true"] small { color: rgba(7, 16, 25, .64); }
+.workspaceNav button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.workspaceNav > p { max-width: 42rem; margin: 0; color: #758a97; font-size: .62rem; line-height: 1.4; text-align: right; }
+
+.projectBar {
+  display: grid;
+  grid-template-columns: minmax(16rem, 1.15fr) minmax(17rem, 1fr) auto;
+  align-items: center;
+  gap: .65rem;
+  padding: .7rem clamp(1rem, 2vw, 2rem);
+  border-bottom: 1px solid rgba(246, 186, 76, .16);
+  background: linear-gradient(90deg, rgba(246, 186, 76, .065), rgba(13, 24, 37, .86));
+}
+.projectBar > label { display: grid; grid-template-columns: auto minmax(10rem, 1fr); align-items: center; gap: .55rem; min-width: 0; }
+.projectBar > label > span, .projectSaveStatus > span { color: #7c909d; font: 600 .47rem/1 var(--font-ibm-plex-mono), monospace; letter-spacing: .08em; text-transform: uppercase; }
+.projectBar input, .savedSearch input { width: 100%; min-width: 0; padding: .54rem .62rem; border: 1px solid rgba(246, 186, 76, .28); border-radius: .55rem; outline: 0; color: white; background: rgba(7, 16, 25, .78); font: 650 .64rem/1.1 var(--font-ibm-plex-mono), monospace; }
+.projectBar input:focus, .savedSearch input:focus { border-color: var(--amber); box-shadow: 0 0 0 2px rgba(246, 186, 76, .1); }
+.projectBar input::placeholder, .savedSearch input::placeholder { color: #506472; }
+.projectSaveStatus { min-width: 0; }
+.projectSaveStatus span, .projectSaveStatus strong, .projectSaveStatus small { display: block; }
+.projectSaveStatus strong { margin-top: .15rem; overflow: hidden; color: #d8e5e7; font-size: .59rem; text-overflow: ellipsis; white-space: nowrap; }
+.projectSaveStatus small { margin-top: .12rem; color: #667b88; font-size: .46rem; }
+.projectActions, .savedBagActions { display: flex; justify-content: flex-end; gap: .35rem; }
+.projectActions button, .savedLibrary button, .savedBagActions button { min-height: 2.25rem; padding: .5rem .64rem; border: 1px solid rgba(132, 151, 167, .22); border-radius: .56rem; color: #bdcdd2; background: rgba(17, 30, 45, .8); cursor: pointer; font: 650 .54rem/1 var(--font-ibm-plex-mono), monospace; }
+.projectActions button:hover, .savedLibrary button:hover, .savedBagActions button:hover { border-color: var(--cyan); color: white; }
+.projectActions .projectPrimaryAction, .savedLibrary .projectPrimaryAction { color: #071019; border-color: var(--cyan); background: var(--cyan); }
+
+.savedLibrary { min-height: 58vh; padding: clamp(1rem, 2vw, 2rem); background: radial-gradient(circle at 85% 0%, rgba(156, 140, 255, .08), transparent 28rem); }
+.savedLibraryHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.savedLibraryHeader p, .savedLibraryHeader h2, .savedLibraryHeader span { display: block; margin: 0; }
+.savedLibraryHeader p { color: var(--cyan); font: 600 .54rem/1.2 var(--font-ibm-plex-mono), monospace; letter-spacing: .16em; text-transform: uppercase; }
+.savedLibraryHeader h2 { margin-top: .3rem; font-size: clamp(1.5rem, 3vw, 2.35rem); letter-spacing: -.045em; }
+.savedLibraryHeader span { max-width: 48rem; margin-top: .38rem; color: #7d909c; font-size: .66rem; line-height: 1.5; }
+.savedSearch { display: grid; grid-template-columns: auto minmax(12rem, 22rem); align-items: center; justify-content: end; gap: .55rem; margin-top: 1rem; }
+.savedSearch > span { color: #718693; font: 600 .48rem/1 var(--font-ibm-plex-mono), monospace; text-transform: uppercase; }
+.savedBagGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .72rem; margin-top: 1rem; }
+.savedBagCard { min-width: 0; padding: .82rem; border: 1px solid rgba(132, 151, 167, .17); border-radius: .9rem; background: linear-gradient(145deg, rgba(23, 38, 56, .78), rgba(8, 18, 29, .78)); box-shadow: 0 14px 30px rgba(0, 0, 0, .13); }
+.savedBagCardTop { display: flex; justify-content: space-between; gap: .5rem; }
+.savedBagCardTop span, .savedBagCardTop b { color: var(--cyan); font: 650 .46rem/1 var(--font-ibm-plex-mono), monospace; letter-spacing: .09em; text-transform: uppercase; }
+.savedBagCardTop b { padding: .25rem .34rem; border-radius: .34rem; color: #243307; background: var(--lime); }
+.savedBagCard h3 { margin: .55rem 0 .24rem; overflow-wrap: anywhere; color: white; font-size: 1.02rem; }
+.savedBagCard > strong { color: var(--amber); font: 650 .64rem/1.25 var(--font-ibm-plex-mono), monospace; }
+.savedBagCard dl { display: grid; gap: .3rem; margin: .72rem 0; }
+.savedBagCard dl > div { display: grid; grid-template-columns: 4.1rem 1fr; gap: .45rem; padding-top: .3rem; border-top: 1px solid rgba(132, 151, 167, .1); }
+.savedBagCard dt, .savedBagCard dd { margin: 0; font-size: .51rem; line-height: 1.3; }
+.savedBagCard dt { color: #687e8c; font-family: var(--font-ibm-plex-mono), monospace; text-transform: uppercase; }
+.savedBagCard dd { overflow: hidden; color: #a9bbc2; text-overflow: ellipsis; white-space: nowrap; text-transform: capitalize; }
+.savedBagActions { justify-content: flex-start; }
+.savedBagActions .savedBagRemove { margin-left: auto; color: #ff9ab3; border-color: rgba(255, 113, 148, .22); }
+.savedEmptyState { display: grid; place-items: center; max-width: 36rem; margin: 4rem auto; padding: 2rem; border: 1px dashed rgba(79, 227, 230, .24); border-radius: 1rem; background: rgba(13, 24, 37, .55); text-align: center; }
+.savedEmptyState > span { color: var(--cyan); font-size: 2rem; }
+.savedEmptyState h3 { margin: .45rem 0 0; font-size: 1.05rem; }
+.savedEmptyState p { max-width: 30rem; margin: .5rem 0 .85rem; color: #718693; font-size: .61rem; line-height: 1.5; }
+.savedLocalNote { margin: 1rem 0 0; padding: .62rem .72rem; border-left: 2px solid var(--violet); color: #758995; background: rgba(156, 140, 255, .045); font-size: .52rem; line-height: 1.45; }
+
 .closureRail {
   display: grid;
   grid-template-columns: minmax(13rem, 17rem) 1fr;
@@ -296,6 +366,8 @@
 .handleReadout small { color: #718695; font: 550 .43rem/1.15 var(--font-ibm-plex-mono), monospace; text-transform: uppercase; }
 .handleReadout strong { margin-top: .22rem; overflow: hidden; color: var(--amber); font: 650 .55rem/1.2 var(--font-ibm-plex-mono), monospace; text-overflow: ellipsis; white-space: nowrap; }
 .handlePlacementCopy { margin: 0; padding: .52rem; border-left: 2px solid var(--cyan); color: #8397a3; background: rgba(79, 227, 230, .04); font-size: .53rem; line-height: 1.42; }
+.sideZipperControls { display: grid; gap: .42rem; margin-top: .55rem; }
+.sideZipperControls .measureField { padding: .5rem; }
 
 .canvasToolbar {
   display: grid;
@@ -546,6 +618,7 @@
   .notionCard { grid-column: 1 / 3; margin-top: 0; }
   .warningList { grid-column: 1 / -1; }
   .resultActions { grid-column: 3; align-content: end; margin-top: 0; }
+  .savedBagGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 1040px) {
@@ -558,6 +631,8 @@
   .fatQuarterSettings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .fatQuarterOrientation { grid-column: 1 / -1; }
   .patternCanvas { min-height: 24rem; }
+  .projectBar { grid-template-columns: minmax(16rem, 1fr) auto; }
+  .projectSaveStatus { grid-column: 1 / -1; grid-row: 2; }
 }
 
 @media (max-width: 790px) {
@@ -577,6 +652,16 @@
   .liveStrip > i { display: none; }
   .fabricGrid { grid-template-columns: 1fr; }
   .appFooter { align-items: flex-start; flex-direction: column; }
+  .workspaceNav { align-items: stretch; flex-direction: column; }
+  .workspaceNav > div { width: 100%; }
+  .workspaceNav button { flex: 1; min-width: 0; }
+  .workspaceNav > p { text-align: left; }
+  .projectBar { grid-template-columns: 1fr; }
+  .projectBar > label { grid-template-columns: 1fr; }
+  .projectSaveStatus { grid-column: auto; grid-row: auto; }
+  .projectActions { justify-content: flex-start; }
+  .savedBagGrid { grid-template-columns: 1fr; }
+  .savedSearch { justify-content: stretch; grid-template-columns: 1fr; }
 }
 
 @media (max-width: 520px) {
@@ -600,6 +685,13 @@
   .fabricRecipeRows b { grid-column: 2; white-space: normal; }
   .fatQuarterRows > div { grid-template-columns: auto minmax(0, 1fr); }
   .fatQuarterRows b, .fatQuarterRows em { grid-column: 2; white-space: normal; }
+  .workspaceNav, .projectBar, .savedLibrary { padding: .72rem; }
+  .workspaceNav > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .workspaceNav button { padding: .45rem; }
+  .workspaceNav button small { white-space: normal; }
+  .savedLibraryHeader { flex-direction: column; }
+  .savedBagActions { flex-wrap: wrap; }
+  .savedBagActions .savedBagRemove { margin-left: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -609,7 +701,7 @@
 
 @media print {
   .page { color: #111; background: white; }
-  .page::before, .topBar, .closureRail, .controlPanel, .canvasToolbar, .resultActions, .appFooter, .toolbarHint, .fabricSourceControls { display: none !important; }
+  .page::before, .topBar, .workspaceNav, .projectBar, .savedLibrary, .closureRail, .controlPanel, .canvasToolbar, .resultActions, .appFooter, .toolbarHint, .fabricSourceControls { display: none !important; }
   .workbench { display: block; }
   .canvasColumn, .resultPanel { padding: .35in; border: 0; background: white; }
   .canvasFrame, .fabricSection, .finishedCard, .mathCard, .cutList, .notionCard { break-inside: avoid; border-color: #bbb; box-shadow: none; background: white; color: #111; }
