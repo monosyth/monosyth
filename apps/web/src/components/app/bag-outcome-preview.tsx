@@ -326,11 +326,13 @@ function ZipperLine({
   to,
   accent = "#f6ba4c",
   label,
+  showPull = true,
 }: {
   from: Point;
   to: Point;
   accent?: string;
   label?: string;
+  showPull?: boolean;
 }) {
   const tapeA = shiftedSegment(from, to, -4.5);
   const tapeB = shiftedSegment(from, to, 4.5);
@@ -338,8 +340,9 @@ function ZipperLine({
   const dy = to.y - from.y;
   const length = Math.max(1, Math.hypot(dx, dy));
   const normal = { x: (-dy / length) * 3.4, y: (dx / length) * 3.4 };
-  const ticks = Array.from({ length: 20 }, (_, index) => {
-    const center = lerp(from, to, (index + 0.5) / 20);
+  const numTicks = Math.max(3, Math.round(length / 8));
+  const ticks = Array.from({ length: numTicks }, (_, index) => {
+    const center = lerp(from, to, (index + 0.5) / numTicks);
     return {
       from: { x: center.x - normal.x, y: center.y - normal.y },
       to: { x: center.x + normal.x, y: center.y + normal.y },
@@ -356,10 +359,12 @@ function ZipperLine({
       {ticks.map((tick, index) => (
         <line key={index} x1={tick.from.x} y1={tick.from.y} x2={tick.to.x} y2={tick.to.y} stroke="#172638" strokeWidth="1.4" />
       ))}
-      <g transform={`translate(${pull.x} ${pull.y}) rotate(${angle})`}>
-        <circle r="5" fill="#172638" stroke={accent} strokeWidth="1.6" />
-        <path d="M 3 -1 L 12 -1 Q 15 -1 15 2 Q 15 5 12 5 L 8 5" fill="none" stroke={accent} strokeWidth="2" strokeLinecap="round" />
-      </g>
+      {showPull ? (
+        <g transform={`translate(${pull.x} ${pull.y}) rotate(${angle})`}>
+          <circle r="5" fill="#172638" stroke={accent} strokeWidth="1.6" />
+          <path d="M 3 -1 L 12 -1 Q 15 -1 15 2 Q 15 5 12 5 L 8 5" fill="none" stroke={accent} strokeWidth="2" strokeLinecap="round" />
+        </g>
+      ) : null}
       {label ? (
         <text x={midpoint(from, to).x} y={midpoint(from, to).y - 12} className={styles.outcomeSvgLabel}>{label}</text>
       ) : null}
@@ -908,6 +913,12 @@ export function BagOutcomePreview({
   const recessZipFrom = lerp(recessFrontLeft, recessBackLeft, 0.48);
   const recessZipTo = lerp(recessFrontRight, recessBackRight, 0.48);
 
+  const boxySideDropHeight = Math.max(0, safeHeight - safeDepth / 2);
+  const boxyLeftDrop3: Point3 = { x: -safeWidth / 2, y: boxySideDropHeight, z: 0 };
+  const boxyRightDrop3: Point3 = { x: safeWidth / 2, y: boxySideDropHeight, z: 0 };
+  const boxyLeftDrop = project(boxyLeftDrop3);
+  const boxyRightDrop = project(boxyRightDrop3);
+
   const zipperOnLeft = options.sideZipperSide === "left";
   const sideTop3 = zipperOnLeft ? leftMidTop3 : rightMidTop3;
   const sideBottom3 = zipperOnLeft ? leftMidBottom3 : rightMidBottom3;
@@ -920,13 +931,8 @@ export function BagOutcomePreview({
     0,
     1,
   );
-  const sideZipStartRatio = (1 - sideZipRatio) / 2;
-  const sideZipStart = project(lerp3(sideTop3, sideBottom3, sideZipStartRatio));
-  const sideZipEnd = project(lerp3(
-    sideTop3,
-    sideBottom3,
-    sideZipStartRatio + sideZipRatio,
-  ));
+  const sideZipStart = project(sideTop3);
+  const sideZipEnd = project(lerp3(sideTop3, sideBottom3, sideZipRatio));
   const sideZipperVisible = zipperOnLeft ? leftVisible : rightVisible;
   const visibleSideMidTop = rightVisible
     ? project(rightMidTop3)
@@ -1132,13 +1138,34 @@ export function BagOutcomePreview({
           ) : null}
 
           {closure === "top-zipper" ? (
-            <ZipperLine
-              from={topZipFrom}
-              to={topZipTo}
-              label={boxy
-                ? `${formatInches(plan.finishedBaseWidth)} FINISHED ZIP LINE`
-                : `${formatInches(plan.finishedTopOpening)} TOP ZIP`}
-            />
+            <g aria-hidden="true">
+              <ZipperLine
+                from={topZipFrom}
+                to={topZipTo}
+                label={boxy
+                  ? `${formatInches(plan.finishedBaseWidth)} TOP ZIP`
+                  : `${formatInches(plan.finishedTopOpening)} TOP ZIP`}
+              />
+              {boxy ? (
+                <>
+                  {/* Left side zipper drop down halfway */}
+                  <ZipperLine
+                    from={topZipFrom}
+                    to={boxyLeftDrop}
+                    showPull={false}
+                  />
+                  {/* Right side zipper drop down halfway */}
+                  <ZipperLine
+                    from={topZipTo}
+                    to={boxyRightDrop}
+                    showPull={false}
+                  />
+                  {/* Boxed end grab tab / carry handle anchor points */}
+                  <circle cx={boxyLeftDrop.x} cy={boxyLeftDrop.y} r="3.5" fill="#f6ba4c" stroke="#101a27" strokeWidth="1.5" />
+                  <circle cx={boxyRightDrop.x} cy={boxyRightDrop.y} r="3.5" fill="#f6ba4c" stroke="#101a27" strokeWidth="1.5" />
+                </>
+              ) : null}
+            </g>
           ) : null}
 
           {closure === "recessed-zipper" ? (
