@@ -18,6 +18,9 @@ export type BoxyBagKit = {
   recommendedZipperLength: number;
   cornerCutoutsPerPanel: 4;
   totalCornerCutouts: 16;
+  pullTabCutLength: number;
+  pullTabCutWidth: number;
+  pullTabQuantity: number;
 };
 
 /**
@@ -139,6 +142,9 @@ export function calculateBoxyBagKit(plan: BagPatternPlan): BoxyBagKit {
     recommendedZipperLength: Math.ceil(plan.finishedFlatWidth + 2),
     cornerCutoutsPerPanel: 4,
     totalCornerCutouts: 16,
+    pullTabCutLength: 2.5,
+    pullTabCutWidth: 2,
+    pullTabQuantity: 2,
   };
 }
 

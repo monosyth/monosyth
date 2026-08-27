@@ -13,6 +13,12 @@ export type BagStudioSnapStep = 0 | 0.125 | 0.25 | 0.5 | 1;
 export type BagStudioTab = "studio" | "saved";
 export type SideZipperSide = "left" | "right";
 export type RecessedZipperEndStyle = "boxed" | "open";
+export type BagStructureFeel =
+  | "draped"
+  | "woven-interfaced"
+  | "fleece-padded"
+  | "foam-standing";
+export type BagPocketStyle = "none" | "single-slip" | "divided-slip";
 
 export type BagStudioClosureOptions = {
   handleMaterial: HandleMaterial;
@@ -44,6 +50,9 @@ export type BagStudioSnapshot = {
   boxyDraft: BagPatternDraft;
   closureOptions: BagStudioClosureOptions;
   outerDesign: OuterPanelDesign;
+  structureFeel?: BagStructureFeel;
+  pocketStyle?: BagPocketStyle;
+  pullTabs?: boolean;
   mirror: boolean;
   toolMode: BagStudioToolMode;
   snapStep: BagStudioSnapStep;
@@ -98,6 +107,13 @@ const piecingModes: OuterPanelDesign["mode"][] = [
 ];
 const panelScopes: OuterPanelDesign["scope"][] = ["both", "front", "back"];
 const blockSizeBases: OuterPanelDesign["blockSizeBasis"][] = ["cut", "finished"];
+const structureFeels: BagStructureFeel[] = [
+  "draped",
+  "woven-interfaced",
+  "fleece-padded",
+  "foam-standing",
+];
+const pocketStyles: BagPocketStyle[] = ["none", "single-slip", "divided-slip"];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -312,6 +328,17 @@ export function normalizeBagStudioSnapshot(
         fallback.outerDesign.contrastRise,
       ),
     },
+    structureFeel: enumValue(
+      input.structureFeel,
+      structureFeels,
+      fallback.structureFeel ?? "woven-interfaced",
+    ),
+    pocketStyle: enumValue(
+      input.pocketStyle,
+      pocketStyles,
+      fallback.pocketStyle ?? "none",
+    ),
+    pullTabs: booleanValue(input.pullTabs, fallback.pullTabs ?? true),
     mirror: booleanValue(input.mirror, fallback.mirror),
     toolMode: enumValue(input.toolMode, toolModes, fallback.toolMode),
     snapStep: enumValue(input.snapStep, snapSteps, fallback.snapStep),

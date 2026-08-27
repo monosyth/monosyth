@@ -21,7 +21,9 @@ import {
   calculateBagPatternPlan,
   calculateBodyFabricLayout,
   calculateFatQuarterPieceLayout,
+  calculateInterfacingPlan,
   calculatePanelStitchGeometry,
+  calculatePocketPlan,
   clamp,
   draftFromFinishedSize,
   formatDecimal,
@@ -32,6 +34,8 @@ import {
   type BagClosure,
   type BagPatternDraft,
   type BagPatternPlan,
+  type InterfacingPlan,
+  type PocketPlan,
 } from "@/lib/sewing/bag-pattern";
 import {
   boxyBagFormulaText,
@@ -57,6 +61,8 @@ import {
   createSavedBagId,
   readBagStudioState,
   writeBagStudioState,
+  type BagPocketStyle,
+  type BagStructureFeel,
   type BagStudioClosureOptions,
   type BagStudioFabricSettings,
   type BagStudioSizeBasis,
@@ -158,6 +164,136 @@ const bodyRecipeChoices: ReadonlyArray<{
 const seamPresets = [0.25, 0.375, 0.5] as const;
 const cornerPresets = [1, 1.5, 2, 2.5, 3] as const;
 
+export type BagSizePreset = {
+  id: string;
+  label: string;
+  dimensions: string;
+  description: string;
+  bodyRecipe: BodyRecipe;
+  baseWidth: number;
+  height: number;
+  depth: number;
+};
+
+const sizePresets: ReadonlyArray<BagSizePreset> = [
+  // Boxy bag presets
+  {
+    id: "boxy-pencil",
+    label: "Pencil & Tool Case",
+    dimensions: "8″ × 2½″ × 2½″",
+    description: "Slim zippered organizer for pens, rotary cutters, and tools",
+    bodyRecipe: "four-corner-boxy",
+    baseWidth: 8,
+    depth: 2.5,
+    height: 2.5,
+  },
+  {
+    id: "boxy-dopp",
+    label: "Classic Dopp Kit",
+    dimensions: "9″ × 4½″ × 4½″",
+    description: "Standard boxed toiletry and travel pouch",
+    bodyRecipe: "four-corner-boxy",
+    baseWidth: 9,
+    depth: 4.5,
+    height: 4.5,
+  },
+  {
+    id: "boxy-caddy",
+    label: "Large Travel Caddy",
+    dimensions: "11″ × 6″ × 5″",
+    description: "Spacious boxy organizer for electronics, toiletries, or sewing projects",
+    bodyRecipe: "four-corner-boxy",
+    baseWidth: 11,
+    depth: 6,
+    height: 5,
+  },
+  // Tote presets
+  {
+    id: "tote-book",
+    label: "Book & Craft Tote",
+    dimensions: "11″ × 13″ × 3″",
+    description: "Upright daily tote sized for notebooks, tablets, and small crafts",
+    bodyRecipe: "two-panel-tote",
+    baseWidth: 11,
+    height: 13,
+    depth: 3,
+  },
+  {
+    id: "tote-market",
+    label: "Everyday Market Tote",
+    dimensions: "14″ × 12″ × 4″",
+    description: "Classic grocery and carry-all tote with balanced base and rim",
+    bodyRecipe: "two-panel-tote",
+    baseWidth: 14,
+    height: 12,
+    depth: 4,
+  },
+  {
+    id: "tote-weekender",
+    label: "Weekender Tote",
+    dimensions: "18″ × 15″ × 6″",
+    description: "Generous travel tote with deep boxed bottom",
+    bodyRecipe: "two-panel-tote",
+    baseWidth: 18,
+    height: 15,
+    depth: 6,
+  },
+];
+
+const structureChoices: ReadonlyArray<{
+  id: BagStructureFeel;
+  label: string;
+  material: string;
+  description: string;
+}> = [
+  {
+    id: "draped",
+    label: "Soft & Draped",
+    material: "Uninterfaced",
+    description: "Flexible, packable feel for market totes or lightweight pouches",
+  },
+  {
+    id: "woven-interfaced",
+    label: "Light Structure",
+    material: "Fusible woven (SF101)",
+    description: "Standard body for cotton or linen without stiffness",
+  },
+  {
+    id: "fleece-padded",
+    label: "Padded Fleece",
+    material: "Fusible fleece (987F)",
+    description: "Pillowy protection; auto-trimmed 1/2″ inside edges to keep seams flat",
+  },
+  {
+    id: "foam-standing",
+    label: "Stand-Up Foam",
+    material: "Sew-in foam (Soft & Stable)",
+    description: "Lightweight 3D structure that holds its shape even when empty",
+  },
+];
+
+const pocketChoices: ReadonlyArray<{
+  id: BagPocketStyle;
+  label: string;
+  description: string;
+}> = [
+  {
+    id: "none",
+    label: "No pocket",
+    description: "Clean, simple single-cavity interior",
+  },
+  {
+    id: "single-slip",
+    label: "Single slip pocket",
+    description: "Wide interior patch pocket for phone, keys, or notebook",
+  },
+  {
+    id: "divided-slip",
+    label: "Divided slip pocket",
+    description: "Dual-compartment patch pocket with center divider stitch line",
+  },
+];
+
 const studioSteps: ReadonlyArray<{
   id: StudioStep;
   number: string;
@@ -230,6 +366,9 @@ const defaultStudioSnapshot: BagStudioSnapshot = {
   boxyDraft: defaultBoxyDraft,
   closureOptions: defaultClosureOptions,
   outerDesign: defaultOuterPanelDesign,
+  structureFeel: "woven-interfaced",
+  pocketStyle: "none",
+  pullTabs: true,
   mirror: true,
   toolMode: "select",
   snapStep: 0.5,
@@ -284,7 +423,12 @@ function getCutPieces(
   options: ClosureOptions,
   composition: OuterPanelComposition,
   handlePlan: ToteHandlePlan,
+  structureFeel: BagStructureFeel = "woven-interfaced",
+  pocketStyle: BagPocketStyle = "none",
+  pullTabs = true,
 ): CutPiece[] {
+  const interfacing = calculateInterfacingPlan(plan, structureFeel);
+  const pocket = calculatePocketPlan(plan, pocketStyle);
   const pieces: CutPiece[] = [
     ...composition.cutPieces,
     {
@@ -299,17 +443,43 @@ function getCutPieces(
         ? `Mark and remove a ${formatInches(plan.cornerCut)} square from all four corners of each panel.`
         : "Use the same corner and shaping marks as the outer.",
     },
-    {
-      material: "interfacing",
-      name: "Interfacing (main body)",
-      quantity: 2,
-      width: plan.boundingCutWidth,
-      height: plan.cutHeight,
-      note: bodyRecipe === "four-corner-boxy"
-        ? "Optional; fuse to each unnotched outer rectangle first, then cut the four matching corner squares."
-        : "Optional; follow the product instructions and trim bulky interfacing out of the seam allowance.",
-    },
   ];
+
+  if (interfacing.quantity > 0) {
+    pieces.push({
+      material: "interfacing",
+      name: `Interfacing (${interfacing.materialName.split(" (")[0]})`,
+      quantity: interfacing.quantity,
+      width: interfacing.cutWidth,
+      height: interfacing.cutHeight,
+      note: interfacing.bulkRelief
+        ? `${interfacing.recommendation} Cut 1/2″ inside outer edges to keep seam allowances flat.`
+        : interfacing.recommendation,
+    });
+  }
+
+  if (pocket.style !== "none") {
+    pieces.push({
+      material: "lining",
+      name: pocket.style === "divided-slip" ? "Divided slip pocket" : "Interior slip pocket",
+      quantity: 1,
+      width: pocket.cutWidth,
+      height: pocket.cutHeight,
+      note: `Finishes ${formatInches(pocket.finishedWidth)} wide × ${formatInches(pocket.finishedHeight)} high. Top edge includes 1″ double-fold hem; bottom and sides include 1/2″ turn-under.`,
+    });
+  }
+
+  if (bodyRecipe === "four-corner-boxy" && pullTabs) {
+    const kit = calculateBoxyBagKit(plan);
+    pieces.push({
+      material: "outer",
+      name: "Zipper grab tab",
+      quantity: kit.pullTabQuantity,
+      width: kit.pullTabCutWidth,
+      height: kit.pullTabCutLength,
+      note: "Fold in half lengthwise to make 1″ × 2″ grab tabs. Baste over zipper tape ends before boxing.",
+    });
+  }
 
   if (closure === "open-tote") {
     pieces.push({
@@ -447,17 +617,80 @@ function closureTeaching(
   }
 }
 
-function boxyBagSewingSteps(plan: BagPatternPlan) {
-  return [
-    "Label every panel and its zipper edge. Fuse optional interfacing to the two unnotched outer rectangles first.",
+function boxyBagSewingSteps(
+  plan: BagPatternPlan,
+  structureFeel: BagStructureFeel = "woven-interfaced",
+  pocketStyle: BagPocketStyle = "none",
+  pullTabs = true,
+) {
+  const steps = [
+    structureFeel === "draped"
+      ? "Label every panel and its zipper edge."
+      : "Label every panel and its zipper edge. Fuse or baste interfacing/stabilizer to the two unnotched outer rectangles first.",
     `After piecing, quilting, and final trimming, remove a ${formatInches(plan.cornerCut)} square from all four corners of every panel.`,
+  ];
+
+  if (pocketStyle !== "none") {
+    steps.push(
+      `Prepare pocket: press top hem under 1/2″ twice and topstitch. Turn under remaining 3 raw edges 1/2″, center on Lining A panel 1.5″ above lower corner notches, and topstitch sides and bottom${pocketStyle === "divided-slip" ? " (sew vertical center divider line)" : ""}.`,
+    );
+  }
+
+  steps.push(
     "Sandwich one zipper side between Outer A and Lining A; sew and topstitch. Repeat with the B panels.",
+  );
+
+  if (pullTabs) {
+    steps.push(
+      "Fold both grab tabs in half (raw ends aligned). Baste one tab centered over the zipper tape at each end with folds facing inward toward the pouch center.",
+    );
+  }
+
+  steps.push(
     `Arrange outer panels right sides together and lining panels right sides together. Sew only the straight side seams between the cutouts with the selected ${formatInches(plan.seamAllowance)} allowance.`,
     "Close the zipper almost fully, keeping the pull out of the seam area. At one upper opening, align the outer and lining side seams with the zipper center, then sew one combined boxed-end seam through the four fabric layers and nylon zipper. Repeat at the other zipper end.",
     "Open the zipper fully. Sew the outer bottom seam, then the lining bottom seam while leaving a generous turning gap.",
     `Match and sew the four remaining lower openings separately with the selected ${formatInches(plan.seamAllowance)} allowance: two outer box seams and two lining box seams.`,
     "Turn through the lining gap, check both zipper ends, close the gap, and gently shape the finished box.",
+  );
+
+  return steps;
+}
+
+function toteBagSewingSteps(
+  plan: BagPatternPlan,
+  closure: BagClosure,
+  options: ClosureOptions,
+  structureFeel: BagStructureFeel = "woven-interfaced",
+  pocketStyle: BagPocketStyle = "none",
+) {
+  const steps = [
+    structureFeel === "draped"
+      ? "Label outer and lining panels and mark centerlines."
+      : "Label outer and lining panels; fuse or baste interfacing/stabilizer to outer panels first.",
   ];
+
+  if (pocketStyle !== "none") {
+    steps.push(
+      `Prepare pocket: press top hem under 1/2″ twice and topstitch. Turn under side and bottom edges 1/2″, center on Lining A panel, and topstitch sides and bottom${pocketStyle === "divided-slip" ? " with center divider line" : ""}.`,
+    );
+  }
+
+  if (closure === "open-tote") {
+    steps.push(
+      `Attach handles: position centers ${formatInches(options.handleInset)} from finished front corners, secure ${formatInches(options.handleAttachmentDepth)} below rim with reinforced Box-and-X stitching.`,
+    );
+  }
+
+  steps.push(
+    `Sew outer front to outer back at side seams and bottom with ${formatInches(plan.seamAllowance)} allowance. Box both bottom corners.`,
+    `Sew lining front to back at side seams and bottom, leaving a 4–5″ turning gap in the bottom seam. Box lining bottom corners.`,
+    closure === "open-tote"
+      ? "Nest outer bag inside lining right sides together, match side seams and top rim, sew around top rim. Turn right side out through lining gap, press, close gap, and topstitch rim."
+      : "Insert and assemble chosen closure subassembly, join lining and outer, turn through lining gap, press, and topstitch.",
+  );
+
+  return steps;
 }
 
 function buildPlanText(
@@ -468,12 +701,18 @@ function buildPlanText(
   pieces: CutPiece[],
   composition: OuterPanelComposition,
   handlePlan: ToteHandlePlan,
+  structureFeel: BagStructureFeel = "woven-interfaced",
+  pocketStyle: BagPocketStyle = "none",
+  pullTabs = true,
 ) {
   const closureLabel =
     closureChoices.find((choice) => choice.id === closure)?.label ?? closure;
   const bodyLabel = bodyRecipeChoices.find(
     (choice) => choice.id === bodyRecipe,
   )?.label ?? bodyRecipe;
+  const sewingSteps = bodyRecipe === "four-corner-boxy"
+    ? boxyBagSewingSteps(plan, structureFeel, pocketStyle, pullTabs)
+    : toteBagSewingSteps(plan, closure, options, structureFeel, pocketStyle);
   const lines = [
     "MONOSYTH BAG PATTERN STUDIO",
     `${bodyLabel} · ${closureLabel}`,
@@ -497,6 +736,10 @@ function buildPlanText(
       ? `Corner rule: ${formatInches(plan.cornerCut)} × 2 = ${formatInches(plan.finishedDepth)} finished width; cut all four corners of every panel`
       : `Corner rule: ${formatInches(plan.cornerCut)} × 2 = ${formatInches(plan.finishedDepth)} finished depth`,
     "",
+    "STRUCTURE & INTERFACING",
+    structureChoices.find((c) => c.id === structureFeel)?.label ?? structureFeel,
+    calculateInterfacingPlan(plan, structureFeel).recommendation,
+    "",
     "OUTER PANEL BUILD",
     `${composition.modeLabel}${composition.design.mode !== "solid" ? ` — ${composition.scopeLabel}` : ""}`,
     ...(composition.design.mode !== "solid"
@@ -515,15 +758,11 @@ function buildPlanText(
       (piece) =>
         `${piece.quantity}× ${piece.name} (${piece.material}): ${formatInches(piece.width)} × ${formatInches(piece.height)} — ${piece.note}`,
     ),
-    ...(bodyRecipe === "four-corner-boxy"
-      ? [
-          "",
-          "BOXY SEWING ORDER",
-          ...boxyBagSewingSteps(plan).map(
-            (instruction, index) => `${index + 1}. ${instruction}`,
-          ),
-        ]
-      : []),
+    "",
+    "SEWING ORDER",
+    ...sewingSteps.map(
+      (instruction, index) => `${index + 1}. ${instruction}`,
+    ),
     "",
     zipperNote(plan, bodyRecipe, closure, options),
     ...(closure === "recessed-zipper" && options.recessEndStyle === "boxed"
@@ -2381,6 +2620,9 @@ export function BagPatternStudio() {
   const [boxyDraft, setBoxyDraft] = useState<BagPatternDraft>(defaultBoxyDraft);
   const [closureOptions, setClosureOptions] = useState<ClosureOptions>(defaultClosureOptions);
   const [outerDesign, setOuterDesign] = useState<OuterPanelDesign>(defaultOuterPanelDesign);
+  const [structureFeel, setStructureFeel] = useState<BagStructureFeel>("woven-interfaced");
+  const [pocketStyle, setPocketStyle] = useState<BagPocketStyle>("none");
+  const [pullTabs, setPullTabs] = useState(true);
   const [mirror, setMirror] = useState(true);
   const [toolMode, setToolMode] = useState<ToolMode>("select");
   const [snapStep, setSnapStep] = useState<SnapStep>(0.5);
@@ -2416,6 +2658,9 @@ export function BagPatternStudio() {
       boxyDraft,
       closureOptions,
       outerDesign,
+      structureFeel,
+      pocketStyle,
+      pullTabs,
       mirror,
       toolMode,
       snapStep,
@@ -2431,8 +2676,11 @@ export function BagPatternStudio() {
       fabricSettings,
       mirror,
       outerDesign,
+      pocketStyle,
       previewYaw,
+      pullTabs,
       snapStep,
+      structureFeel,
       toteDraft,
       toolMode,
     ],
@@ -2484,6 +2732,9 @@ export function BagPatternStudio() {
       setBoxyDraft(snapshot.boxyDraft);
       setClosureOptions(snapshot.closureOptions);
       setOuterDesign(snapshot.outerDesign);
+      setStructureFeel(snapshot.structureFeel ?? "woven-interfaced");
+      setPocketStyle(snapshot.pocketStyle ?? "none");
+      setPullTabs(snapshot.pullTabs ?? true);
       setMirror(snapshot.mirror);
       setToolMode(snapshot.toolMode);
       setSnapStep(snapshot.snapStep);
@@ -2554,8 +2805,21 @@ export function BagPatternStudio() {
       closureOptions,
       composition,
       handlePlan,
+      structureFeel,
+      pocketStyle,
+      pullTabs,
     ),
-    [plan, bodyRecipe, closure, closureOptions, composition, handlePlan],
+    [
+      plan,
+      bodyRecipe,
+      closure,
+      closureOptions,
+      composition,
+      handlePlan,
+      structureFeel,
+      pocketStyle,
+      pullTabs,
+    ],
   );
   const closureWarnings = useMemo(() => {
     const warnings: string[] = [];
@@ -2743,11 +3007,46 @@ export function BagPatternStudio() {
     setBoxyDraft(snapshot.boxyDraft);
     setClosureOptions(snapshot.closureOptions);
     setOuterDesign(snapshot.outerDesign);
+    setStructureFeel(snapshot.structureFeel ?? "woven-interfaced");
+    setPocketStyle(snapshot.pocketStyle ?? "none");
+    setPullTabs(snapshot.pullTabs ?? true);
     setMirror(snapshot.mirror);
     setToolMode(snapshot.toolMode);
     setSnapStep(snapshot.snapStep);
     setFabricSettings(snapshot.fabricSettings);
     setPreviewYaw(snapshot.previewYaw);
+    setCopyState("idle");
+  }
+
+  function applySizePreset(preset: BagSizePreset) {
+    if (preset.bodyRecipe === "four-corner-boxy") {
+      setBodyRecipe("four-corner-boxy");
+      setClosure("top-zipper");
+      setBoxyDraft((current) =>
+        draftFromFinishedBoxyBag({
+          length: preset.baseWidth,
+          width: preset.depth,
+          height: preset.height,
+          seamAllowance: current.seamAllowance,
+          fabricWidth: current.fabricWidth,
+        }),
+      );
+    } else {
+      setBodyRecipe("two-panel-tote");
+      setToteDraft((current) =>
+        draftFromFinishedSize({
+          baseWidth: preset.baseWidth,
+          height: preset.height,
+          depth: preset.depth,
+          seamAllowance: current.seamAllowance,
+          topTakeUp: current.topTakeUp,
+          leftTopInset: current.leftTopInset,
+          rightTopInset: current.rightTopInset,
+          fabricWidth: current.fabricWidth,
+        }),
+      );
+    }
+    setBasis("finished");
     setCopyState("idle");
   }
 
@@ -3123,6 +3422,9 @@ export function BagPatternStudio() {
           pieces,
           composition,
           handlePlan,
+          structureFeel,
+          pocketStyle,
+          pullTabs,
         ),
       );
       setCopyState("copied");
@@ -3403,6 +3705,29 @@ export function BagPatternStudio() {
             </div>
 
             <div className={styles.studioStepContent} hidden={activeStudioStep !== "cuts"}>
+            <div className={styles.presetsSection}>
+              <div className={styles.presetsHeader}>
+                <span>⚡ Real-world presets</span>
+                <small>1-click proven {bodyRecipe === "four-corner-boxy" ? "pouch" : "tote"} sizes</small>
+              </div>
+              <div className={styles.presetChips}>
+                {sizePresets
+                  .filter((preset) => preset.bodyRecipe === bodyRecipe)
+                  .map((preset) => (
+                    <button
+                      type="button"
+                      key={preset.id}
+                      className={styles.presetChip}
+                      onClick={() => applySizePreset(preset)}
+                      title={preset.description}
+                    >
+                      <strong>{preset.label}</strong>
+                      <small>{preset.dimensions}</small>
+                    </button>
+                  ))}
+              </div>
+            </div>
+
             <section className={styles.cutFirstCard}>
               <header>
                 <div>
@@ -3558,22 +3883,24 @@ export function BagPatternStudio() {
                   : "Cut-panel mode keeps the fabric fixed so you can see exactly what a larger corner steals."}</p>
             </section>
 
-            {bodyRecipe === "two-panel-tote" ? <section className={styles.shapeSection}>
-              <div className={styles.subhead}>
-                <div>
-                  <span>Side shaping</span>
-                  <strong>Angle the top</strong>
+            {bodyRecipe === "two-panel-tote" ? (
+              <section className={styles.shapeSection}>
+                <div className={styles.subhead}>
+                  <div>
+                    <span>Side shaping</span>
+                    <strong>Angle the top</strong>
+                  </div>
+                  <button type="button" className={styles.mirrorButton} aria-pressed={mirror} onClick={() => setMirror((current) => !current)}>
+                    <i aria-hidden="true">↔</i> Mirror {mirror ? "on" : "off"}
+                  </button>
                 </div>
-                <button type="button" className={styles.mirrorButton} aria-pressed={mirror} onClick={() => setMirror((current) => !current)}>
-                  <i aria-hidden="true">↔</i> Mirror {mirror ? "on" : "off"}
-                </button>
-              </div>
-              <div className={styles.insetFields}>
-                <MeasurementField label="Left inset" hint={`${Math.round(plan.leftTopAngle)}° top angle`} value={draft.leftTopInset} min={-3} step={snapStep === 0 ? 0.125 : snapStep} onChange={(value) => updateInset("left", value)} />
-                <MeasurementField label="Right inset" hint={`${Math.round(plan.rightTopAngle)}° top angle`} value={draft.rightTopInset} min={-3} step={snapStep === 0 ? 0.125 : snapStep} onChange={(value) => updateInset("right", value)} />
-              </div>
-              <p>Positive values narrow the top; negative values flare it. Mirror keeps both stitch-line angles identical.</p>
-            </section> : (
+                <div className={styles.insetFields}>
+                  <MeasurementField label="Left inset" hint={`${Math.round(plan.leftTopAngle)}° top angle`} value={draft.leftTopInset} min={-3} step={snapStep === 0 ? 0.125 : snapStep} onChange={(value) => updateInset("left", value)} />
+                  <MeasurementField label="Right inset" hint={`${Math.round(plan.rightTopAngle)}° top angle`} value={draft.rightTopInset} min={-3} step={snapStep === 0 ? 0.125 : snapStep} onChange={(value) => updateInset("right", value)} />
+                </div>
+                <p>Positive values narrow the top; negative values flare it. Mirror keeps both stitch-line angles identical.</p>
+              </section>
+            ) : (
               <section className={styles.shapeSection}>
                 <div className={styles.subhead}>
                   <div>
@@ -3582,11 +3909,89 @@ export function BagPatternStudio() {
                   </div>
                 </div>
                 <p>Keeping every square identical creates the true rectangular box. A later advanced method can unlock tapered top and bottom corners.</p>
+                <div className={styles.grabTabSection}>
+                  <label className={styles.toggleField}>
+                    <input
+                      type="checkbox"
+                      checked={pullTabs}
+                      onChange={(e) => setPullTabs(e.target.checked)}
+                    />
+                    <span>
+                      <strong>Zipper grab tabs (2× pull tabs)</strong>
+                      <small>Includes two 2″ × 2½″ cut tabs folded and basted to zipper ends</small>
+                    </span>
+                  </label>
+                </div>
               </section>
             )}
             </div>
 
-            <section className={styles.closureOptions} hidden={activeStudioStep !== "build"}>
+            <div className={styles.studioStepContent} hidden={activeStudioStep !== "build"}>
+            <section className={styles.structureSection}>
+              <div className={styles.subhead}>
+                <div>
+                  <span>Body structure</span>
+                  <strong>Interfacing & feel</strong>
+                </div>
+              </div>
+              <div className={styles.structureGrid}>
+                {structureChoices.map((choice) => (
+                  <button
+                    type="button"
+                    key={choice.id}
+                    aria-pressed={structureFeel === choice.id}
+                    className={structureFeel === choice.id ? styles.structureActive : ""}
+                    onClick={() => setStructureFeel(choice.id)}
+                  >
+                    <strong>{choice.label}</strong>
+                    <b>{choice.material}</b>
+                    <small>{choice.description}</small>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section className={styles.pocketSection}>
+              <div className={styles.subhead}>
+                <div>
+                  <span>Interior storage</span>
+                  <strong>Slip pocket</strong>
+                </div>
+              </div>
+              <div className={styles.pocketGrid}>
+                {pocketChoices.map((choice) => (
+                  <button
+                    type="button"
+                    key={choice.id}
+                    aria-pressed={pocketStyle === choice.id}
+                    className={pocketStyle === choice.id ? styles.pocketActive : ""}
+                    onClick={() => setPocketStyle(choice.id)}
+                  >
+                    <strong>{choice.label}</strong>
+                    <small>{choice.description}</small>
+                  </button>
+                ))}
+              </div>
+              {pocketStyle !== "none" ? (
+                <div className={styles.pocketDetailCard}>
+                  {(() => {
+                    const pocket = calculatePocketPlan(plan, pocketStyle);
+                    return (
+                      <>
+                        <div className={styles.pocketDetailHeader}>
+                          <span>Cut 1 piece: <strong>{formatInches(pocket.cutWidth)} × {formatInches(pocket.cutHeight)}</strong></span>
+                          <b>{pocketStyle === "divided-slip" ? "DIVIDED SLIP" : "SINGLE SLIP"}</b>
+                        </div>
+                        <p>Finishes {formatInches(pocket.finishedWidth)} wide × {formatInches(pocket.finishedHeight)} high with 1″ double-fold top hem and 1/2″ edge turn-under.</p>
+                        {pocket.notes.map((note) => <small key={note}>{note}</small>)}
+                      </>
+                    );
+                  })()}
+                </div>
+              ) : null}
+            </section>
+
+            <section className={styles.closureOptions}>
               <div className={styles.subhead}>
                 <div>
                   <span>{bodyRecipe === "four-corner-boxy" ? "Boxy structural zipper" : closureChoices.find((choice) => choice.id === closure)?.label}</span>
@@ -3649,6 +4054,7 @@ export function BagPatternStudio() {
               {closure === "top-zipper" ? <p className={styles.optionOnlyNote}>{bodyRecipe === "four-corner-boxy" ? `The zipper sewing span between the upper squares is ${formatInches(plan.finishedFlatWidth)}. Start longer, sew across nylon teeth only, and trim after the ends are secured.` : "The zipper uses the full flat top seam; extra tape is added for handling and trimming."}</p> : null}
               <p className={styles.closureTeaching}>{closureTeaching(bodyRecipe, closure, closureOptions)}</p>
             </section>
+            </div>
 
             <section className={styles.fabricInput} hidden={activeStudioStep !== "plan"}>
               <MeasurementField label="Fabric bolt width" hint="nominal width before selvages" value={draft.fabricWidth} min={20} step={1} onChange={(value) => updateDraft({ ...draft, fabricWidth: Math.max(20, value) })} />

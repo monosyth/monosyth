@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   calculateBagPatternPlan,
   calculateFatQuarterPieceLayout,
+  calculateInterfacingPlan,
+  calculatePocketPlan,
   draftFromFinishedSize,
 } from "../src/lib/sewing/bag-pattern";
 import {
@@ -358,6 +360,40 @@ near(boxyKit.installedZipperSeam, 10.5, "boxy zipper spans between upper notches
 near(boxyKit.recommendedZipperLength, 13, "boxy zipper adds handling room past both upper cutouts");
 yes(boxyKit.cornerCutoutsPerPanel === 4, "each boxy panel has four corner cutouts");
 yes(boxyKit.totalCornerCutouts === 16, "outer and lining panels have sixteen total cutouts");
+near(boxyKit.pullTabCutWidth, 2, "boxy pull tab width");
+near(boxyKit.pullTabCutLength, 2.5, "boxy pull tab length");
+yes(boxyKit.pullTabQuantity === 2, "boxy pull tab quantity");
+
+// Pocket calculations
+const singlePocket = calculatePocketPlan(plan, "single-slip");
+yes(singlePocket.valid, "single slip pocket is valid for standard tote");
+near(singlePocket.finishedWidth, 10, "single slip pocket finished width");
+near(singlePocket.finishedHeight, 6.25, "single slip pocket finished height");
+near(singlePocket.cutWidth, 11, "single slip pocket cut width includes side turn-unders");
+near(singlePocket.cutHeight, 7.75, "single slip pocket cut height includes top hem and bottom turn-under");
+
+const dividedPocket = calculatePocketPlan(plan, "divided-slip");
+yes(dividedPocket.valid, "divided slip pocket is valid");
+yes(dividedPocket.notes.some((n) => n.includes("center")), "divided pocket includes center divider instruction");
+
+const noPocket = calculatePocketPlan(plan, "none");
+yes(noPocket.cutWidth === 0 && noPocket.cutHeight === 0, "no pocket returns zero dimensions");
+
+// Interfacing calculations
+const draped = calculateInterfacingPlan(plan, "draped");
+yes(draped.quantity === 0, "draped structure needs 0 interfacing pieces");
+
+const woven = calculateInterfacingPlan(plan, "woven-interfaced");
+yes(woven.quantity === 2, "woven interfaced needs 2 pieces");
+near(woven.cutWidth, plan.boundingCutWidth, "woven interfacing cut width matches body");
+near(woven.cutHeight, plan.cutHeight, "woven interfacing cut height matches body");
+yes(!woven.bulkRelief, "woven interfacing has no bulk relief deduction");
+
+const foam = calculateInterfacingPlan(plan, "foam-standing");
+yes(foam.quantity === 2, "foam standing needs 2 pieces");
+yes(foam.bulkRelief, "foam standing applies bulk relief");
+near(foam.cutWidth, plan.boundingCutWidth - 1, "foam standing cut width is trimmed 1 inch total (1/2 inch per side)");
+near(foam.cutHeight, plan.cutHeight - 1, "foam standing cut height is trimmed 1 inch total (1/2 inch top/bottom)");
 
 const impossibleBoxy = calculateBoxyBagPlan({
   ...easyCutBoxy,

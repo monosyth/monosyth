@@ -498,3 +498,123 @@ export function formatYards(value: number) {
     ? `${whole} ${labels[remainder]} yd`
     : `${labels[remainder]} yd`;
 }
+
+export type PocketPlan = {
+  style: "none" | "single-slip" | "divided-slip";
+  finishedWidth: number;
+  finishedHeight: number;
+  cutWidth: number;
+  cutHeight: number;
+  valid: boolean;
+  notes: string[];
+};
+
+export function calculatePocketPlan(
+  plan: BagPatternPlan,
+  style: "none" | "single-slip" | "divided-slip",
+): PocketPlan {
+  if (style === "none") {
+    return {
+      style: "none",
+      finishedWidth: 0,
+      finishedHeight: 0,
+      cutWidth: 0,
+      cutHeight: 0,
+      valid: true,
+      notes: [],
+    };
+  }
+
+  const availableWidth = Math.max(0, plan.finishedBaseWidth);
+  const availableHeight = Math.max(0, plan.finishedHeight);
+  const targetFinishedWidth = snapMeasurement(
+    clamp(availableWidth * 0.72, 4, Math.max(4, availableWidth - 2)),
+    0.25,
+  );
+  const targetFinishedHeight = snapMeasurement(
+    clamp(availableHeight * 0.52, 3.5, Math.max(3.5, availableHeight - 2)),
+    0.25,
+  );
+  // Double-fold top hem (1/2" + 1/2" = 1") + 1/2" bottom turn-under
+  const cutHeight = targetFinishedHeight + 1.5;
+  // 1/2" side turn-under at each side = 1"
+  const cutWidth = targetFinishedWidth + 1.0;
+  const notes: string[] = [];
+
+  if (targetFinishedWidth < 4 || targetFinishedHeight < 3) {
+    notes.push("Compact pocket proportion sized for this bag.");
+  }
+  if (style === "divided-slip") {
+    notes.push(
+      `Sew a vertical stitch line down the center to create two ${formatInches(targetFinishedWidth / 2)} slots.`,
+    );
+  }
+
+  return {
+    style,
+    finishedWidth: targetFinishedWidth,
+    finishedHeight: targetFinishedHeight,
+    cutWidth,
+    cutHeight,
+    valid: targetFinishedWidth > 0 && targetFinishedHeight > 0,
+    notes,
+  };
+}
+
+export type InterfacingPlan = {
+  structure: "draped" | "woven-interfaced" | "fleece-padded" | "foam-standing";
+  materialName: string;
+  recommendation: string;
+  bulkRelief: boolean;
+  cutWidth: number;
+  cutHeight: number;
+  quantity: number;
+};
+
+export function calculateInterfacingPlan(
+  plan: BagPatternPlan,
+  structure: "draped" | "woven-interfaced" | "fleece-padded" | "foam-standing",
+): InterfacingPlan {
+  switch (structure) {
+    case "draped":
+      return {
+        structure: "draped",
+        materialName: "Uninterfaced / Self-fabric drape",
+        recommendation: "Best for slouchy market totes, lightweight linen bags, or packable pouches.",
+        bulkRelief: false,
+        cutWidth: 0,
+        cutHeight: 0,
+        quantity: 0,
+      };
+    case "woven-interfaced":
+      return {
+        structure: "woven-interfaced",
+        materialName: "Fusible woven interfacing (e.g. Pellon SF101)",
+        recommendation: "Adds body and a smooth, wrinkle-resistant finish to cotton or linen without stiffness.",
+        bulkRelief: false,
+        cutWidth: plan.boundingCutWidth,
+        cutHeight: plan.cutHeight,
+        quantity: 2,
+      };
+    case "fleece-padded":
+      return {
+        structure: "fleece-padded",
+        materialName: "Fusible fleece (e.g. Pellon 987F)",
+        recommendation: "Adds soft padded structure and pillowy hand-feel; trimmed 1/2″ inside outer edges to keep seam allowances flat.",
+        bulkRelief: true,
+        cutWidth: Math.max(0, plan.boundingCutWidth - 1),
+        cutHeight: Math.max(0, plan.cutHeight - 1),
+        quantity: 2,
+      };
+    case "foam-standing":
+      return {
+        structure: "foam-standing",
+        materialName: "Sew-in foam stabilizer (e.g. ByAnnie Soft and Stable)",
+        recommendation: "Provides lightweight 3D stand-up structure that retains its shape even when empty; trimmed 1/2″ inside edges.",
+        bulkRelief: true,
+        cutWidth: Math.max(0, plan.boundingCutWidth - 1),
+        cutHeight: Math.max(0, plan.cutHeight - 1),
+        quantity: 2,
+      };
+  }
+}
