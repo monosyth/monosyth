@@ -6,6 +6,11 @@ import {
   draftFromFinishedSize,
 } from "../src/lib/sewing/bag-pattern";
 import {
+  calculateBoxyBagKit,
+  calculateBoxyBagPlan,
+  draftFromFinishedBoxyBag,
+} from "../src/lib/sewing/boxy-bag";
+import {
   calculateOuterPanelComposition,
   defaultOuterPanelDesign,
 } from "../src/lib/sewing/panel-composition";
@@ -295,5 +300,71 @@ for (const size of [
   near(roundTrip.finishedHeight, size.height, "size-set height round trip");
   near(roundTrip.finishedDepth, size.depth, "size-set depth round trip");
 }
+
+const easyCutBoxy = calculateBoxyBagPlan({
+  cutWidth: 14.5,
+  cutHeight: 8.5,
+  cornerCut: 2,
+  seamAllowance: 0.25,
+  topTakeUp: 0,
+  leftTopInset: 0,
+  rightTopInset: 0,
+  fabricWidth: 44,
+});
+near(easyCutBoxy.finishedBaseWidth, 10, "easy-cut boxy length");
+near(easyCutBoxy.finishedDepth, 4, "easy-cut boxy width");
+near(easyCutBoxy.finishedHeight, 4, "easy-cut boxy height");
+near(easyCutBoxy.finishedFlatWidth, 10.5, "easy-cut zipper sewing span");
+yes(easyCutBoxy.valid, "easy-cut boxy draft is valid");
+
+const halfInchBoxy = calculateBoxyBagPlan({
+  ...easyCutBoxy,
+  cutWidth: 12,
+  cutHeight: 8,
+  cornerCut: 2,
+  seamAllowance: 0.5,
+});
+near(halfInchBoxy.finishedBaseWidth, 7, "half-inch-seam boxy length");
+near(halfInchBoxy.finishedDepth, 3, "half-inch-seam boxy width");
+near(halfInchBoxy.finishedHeight, 4, "boxy corner square controls finished height");
+
+for (const size of [
+  { length: 7, width: 3, height: 4 },
+  { length: 10, width: 4, height: 4 },
+  { length: 18, width: 7, height: 6 },
+]) {
+  const roundTrip = calculateBoxyBagPlan(
+    draftFromFinishedBoxyBag({ ...size, seamAllowance: 0.25 }),
+  );
+  near(roundTrip.finishedBaseWidth, size.length, "boxy length round trip");
+  near(roundTrip.finishedDepth, size.width, "boxy width round trip");
+  near(roundTrip.finishedHeight, size.height, "boxy height round trip");
+}
+
+const boxyKit = calculateBoxyBagKit(easyCutBoxy);
+near(boxyKit.installedZipperSeam, 10.5, "boxy zipper spans between upper notches");
+near(boxyKit.recommendedZipperLength, 13, "boxy zipper adds handling room past both upper cutouts");
+yes(boxyKit.cornerCutoutsPerPanel === 4, "each boxy panel has four corner cutouts");
+yes(boxyKit.totalCornerCutouts === 16, "outer and lining panels have sixteen total cutouts");
+
+const impossibleBoxy = calculateBoxyBagPlan({
+  ...easyCutBoxy,
+  cutHeight: 4.5,
+});
+yes(!impossibleBoxy.valid, "boxy draft rejects corners that consume the panel width");
+yes(
+  impossibleBoxy.warnings.some((warning) => warning.includes("width")),
+  "invalid boxy width explains what must change",
+);
+
+const crampedBoxy = calculateBoxyBagPlan({
+  ...easyCutBoxy,
+  cornerCut: 0.25,
+});
+yes(!crampedBoxy.valid, "boxy draft rejects a corner square no larger than the seam allowance");
+yes(
+  crampedBoxy.warnings.some((warning) => warning.includes("larger than the seam allowance")),
+  "cramped boxy corner explains the handling problem",
+);
 
 process.stdout.write(`${checks} sewing-math checks passed\n`);

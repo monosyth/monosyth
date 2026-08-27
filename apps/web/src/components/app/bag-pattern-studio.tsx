@@ -28,10 +28,17 @@ import {
   formatInches,
   formatYards,
   snapMeasurement,
+  type BagBodyRecipe,
   type BagClosure,
   type BagPatternDraft,
   type BagPatternPlan,
 } from "@/lib/sewing/bag-pattern";
+import {
+  boxyBagFormulaText,
+  calculateBoxyBagKit,
+  calculateBoxyBagPlan,
+  draftFromFinishedBoxyBag,
+} from "@/lib/sewing/boxy-bag";
 import {
   calculateOuterPanelComposition,
   defaultOuterPanelDesign,
@@ -66,6 +73,7 @@ import {
 } from "@/lib/sewing/recessed-zipper";
 
 type SizeBasis = BagStudioSizeBasis;
+type BodyRecipe = BagBodyRecipe;
 type ToolMode = BagStudioToolMode;
 type SnapStep = BagStudioSnapStep;
 type StudioStep = "cuts" | "build" | "plan";
@@ -127,6 +135,26 @@ const closureChoices: ReadonlyArray<{
   },
 ] as const;
 
+const bodyRecipeChoices: ReadonlyArray<{
+  id: BodyRecipe;
+  label: string;
+  short: string;
+  description: string;
+}> = [
+  {
+    id: "two-panel-tote",
+    label: "Tote body",
+    short: "2 LOWER CORNERS",
+    description: "Front + back panels with boxed bottom corners",
+  },
+  {
+    id: "four-corner-boxy",
+    label: "Boxy zipper bag",
+    short: "4 CORNERS / PANEL",
+    description: "Rectangular pouch with a centered structural zipper",
+  },
+] as const;
+
 const seamPresets = [0.25, 0.375, 0.5] as const;
 const cornerPresets = [1, 1.5, 2, 2.5, 3] as const;
 
@@ -164,6 +192,14 @@ const defaultDraft = draftFromFinishedSize({
   fabricWidth: 44,
 });
 
+const defaultBoxyDraft = draftFromFinishedBoxyBag({
+  length: 10,
+  width: 4,
+  height: 4,
+  seamAllowance: 0.25,
+  fabricWidth: 44,
+});
+
 const defaultClosureOptions: ClosureOptions = {
   handleMaterial: "webbing",
   handleDrop: 11,
@@ -187,9 +223,11 @@ const defaultFabricSettings: BagStudioFabricSettings = {
 };
 
 const defaultStudioSnapshot: BagStudioSnapshot = {
+  bodyRecipe: "two-panel-tote",
   closure: "open-tote",
   basis: "cut",
   draft: defaultDraft,
+  boxyDraft: defaultBoxyDraft,
   closureOptions: defaultClosureOptions,
   outerDesign: defaultOuterPanelDesign,
   mirror: true,
@@ -198,6 +236,15 @@ const defaultStudioSnapshot: BagStudioSnapshot = {
   fabricSettings: defaultFabricSettings,
   previewYaw: 30,
 };
+
+function outerDesignForBody(
+  bodyRecipe: BodyRecipe,
+  design: OuterPanelDesign,
+): OuterPanelDesign {
+  return bodyRecipe === "four-corner-boxy"
+    ? { ...design, contrastEnabled: false }
+    : design;
+}
 
 function cleanInput(value: number, fallback = 0) {
   return Number.isFinite(value) ? value : fallback;
@@ -232,6 +279,7 @@ function finishedSideSeamLength(plan: BagPatternPlan) {
 
 function getCutPieces(
   plan: BagPatternPlan,
+  bodyRecipe: BodyRecipe,
   closure: BagClosure,
   options: ClosureOptions,
   composition: OuterPanelComposition,
@@ -241,11 +289,15 @@ function getCutPieces(
     ...composition.cutPieces,
     {
       material: "lining",
-      name: "Main lining panel",
+      name: bodyRecipe === "four-corner-boxy"
+        ? "Boxy lining panel"
+        : "Main lining panel",
       quantity: 2,
       width: plan.boundingCutWidth,
       height: plan.cutHeight,
-      note: "Use the same corner and shaping marks as the outer.",
+      note: bodyRecipe === "four-corner-boxy"
+        ? `Mark and remove a ${formatInches(plan.cornerCut)} square from all four corners of each panel.`
+        : "Use the same corner and shaping marks as the outer.",
     },
     {
       material: "interfacing",
@@ -253,7 +305,9 @@ function getCutPieces(
       quantity: 2,
       width: plan.boundingCutWidth,
       height: plan.cutHeight,
-      note: "Optional; follow the product instructions and trim bulky interfacing out of the seam allowance.",
+      note: bodyRecipe === "four-corner-boxy"
+        ? "Optional; fuse to each unnotched outer rectangle first, then cut the four matching corner squares."
+        : "Optional; follow the product instructions and trim bulky interfacing out of the seam allowance.",
     },
   ];
 
@@ -270,7 +324,7 @@ function getCutPieces(
     });
   }
 
-  if (closure === "top-zipper") {
+  if (bodyRecipe === "two-panel-tote" && closure === "top-zipper") {
     pieces.push({
       material: "outer",
       name: "Zipper tab square",
@@ -341,9 +395,14 @@ function getCutPieces(
 
 function zipperNote(
   plan: BagPatternPlan,
+  bodyRecipe: BodyRecipe,
   closure: BagClosure,
   options: ClosureOptions,
 ) {
+  if (bodyRecipe === "four-corner-boxy") {
+    const kit = calculateBoxyBagKit(plan);
+    return `Centered structural zipper: the raw sewing span between the two upper corner squares is ${formatInches(kit.installedZipperSeam)}. Start with ${formatInches(kit.recommendedZipperLength)} or longer nylon coil zipper tape so roughly 1 inch extends past each upper cutout for handling. Keep metal stops outside every stitch and trim line, and trim only after the ends are secured.`;
+  }
   switch (closure) {
     case "open-tote": {
       const handlePlan = calculateToteHandlePlan(plan, options);
@@ -364,7 +423,14 @@ function zipperNote(
   }
 }
 
-function closureTeaching(closure: BagClosure, options: ClosureOptions) {
+function closureTeaching(
+  bodyRecipe: BodyRecipe,
+  closure: BagClosure,
+  options: ClosureOptions,
+) {
+  if (bodyRecipe === "four-corner-boxy") {
+    return "The zipper is the center seam of the full top face. The two upper squares form the zipper ends, the two lower squares form the bottom corners, and all four stay the same size for a true rectangular box.";
+  }
   switch (closure) {
     case "open-tote":
       return "The top take-up is one matching seam allowance for a lined rim. Center each handle on the marks and reinforce the full box-and-X area from behind; a double-fold hem needs its own larger top allowance.";
@@ -381,8 +447,22 @@ function closureTeaching(closure: BagClosure, options: ClosureOptions) {
   }
 }
 
+function boxyBagSewingSteps(plan: BagPatternPlan) {
+  return [
+    "Label every panel and its zipper edge. Fuse optional interfacing to the two unnotched outer rectangles first.",
+    `After piecing, quilting, and final trimming, remove a ${formatInches(plan.cornerCut)} square from all four corners of every panel.`,
+    "Sandwich one zipper side between Outer A and Lining A; sew and topstitch. Repeat with the B panels.",
+    `Arrange outer panels right sides together and lining panels right sides together. Sew only the straight side seams between the cutouts with the selected ${formatInches(plan.seamAllowance)} allowance.`,
+    "Close the zipper almost fully, keeping the pull out of the seam area. At one upper opening, align the outer and lining side seams with the zipper center, then sew one combined boxed-end seam through the four fabric layers and nylon zipper. Repeat at the other zipper end.",
+    "Open the zipper fully. Sew the outer bottom seam, then the lining bottom seam while leaving a generous turning gap.",
+    `Match and sew the four remaining lower openings separately with the selected ${formatInches(plan.seamAllowance)} allowance: two outer box seams and two lining box seams.`,
+    "Turn through the lining gap, check both zipper ends, close the gap, and gently shape the finished box.",
+  ];
+}
+
 function buildPlanText(
   plan: BagPatternPlan,
+  bodyRecipe: BodyRecipe,
   closure: BagClosure,
   options: ClosureOptions,
   pieces: CutPiece[],
@@ -391,17 +471,31 @@ function buildPlanText(
 ) {
   const closureLabel =
     closureChoices.find((choice) => choice.id === closure)?.label ?? closure;
+  const bodyLabel = bodyRecipeChoices.find(
+    (choice) => choice.id === bodyRecipe,
+  )?.label ?? bodyRecipe;
   const lines = [
     "MONOSYTH BAG PATTERN STUDIO",
-    closureLabel,
+    `${bodyLabel} · ${closureLabel}`,
     "",
-    `Finished base: ${formatInches(plan.finishedBaseWidth)} W × ${formatInches(plan.finishedHeight)} H × ${formatInches(plan.finishedDepth)} D`,
-    `Flat/top width before shaping: ${formatInches(plan.finishedFlatWidth)}`,
-    `Flat top seam after shaping: ${formatInches(plan.finishedTopOpening)}`,
-    `Approximate standing rim width: ${formatInches(standingTopRimWidth(plan))}`,
+    bodyRecipe === "four-corner-boxy"
+      ? `Finished box: ${formatInches(plan.finishedBaseWidth)} L × ${formatInches(plan.finishedDepth)} W × ${formatInches(plan.finishedHeight)} H`
+      : `Finished base: ${formatInches(plan.finishedBaseWidth)} W × ${formatInches(plan.finishedHeight)} H × ${formatInches(plan.finishedDepth)} D`,
+    ...(bodyRecipe === "four-corner-boxy"
+      ? [
+          `Zipper-edge sewing span between upper squares: ${formatInches(plan.finishedFlatWidth)}`,
+          ...boxyBagFormulaText(plan),
+        ]
+      : [
+          `Flat/top width before shaping: ${formatInches(plan.finishedFlatWidth)}`,
+          `Flat top seam after shaping: ${formatInches(plan.finishedTopOpening)}`,
+          `Approximate standing rim width: ${formatInches(standingTopRimWidth(plan))}`,
+        ]),
     `Seam allowance: ${formatInches(plan.seamAllowance)}`,
     `Raw-edge corner square: ${formatInches(plan.cornerCut)} × ${formatInches(plan.cornerCut)}`,
-    `Corner rule: ${formatInches(plan.cornerCut)} × 2 = ${formatInches(plan.finishedDepth)} finished depth`,
+    bodyRecipe === "four-corner-boxy"
+      ? `Corner rule: ${formatInches(plan.cornerCut)} × 2 = ${formatInches(plan.finishedHeight)} finished height; cut all four corners of every panel`
+      : `Corner rule: ${formatInches(plan.cornerCut)} × 2 = ${formatInches(plan.finishedDepth)} finished depth`,
     "",
     "OUTER PANEL BUILD",
     `${composition.modeLabel}${composition.design.mode !== "solid" ? ` — ${composition.scopeLabel}` : ""}`,
@@ -421,8 +515,17 @@ function buildPlanText(
       (piece) =>
         `${piece.quantity}× ${piece.name} (${piece.material}): ${formatInches(piece.width)} × ${formatInches(piece.height)} — ${piece.note}`,
     ),
+    ...(bodyRecipe === "four-corner-boxy"
+      ? [
+          "",
+          "BOXY SEWING ORDER",
+          ...boxyBagSewingSteps(plan).map(
+            (instruction, index) => `${index + 1}. ${instruction}`,
+          ),
+        ]
+      : []),
     "",
-    zipperNote(plan, closure, options),
+    zipperNote(plan, bodyRecipe, closure, options),
     ...(closure === "recessed-zipper" && options.recessEndStyle === "boxed"
       ? [
           `Closure-notch reminder: cut two ${formatInches(options.recessNotch)} squares from the zipper-edge corners of every recessed panel (8 notches total).`,
@@ -437,9 +540,13 @@ function buildPlanText(
       : []),
     "",
     "REFERENCE",
-    "Corner squares are measured from the raw side and bottom edges. This shortcut assumes the side, bottom, and corner seams use the same allowance.",
+    bodyRecipe === "four-corner-boxy"
+      ? "Measure every corner square from both raw edges. The four equal squares form the zipper-end and bottom box seams; use the same allowance on the zipper, side, bottom, and box seams."
+      : "Corner squares are measured from the raw side and bottom edges. This shortcut assumes the side, bottom, and corner seams use the same allowance.",
     "For thick foam, vinyl, or canvas, sew a scrap test because turn-of-cloth changes the usable inside size.",
-    "Open the zipper at least halfway before closing the shell.",
+    bodyRecipe === "four-corner-boxy"
+      ? "Keep the pull away from each combined zipper-end seam, then open the zipper fully before sewing the bottom seams."
+      : "Open the zipper at least halfway before closing the shell.",
   ];
 
   return lines.join("\n");
@@ -577,6 +684,67 @@ function downloadPatternSvg(
   URL.revokeObjectURL(url);
 }
 
+function downloadBoxyPatternSvg(plan: BagPatternPlan) {
+  const scale = 96;
+  const margin = 0.75;
+  const footer = 1.75;
+  const pageWidth = plan.cutWidth + margin * 2;
+  const pageHeight = plan.cutHeight + margin * 2 + footer;
+  const x = (value: number) => (value + margin) * scale;
+  const y = (value: number) => (value + margin) * scale;
+  const w = plan.cutWidth;
+  const h = plan.cutHeight;
+  const c = plan.cornerCut;
+  const s = plan.seamAllowance;
+  const outline = [
+    `M ${x(c)} ${y(0)}`,
+    `L ${x(w - c)} ${y(0)}`,
+    `L ${x(w - c)} ${y(c)}`,
+    `L ${x(w)} ${y(c)}`,
+    `L ${x(w)} ${y(h - c)}`,
+    `L ${x(w - c)} ${y(h - c)}`,
+    `L ${x(w - c)} ${y(h)}`,
+    `L ${x(c)} ${y(h)}`,
+    `L ${x(c)} ${y(h - c)}`,
+    `L ${x(0)} ${y(h - c)}`,
+    `L ${x(0)} ${y(c)}`,
+    `L ${x(c)} ${y(c)}`,
+    "Z",
+  ].join(" ");
+  const calibrationY = (plan.cutHeight + margin + 0.35) * scale;
+  const labelX = pageWidth * scale - margin * scale;
+  const fileName = `monosyth-boxy-panel-${formatDecimal(w)}x${formatDecimal(h)}.svg`;
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${pageWidth}in" height="${pageHeight}in" viewBox="0 0 ${pageWidth * scale} ${pageHeight * scale}">
+  <rect width="100%" height="100%" fill="white"/>
+  <path d="${outline}" fill="#f4f0ff" stroke="#151c32" stroke-width="2" stroke-linejoin="round"/>
+  <g fill="none" stroke="#147d91" stroke-width="2" stroke-dasharray="8 6">
+    <line x1="${x(c)}" y1="${y(s)}" x2="${x(w - c)}" y2="${y(s)}"/>
+    <line x1="${x(c)}" y1="${y(h - s)}" x2="${x(w - c)}" y2="${y(h - s)}"/>
+    <line x1="${x(s)}" y1="${y(c)}" x2="${x(s)}" y2="${y(h - c)}"/>
+    <line x1="${x(w - s)}" y1="${y(c)}" x2="${x(w - s)}" y2="${y(h - c)}"/>
+  </g>
+  <line x1="${x(w / 2)}" y1="${y(c + 0.35)}" x2="${x(w / 2)}" y2="${y(h - c - 0.35)}" stroke="#65708b" stroke-width="1.5" stroke-dasharray="14 8"/>
+  <text x="${x(w / 2)}" y="${y(c / 2)}" text-anchor="middle" font-family="monospace" font-size="16" font-weight="700" fill="#a05a00">TOP / ZIPPER EDGE · ${formatInches(plan.finishedFlatWidth)} BETWEEN SQUARES</text>
+  <text x="${x(w / 2)}" y="${y(h / 2) - 16}" text-anchor="middle" font-family="monospace" font-size="19" font-weight="700" fill="#151c32">FOUR-CORNER BOXY PANEL</text>
+  <text x="${x(w / 2)}" y="${y(h / 2) + 14}" text-anchor="middle" font-family="monospace" font-size="15" fill="#151c32">CUT 2 OUTER · CUT 2 LINING · OPTIONAL INTERFACING</text>
+  <text x="${x(w / 2)}" y="${y(h / 2) + 42}" text-anchor="middle" font-family="monospace" font-size="14" fill="#65708b">CUT ${formatInches(w)} × ${formatInches(h)} · REMOVE ${formatInches(c)} FROM ALL 4 CORNERS</text>
+  <text x="${x(w / 2)}" y="${y(h / 2) + 68}" text-anchor="middle" font-family="monospace" font-size="14" fill="#65708b">SEAM ${formatInches(s)} · SOLID CUT · DASHED FLAT SEAMS</text>
+  <rect x="${margin * scale}" y="${calibrationY}" width="${scale}" height="${scale}" fill="none" stroke="#151c32" stroke-width="2"/>
+  <text x="${margin * scale}" y="${calibrationY - 10}" font-family="monospace" font-size="13" fill="#151c32">1-INCH CALIBRATION SQUARE</text>
+  <text x="${labelX}" y="${calibrationY + 36}" text-anchor="end" font-family="monospace" font-size="13" fill="#151c32">PRINT AT ACTUAL SIZE / 100%</text>
+</svg>`;
+  const blob = new Blob([svg], { type: "image/svg+xml" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 function MeasurementField({
   label,
   hint,
@@ -617,6 +785,10 @@ function Handle({
   x,
   y,
   label,
+  value,
+  min,
+  max,
+  valueText,
   kind = "round",
   axis,
   onPointerDown,
@@ -625,6 +797,10 @@ function Handle({
   x: number;
   y: number;
   label: string;
+  value: number;
+  min: number;
+  max: number;
+  valueText: string;
   kind?: "round" | "diamond" | "corner";
   axis?: "horizontal" | "vertical";
   onPointerDown: (event: PointerEvent<SVGGElement>) => void;
@@ -634,9 +810,14 @@ function Handle({
     <g
       className={`${styles.vectorHandle} ${kind === "round" ? "" : styles[`vectorHandle_${kind}`]} ${axis ? styles[`handle_${axis}`] : ""}`}
       transform={`translate(${x} ${y})`}
-      role="button"
+      role="slider"
       tabIndex={0}
       aria-label={label}
+      aria-orientation={axis}
+      aria-valuemin={min}
+      aria-valuemax={max}
+      aria-valuenow={value}
+      aria-valuetext={valueText}
       onPointerDown={onPointerDown}
       onKeyDown={onKeyDown}
     >
@@ -959,7 +1140,8 @@ function PatternCanvas({
       <svg
         className={styles.patternCanvas}
         viewBox="0 0 760 520"
-        role="img"
+        role="group"
+        aria-roledescription="interactive vector pattern editor"
         aria-label={`Editable bag panel, ${formatInches(plan.cutWidth)} by ${formatInches(plan.cutHeight)}, with ${formatInches(plan.seamAllowance)} seam allowance, ${formatInches(plan.cornerCut)} boxed corner cutouts, and a ${composition.modeLabel.toLowerCase()} outer build${composition.design.contrastEnabled ? " with a contrast bottom" : ""}${closure === "open-tote" ? " plus measured handle marks" : ""}`}
         onPointerMove={pointerMove}
         onPointerUp={endDrag}
@@ -1096,16 +1278,16 @@ function PatternCanvas({
 
         {toolMode === "select" ? (
           <>
-            <Handle x={left} y={centerY} label="Resize left edge" axis="horizontal" onPointerDown={(event) => beginDrag("left", event)} onKeyDown={(event) => nudge("left", event)} />
-            <Handle x={right} y={centerY} label="Resize right edge" axis="horizontal" onPointerDown={(event) => beginDrag("right", event)} onKeyDown={(event) => nudge("right", event)} />
-            <Handle x={centerX} y={top} label="Resize top edge" axis="vertical" onPointerDown={(event) => beginDrag("top", event)} onKeyDown={(event) => nudge("top", event)} />
-            <Handle x={centerX} y={bottom} label="Resize bottom edge" axis="vertical" onPointerDown={(event) => beginDrag("bottom", event)} onKeyDown={(event) => nudge("bottom", event)} />
+            <Handle x={left} y={centerY} label="Resize left edge" value={draft.cutWidth} min={3} max={60} valueText={`${formatInches(draft.cutWidth)} panel cut width`} axis="horizontal" onPointerDown={(event) => beginDrag("left", event)} onKeyDown={(event) => nudge("left", event)} />
+            <Handle x={right} y={centerY} label="Resize right edge" value={draft.cutWidth} min={3} max={60} valueText={`${formatInches(draft.cutWidth)} panel cut width`} axis="horizontal" onPointerDown={(event) => beginDrag("right", event)} onKeyDown={(event) => nudge("right", event)} />
+            <Handle x={centerX} y={top} label="Resize top edge" value={draft.cutHeight} min={3} max={50} valueText={`${formatInches(draft.cutHeight)} panel cut height`} axis="vertical" onPointerDown={(event) => beginDrag("top", event)} onKeyDown={(event) => nudge("top", event)} />
+            <Handle x={centerX} y={bottom} label="Resize bottom edge" value={draft.cutHeight} min={3} max={50} valueText={`${formatInches(draft.cutHeight)} panel cut height`} axis="vertical" onPointerDown={(event) => beginDrag("bottom", event)} onKeyDown={(event) => nudge("bottom", event)} />
           </>
         ) : (
           <>
-            <Handle x={topLeft} y={top} label="Shape top-left angle" kind="diamond" onPointerDown={(event) => beginDrag("shape-left", event)} onKeyDown={(event) => nudge("shape-left", event)} />
-            <Handle x={topRight} y={top} label="Shape top-right angle" kind="diamond" onPointerDown={(event) => beginDrag("shape-right", event)} onKeyDown={(event) => nudge("shape-right", event)} />
-            <Handle x={right - cut} y={bottom - cut} label="Resize both boxed corner squares" kind="corner" onPointerDown={(event) => beginDrag("corner", event)} onKeyDown={(event) => nudge("corner", event)} />
+            <Handle x={topLeft} y={top} label="Shape top-left angle" value={draft.leftTopInset} min={-3} max={draft.cutWidth / 3} valueText={`${formatInches(draft.leftTopInset)} top-left inset`} kind="diamond" axis="horizontal" onPointerDown={(event) => beginDrag("shape-left", event)} onKeyDown={(event) => nudge("shape-left", event)} />
+            <Handle x={topRight} y={top} label="Shape top-right angle" value={draft.rightTopInset} min={-3} max={draft.cutWidth / 3} valueText={`${formatInches(draft.rightTopInset)} top-right inset`} kind="diamond" axis="horizontal" onPointerDown={(event) => beginDrag("shape-right", event)} onKeyDown={(event) => nudge("shape-right", event)} />
+            <Handle x={right - cut} y={bottom - cut} label="Resize both boxed corner squares" value={draft.cornerCut} min={0.5} max={Math.max(0.5, Math.min(draft.cutWidth / 2 - draft.seamAllowance - 1, draft.cutHeight / 2 - 0.5))} valueText={`${formatInches(draft.cornerCut)} raw corner square`} kind="corner" onPointerDown={(event) => beginDrag("corner", event)} onKeyDown={(event) => nudge("corner", event)} />
           </>
         )}
       </svg>
@@ -1118,6 +1300,267 @@ function PatternCanvas({
         {composition.design.mode !== "solid" ? <span><i className={styles.legendPiecing} /> piecing seams</span> : null}
         {composition.design.contrastEnabled ? <span><i className={styles.legendContrast} /> contrast join</span> : null}
         {closure === "open-tote" ? <span><i className={styles.legendHandle} /> handle placement</span> : null}
+      </div>
+    </div>
+  );
+}
+
+function BoxyPatternCanvas({
+  draft,
+  plan,
+  composition,
+  snapStep,
+  toolMode,
+  onDraftChange,
+  onUseCutBasis,
+}: {
+  draft: BagPatternDraft;
+  plan: BagPatternPlan;
+  composition: OuterPanelComposition;
+  snapStep: SnapStep;
+  toolMode: ToolMode;
+  onDraftChange: (draft: BagPatternDraft) => void;
+  onUseCutBasis: () => void;
+}) {
+  const dragRef = useRef<{
+    handle: "left" | "right" | "top" | "bottom" | "corner";
+    pointerId: number;
+    startX: number;
+    startY: number;
+    draft: BagPatternDraft;
+    scale: number;
+    screenToViewX: number;
+    screenToViewY: number;
+  } | null>(null);
+  const scale = Math.min(
+    22,
+    570 / Math.max(plan.cutWidth + 4, 16),
+    350 / Math.max(plan.cutHeight + 4, 12),
+  );
+  const centerX = 380;
+  const centerY = 262;
+  const left = centerX - plan.cutWidth * scale / 2;
+  const right = centerX + plan.cutWidth * scale / 2;
+  const top = centerY - plan.cutHeight * scale / 2;
+  const bottom = centerY + plan.cutHeight * scale / 2;
+  const cut = plan.cornerCut * scale;
+  const seam = Math.max(3, plan.seamAllowance * scale);
+  const outline = [
+    `M ${left + cut} ${top}`,
+    `L ${right - cut} ${top}`,
+    `L ${right - cut} ${top + cut}`,
+    `L ${right} ${top + cut}`,
+    `L ${right} ${bottom - cut}`,
+    `L ${right - cut} ${bottom - cut}`,
+    `L ${right - cut} ${bottom}`,
+    `L ${left + cut} ${bottom}`,
+    `L ${left + cut} ${bottom - cut}`,
+    `L ${left} ${bottom - cut}`,
+    `L ${left} ${top + cut}`,
+    `L ${left + cut} ${top + cut}`,
+    "Z",
+  ].join(" ");
+  const compositionBottom = composition.contrastJoinY ?? plan.cutHeight;
+  const compositionBottomY = top + compositionBottom * scale;
+
+  function beginDrag(
+    handle: "left" | "right" | "top" | "bottom" | "corner",
+    event: PointerEvent<SVGGElement>,
+  ) {
+    event.preventDefault();
+    const svg = event.currentTarget.ownerSVGElement;
+    const bounds = svg?.getBoundingClientRect();
+    svg?.setPointerCapture(event.pointerId);
+    dragRef.current = {
+      handle,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      draft,
+      scale,
+      screenToViewX: bounds?.width ? 760 / bounds.width : 1,
+      screenToViewY: bounds?.height ? 520 / bounds.height : 1,
+    };
+  }
+
+  function pointerMove(event: PointerEvent<SVGSVGElement>) {
+    const active = dragRef.current;
+    if (!active || active.pointerId !== event.pointerId) return;
+    const dx = (event.clientX - active.startX) * active.screenToViewX / active.scale;
+    const dy = (event.clientY - active.startY) * active.screenToViewY / active.scale;
+    const applySnap = (value: number) => snapStep === 0
+      ? value
+      : snapMeasurement(value, snapStep);
+    const start = active.draft;
+    const minWidth = start.cornerCut * 2 + start.seamAllowance * 2 + 1;
+    const minHeight = start.cornerCut * 2 + start.seamAllowance * 2 + 1;
+    let next = start;
+
+    if (active.handle === "left") {
+      next = { ...start, cutWidth: clamp(applySnap(start.cutWidth - dx * 2), minWidth, 60) };
+    }
+    if (active.handle === "right") {
+      next = { ...start, cutWidth: clamp(applySnap(start.cutWidth + dx * 2), minWidth, 60) };
+    }
+    if (active.handle === "top") {
+      next = { ...start, cutHeight: clamp(applySnap(start.cutHeight - dy * 2), minHeight, 50) };
+    }
+    if (active.handle === "bottom") {
+      next = { ...start, cutHeight: clamp(applySnap(start.cutHeight + dy * 2), minHeight, 50) };
+    }
+    if (active.handle === "corner") {
+      const delta = applySnap((dx + dy) / 2);
+      const maximumCorner = Math.max(
+        0.5,
+        Math.min(
+          start.cutWidth / 2 - start.seamAllowance - 0.5,
+          start.cutHeight / 2 - start.seamAllowance - 0.5,
+          8,
+        ),
+      );
+      next = {
+        ...start,
+        cornerCut: clamp(applySnap(start.cornerCut + delta), 0.5, maximumCorner),
+      };
+    }
+    onUseCutBasis();
+    onDraftChange(next);
+  }
+
+  function endDrag(event: PointerEvent<SVGSVGElement>) {
+    if (dragRef.current?.pointerId === event.pointerId) dragRef.current = null;
+  }
+
+  function nudge(
+    handle: "left" | "right" | "top" | "bottom" | "corner",
+    event: KeyboardEvent<SVGGElement>,
+  ) {
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+    event.preventDefault();
+    const step = snapStep || 0.125;
+    const horizontal = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+    const vertical = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0;
+    let next = draft;
+    if (handle === "left" && horizontal) next = { ...draft, cutWidth: Math.max(3, draft.cutWidth - horizontal * step * 2) };
+    if (handle === "right" && horizontal) next = { ...draft, cutWidth: Math.max(3, draft.cutWidth + horizontal * step * 2) };
+    if (handle === "top" && vertical) next = { ...draft, cutHeight: Math.max(3, draft.cutHeight - vertical * step * 2) };
+    if (handle === "bottom" && vertical) next = { ...draft, cutHeight: Math.max(3, draft.cutHeight + vertical * step * 2) };
+    if (handle === "corner") {
+      const direction = horizontal || vertical;
+      next = {
+        ...draft,
+        cornerCut: clamp(
+          draft.cornerCut + direction * step,
+          0.5,
+          Math.min(
+            draft.cutWidth / 2 - draft.seamAllowance - 0.5,
+            draft.cutHeight / 2 - draft.seamAllowance - 0.5,
+          ),
+        ),
+      };
+    }
+    onUseCutBasis();
+    onDraftChange(next);
+  }
+
+  return (
+    <div className={styles.canvasFrame}>
+      <svg
+        className={styles.patternCanvas}
+        viewBox="0 0 760 520"
+        role="group"
+        aria-roledescription="interactive four-corner pattern editor"
+        aria-label={`Editable four-corner boxy-bag panel, ${formatInches(plan.cutWidth)} long by ${formatInches(plan.cutHeight)} wide, with a ${formatInches(plan.cornerCut)} square removed from every corner and a ${formatInches(plan.seamAllowance)} seam allowance`}
+        onPointerMove={pointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+      >
+        <defs>
+          <pattern id="boxy-quarter-grid" width={scale / 4} height={scale / 4} patternUnits="userSpaceOnUse">
+            <path d={`M ${scale / 4} 0 H 0 V ${scale / 4}`} className={styles.gridFine} />
+          </pattern>
+          <pattern id="boxy-inch-grid" width={scale} height={scale} patternUnits="userSpaceOnUse">
+            <rect width={scale} height={scale} fill="url(#boxy-quarter-grid)" />
+            <path d={`M ${scale} 0 H 0 V ${scale}`} className={styles.gridInch} />
+          </pattern>
+          <clipPath id="boxy-panel-clip"><path d={outline} /></clipPath>
+        </defs>
+        <rect className={styles.canvasPaper} x="12" y="12" width="736" height="496" rx="18" />
+        <rect x="12" y="12" width="736" height="496" rx="18" fill="url(#boxy-inch-grid)" />
+        <line className={styles.centerGuide} x1={centerX} y1="38" x2={centerX} y2="486" />
+        <line className={styles.centerGuide} x1="34" y1={centerY} x2="726" y2={centerY} />
+        <path className={styles.panelShadow} d={outline} transform="translate(5 7)" />
+        <path className={styles.panelFill} d={outline} />
+        <g className={styles.compositionOverlay} clipPath="url(#boxy-panel-clip)" aria-hidden="true">
+          {composition.design.contrastEnabled ? (
+            <rect className={styles.compositionContrast} x={left} y={compositionBottomY} width={right - left} height={bottom - compositionBottomY} />
+          ) : null}
+          {composition.design.mode === "vertical-strips" || composition.design.mode === "block-grid"
+            ? composition.columnSeams.map((seamX, index) => (
+                <line key={`boxy-column-${index}`} x1={left + seamX * scale} y1={top} x2={left + seamX * scale} y2={compositionBottomY} />
+              ))
+            : null}
+          {composition.design.mode === "horizontal-strips" || composition.design.mode === "block-grid"
+            ? composition.rowSeams.map((seamY, index) => (
+                <line key={`boxy-row-${index}`} x1={left} y1={top + seamY * scale} x2={right} y2={top + seamY * scale} />
+              ))
+            : null}
+        </g>
+        <path className={styles.cutLine} d={outline} />
+        <g className={styles.stitchLines} aria-hidden="true">
+          <path d={`M ${left + cut} ${top + seam} H ${right - cut}`} />
+          <path d={`M ${left + cut} ${bottom - seam} H ${right - cut}`} />
+          <path d={`M ${left + seam} ${top + cut} V ${bottom - cut}`} />
+          <path d={`M ${right - seam} ${top + cut} V ${bottom - cut}`} />
+        </g>
+        <g className={styles.boxyZipperEdge} aria-hidden="true">
+          <path d={`M ${left + cut} ${top + 8} H ${right - cut}`} />
+          <text x={centerX} y={top + 29}>TOP / ZIPPER EDGE · {formatInches(plan.finishedFlatWidth)} BETWEEN SQUARES</text>
+        </g>
+        <g className={styles.grainLine}>
+          <line x1={centerX} y1={top + cut + 38} x2={centerX} y2={bottom - cut - 38} />
+          <path d={`M ${centerX} ${top + cut + 26} l -6 12 h 12 Z`} />
+          <path d={`M ${centerX} ${bottom - cut - 26} l -6 -12 h 12 Z`} />
+          <text x={centerX + 12} y={centerY} transform={`rotate(-90 ${centerX + 12} ${centerY})`}>GRAIN / CENTER</text>
+        </g>
+        <g className={styles.dimensionLine}>
+          <line x1={left} y1={top - 25} x2={right} y2={top - 25} />
+          <path d={`M ${left} ${top - 25} l 8 -5 v 10 Z`} />
+          <path d={`M ${right} ${top - 25} l -8 -5 v 10 Z`} />
+          <text x={centerX} y={top - 34}>{formatInches(plan.cutWidth)} PANEL CUT LENGTH</text>
+          <line x1={right + 30} y1={top} x2={right + 30} y2={bottom} />
+          <path d={`M ${right + 30} ${top} l -5 8 h 10 Z`} />
+          <path d={`M ${right + 30} ${bottom} l -5 -8 h 10 Z`} />
+          <text x={right + 48} y={centerY} transform={`rotate(90 ${right + 48} ${centerY})`}>{formatInches(plan.cutHeight)} PANEL CUT WIDTH</text>
+        </g>
+        <g className={styles.boxyCornerLabels} aria-hidden="true">
+          <text x={left + cut / 2} y={top + cut / 2}>{formatInches(plan.cornerCut)}</text>
+          <text x={right - cut / 2} y={top + cut / 2}>{formatInches(plan.cornerCut)}</text>
+          <text x={left + cut / 2} y={bottom - cut / 2}>{formatInches(plan.cornerCut)}</text>
+          <text x={right - cut / 2} y={bottom - cut / 2}>{formatInches(plan.cornerCut)}</text>
+        </g>
+        <g className={styles.panelLabel}>
+          <text x={centerX} y={centerY - 15}>FOUR-CORNER BOXY PANEL</text>
+          <text x={centerX} y={centerY + 14}>CUT 2 OUTER · CUT 2 AQUA LINING</text>
+          <text x={centerX} y={centerY + 41}>ALL 4 SQUARES LINKED · SOLID CUT / DASHED STITCH</text>
+        </g>
+        {toolMode === "select" ? (
+          <>
+            <Handle x={left} y={centerY} label="Resize both horizontal edges" value={draft.cutWidth} min={3} max={60} valueText={`${formatInches(draft.cutWidth)} panel cut length`} axis="horizontal" onPointerDown={(event) => beginDrag("left", event)} onKeyDown={(event) => nudge("left", event)} />
+            <Handle x={right} y={centerY} label="Resize both horizontal edges" value={draft.cutWidth} min={3} max={60} valueText={`${formatInches(draft.cutWidth)} panel cut length`} axis="horizontal" onPointerDown={(event) => beginDrag("right", event)} onKeyDown={(event) => nudge("right", event)} />
+            <Handle x={centerX} y={top} label="Resize both vertical edges" value={draft.cutHeight} min={3} max={50} valueText={`${formatInches(draft.cutHeight)} panel cut width`} axis="vertical" onPointerDown={(event) => beginDrag("top", event)} onKeyDown={(event) => nudge("top", event)} />
+            <Handle x={centerX} y={bottom} label="Resize both vertical edges" value={draft.cutHeight} min={3} max={50} valueText={`${formatInches(draft.cutHeight)} panel cut width`} axis="vertical" onPointerDown={(event) => beginDrag("bottom", event)} onKeyDown={(event) => nudge("bottom", event)} />
+          </>
+        ) : (
+          <Handle x={left + cut} y={top + cut} label="Resize all four boxy-bag corner squares" value={draft.cornerCut} min={0.5} max={Math.max(0.5, Math.min(draft.cutWidth / 2 - draft.seamAllowance - 0.5, draft.cutHeight / 2 - draft.seamAllowance - 0.5, 8))} valueText={`${formatInches(draft.cornerCut)} square removed from all four corners`} kind="corner" onPointerDown={(event) => beginDrag("corner", event)} onKeyDown={(event) => nudge("corner", event)} />
+        )}
+      </svg>
+      <div className={styles.canvasLegend}>
+        <span><i className={styles.legendCut} /> cut line</span>
+        <span><i className={styles.legendStitch} /> stitch line</span>
+        <span><i className={styles.legendAllowance} /> {formatInches(plan.seamAllowance)} seam</span>
+        <span><i className={styles.legendGrain} /> grain / center</span>
+        <span><i className={styles.legendHandle} /> zipper edge</span>
       </div>
     </div>
   );
@@ -1789,20 +2232,135 @@ function RecessedZipperCutPlan({
   );
 }
 
+function BoxyBagCutPlan({ plan }: { plan: BagPatternPlan }) {
+  const kit = calculateBoxyBagKit(plan);
+  const panels = [
+    { material: "outer" as const, name: "Outer panel A" },
+    { material: "outer" as const, name: "Outer panel B" },
+    { material: "lining" as const, name: "Lining panel A" },
+    { material: "lining" as const, name: "Lining panel B" },
+  ];
+  const cornerStyle = {
+    "--boxy-notch-x": `${clamp(
+      kit.cornerSquare / Math.max(kit.panelCutLength, 0.01) * 100,
+      8,
+      24,
+    )}%`,
+    "--boxy-notch-y": `${clamp(
+      kit.cornerSquare / Math.max(kit.panelCutWidth, 0.01) * 100,
+      14,
+      34,
+    )}%`,
+  } as CSSProperties;
+  const formulas = boxyBagFormulaText(plan);
+  const sewingSteps = boxyBagSewingSteps(plan);
+
+  return (
+    <section className={`${styles.recessedCutPlan} ${styles.boxyCutPlan}`} aria-labelledby="boxy-cut-plan-title">
+      <header className={styles.recessedCutPlanHeader}>
+        <div>
+          <p>True boxy zipper bag</p>
+          <h2 id="boxy-cut-plan-title">Cut four matching rectangles, then remove every corner</h2>
+          <span>The upper squares box the zipper ends; the lower squares box the bottom.</span>
+        </div>
+        <b>4 CORNERS / PANEL</b>
+      </header>
+
+      <div className={styles.recessedCutSummary}>
+        <div>
+          <span>Cut each rectangle</span>
+          <strong>{formatInches(kit.panelCutLength)} × {formatInches(kit.panelCutWidth)}</strong>
+          <small>2 outer + 2 lining</small>
+        </div>
+        <div>
+          <span>Remove from every corner</span>
+          <strong>{formatInches(kit.cornerSquare)} square</strong>
+          <small>4 each · 16 total</small>
+        </div>
+        <div>
+          <span>Zipper edge between squares</span>
+          <strong>{formatInches(kit.installedZipperSeam)}</strong>
+          <small>start with {formatInches(kit.recommendedZipperLength)} or longer nylon coil · about 1 inch beyond each upper cutout</small>
+        </div>
+        <div>
+          <span>Expected finished box</span>
+          <strong>{formatInches(plan.finishedBaseWidth)} L × {formatInches(plan.finishedDepth)} W × {formatInches(plan.finishedHeight)} H</strong>
+          <small>before thick-fabric turn-of-cloth</small>
+        </div>
+      </div>
+
+      <div className={styles.recessedColorKey} aria-label="Boxy bag panel color key">
+        <span><i className={styles.recessedOuterSwatch} />Outer fabric · violet</span>
+        <span><i className={styles.recessedLiningSwatch} />Lining fabric · aqua</span>
+        <span><i className={styles.recessedStitchSwatch} />Dashed = seam line</span>
+      </div>
+      <p className={styles.recessedScaleNote}>Diagrams enlarge the corner squares for teaching. Use the written measurements, not the visual scale.</p>
+
+      <div className={`${styles.recessedPieceGrid} ${styles.boxyPieceGrid}`}>
+        {panels.map((panel) => (
+          <article key={`${panel.material}-${panel.name}`}>
+            <header>
+              <strong>{panel.name}</strong>
+              <span>{panel.material === "outer" ? "OUTER FABRIC" : "LINING FABRIC"}</span>
+            </header>
+            <div
+              className={`${styles.boxyPatternPiece} ${panel.material === "outer" ? styles.boxyPatternOuter : styles.boxyPatternLining}`}
+              style={cornerStyle}
+              role="img"
+              aria-label={`${panel.name}, cut ${formatInches(kit.panelCutLength)} by ${formatInches(kit.panelCutWidth)}, then remove a ${formatInches(kit.cornerSquare)} square from all four corners`}
+            >
+              <i className={styles.boxyNotchTopLeft} aria-hidden="true" />
+              <i className={styles.boxyNotchTopRight} aria-hidden="true" />
+              <i className={styles.boxyNotchBottomLeft} aria-hidden="true" />
+              <i className={styles.boxyNotchBottomRight} aria-hidden="true" />
+              <span className={styles.boxyPieceZipper}>TOP / ZIPPER EDGE · {formatInches(kit.installedZipperSeam)}</span>
+              <span className={styles.boxyPieceBottom}>BOTTOM SEAM</span>
+              <span className={styles.boxyPieceSideLeft}>SIDE</span>
+              <span className={styles.boxyPieceSideRight}>SIDE</span>
+              <b>{formatInches(kit.cornerSquare)} × 4</b>
+              <em>grain →</em>
+            </div>
+            <p>{formatInches(kit.panelCutLength)} long × {formatInches(kit.panelCutWidth)} wide</p>
+          </article>
+        ))}
+      </div>
+
+      <div className={styles.boxyFormulaGrid}>
+        {formulas.map((formula) => <p key={formula}>{formula}</p>)}
+      </div>
+
+      <div className={styles.recessedAssemblyGuide}>
+        <div className={`${styles.recessedAssemblyModel} ${styles.boxyAssemblyModel}`} role="img" aria-label="Boxy zipper sandwich: violet outer fabric, centered zipper, aqua lining, with four linked box corners">
+          <span className={styles.recessedAssemblyOuter}>OUTER A</span>
+          <span className={styles.recessedAssemblyZipper}>CENTER ZIPPER</span>
+          <span className={styles.recessedAssemblyLining}>AQUA LINING</span>
+        </div>
+        <ol>
+          {sewingSteps.map((step) => <li key={step}>{step}</li>)}
+        </ol>
+      </div>
+      <p className={styles.recessedConstructionNote}><strong>Why this is a different bag:</strong> the tote pattern removes only two bottom squares. This boxy pattern removes four squares from every panel; each upper pair closes around a zipper end, while the four lower openings form the separate outer and lining box seams. Make a scrap sample when using foam, canvas, vinyl, or thick quilted blocks because bulk reduces the usable inside measurements.</p>
+    </section>
+  );
+}
+
 const SavedBagThumbnail = memo(function SavedBagThumbnail({
   snapshot,
 }: {
   snapshot: BagStudioSnapshot;
 }) {
-  const plan = calculateBagPatternPlan(snapshot.draft);
+  const plan = snapshot.bodyRecipe === "four-corner-boxy"
+    ? calculateBoxyBagPlan(snapshot.boxyDraft)
+    : calculateBagPatternPlan(snapshot.draft);
   const composition = calculateOuterPanelComposition(
     plan,
-    snapshot.outerDesign,
+    outerDesignForBody(snapshot.bodyRecipe, snapshot.outerDesign),
   );
 
   return (
     <BagOutcomePreview
       variant="thumbnail"
+      bodyRecipe={snapshot.bodyRecipe}
       plan={plan}
       closure={snapshot.closure}
       options={snapshot.closureOptions}
@@ -1814,9 +2372,13 @@ const SavedBagThumbnail = memo(function SavedBagThumbnail({
 
 export function BagPatternStudio() {
   const { status, user } = useAuth();
+  const [bodyRecipe, setBodyRecipe] = useState<BodyRecipe>(
+    defaultStudioSnapshot.bodyRecipe,
+  );
   const [closure, setClosure] = useState<BagClosure>("open-tote");
   const [basis, setBasis] = useState<SizeBasis>("cut");
-  const [draft, setDraft] = useState<BagPatternDraft>(defaultDraft);
+  const [toteDraft, setToteDraft] = useState<BagPatternDraft>(defaultDraft);
+  const [boxyDraft, setBoxyDraft] = useState<BagPatternDraft>(defaultBoxyDraft);
   const [closureOptions, setClosureOptions] = useState<ClosureOptions>(defaultClosureOptions);
   const [outerDesign, setOuterDesign] = useState<OuterPanelDesign>(defaultOuterPanelDesign);
   const [mirror, setMirror] = useState(true);
@@ -1843,12 +2405,15 @@ export function BagPatternStudio() {
   const workspaceTabRefs = useRef<
     Partial<Record<BagStudioTab, HTMLButtonElement | null>>
   >({});
+  const draft = bodyRecipe === "four-corner-boxy" ? boxyDraft : toteDraft;
 
   const currentSnapshot = useMemo<BagStudioSnapshot>(
     () => ({
+      bodyRecipe,
       closure,
       basis,
-      draft,
+      draft: toteDraft,
+      boxyDraft,
       closureOptions,
       outerDesign,
       mirror,
@@ -1859,14 +2424,16 @@ export function BagPatternStudio() {
     }),
     [
       basis,
+      bodyRecipe,
+      boxyDraft,
       closure,
       closureOptions,
-      draft,
       fabricSettings,
       mirror,
       outerDesign,
       previewYaw,
       snapStep,
+      toteDraft,
       toolMode,
     ],
   );
@@ -1910,9 +2477,11 @@ export function BagPatternStudio() {
 
     startTransition(() => {
       const snapshot = persisted.workingCopy.snapshot;
+      setBodyRecipe(snapshot.bodyRecipe);
       setClosure(snapshot.closure);
       setBasis(snapshot.basis);
-      setDraft(snapshot.draft);
+      setToteDraft(snapshot.draft);
+      setBoxyDraft(snapshot.boxyDraft);
       setClosureOptions(snapshot.closureOptions);
       setOuterDesign(snapshot.outerDesign);
       setMirror(snapshot.mirror);
@@ -1960,18 +2529,33 @@ export function BagPatternStudio() {
     return () => window.removeEventListener("pagehide", persistWorkingCopy);
   }, [hydratedOwnerId, storageReady, storedState, user?.uid]);
 
-  const plan = useMemo(() => calculateBagPatternPlan(draft), [draft]);
+  const plan = useMemo(
+    () => bodyRecipe === "four-corner-boxy"
+      ? calculateBoxyBagPlan(boxyDraft)
+      : calculateBagPatternPlan(toteDraft),
+    [bodyRecipe, boxyDraft, toteDraft],
+  );
   const composition = useMemo(
-    () => calculateOuterPanelComposition(plan, outerDesign),
-    [plan, outerDesign],
+    () => calculateOuterPanelComposition(
+      plan,
+      outerDesignForBody(bodyRecipe, outerDesign),
+    ),
+    [bodyRecipe, plan, outerDesign],
   );
   const handlePlan = useMemo(
     () => calculateToteHandlePlan(plan, closureOptions),
     [plan, closureOptions],
   );
   const pieces = useMemo(
-    () => getCutPieces(plan, closure, closureOptions, composition, handlePlan),
-    [plan, closure, closureOptions, composition, handlePlan],
+    () => getCutPieces(
+      plan,
+      bodyRecipe,
+      closure,
+      closureOptions,
+      composition,
+      handlePlan,
+    ),
+    [plan, bodyRecipe, closure, closureOptions, composition, handlePlan],
   );
   const closureWarnings = useMemo(() => {
     const warnings: string[] = [];
@@ -2064,8 +2648,9 @@ export function BagPatternStudio() {
     draft.cutWidth,
     draft.cutHeight,
     draft.cornerCut,
-    draft.leftTopInset,
-    draft.rightTopInset,
+    ...(bodyRecipe === "two-panel-tote"
+      ? [draft.leftTopInset, draft.rightTopInset]
+      : []),
   ].every(
     (measurement) =>
       Math.abs(measurement - snapMeasurement(measurement, easyCutGrid)) < 0.001,
@@ -2121,9 +2706,11 @@ export function BagPatternStudio() {
   }, [closure, closureOptions.handleAttachmentDepth, composition, handlePlan, plan]);
 
   function applySnapshot(snapshot: BagStudioSnapshot) {
+    setBodyRecipe(snapshot.bodyRecipe);
     setClosure(snapshot.closure);
     setBasis(snapshot.basis);
-    setDraft(snapshot.draft);
+    setToteDraft(snapshot.draft);
+    setBoxyDraft(snapshot.boxyDraft);
     setClosureOptions(snapshot.closureOptions);
     setOuterDesign(snapshot.outerDesign);
     setMirror(snapshot.mirror);
@@ -2255,7 +2842,16 @@ export function BagPatternStudio() {
   }
 
   function updateDraft(next: BagPatternDraft) {
-    setDraft(next);
+    if (bodyRecipe === "four-corner-boxy") {
+      setBoxyDraft({
+        ...next,
+        topTakeUp: 0,
+        leftTopInset: 0,
+        rightTopInset: 0,
+      });
+    } else {
+      setToteDraft(next);
+    }
     setCopyState("idle");
   }
 
@@ -2265,7 +2861,11 @@ export function BagPatternStudio() {
     const cutHeight = Math.max(3, snapMeasurement(draft.cutHeight, grid));
     const maximumCorner = Math.max(
       0.5,
-      Math.min(5, cutHeight / 2 - 0.5, cutWidth / 2 - draft.seamAllowance),
+      Math.min(
+        5,
+        cutHeight / 2 - draft.seamAllowance - 0.5,
+        cutWidth / 2 - draft.seamAllowance - 0.5,
+      ),
     );
     updateDraft({
       ...draft,
@@ -2276,8 +2876,12 @@ export function BagPatternStudio() {
         0.5,
         maximumCorner,
       ),
-      leftTopInset: snapMeasurement(draft.leftTopInset, grid),
-      rightTopInset: snapMeasurement(draft.rightTopInset, grid),
+      leftTopInset: bodyRecipe === "four-corner-boxy"
+        ? 0
+        : snapMeasurement(draft.leftTopInset, grid),
+      rightTopInset: bodyRecipe === "four-corner-boxy"
+        ? 0
+        : snapMeasurement(draft.rightTopInset, grid),
     });
     setBasis("cut");
     if (snapStep === 0) setSnapStep(0.5);
@@ -2290,12 +2894,52 @@ export function BagPatternStudio() {
     });
   }
 
+  function chooseBodyRecipe(nextRecipe: BodyRecipe) {
+    setBodyRecipe(nextRecipe);
+    if (nextRecipe === "four-corner-boxy") {
+      setClosure("top-zipper");
+    }
+    setCopyState("idle");
+  }
+
   function updateFinished(
     key: "baseWidth" | "height" | "depth",
     value: number,
   ) {
     const nextValue = Math.max(0, cleanInput(value));
     const current = plan;
+
+    if (bodyRecipe === "four-corner-boxy") {
+      if (key === "baseWidth") {
+        updateDraft({
+          ...draft,
+          cutWidth:
+            nextValue + current.finishedHeight + draft.seamAllowance * 2,
+        });
+      }
+      if (key === "depth") {
+        updateDraft({
+          ...draft,
+          cutHeight:
+            nextValue + current.finishedHeight + draft.seamAllowance * 2,
+        });
+      }
+      if (key === "height") {
+        updateDraft({
+          ...draft,
+          cornerCut: nextValue / 2,
+          cutWidth:
+            current.finishedBaseWidth +
+            nextValue +
+            draft.seamAllowance * 2,
+          cutHeight:
+            current.finishedDepth +
+            nextValue +
+            draft.seamAllowance * 2,
+        });
+      }
+      return;
+    }
 
     if (key === "baseWidth") {
       updateDraft({
@@ -2338,7 +2982,23 @@ export function BagPatternStudio() {
       updateDraft({
         ...draft,
         seamAllowance,
-        topTakeUp: seamAllowance,
+        topTakeUp: bodyRecipe === "four-corner-boxy" ? 0 : seamAllowance,
+      });
+      return;
+    }
+    if (bodyRecipe === "four-corner-boxy") {
+      updateDraft({
+        ...draft,
+        seamAllowance,
+        topTakeUp: 0,
+        cutWidth:
+          plan.finishedBaseWidth +
+          plan.finishedHeight +
+          seamAllowance * 2,
+        cutHeight:
+          plan.finishedDepth +
+          plan.finishedHeight +
+          seamAllowance * 2,
       });
       return;
     }
@@ -2359,7 +3019,10 @@ export function BagPatternStudio() {
 
   function chooseCorner(value: number) {
     if (basis === "finished") {
-      updateFinished("depth", value * 2);
+      updateFinished(
+        bodyRecipe === "four-corner-boxy" ? "height" : "depth",
+        value * 2,
+      );
     } else {
       updateDraft({ ...draft, cornerCut: value });
     }
@@ -2424,6 +3087,7 @@ export function BagPatternStudio() {
       await navigator.clipboard.writeText(
         buildPlanText(
           plan,
+          bodyRecipe,
           closure,
           closureOptions,
           pieces,
@@ -2492,7 +3156,7 @@ export function BagPatternStudio() {
             <button type="button" onClick={startNewBag}>New bag</button>
             <button type="button" onClick={resetDraft}>Reset</button>
             <button type="button" onClick={printPlan}>Print plan</button>
-            <button type="button" className={styles.downloadButton} disabled={!ready} onClick={() => downloadPatternSvg(plan, composition, closure, handlePlan)}>Body-panel SVG</button>
+            <button type="button" className={styles.downloadButton} disabled={!ready} onClick={() => bodyRecipe === "four-corner-boxy" ? downloadBoxyPatternSvg(plan) : downloadPatternSvg(plan, composition, closure, handlePlan)}>{bodyRecipe === "four-corner-boxy" ? "Boxy-panel SVG" : "Body-panel SVG"}</button>
           </div>
         </header>
 
@@ -2531,7 +3195,7 @@ export function BagPatternStudio() {
               <small>{savedBags.length} named design{savedBags.length === 1 ? "" : "s"}</small>
             </button>
           </div>
-          <p>One core bag system · swap the size, shape, panels, handles, bottom, and closure.</p>
+          <p>Choose the bag body, then change its size, panels, handles, bottom, and opening.</p>
         </nav>
 
         <section className={styles.projectBar} aria-label="Current bag design">
@@ -2622,9 +3286,41 @@ export function BagPatternStudio() {
             <i aria-hidden="true">→</i>
             <span>
               <small>Expected sewn size</small>
-              <strong>{formatInches(plan.finishedBaseWidth)} W × {formatInches(plan.finishedHeight)} H × {formatInches(plan.finishedDepth)} D</strong>
+              <strong>{bodyRecipe === "four-corner-boxy"
+                ? `${formatInches(plan.finishedBaseWidth)} L × ${formatInches(plan.finishedDepth)} W × ${formatInches(plan.finishedHeight)} H`
+                : `${formatInches(plan.finishedBaseWidth)} W × ${formatInches(plan.finishedHeight)} H × ${formatInches(plan.finishedDepth)} D`}</strong>
             </span>
             <b className={ready ? styles.validBadge : styles.invalidBadge}>{ready ? "READY" : "CHECK"}</b>
+          </div>
+        </section>
+
+        <section
+          className={`${styles.closureRail} ${styles.bodyRecipeRail}`}
+          aria-labelledby="body-recipe-title"
+          hidden={activeStudioStep !== "cuts"}
+        >
+          <div className={styles.railTitle}>
+            <span>01</span>
+            <div>
+              <p id="body-recipe-title">Choose the bag body</p>
+              <small>This changes the flat pattern, corner math, zipper construction, and 3D shape.</small>
+            </div>
+          </div>
+          <div className={`${styles.closureChoices} ${styles.bodyRecipeChoices}`}>
+            {bodyRecipeChoices.map((choice) => (
+              <button
+                type="button"
+                key={choice.id}
+                aria-pressed={bodyRecipe === choice.id}
+                className={bodyRecipe === choice.id ? styles.closureActive : ""}
+                onClick={() => chooseBodyRecipe(choice.id)}
+              >
+                <i aria-hidden="true"><span /></i>
+                <strong>{choice.label}</strong>
+                <small>{choice.description}</small>
+                <b>{choice.short}</b>
+              </button>
+            ))}
           </div>
         </section>
 
@@ -2632,23 +3328,27 @@ export function BagPatternStudio() {
           <div className={styles.railTitle}>
             <span>02</span>
             <div>
-              <p id="closure-title">Choose the opening</p>
-              <small>Body math stays visible while the closure kit changes.</small>
+              <p id="closure-title">{bodyRecipe === "four-corner-boxy" ? "Boxy-bag opening" : "Choose the opening"}</p>
+              <small>{bodyRecipe === "four-corner-boxy" ? "The centered top zipper is structural in this first boxy-bag method." : "Body math stays visible while the closure kit changes."}</small>
             </div>
           </div>
           <div className={styles.closureChoices}>
-            {closureChoices.map((choice) => (
+            {(bodyRecipe === "four-corner-boxy"
+              ? closureChoices.filter((choice) => choice.id === "top-zipper")
+              : closureChoices
+            ).map((choice) => (
               <button
                 type="button"
                 key={choice.id}
                 aria-pressed={closure === choice.id}
                 className={closure === choice.id ? styles.closureActive : ""}
+                disabled={bodyRecipe === "four-corner-boxy"}
                 onClick={() => setClosure(choice.id)}
               >
                 <i aria-hidden="true"><span /></i>
-                <strong>{choice.label}</strong>
-                <small>{choice.description}</small>
-                <b>{choice.short}</b>
+                <strong>{bodyRecipe === "four-corner-boxy" ? "Centered structural zipper" : choice.label}</strong>
+                <small>{bodyRecipe === "four-corner-boxy" ? "The top seam that completes the rectangular box" : choice.description}</small>
+                <b>{bodyRecipe === "four-corner-boxy" ? "BUILT INTO BODY" : choice.short}</b>
               </button>
             ))}
           </div>
@@ -2677,18 +3377,22 @@ export function BagPatternStudio() {
               <header>
                 <div>
                   <p>Start here</p>
-                  <h3>Cut the easy rectangle first</h3>
+                  <h3>{bodyRecipe === "four-corner-boxy" ? "Cut the easy boxy rectangles first" : "Cut the easy rectangle first"}</h3>
                 </div>
                 <span>{cutsMatchGrid ? "easy-grid ready" : "off-grid cuts"}</span>
               </header>
-              <strong>{formatInches(plan.boundingCutWidth)} wide × {formatInches(plan.cutHeight)} tall</strong>
+              <strong>{bodyRecipe === "four-corner-boxy"
+                ? `${formatInches(plan.boundingCutWidth)} long × ${formatInches(plan.cutHeight)} wide`
+                : `${formatInches(plan.boundingCutWidth)} wide × ${formatInches(plan.cutHeight)} tall`}</strong>
               <ol>
                 <li>
                   {composition.design.mode === "solid" && !composition.design.contrastEnabled
                     ? "Cut 2 outer rectangles and 2 lining rectangles."
                     : `Build the selected outer panels, trim each to ${formatInches(composition.targetWidth)} × ${formatInches(composition.targetHeight)}, and cut 2 lining rectangles.`}
                 </li>
-                <li>Mark and remove a {formatInches(draft.cornerCut)} square from both bottom corners.</li>
+                <li>{bodyRecipe === "four-corner-boxy"
+                  ? `Label the zipper edge, then mark and remove a ${formatInches(draft.cornerCut)} square from all four corners of every panel.`
+                  : `Mark and remove a ${formatInches(draft.cornerCut)} square from both bottom corners.`}</li>
                 <li>Sew with a {formatInches(draft.seamAllowance)} seam allowance.</li>
               </ol>
               <p>The finished measurements below are allowed to be unusual. The measurements you cut stay practical.</p>
@@ -2713,15 +3417,15 @@ export function BagPatternStudio() {
             <div className={styles.fieldStack}>
               {basis === "finished" ? (
                 <>
-                  <MeasurementField label="Bottom / base width" hint="finished front edge at the floor" value={plan.finishedBaseWidth} min={1} onChange={(value) => updateFinished("baseWidth", value)} />
-                  <MeasurementField label="Standing height" hint="finished rim to bottom plane" value={plan.finishedHeight} min={1} onChange={(value) => updateFinished("height", value)} />
-                  <MeasurementField label="Bag depth" hint="front-to-back boxed seam" value={plan.finishedDepth} min={1} onChange={(value) => updateFinished("depth", value)} />
+                  <MeasurementField label={bodyRecipe === "four-corner-boxy" ? "Finished length" : "Bottom / base width"} hint={bodyRecipe === "four-corner-boxy" ? "along the centered zipper" : "finished front edge at the floor"} value={plan.finishedBaseWidth} min={1} onChange={(value) => updateFinished("baseWidth", value)} />
+                  <MeasurementField label="Standing height" hint={bodyRecipe === "four-corner-boxy" ? "created by all four corner squares" : "finished rim to bottom plane"} value={plan.finishedHeight} min={1} onChange={(value) => updateFinished("height", value)} />
+                  <MeasurementField label={bodyRecipe === "four-corner-boxy" ? "Finished width" : "Bag depth"} hint="front-to-back finished space" value={plan.finishedDepth} min={1} onChange={(value) => updateFinished("depth", value)} />
                 </>
               ) : (
                 <>
-                  <MeasurementField label="Panel cut width" hint="raw edge to raw edge" value={draft.cutWidth} min={3} step={snapStep === 0 ? 0.125 : snapStep} onChange={(value) => updateDraft({ ...draft, cutWidth: Math.max(0, value) })} />
-                  <MeasurementField label="Panel cut height" hint="raw top to raw bottom" value={draft.cutHeight} min={3} step={snapStep === 0 ? 0.125 : snapStep} onChange={(value) => updateDraft({ ...draft, cutHeight: Math.max(0, value) })} />
-                  <MeasurementField label="Corner square" hint="measure from both raw edges" value={draft.cornerCut} min={0.5} step={snapStep === 0 ? 0.125 : snapStep} onChange={(value) => updateDraft({ ...draft, cornerCut: Math.max(0, value) })} />
+                  <MeasurementField label={bodyRecipe === "four-corner-boxy" ? "Panel cut length" : "Panel cut width"} hint={bodyRecipe === "four-corner-boxy" ? "long edge runs along the zipper" : "raw edge to raw edge"} value={draft.cutWidth} min={3} step={snapStep === 0 ? 0.125 : snapStep} onChange={(value) => updateDraft({ ...draft, cutWidth: Math.max(0, value) })} />
+                  <MeasurementField label={bodyRecipe === "four-corner-boxy" ? "Panel cut width" : "Panel cut height"} hint={bodyRecipe === "four-corner-boxy" ? "zipper edge to bottom edge" : "raw top to raw bottom"} value={draft.cutHeight} min={3} step={snapStep === 0 ? 0.125 : snapStep} onChange={(value) => updateDraft({ ...draft, cutHeight: Math.max(0, value) })} />
+                  <MeasurementField label={bodyRecipe === "four-corner-boxy" ? "Four-corner square" : "Corner square"} hint={bodyRecipe === "four-corner-boxy" ? "remove from every corner" : "measure from both raw edges"} value={draft.cornerCut} min={0.5} step={snapStep === 0 ? 0.125 : snapStep} onChange={(value) => updateDraft({ ...draft, cornerCut: Math.max(0, value) })} />
                 </>
               )}
             </div>
@@ -2738,7 +3442,9 @@ export function BagPatternStudio() {
                   ))}
                 </div>
               </div>
-              <p>The cut line sits this far outside the stitch line. Side, bottom, and corner allowances stay locked together so the corner shortcut remains accurate.</p>
+              <p>{bodyRecipe === "four-corner-boxy"
+                ? "Use this same allowance on the zipper, ends, bottom, and all box seams so the four-corner formula remains consistent."
+                : "The cut line sits this far outside the stitch line. Side, bottom, and corner allowances stay locked together so the corner shortcut remains accurate."}</p>
             </section>
 
             <section className={styles.cornerLab}>
@@ -2747,13 +3453,22 @@ export function BagPatternStudio() {
                   <span>Box-corner experiment</span>
                   <strong>{formatInches(draft.cornerCut)} square</strong>
                 </div>
-                <span className={styles.depthPill}>{formatInches(plan.finishedDepth)} deep</span>
+                <span className={styles.depthPill}>{bodyRecipe === "four-corner-boxy" ? `${formatInches(plan.finishedHeight)} high` : `${formatInches(plan.finishedDepth)} deep`}</span>
               </div>
               <input
                 className={styles.range}
                 type="range"
                 min="0.5"
-                max={Math.max(0.5, Math.min(5, draft.cutHeight / 2 - 0.5))}
+                max={Math.max(
+                  0.5,
+                  Math.min(
+                    5,
+                    draft.cutHeight / 2 - draft.seamAllowance - 0.5,
+                    bodyRecipe === "four-corner-boxy"
+                      ? draft.cutWidth / 2 - draft.seamAllowance - 0.5
+                      : 5,
+                  ),
+                )}
                 step={snapStep === 0 ? 0.01 : snapStep}
                 value={draft.cornerCut}
                 aria-label="Corner square size"
@@ -2767,15 +3482,21 @@ export function BagPatternStudio() {
               <div className={styles.cornerEquation}>
                 <span>{formatInches(draft.cornerCut)}</span>
                 <i>× 2</i>
-                <span>{formatInches(plan.finishedDepth)}</span>
+                <span>{formatInches(bodyRecipe === "four-corner-boxy" ? plan.finishedHeight : plan.finishedDepth)}</span>
                 <small>raw square</small>
                 <small />
-                <small>finished depth</small>
+                <small>{bodyRecipe === "four-corner-boxy" ? "finished height" : "finished depth"}</small>
               </div>
-              <p>{basis === "finished" ? "Finished mode keeps your base width and height while the panel grows or shrinks." : "Cut-panel mode keeps the fabric fixed so you can see exactly what a larger corner steals."}</p>
+              <p>{bodyRecipe === "four-corner-boxy"
+                ? basis === "finished"
+                  ? "Finished mode keeps the length and width while all four linked corner squares change the height."
+                  : "Cut-first mode keeps the rectangles fixed: a larger square makes the box taller while shortening its length and width."
+                : basis === "finished"
+                  ? "Finished mode keeps your base width and height while the panel grows or shrinks."
+                  : "Cut-panel mode keeps the fabric fixed so you can see exactly what a larger corner steals."}</p>
             </section>
 
-            <section className={styles.shapeSection}>
+            {bodyRecipe === "two-panel-tote" ? <section className={styles.shapeSection}>
               <div className={styles.subhead}>
                 <div>
                   <span>Side shaping</span>
@@ -2790,13 +3511,23 @@ export function BagPatternStudio() {
                 <MeasurementField label="Right inset" hint={`${Math.round(plan.rightTopAngle)}° top angle`} value={draft.rightTopInset} min={-3} step={snapStep === 0 ? 0.125 : snapStep} onChange={(value) => updateInset("right", value)} />
               </div>
               <p>Positive values narrow the top; negative values flare it. Mirror keeps both stitch-line angles identical.</p>
-            </section>
+            </section> : (
+              <section className={styles.shapeSection}>
+                <div className={styles.subhead}>
+                  <div>
+                    <span>Linked box corners</span>
+                    <strong>All four stay equal</strong>
+                  </div>
+                </div>
+                <p>Keeping every square identical creates the true rectangular box. A later advanced method can unlock tapered top and bottom corners.</p>
+              </section>
+            )}
             </div>
 
             <section className={styles.closureOptions} hidden={activeStudioStep !== "build"}>
               <div className={styles.subhead}>
                 <div>
-                  <span>{closureChoices.find((choice) => choice.id === closure)?.label}</span>
+                  <span>{bodyRecipe === "four-corner-boxy" ? "Boxy structural zipper" : closureChoices.find((choice) => choice.id === closure)?.label}</span>
                   <strong>Closure details</strong>
                 </div>
               </div>
@@ -2853,8 +3584,8 @@ export function BagPatternStudio() {
                   ) : null}
                 </div>
               ) : null}
-              {closure === "top-zipper" ? <p className={styles.optionOnlyNote}>The zipper uses the full flat top seam; extra tape is added for handling and trimming.</p> : null}
-              <p className={styles.closureTeaching}>{closureTeaching(closure, closureOptions)}</p>
+              {closure === "top-zipper" ? <p className={styles.optionOnlyNote}>{bodyRecipe === "four-corner-boxy" ? `The zipper sewing span between the upper squares is ${formatInches(plan.finishedFlatWidth)}. Start longer, sew across nylon teeth only, and trim after the ends are secured.` : "The zipper uses the full flat top seam; extra tape is added for handling and trimming."}</p> : null}
+              <p className={styles.closureTeaching}>{closureTeaching(bodyRecipe, closure, closureOptions)}</p>
             </section>
 
             <section className={styles.fabricInput} hidden={activeStudioStep !== "plan"}>
@@ -2867,7 +3598,7 @@ export function BagPatternStudio() {
             <div className={styles.canvasToolbar}>
               <div className={styles.toolButtons} aria-label="Vector tools">
                 <button type="button" aria-pressed={toolMode === "select"} onClick={() => setToolMode("select")}><i aria-hidden="true">↖</i><span>Select</span><small>resize edges</small></button>
-                <button type="button" aria-pressed={toolMode === "shape"} onClick={() => setToolMode("shape")}><i aria-hidden="true">⌁</i><span>Vector pen</span><small>angles + corners</small></button>
+                <button type="button" aria-pressed={toolMode === "shape"} onClick={() => setToolMode("shape")}><i aria-hidden="true">⌁</i><span>Vector pen</span><small>{bodyRecipe === "four-corner-boxy" ? "4 linked corners" : "angles + corners"}</small></button>
               </div>
               <div className={styles.snapControl}>
                 <label htmlFor="snap-step">Cut grid</label>
@@ -2880,44 +3611,59 @@ export function BagPatternStudio() {
                 </select>
               </div>
               <div className={styles.toolbarHint}>
-                <span>{mirror ? "Mirrored editing" : "Independent edges"}</span>
-                <small>Drag the bright handles or focus one and use arrow keys.</small>
+                <span>{bodyRecipe === "four-corner-boxy" ? "Four-corner editing" : mirror ? "Mirrored editing" : "Independent edges"}</span>
+                <small>{bodyRecipe === "four-corner-boxy" ? "All corner squares move together to keep a true rectangular box." : "Drag the bright handles or focus one and use arrow keys."}</small>
               </div>
             </div>
 
-            <PatternCanvas
-              draft={draft}
-              plan={plan}
-              composition={composition}
-              closure={closure}
-              handlePlan={handlePlan}
-              mirror={mirror}
-              snapStep={snapStep}
-              toolMode={toolMode}
-              onDraftChange={updateDraft}
-              onUseCutBasis={() => setBasis("cut")}
-            />
+            {bodyRecipe === "four-corner-boxy" ? (
+              <BoxyPatternCanvas
+                draft={draft}
+                plan={plan}
+                composition={composition}
+                snapStep={snapStep}
+                toolMode={toolMode}
+                onDraftChange={updateDraft}
+                onUseCutBasis={() => setBasis("cut")}
+              />
+            ) : (
+              <PatternCanvas
+                draft={draft}
+                plan={plan}
+                composition={composition}
+                closure={closure}
+                handlePlan={handlePlan}
+                mirror={mirror}
+                snapStep={snapStep}
+                toolMode={toolMode}
+                onDraftChange={updateDraft}
+                onUseCutBasis={() => setBasis("cut")}
+              />
+            )}
 
             <div className={styles.liveStrip}>
               <div>
-                <span>Raw panel</span>
+                <span>{bodyRecipe === "four-corner-boxy" ? "Raw rectangle" : "Raw panel"}</span>
                 <strong>{formatInches(plan.cutWidth)} × {formatInches(plan.cutHeight)}</strong>
               </div>
               <i>→</i>
               <div>
-                <span>Flat width</span>
+                <span>{bodyRecipe === "four-corner-boxy" ? "Zipper seam span" : "Flat width"}</span>
                 <strong>{formatInches(plan.finishedFlatWidth)}</strong>
               </div>
               <i>→</i>
               <div className={styles.liveStripAccent}>
-                <span>Finished footprint</span>
-                <strong>{formatInches(plan.finishedBaseWidth)} × {formatInches(plan.finishedDepth)}</strong>
+                <span>{bodyRecipe === "four-corner-boxy" ? "Finished box" : "Finished footprint"}</span>
+                <strong>{bodyRecipe === "four-corner-boxy"
+                  ? `${formatInches(plan.finishedBaseWidth)} L × ${formatInches(plan.finishedDepth)} W × ${formatInches(plan.finishedHeight)} H`
+                  : `${formatInches(plan.finishedBaseWidth)} × ${formatInches(plan.finishedDepth)}`}</strong>
               </div>
             </div>
             </div>
 
             <div className={styles.buildWorkspace} hidden={activeStudioStep !== "build"}>
             <BagPanelComposer
+              bodyRecipe={bodyRecipe}
               plan={plan}
               value={outerDesign}
               composition={composition}
@@ -2928,6 +3674,7 @@ export function BagPatternStudio() {
             />
 
             <BagOutcomePreview
+              bodyRecipe={bodyRecipe}
               plan={plan}
               closure={closure}
               options={closureOptions}
@@ -2947,6 +3694,9 @@ export function BagPatternStudio() {
             {closure === "recessed-zipper" ? (
               <RecessedZipperCutPlan plan={plan} options={closureOptions} />
             ) : null}
+            {bodyRecipe === "four-corner-boxy" ? (
+              <BoxyBagCutPlan plan={plan} />
+            ) : null}
             </div>
           </section>
 
@@ -2961,33 +3711,39 @@ export function BagPatternStudio() {
 
             <section className={styles.finishedCard}>
               <p>Finished bag</p>
-              <strong>{formatInches(plan.finishedBaseWidth)} W × {formatInches(plan.finishedHeight)} H × {formatInches(plan.finishedDepth)} D</strong>
+              <strong>{bodyRecipe === "four-corner-boxy"
+                ? `${formatInches(plan.finishedBaseWidth)} L × ${formatInches(plan.finishedDepth)} W × ${formatInches(plan.finishedHeight)} H`
+                : `${formatInches(plan.finishedBaseWidth)} W × ${formatInches(plan.finishedHeight)} H × ${formatInches(plan.finishedDepth)} D`}</strong>
               <div>
                 <span><small>Bottom footprint</small><b>{formatInches(plan.finishedBaseWidth)} × {formatInches(plan.finishedDepth)}</b></span>
-                <span><small>Flat top seam</small><b>{formatInches(plan.finishedTopOpening)}</b></span>
+                <span><small>{bodyRecipe === "four-corner-boxy" ? "Zipper seam span" : "Flat top seam"}</small><b>{formatInches(bodyRecipe === "four-corner-boxy" ? plan.finishedFlatWidth : plan.finishedTopOpening)}</b></span>
                 <span><small>Approx. volume</small><b>{Math.round(plan.volumeCubicInches / 61)} L</b></span>
               </div>
             </section>
 
             <section className={styles.mathCard}>
               <header>
-                <span>Why the ¼ inch does not add to the square</span>
-                <b>BOX MATH</b>
+                <span>{bodyRecipe === "four-corner-boxy" ? "Why four equal squares make a true box" : `Why the ${formatInches(plan.seamAllowance)} does not add to the square`}</span>
+                <b>{bodyRecipe === "four-corner-boxy" ? "BOXY MATH" : "BOX MATH"}</b>
               </header>
               <div className={styles.mathDiagram} aria-hidden="true">
                 <span className={styles.mathCut} />
                 <span className={styles.mathStitch} />
                 <span className={styles.mathCorner}>C</span>
-                <span className={styles.mathSeam}>¼″</span>
+                <span className={styles.mathSeam}>{formatInches(plan.seamAllowance)}</span>
               </div>
-              <p>Measure the corner square from the <strong>raw side and bottom edges</strong>. When the side, bottom, and boxed seams all use {formatInches(plan.seamAllowance)}, their offsets cancel in the fold.</p>
+              <p>{bodyRecipe === "four-corner-boxy"
+                ? <>Measure every square from its <strong>two raw edges</strong>. The upper pair shapes the zipper ends and the lower pair shapes the bottom; equal squares keep the top and bottom the same size.</>
+                : <>Measure the corner square from the <strong>raw side and bottom edges</strong>. When the side, bottom, and boxed seams all use {formatInches(plan.seamAllowance)}, their offsets cancel in the fold.</>}</p>
               <div className={styles.mathFormula}>
-                <span>Depth</span>
+                <span>{bodyRecipe === "four-corner-boxy" ? "Height" : "Depth"}</span>
                 <b>=</b>
                 <strong>2 × corner square</strong>
-                <em>= {formatInches(plan.finishedDepth)}</em>
+                <em>= {formatInches(bodyRecipe === "four-corner-boxy" ? plan.finishedHeight : plan.finishedDepth)}</em>
               </div>
-              <small>If you pinch first instead, measure half the desired depth from the actual seam intersection—not from the raw fabric point.</small>
+              <small>{bodyRecipe === "four-corner-boxy"
+                ? `The corners also remove ${formatInches(plan.cornerCut)} from both ends of the length and width. Sew a scrap test when bulk matters.`
+                : "If you pinch first instead, measure half the desired depth from the actual seam intersection—not from the raw fabric point."}</small>
             </section>
 
             {!ready ? (
@@ -3000,7 +3756,7 @@ export function BagPatternStudio() {
               <header>
                 <div>
                   <p>Cut list</p>
-                  <h3>{closureChoices.find((choice) => choice.id === closure)?.label}</h3>
+                  <h3>{bodyRecipe === "four-corner-boxy" ? "Boxy zipper bag" : closureChoices.find((choice) => choice.id === closure)?.label}</h3>
                 </div>
                 <span>{pieces.length} groups</span>
               </header>
@@ -3020,7 +3776,7 @@ export function BagPatternStudio() {
 
             <section className={styles.notionCard}>
               <span>Hardware + construction</span>
-              <strong>{zipperNote(plan, closure, closureOptions)}</strong>
+              <strong>{zipperNote(plan, bodyRecipe, closure, closureOptions)}</strong>
               <p>Directional fabric: keep grain arrows parallel. Thick foam or vinyl: make a scrap corner because turn-of-cloth can reduce the inside size.</p>
               {handleBuildAdvisories.map((advisory) => <b key={advisory}>{advisory}</b>)}
               {closure !== "open-tote" ? <b>Before closing the shell, open the zipper at least halfway.</b> : null}
@@ -3029,7 +3785,7 @@ export function BagPatternStudio() {
             <div className={styles.resultActions}>
               <button type="button" onClick={() => void copyPlan()} disabled={!ready}>{copyState === "copied" ? "Copied ✓" : copyState === "error" ? "Copy failed" : "Copy cut plan"}</button>
               <button type="button" onClick={() => window.print()}>Print</button>
-              <button type="button" className={styles.primaryAction} disabled={!ready} onClick={() => downloadPatternSvg(plan, composition, closure, handlePlan)}>Download body-panel SVG</button>
+              <button type="button" className={styles.primaryAction} disabled={!ready} onClick={() => bodyRecipe === "four-corner-boxy" ? downloadBoxyPatternSvg(plan) : downloadPatternSvg(plan, composition, closure, handlePlan)}>Download {bodyRecipe === "four-corner-boxy" ? "boxy-panel" : "body-panel"} SVG</button>
             </div>
           </aside>
         </div>
@@ -3087,24 +3843,29 @@ export function BagPatternStudio() {
           {filteredSavedBags.length ? (
             <div className={styles.savedBagGrid}>
               {filteredSavedBags.map((saved) => {
-                const savedPlan = calculateBagPatternPlan(saved.snapshot.draft);
+                const savedPlan = saved.snapshot.bodyRecipe === "four-corner-boxy"
+                  ? calculateBoxyBagPlan(saved.snapshot.boxyDraft)
+                  : calculateBagPatternPlan(saved.snapshot.draft);
                 const closureLabel = closureChoices.find(
                   (choice) => choice.id === saved.snapshot.closure,
                 )?.label;
+                const boxySaved = saved.snapshot.bodyRecipe === "four-corner-boxy";
                 return (
                   <article className={styles.savedBagCard} key={saved.id}>
                     <div className={styles.savedBagCardTop}>
-                      <span>{closureLabel}</span>
+                      <span>{boxySaved ? "Boxy zipper bag" : closureLabel}</span>
                       {saved.id === activeSavedBagId ? <b>OPEN</b> : null}
                     </div>
                     <h3>{saved.name}</h3>
                     {activeTab === "saved" ? (
                       <SavedBagThumbnail snapshot={saved.snapshot} />
                     ) : null}
-                    <strong>{formatInches(savedPlan.finishedBaseWidth)} W × {formatInches(savedPlan.finishedHeight)} H × {formatInches(savedPlan.finishedDepth)} D</strong>
+                    <strong>{boxySaved
+                      ? `${formatInches(savedPlan.finishedBaseWidth)} L × ${formatInches(savedPlan.finishedDepth)} W × ${formatInches(savedPlan.finishedHeight)} H`
+                      : `${formatInches(savedPlan.finishedBaseWidth)} W × ${formatInches(savedPlan.finishedHeight)} H × ${formatInches(savedPlan.finishedDepth)} D`}</strong>
                     <dl>
                       <div><dt>Outer</dt><dd>{saved.snapshot.outerDesign.mode.replaceAll("-", " ")}</dd></div>
-                      <div><dt>Fabric</dt><dd>{saved.snapshot.fabricSettings.source === "fat-quarters" ? "fat quarters" : `${formatInches(saved.snapshot.draft.fabricWidth)} bolt`}</dd></div>
+                      <div><dt>Fabric</dt><dd>{saved.snapshot.fabricSettings.source === "fat-quarters" ? "fat quarters" : `${formatInches(boxySaved ? saved.snapshot.boxyDraft.fabricWidth : saved.snapshot.draft.fabricWidth)} bolt`}</dd></div>
                       <div><dt>Updated</dt><dd>{formatSavedBagTime(saved.updatedAt)}</dd></div>
                     </dl>
                     <div className={styles.savedBagActions}>
@@ -3130,7 +3891,7 @@ export function BagPatternStudio() {
 
         <footer className={styles.appFooter}>
           <span>Monosyth / Modular Bag Studio</span>
-          <p>One bag grammar. Many useful constructions.</p>
+          <p>Shared sewing ideas, distinct bag bodies, and practical cuts.</p>
           <Link href="/app">← Back to Studio</Link>
         </footer>
       </div>

@@ -6,6 +6,7 @@ import styles from "@/components/app/bag-panel-composer.module.css";
 import {
   formatDecimal,
   formatInches,
+  type BagBodyRecipe,
   type BagPatternPlan,
 } from "@/lib/sewing/bag-pattern";
 import {
@@ -17,6 +18,7 @@ import {
 } from "@/lib/sewing/panel-composition";
 
 type BagPanelComposerProps = {
+  bodyRecipe: BagBodyRecipe;
   plan: BagPatternPlan;
   value: OuterPanelDesign;
   composition: OuterPanelComposition;
@@ -111,11 +113,13 @@ function InchField({
 function PanelDiagram({
   label,
   face,
+  bodyRecipe,
   plan,
   composition,
 }: {
   label: string;
   face: "front" | "back";
+  bodyRecipe: BagBodyRecipe;
   plan: BagPatternPlan;
   composition: OuterPanelComposition;
 }) {
@@ -127,17 +131,33 @@ function PanelDiagram({
   const x = (value: number) => 18 + ((value - minX) / width) * 224;
   const y = (value: number) => 14 + (value / height) * 142;
   const c = plan.cornerCut;
-  const outline = [
-    `M ${x(plan.leftTopInset)} ${y(0)}`,
-    `L ${x(plan.cutWidth - plan.rightTopInset)} ${y(0)}`,
-    `L ${x(plan.cutWidth)} ${y(height - c)}`,
-    `L ${x(plan.cutWidth - c)} ${y(height - c)}`,
-    `L ${x(plan.cutWidth - c)} ${y(height)}`,
-    `L ${x(c)} ${y(height)}`,
-    `L ${x(c)} ${y(height - c)}`,
-    `L ${x(0)} ${y(height - c)}`,
-    "Z",
-  ].join(" ");
+  const outline = bodyRecipe === "four-corner-boxy"
+    ? [
+        `M ${x(c)} ${y(0)}`,
+        `L ${x(plan.cutWidth - c)} ${y(0)}`,
+        `L ${x(plan.cutWidth - c)} ${y(c)}`,
+        `L ${x(plan.cutWidth)} ${y(c)}`,
+        `L ${x(plan.cutWidth)} ${y(height - c)}`,
+        `L ${x(plan.cutWidth - c)} ${y(height - c)}`,
+        `L ${x(plan.cutWidth - c)} ${y(height)}`,
+        `L ${x(c)} ${y(height)}`,
+        `L ${x(c)} ${y(height - c)}`,
+        `L ${x(0)} ${y(height - c)}`,
+        `L ${x(0)} ${y(c)}`,
+        `L ${x(c)} ${y(c)}`,
+        "Z",
+      ].join(" ")
+    : [
+        `M ${x(plan.leftTopInset)} ${y(0)}`,
+        `L ${x(plan.cutWidth - plan.rightTopInset)} ${y(0)}`,
+        `L ${x(plan.cutWidth)} ${y(height - c)}`,
+        `L ${x(plan.cutWidth - c)} ${y(height - c)}`,
+        `L ${x(plan.cutWidth - c)} ${y(height)}`,
+        `L ${x(c)} ${y(height)}`,
+        `L ${x(c)} ${y(height - c)}`,
+        `L ${x(0)} ${y(height - c)}`,
+        "Z",
+      ].join(" ");
   const isPieced =
     composition.design.mode !== "solid" &&
     (composition.design.scope === "both" ||
@@ -216,6 +236,7 @@ function PanelDiagram({
 }
 
 export function BagPanelComposer({
+  bodyRecipe,
   plan,
   value,
   composition,
@@ -234,7 +255,7 @@ export function BagPanelComposer({
         <div>
           <p>Outer-panel builder</p>
           <h2 id="outer-panel-build-title">Piece it, trim it, then shape it</h2>
-          <span>Build the front and back from strips or quilt blocks without changing the finished bag size.</span>
+          <span>{bodyRecipe === "four-corner-boxy" ? "Build Panel A and Panel B from strips or quilt blocks, trim the full rectangles, then cut all four squares." : "Build the front and back from strips or quilt blocks without changing the finished bag size."}</span>
         </div>
         <span className={composition.valid ? styles.ready : styles.check}>
           {composition.valid ? "FIT READY" : "CHECK FIT"}
@@ -271,7 +292,13 @@ export function BagPanelComposer({
                     aria-pressed={value.scope === choice.id}
                     onClick={() => update({ scope: choice.id })}
                   >
-                    {choice.label}
+                    {bodyRecipe === "four-corner-boxy"
+                      ? choice.id === "both"
+                        ? "Panel A + B"
+                        : choice.id === "front"
+                          ? "Panel A only"
+                          : "Panel B only"
+                      : choice.label}
                   </button>
                 ))}
               </div>
@@ -333,35 +360,39 @@ export function BagPanelComposer({
             </>
           ) : null}
 
-          {value.mode !== "solid" || value.contrastEnabled ? (
+          {value.mode !== "solid" || (bodyRecipe === "two-panel-tote" && value.contrastEnabled) ? (
             <div className={styles.fieldGrid}>
               <InchField label={value.mode === "solid" ? "Band join allowance" : "Piecing allowance"} hint={value.mode === "solid" ? "upper-to-bottom seam" : "between small pieces"} value={value.piecingAllowance} min={0.125} onChange={(piecingAllowance) => update({ piecingAllowance })} />
               {value.mode !== "solid" ? <InchField label="Trim margin" hint="each outside edge" value={value.trimMargin} min={0} onChange={(trimMargin) => update({ trimMargin })} /> : null}
             </div>
           ) : null}
 
-          <div className={styles.contrastControl}>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={value.contrastEnabled}
-              onClick={() => update({ contrastEnabled: !value.contrastEnabled })}
-            >
-              <i aria-hidden="true"><span /></i>
-              <span><strong>Contrast bottom</strong><small>separate fabric wraps under the base</small></span>
-            </button>
-            {value.contrastEnabled ? (
-              <InchField label="Finished rise" hint="visible above base" value={value.contrastRise} min={0.5} onChange={(contrastRise) => update({ contrastRise })} />
-            ) : null}
-          </div>
+          {bodyRecipe === "two-panel-tote" ? (
+            <div className={styles.contrastControl}>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={value.contrastEnabled}
+                onClick={() => update({ contrastEnabled: !value.contrastEnabled })}
+              >
+                <i aria-hidden="true"><span /></i>
+                <span><strong>Contrast bottom</strong><small>separate fabric wraps under the base</small></span>
+              </button>
+              {value.contrastEnabled ? (
+                <InchField label="Finished rise" hint="visible above base" value={value.contrastRise} min={0.5} onChange={(contrastRise) => update({ contrastRise })} />
+              ) : null}
+            </div>
+          ) : (
+            <p className={styles.allowanceNote}><strong>Boxy contrast bottoms come later:</strong> a true boxy bag needs its own wrap-around bottom construction so the color lands evenly on every face. This first method keeps the outer rectangles solid or pieced.</p>
+          )}
 
           <p className={styles.allowanceNote}><strong>Keep these allowances separate:</strong> piecing allowance changes the small-piece cuts; the bag seam allowance is already built into the final body panel. A 1/4-inch trim margin suits ordinary piecing; use about 1/2 inch when quilting or adding foam because the slab can shrink.</p>
         </div>
 
         <div className={styles.previewArea}>
           <div className={styles.panelPair}>
-            <PanelDiagram label="Front" face="front" plan={plan} composition={composition} />
-            <PanelDiagram label="Back" face="back" plan={plan} composition={composition} />
+            <PanelDiagram label={bodyRecipe === "four-corner-boxy" ? "Panel A" : "Front"} face="front" bodyRecipe={bodyRecipe} plan={plan} composition={composition} />
+            <PanelDiagram label={bodyRecipe === "four-corner-boxy" ? "Panel B" : "Back"} face="back" bodyRecipe={bodyRecipe} plan={plan} composition={composition} />
           </div>
 
           <div className={styles.metrics}>
@@ -387,7 +418,7 @@ export function BagPanelComposer({
                 <strong>{selectedBlockCount} at {formatInches(composition.blockCutSize)} cut → {formatInches(composition.blockFinishedSize)} finished</strong>
               </div>
             ) : null}
-            {value.contrastEnabled ? (
+            {composition.design.contrastEnabled ? (
               <div>
                 <span>Contrast band cut</span>
                 <strong>2 at {formatInches(composition.targetWidth)} × {formatInches(composition.contrastCutHeight)}</strong>

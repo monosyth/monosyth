@@ -5,6 +5,8 @@ export type BagClosure =
   | "zipper-gusset"
   | "recessed-zipper";
 
+export type BagBodyRecipe = "two-panel-tote" | "four-corner-boxy";
+
 export type BagPatternDraft = {
   cutWidth: number;
   cutHeight: number;

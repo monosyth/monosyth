@@ -1,4 +1,5 @@
 import type {
+  BagBodyRecipe,
   BagClosure,
   BagPatternDraft,
 } from "@/lib/sewing/bag-pattern";
@@ -36,9 +37,11 @@ export type BagStudioFabricSettings = {
 };
 
 export type BagStudioSnapshot = {
+  bodyRecipe: BagBodyRecipe;
   closure: BagClosure;
   basis: BagStudioSizeBasis;
   draft: BagPatternDraft;
+  boxyDraft: BagPatternDraft;
   closureOptions: BagStudioClosureOptions;
   outerDesign: OuterPanelDesign;
   mirror: boolean;
@@ -57,7 +60,7 @@ export type SavedBagDesign = {
 };
 
 export type BagStudioStoredState = {
-  schemaVersion: 1;
+  schemaVersion: 2;
   workingCopy: {
     name: string;
     activeSavedBagId: string | null;
@@ -68,7 +71,7 @@ export type BagStudioStoredState = {
 };
 
 export const BAG_STUDIO_STORAGE_KEY = "monosyth:bag-pattern-studio:v1";
-export const BAG_STUDIO_SCHEMA_VERSION = 1;
+export const BAG_STUDIO_SCHEMA_VERSION = 2;
 export const MAX_SAVED_BAGS = 60;
 
 const closures: BagClosure[] = [
@@ -78,6 +81,7 @@ const closures: BagClosure[] = [
   "zipper-gusset",
   "recessed-zipper",
 ];
+const bodyRecipes: BagBodyRecipe[] = ["two-panel-tote", "four-corner-boxy"];
 const sizeBases: BagStudioSizeBasis[] = ["finished", "cut"];
 const fabricSources: BagStudioFabricSource[] = ["bolt", "fat-quarters"];
 const toolModes: BagStudioToolMode[] = ["select", "shape"];
@@ -138,6 +142,7 @@ export function normalizeBagStudioSnapshot(
 ): BagStudioSnapshot {
   const input = isRecord(value) ? value : {};
   const draft = isRecord(input.draft) ? input.draft : {};
+  const boxyDraft = isRecord(input.boxyDraft) ? input.boxyDraft : {};
   const closureOptions = isRecord(input.closureOptions)
     ? input.closureOptions
     : {};
@@ -145,13 +150,22 @@ export function normalizeBagStudioSnapshot(
   const fabricSettings = isRecord(input.fabricSettings)
     ? input.fabricSettings
     : {};
-  const normalizedClosure = enumValue(
+  const bodyRecipe = enumValue(
+    input.bodyRecipe,
+    bodyRecipes,
+    fallback.bodyRecipe,
+  );
+  const requestedClosure = enumValue(
     input.closure,
     closures,
     fallback.closure,
   );
+  const normalizedClosure = bodyRecipe === "four-corner-boxy"
+    ? "top-zipper"
+    : requestedClosure;
 
   return {
+    bodyRecipe,
     closure: normalizedClosure,
     basis: enumValue(input.basis, sizeBases, fallback.basis),
     draft: {
@@ -172,6 +186,31 @@ export function normalizeBagStudioSnapshot(
         fallback.draft.rightTopInset,
       ),
       fabricWidth: finiteNumber(draft.fabricWidth, fallback.draft.fabricWidth),
+    },
+    boxyDraft: {
+      cutWidth: finiteNumber(
+        boxyDraft.cutWidth,
+        fallback.boxyDraft.cutWidth,
+      ),
+      cutHeight: finiteNumber(
+        boxyDraft.cutHeight,
+        fallback.boxyDraft.cutHeight,
+      ),
+      cornerCut: finiteNumber(
+        boxyDraft.cornerCut,
+        fallback.boxyDraft.cornerCut,
+      ),
+      seamAllowance: finiteNumber(
+        boxyDraft.seamAllowance,
+        fallback.boxyDraft.seamAllowance,
+      ),
+      topTakeUp: 0,
+      leftTopInset: 0,
+      rightTopInset: 0,
+      fabricWidth: finiteNumber(
+        boxyDraft.fabricWidth,
+        fallback.boxyDraft.fabricWidth,
+      ),
     },
     closureOptions: {
       handleMaterial: enumValue(

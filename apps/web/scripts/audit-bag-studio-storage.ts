@@ -12,6 +12,7 @@ import {
   type BagStudioSnapshot,
 } from "../src/lib/sewing/bag-studio-storage";
 import { draftFromFinishedSize } from "../src/lib/sewing/bag-pattern";
+import { draftFromFinishedBoxyBag } from "../src/lib/sewing/boxy-bag";
 import { defaultOuterPanelDesign } from "../src/lib/sewing/panel-composition";
 
 let checks = 0;
@@ -25,12 +26,20 @@ const yes = (condition: unknown, message: string) => {
 };
 
 const fallback: BagStudioSnapshot = {
+  bodyRecipe: "two-panel-tote",
   closure: "open-tote",
   basis: "finished",
   draft: draftFromFinishedSize({
     baseWidth: 14,
     height: 12,
     depth: 4,
+    seamAllowance: 0.25,
+    fabricWidth: 44,
+  }),
+  boxyDraft: draftFromFinishedBoxyBag({
+    length: 10,
+    width: 4,
+    height: 4,
     seamAllowance: 0.25,
     fabricWidth: 44,
   }),
@@ -129,6 +138,26 @@ same(restored.savedBags[0]?.snapshot.outerDesign.blockSizeBasis, "cut", "cut-squ
 same(restored.savedBags[0]?.snapshot.previewYaw, 350, "3D orbit position survives a save");
 same(restored.savedBags[0]?.snapshot.snapStep, 1, "whole-inch cutting grid survives a save");
 
+const boxy = normalizeBagStudioSnapshot(
+  {
+    ...fallback,
+    bodyRecipe: "four-corner-boxy",
+    closure: "side-zipper",
+    boxyDraft: {
+      ...fallback.boxyDraft,
+      cutWidth: 14.5,
+      cutHeight: 8.5,
+      cornerCut: 2,
+    },
+  },
+  fallback,
+);
+same(boxy.bodyRecipe, "four-corner-boxy", "boxy body recipe survives normalization");
+same(boxy.closure, "top-zipper", "boxy body normalizes to its compatible structural zipper");
+same(boxy.boxyDraft.cutWidth, 14.5, "boxy cut length survives a save");
+same(boxy.boxyDraft.cutHeight, 8.5, "boxy cut width survives a save");
+same(boxy.boxyDraft.cornerCut, 2, "boxy four-corner square survives a save");
+
 const repaired = normalizeBagStudioSnapshot(
   {
     closure: "not-a-closure",
@@ -143,6 +172,16 @@ same(repaired.closureOptions.sideZipperSide, "right", "unknown zipper side falls
 same(repaired.fabricSettings.fatQuarterWidth, 21, "non-finite fabric size falls back safely");
 same(repaired.previewYaw, 350, "negative orbit values normalize around the bag");
 same(normalizePreviewYaw(720), 0, "full rotations normalize to the front");
+
+const legacyTote = normalizeBagStudioSnapshot(
+  {
+    closure: "top-zipper",
+    draft: fallback.draft,
+  },
+  fallback,
+);
+same(legacyTote.bodyRecipe, "two-panel-tote", "older saves without a body recipe remain tote bodies");
+same(legacyTote.boxyDraft, fallback.boxyDraft, "older saves receive a safe boxy starter draft without changing their tote");
 
 const legacyRecessed = normalizeBagStudioSnapshot(
   {

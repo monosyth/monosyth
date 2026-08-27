@@ -16,6 +16,7 @@ import {
   clamp,
   formatDecimal,
   formatInches,
+  type BagBodyRecipe,
   type BagClosure,
   type BagPatternPlan,
 } from "@/lib/sewing/bag-pattern";
@@ -58,6 +59,7 @@ type SurfaceWindow = {
 };
 
 type BagOutcomePreviewProps = {
+  bodyRecipe: BagBodyRecipe;
   plan: BagPatternPlan;
   closure: BagClosure;
   options: BagOutcomeOptions;
@@ -465,6 +467,7 @@ type ProjectedBodySurface = {
 };
 
 export function BagOutcomePreview({
+  bodyRecipe,
   plan,
   closure,
   options,
@@ -609,15 +612,17 @@ export function BagOutcomePreview({
   const safeWidth = Math.max(0.5, plan.finishedBaseWidth);
   // One flat panel spans the front plus half of each side once the bag stands.
   // Subtracting the boxed depth converts that flat seam span to the visible rim.
-  const standingTopWidth = Math.max(
-    0,
-    plan.finishedTopOpening - plan.finishedDepth,
-  );
+  const boxy = bodyRecipe === "four-corner-boxy";
+  const standingTopWidth = boxy
+    ? Math.max(0, plan.finishedBaseWidth)
+    : Math.max(0, plan.finishedTopOpening - plan.finishedDepth);
   const safeTopWidth = Math.max(0.5, standingTopWidth);
   const safeHeight = Math.max(0.5, plan.finishedHeight);
   const safeDepth = Math.max(0.25, plan.finishedDepth);
-  const topCollapsesToZipper = closure === "top-zipper";
-  const bodyTopWidth = topCollapsesToZipper
+  const topCollapsesToZipper = !boxy && closure === "top-zipper";
+  const bodyTopWidth = boxy
+    ? safeWidth
+    : topCollapsesToZipper
     ? Math.max(0.5, plan.finishedTopOpening)
     : safeTopWidth;
   const normalizedYaw = quantizeYaw(previewYaw);
@@ -638,7 +643,9 @@ export function BagOutcomePreview({
     safeHeight + handleModel + orbitDiagonal * PROJECTION_PITCH + 2;
   const scale = Math.min(480 / modelWidth, 290 / modelHeight, 32);
   const baseline = 352 - (orbitDiagonal / 2) * PROJECTION_PITCH * scale;
-  const topCenterShift = (plan.leftTopInset - plan.rightTopInset) / 2;
+  const topCenterShift = boxy
+    ? 0
+    : (plan.leftTopInset - plan.rightTopInset) / 2;
   const frontTopZ = topCollapsesToZipper ? 0 : -safeDepth / 2;
   const backTopZ = topCollapsesToZipper ? 0 : safeDepth / 2;
   const frontTopLeft3: Point3 = { x: topCenterShift - bodyTopWidth / 2, y: safeHeight, z: frontTopZ };
@@ -656,36 +663,45 @@ export function BagOutcomePreview({
   const project = (point: Point3) =>
     projectPoint3(point, normalizedYaw, scale, baseline);
   const blankMinX = Math.min(0, plan.leftTopInset);
-  const stitchGeometry = calculatePanelStitchGeometry(plan);
+  const stitchGeometry = boxy ? null : calculatePanelStitchGeometry(plan);
   const toBlankX = (rawX: number) => rawX - blankMinX;
-  const flatTopLeft = toBlankX(stitchGeometry.topLeft.x);
-  const flatTopRight = toBlankX(stitchGeometry.topRight.x);
-  const frontWindow: SurfaceWindow = {
+  const flatTopLeft = boxy
+    ? plan.cornerCut
+    : toBlankX(stitchGeometry?.topLeft.x ?? 0);
+  const flatTopRight = boxy
+    ? Math.max(plan.cornerCut, plan.cutWidth - plan.cornerCut)
+    : toBlankX(stitchGeometry?.topRight.x ?? plan.cutWidth);
+  const toteFrontWindow: SurfaceWindow = {
     top: topCollapsesToZipper
       ? { start: flatTopLeft, end: flatTopRight }
       : {
           start: toBlankX(
-            stitchGeometry.topLeft.x + plan.finishedDepth / 2,
+            (stitchGeometry?.topLeft.x ?? 0) + plan.finishedDepth / 2,
           ),
           end: toBlankX(
-            stitchGeometry.topRight.x - plan.finishedDepth / 2,
+            (stitchGeometry?.topRight.x ?? plan.cutWidth) - plan.finishedDepth / 2,
           ),
         },
     bottom: {
       start: toBlankX(
-        stitchGeometry.leftSideBottom.x + plan.finishedDepth / 2,
+        (stitchGeometry?.leftSideBottom.x ?? 0) + plan.finishedDepth / 2,
       ),
       end: toBlankX(
-        stitchGeometry.rightSideBottom.x - plan.finishedDepth / 2,
+        (stitchGeometry?.rightSideBottom.x ?? plan.cutWidth) - plan.finishedDepth / 2,
       ),
     },
   };
+  const boxyFrontWindow: SurfaceWindow = {
+    top: { start: flatTopLeft, end: flatTopRight },
+    bottom: { start: flatTopLeft, end: flatTopRight },
+  };
+  const frontWindow = boxy ? boxyFrontWindow : toteFrontWindow;
   const leftSideWindow: SurfaceWindow = {
     top: topCollapsesToZipper
       ? { start: flatTopLeft, end: flatTopLeft }
       : { start: flatTopLeft, end: frontWindow.top.start },
     bottom: {
-      start: toBlankX(stitchGeometry.leftSideBottom.x),
+      start: boxy ? 0 : toBlankX(stitchGeometry?.leftSideBottom.x ?? 0),
       end: frontWindow.bottom.start,
     },
   };
@@ -695,7 +711,7 @@ export function BagOutcomePreview({
       : { start: frontWindow.top.end, end: flatTopRight },
     bottom: {
       start: frontWindow.bottom.end,
-      end: toBlankX(stitchGeometry.rightSideBottom.x),
+      end: boxy ? plan.cutWidth : toBlankX(stitchGeometry?.rightSideBottom.x ?? plan.cutWidth),
     },
   };
   const bodySurfaces: ProjectedBodySurface[] = [];
@@ -836,10 +852,15 @@ export function BagOutcomePreview({
     };
   }).sort((left, right) => right.depth - left.depth);
   const viewDetail = yawDescription(normalizedYaw);
-  const title = `${closureLabels[closure]} — ${viewDetail}`;
-  const accessibleDimensions = `${formatInches(plan.finishedBaseWidth)} wide by ${formatInches(plan.finishedHeight)} high by ${formatInches(plan.finishedDepth)} deep`;
+  const modelLabel = boxy ? "Boxy zipper bag" : closureLabels[closure];
+  const title = `${modelLabel} — ${viewDetail}`;
+  const accessibleDimensions = boxy
+    ? `${formatInches(plan.finishedBaseWidth)} long by ${formatInches(plan.finishedDepth)} wide by ${formatInches(plan.finishedHeight)} high`
+    : `${formatInches(plan.finishedBaseWidth)} wide by ${formatInches(plan.finishedHeight)} high by ${formatInches(plan.finishedDepth)} deep`;
   const outerBuildLabel = `${composition.modeLabel}${composition.design.mode !== "solid" ? ` on the ${composition.scopeLabel}` : ""}${composition.design.contrastEnabled ? ` with a ${formatInches(composition.design.contrastRise)} contrast bottom` : ""}`;
-  const closureNote = closure === "recessed-zipper"
+  const closureNote = boxy
+    ? "This is the true four-corner boxy body: a full horizontal top face, centered structural zipper, vertical end walls, and equal top and bottom box corners. Flat-panel patch placement is shown as a proportional surface concept."
+    : closure === "recessed-zipper"
     ? options.recessEndStyle === "boxed"
       ? "This is a generic recessed-plane concept view. The boxed end walls and fabric bulk are not modeled, and the vertical drop is only an estimate based on the selected panel depth."
       : "The floating zipper panel sits below the rim and stops short of both side seams by the measured end gaps; the vertical drop is approximate."
@@ -1099,7 +1120,7 @@ export function BagOutcomePreview({
             <ZipperLine
               from={topZipFrom}
               to={topZipTo}
-              label={`${formatInches(plan.finishedTopOpening)} TOP ZIP`}
+              label={`${formatInches(boxy ? plan.finishedBaseWidth : plan.finishedTopOpening)} TOP ZIP`}
             />
           ) : null}
 
@@ -1156,7 +1177,7 @@ export function BagOutcomePreview({
                 <DimensionLine
                   from={add(visibleFlatBottom[0], { x: 0, y: 26 })}
                   to={add(visibleFlatBottom[1], { x: 0, y: 26 })}
-                  label={`${formatInches(plan.finishedBaseWidth)} W`}
+                  label={`${formatInches(plan.finishedBaseWidth)} ${boxy ? "L" : "W"}`}
                   markerId={markerId}
                 />
               ) : null}
@@ -1171,7 +1192,7 @@ export function BagOutcomePreview({
                 <DimensionLine
                   from={add(visibleDepthBottom[0], { x: 0, y: 18 })}
                   to={add(visibleDepthBottom[1], { x: 0, y: 18 })}
-                  label={`${formatInches(plan.finishedDepth)} D`}
+                  label={`${formatInches(plan.finishedDepth)} ${boxy ? "W" : "D"}`}
                   markerId={markerId}
                 />
               ) : null}
@@ -1209,25 +1230,31 @@ export function BagOutcomePreview({
       {interactive ? <><div className={styles.outcomeReadout}>
         <div>
           <span>Finished shape</span>
-          <strong>{formatInches(plan.finishedBaseWidth)} W × {formatInches(plan.finishedHeight)} H × {formatInches(plan.finishedDepth)} D</strong>
+          <strong>{boxy
+            ? `${formatInches(plan.finishedBaseWidth)} L × ${formatInches(plan.finishedDepth)} W × ${formatInches(plan.finishedHeight)} H`
+            : `${formatInches(plan.finishedBaseWidth)} W × ${formatInches(plan.finishedHeight)} H × ${formatInches(plan.finishedDepth)} D`}</strong>
         </div>
         <div>
-          <span>{topCollapsesToZipper ? "Closed ridge / open-rim estimate" : "Approx. rim / flat top seam"}</span>
+          <span>{boxy ? "Zipper seam / top length" : topCollapsesToZipper ? "Closed ridge / open-rim estimate" : "Approx. rim / flat top seam"}</span>
           <strong>
-            {topCollapsesToZipper
+            {boxy
+              ? `${formatInches(plan.finishedFlatWidth)} / ${formatInches(plan.finishedBaseWidth)}`
+              : topCollapsesToZipper
               ? `${formatInches(plan.finishedTopOpening)} / ${formatInches(standingTopWidth)}`
               : `${formatInches(standingTopWidth)} / ${formatInches(plan.finishedTopOpening)}`}
           </strong>
         </div>
         <div>
-          <span>{closure === "open-tote" ? "Handle width / inset / depth" : "Side angles"}</span>
-          <strong>{closure === "open-tote"
+          <span>{boxy ? "Linked corners / raw square" : closure === "open-tote" ? "Handle width / inset / depth" : "Side angles"}</span>
+          <strong>{boxy
+            ? `4 per panel / ${formatInches(plan.cornerCut)}`
+            : closure === "open-tote"
             ? `${formatInches(options.handleWidth)} / ${formatInches(options.handleInset)} / ${formatInches(options.handleAttachmentDepth)}`
             : `${formatDecimal(plan.leftTopAngle, 1)}° / ${formatDecimal(plan.rightTopAngle, 1)}°`}</strong>
         </div>
         <div className={styles.outcomeClosureReadout}>
-          <span>Closure + outer build</span>
-          <strong>{closureLabels[closure]} · {composition.modeLabel}{composition.design.contrastEnabled ? " + contrast" : ""}</strong>
+          <span>{boxy ? "Body + outer build" : "Closure + outer build"}</span>
+          <strong>{modelLabel} · {composition.modeLabel}{composition.design.contrastEnabled ? " + contrast" : ""}</strong>
         </div>
       </div>
       <p className={styles.outcomeNote}><strong>{closureNote}</strong> The surface preview follows the selected {outerBuildLabel.toLowerCase()}. This is a proportional concept view based on stitch-line dimensions; fabric drape, foam, and turn-of-cloth can change the sewn silhouette.</p></> : null}
