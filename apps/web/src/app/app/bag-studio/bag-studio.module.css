@@ -2445,3 +2445,51 @@
   color: var(--ink);
 }
 
+.frenchSeamCard {
+  margin-top: .75rem;
+  padding: .75rem .85rem;
+  border: 1px solid rgba(246, 186, 76, .3);
+  border-radius: .75rem;
+  background: rgba(246, 186, 76, .06);
+}
+.frenchSeamCard header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .5rem;
+  margin-bottom: .45rem;
+}
+.frenchSeamCard header span {
+  color: var(--amber);
+  font: 700 .58rem/1 var(--font-ibm-plex-mono), monospace;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.frenchSeamCard header strong {
+  color: #f7eed7;
+  font: 600 .7rem/1.2 var(--font-ibm-plex-mono), monospace;
+}
+.frenchSeamCard p {
+  margin: 0 0 .35rem;
+  color: #d1dfdf;
+  font-size: .68rem;
+  line-height: 1.35;
+}
+.frenchSeamCard ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: #e4ecef;
+  font-size: .68rem;
+  line-height: 1.45;
+}
+.frenchSeamCard li {
+  margin-bottom: .25rem;
+}
+.warningNote {
+  display: block;
+  margin-top: .35rem;
+  color: #ff9e7d;
+  font-size: .65rem;
+  line-height: 1.35;
+}
+

@@ -63,6 +63,8 @@ const fallback: BagStudioSnapshot = {
   structureFeel: "woven-interfaced",
   pocketStyle: "none",
   pullTabs: true,
+  boxyHandleStyle: "side-handle",
+  boxyBoxingMethod: "pinch-french-seam",
   mirror: true,
   toolMode: "select",
   snapStep: 0.25,

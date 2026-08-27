@@ -18,6 +18,7 @@ import {
 } from "../src/lib/sewing/panel-composition";
 import { calculateRecessedZipperKit } from "../src/lib/sewing/recessed-zipper";
 import { calculateToteHandlePlan } from "../src/lib/sewing/tote-handle";
+import { calculateFrenchCornerPlan } from "../src/lib/sewing/corner-construction";
 
 let checks = 0;
 const near = (actual: number, expected: number, message: string) => {
@@ -415,4 +416,20 @@ yes(
   "cramped boxy corner explains the handling problem",
 );
 
+// French seam corner compensation calculations
+const frenchPlan1 = calculateFrenchCornerPlan(3, 0.25);
+yes(frenchPlan1.valid, "french corner plan with 3 inch target and 1/4 inch seam is valid");
+near(frenchPlan1.targetSpan, 3, "target span is 3 inches");
+near(frenchPlan1.targetHeight, 1.5, "target height is 1.5 inches");
+near(frenchPlan1.enclosingPassAllowance, 0.25, "enclosing pass allowance matches seam allowance");
+near(frenchPlan1.firstPassHeight, 1.25, "first pass height is compensated by seam allowance (1.5 - 0.25 = 1.25)");
+near(frenchPlan1.firstPassSpan, 2.5, "first pass span is compensated by 2x seam allowance (3 - 0.5 = 2.5)");
+near(frenchPlan1.trimAllowance, 0.125, "trim allowance is 1/8 inch");
+
+const frenchPlanHalfInch = calculateFrenchCornerPlan(5, 0.5);
+yes(frenchPlanHalfInch.valid, "french corner plan with 5 inch target and 1/2 inch seam is valid");
+near(frenchPlanHalfInch.firstPassSpan, 4, "5 inch target with 1/2 inch seam has 4 inch first pass span");
+near(frenchPlanHalfInch.firstPassHeight, 2, "5 inch target with 1/2 inch seam has 2 inch first pass height");
+
 process.stdout.write(`${checks} sewing-math checks passed\n`);
+

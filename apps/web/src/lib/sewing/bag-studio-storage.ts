@@ -19,6 +19,8 @@ export type BagStructureFeel =
   | "fleece-padded"
   | "foam-standing";
 export type BagPocketStyle = "none" | "single-slip" | "divided-slip";
+export type BagBoxyHandleStyle = "none" | "grab-tabs" | "side-handle" | "both";
+export type BagBoxyBoxingMethod = "four-corner-cut" | "pinch-french-seam";
 
 export type BagStudioClosureOptions = {
   handleMaterial: HandleMaterial;
@@ -53,6 +55,8 @@ export type BagStudioSnapshot = {
   structureFeel?: BagStructureFeel;
   pocketStyle?: BagPocketStyle;
   pullTabs?: boolean;
+  boxyHandleStyle?: BagBoxyHandleStyle;
+  boxyBoxingMethod?: BagBoxyBoxingMethod;
   mirror: boolean;
   toolMode: BagStudioToolMode;
   snapStep: BagStudioSnapStep;
@@ -69,7 +73,7 @@ export type SavedBagDesign = {
 };
 
 export type BagStudioStoredState = {
-  schemaVersion: 2;
+  schemaVersion: 3;
   workingCopy: {
     name: string;
     activeSavedBagId: string | null;
@@ -80,7 +84,7 @@ export type BagStudioStoredState = {
 };
 
 export const BAG_STUDIO_STORAGE_KEY = "monosyth:bag-pattern-studio:v1";
-export const BAG_STUDIO_SCHEMA_VERSION = 2;
+export const BAG_STUDIO_SCHEMA_VERSION = 3;
 export const MAX_SAVED_BAGS = 60;
 
 const closures: BagClosure[] = [
@@ -114,6 +118,8 @@ const structureFeels: BagStructureFeel[] = [
   "foam-standing",
 ];
 const pocketStyles: BagPocketStyle[] = ["none", "single-slip", "divided-slip"];
+const boxyHandleStyles: BagBoxyHandleStyle[] = ["none", "grab-tabs", "side-handle", "both"];
+const boxyBoxingMethods: BagBoxyBoxingMethod[] = ["four-corner-cut", "pinch-french-seam"];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -339,6 +345,16 @@ export function normalizeBagStudioSnapshot(
       fallback.pocketStyle ?? "none",
     ),
     pullTabs: booleanValue(input.pullTabs, fallback.pullTabs ?? true),
+    boxyHandleStyle: enumValue(
+      input.boxyHandleStyle,
+      boxyHandleStyles,
+      input.pullTabs === false ? "none" : fallback.boxyHandleStyle ?? "grab-tabs",
+    ),
+    boxyBoxingMethod: enumValue(
+      input.boxyBoxingMethod,
+      boxyBoxingMethods,
+      fallback.boxyBoxingMethod ?? "four-corner-cut",
+    ),
     mirror: booleanValue(input.mirror, fallback.mirror),
     toolMode: enumValue(input.toolMode, toolModes, fallback.toolMode),
     snapStep: enumValue(input.snapStep, snapSteps, fallback.snapStep),
@@ -515,4 +531,3 @@ export function decodeBagStudioShare(
   }
   return null;
 }
-

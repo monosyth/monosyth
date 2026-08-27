@@ -21,6 +21,9 @@ export type BoxyBagKit = {
   pullTabCutLength: number;
   pullTabCutWidth: number;
   pullTabQuantity: number;
+  sideHandleCutLength: number;
+  sideHandleCutWidth: number;
+  sideHandleQuantity: number;
 };
 
 /**
@@ -145,6 +148,9 @@ export function calculateBoxyBagKit(plan: BagPatternPlan): BoxyBagKit {
     pullTabCutLength: 2.5,
     pullTabCutWidth: 2,
     pullTabQuantity: 2,
+    sideHandleCutLength: 9,
+    sideHandleCutWidth: 3,
+    sideHandleQuantity: 1,
   };
 }
 

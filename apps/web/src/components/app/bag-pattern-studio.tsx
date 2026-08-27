@@ -63,6 +63,8 @@ import {
   encodeBagStudioShare,
   readBagStudioState,
   writeBagStudioState,
+  type BagBoxyBoxingMethod,
+  type BagBoxyHandleStyle,
   type BagPocketStyle,
   type BagStructureFeel,
   type BagStudioClosureOptions,
@@ -79,6 +81,7 @@ import {
   calculateRecessedZipperKit,
   recessedPanelFinishedLength,
 } from "@/lib/sewing/recessed-zipper";
+import { calculateFrenchCornerPlan } from "@/lib/sewing/corner-construction";
 
 type SizeBasis = BagStudioSizeBasis;
 type BodyRecipe = BagBodyRecipe;
@@ -200,6 +203,16 @@ const sizePresets: ReadonlyArray<BagSizePreset> = [
     height: 4.5,
   },
   {
+    id: "boxy-makeup",
+    label: "Boxy Makeup Bag",
+    dimensions: "9″ × 5″ × 4½″",
+    description: "Wide-base cosmetics caddy with side carry loop and stand-up walls (Shannon's Summer Sewing Day 7)",
+    bodyRecipe: "four-corner-boxy",
+    baseWidth: 9,
+    depth: 5,
+    height: 4.5,
+  },
+  {
     id: "boxy-caddy",
     label: "Large Travel Caddy",
     dimensions: "11″ × 6″ × 5″",
@@ -293,6 +306,58 @@ const pocketChoices: ReadonlyArray<{
     id: "divided-slip",
     label: "Divided slip pocket",
     description: "Dual-compartment patch pocket with center divider stitch line",
+  },
+];
+
+const boxyHandleChoices: ReadonlyArray<{
+  id: BagBoxyHandleStyle;
+  label: string;
+  detail: string;
+  description: string;
+}> = [
+  {
+    id: "side-handle",
+    label: "Side carry loop",
+    detail: "1× 3″ × 9″ strip",
+    description: "Sturdy carry loop across one boxed end (like Shannon's Makeup Bag)",
+  },
+  {
+    id: "grab-tabs",
+    label: "2× Pinch tabs",
+    detail: "2× 2″ × 2½″ tabs",
+    description: "Compact pull tabs at both zipper ends for easy opening and closing",
+  },
+  {
+    id: "both",
+    label: "Strap + Tab",
+    detail: "1 loop + 1 tab",
+    description: "Side carry loop on one end, pinch pull tab on the other",
+  },
+  {
+    id: "none",
+    label: "Clean ends",
+    detail: "No tabs",
+    description: "Plain minimalist boxed corners with no external tabs",
+  },
+];
+
+const boxyBoxingChoices: ReadonlyArray<{
+  id: BagBoxyBoxingMethod;
+  label: string;
+  detail: string;
+  description: string;
+}> = [
+  {
+    id: "pinch-french-seam",
+    label: "Pinch & French Seam",
+    detail: "Shannon's method (no cutouts)",
+    description: "Sew full rectangles, pinch 3″ corner triangles outside, trim, and enclose raw edges in French seams",
+  },
+  {
+    id: "four-corner-cut",
+    label: "Pre-cut 4 Corner Squares",
+    detail: "Flat-pack cutouts",
+    description: "Mark and remove corner squares before assembly for classic boxed corners",
   },
 ];
 
@@ -428,9 +493,12 @@ function getCutPieces(
   structureFeel: BagStructureFeel = "woven-interfaced",
   pocketStyle: BagPocketStyle = "none",
   pullTabs = true,
+  boxyHandleStyle: BagBoxyHandleStyle = "side-handle",
+  boxyBoxingMethod: BagBoxyBoxingMethod = "pinch-french-seam",
 ): CutPiece[] {
   const interfacing = calculateInterfacingPlan(plan, structureFeel);
   const pocket = calculatePocketPlan(plan, pocketStyle);
+  const isFrenchSeam = bodyRecipe === "four-corner-boxy" && boxyBoxingMethod === "pinch-french-seam";
   const pieces: CutPiece[] = [
     ...composition.cutPieces,
     {
@@ -442,7 +510,9 @@ function getCutPieces(
       width: plan.boundingCutWidth,
       height: plan.cutHeight,
       note: bodyRecipe === "four-corner-boxy"
-        ? `Mark and remove a ${formatInches(plan.cornerCut)} square from all four corners of each panel.`
+        ? isFrenchSeam
+          ? "Cut full matching rectangles (do NOT pre-cut corners). Corners are pinched and French-seamed after tube assembly."
+          : `Mark and remove a ${formatInches(plan.cornerCut)} square from all four corners of each panel.`
         : "Use the same corner and shaping marks as the outer.",
     },
   ];
@@ -471,16 +541,50 @@ function getCutPieces(
     });
   }
 
-  if (bodyRecipe === "four-corner-boxy" && pullTabs) {
+  if (bodyRecipe === "four-corner-boxy") {
     const kit = calculateBoxyBagKit(plan);
-    pieces.push({
-      material: "outer",
-      name: "Zipper grab tab",
-      quantity: kit.pullTabQuantity,
-      width: kit.pullTabCutWidth,
-      height: kit.pullTabCutLength,
-      note: "Fold in half lengthwise to make 1″ × 2″ grab tabs. Baste over zipper tape ends before boxing.",
-    });
+    const style = boxyHandleStyle ?? (pullTabs ? "grab-tabs" : "none");
+    if (isFrenchSeam) {
+      pieces.push({
+        material: "outer",
+        name: "Zipper end tab (3″ × 3″)",
+        quantity: 2,
+        width: 3,
+        height: 3,
+        note: "Fold in half over zipper tape ends and topstitch before assembling tube ends (Shannon's method).",
+      });
+      if (style === "side-handle" || style === "both") {
+        pieces.push({
+          material: "outer",
+          name: "Side carry loop strap",
+          quantity: 1,
+          width: 4,
+          height: 9,
+          note: "Fold in fourths lengthwise to 1″ wide. Edgestitch both edges and baste across one boxed end seam.",
+        });
+      }
+    } else {
+      if (style === "grab-tabs" || style === "both") {
+        pieces.push({
+          material: "outer",
+          name: "Zipper grab tab",
+          quantity: style === "both" ? 1 : kit.pullTabQuantity,
+          width: kit.pullTabCutWidth,
+          height: kit.pullTabCutLength,
+          note: "Fold in half lengthwise to make 1″ × 2″ grab tabs. Baste over zipper tape ends before boxing.",
+        });
+      }
+      if (style === "side-handle" || style === "both") {
+        pieces.push({
+          material: "outer",
+          name: "Side carry loop strap",
+          quantity: kit.sideHandleQuantity,
+          width: kit.sideHandleCutWidth,
+          height: kit.sideHandleCutLength,
+          note: "Fold in fourths lengthwise to 3/4″ wide. Baste into carry loop across one boxed end seam.",
+        });
+      }
+    }
   }
 
   if (closure === "open-tote") {
@@ -624,7 +728,23 @@ function boxyBagSewingSteps(
   structureFeel: BagStructureFeel = "woven-interfaced",
   pocketStyle: BagPocketStyle = "none",
   pullTabs = true,
+  boxyHandleStyle: BagBoxyHandleStyle = "side-handle",
+  boxyBoxingMethod: BagBoxyBoxingMethod = "pinch-french-seam",
 ) {
+  if (boxyBoxingMethod === "pinch-french-seam") {
+    return [
+      structureFeel === "draped"
+        ? "1. Label outer and lining panels and zipper edges."
+        : "1. Fuse fleece or foam to wrong side of outer panels. (Optional: Quilt vertical or diamond channels with fabric pen lines and sew brand label 1.5″ below zipper edge).",
+      "2. Apply double-sided fabric tape along top edge of Outer A. Separate nylon zipper and stick one side teeth face-down. Apply tape over zipper, position Lining A face-down, and sew across using fabric edge as guide. Press and topstitch. Repeat for Side B.",
+      "3. Re-thread zipper pull onto coil. Sew 3″ × 3″ fabric tabs over both zipper ends, then trim excess zipper flush with panel edges.",
+      "4. Sew outer bottom seam all the way across. Sew lining bottom seam leaving a 4″ turning gap. OPEN ZIPPER HALFWAY!",
+      "5. Flatten tube with bottom seam centered over zipper. Sew across both short ends through all layers. Clip 4 outer corners at 45° and turn right-side out through lining gap. Stitch lining gap closed.",
+      `6. From outside, pinch each of the 4 corners into an isosceles triangle with seam centered. Measure and draw a ${formatInches(plan.cornerCut * 2)} (or 3″) line straight across all 4 corner triangles; sew along lines and trim excess corners close to stitching.`,
+      "7. Attach 4″ × 9″ folded carry handle across one end seam. Turn inside-out again, and sew French seams on all 4 corners to completely enclose raw edges with no bias binding needed!",
+    ];
+  }
+
   const steps = [
     structureFeel === "draped"
       ? "Label every panel and its zipper edge."
@@ -642,15 +762,29 @@ function boxyBagSewingSteps(
     "Sandwich one zipper side between Outer A and Lining A; sew and topstitch. Repeat with the B panels.",
   );
 
-  if (pullTabs) {
+  if (boxyHandleStyle === "side-handle" || boxyHandleStyle === "both") {
     steps.push(
-      "Fold both grab tabs in half (raw ends aligned). Baste one tab centered over the zipper tape at each end with folds facing inward toward the pouch center.",
+      "Prepare side carry strap: fold strip in fourths lengthwise to 3/4″ wide, and edgestitch both sides.",
+    );
+  }
+
+  if (boxyHandleStyle === "grab-tabs" || (boxyHandleStyle === undefined && pullTabs)) {
+    steps.push(
+      "Fold both 2″ × 2½″ grab tabs in half. Baste one tab centered over zipper tape at each end with fold pointing toward bag center.",
+    );
+  } else if (boxyHandleStyle === "side-handle") {
+    steps.push(
+      "Loop side carry strap across one zipper end, aligning raw ends with raw cutout edge below zipper center; baste in place.",
+    );
+  } else if (boxyHandleStyle === "both") {
+    steps.push(
+      "Baste grab tab at one zipper end, and loop side carry strap across opposite zipper end; baste both before boxing.",
     );
   }
 
   steps.push(
     `Arrange outer panels right sides together and lining panels right sides together. Sew only the straight side seams between the cutouts with the selected ${formatInches(plan.seamAllowance)} allowance.`,
-    "Close the zipper almost fully, keeping the pull out of the seam area. At one upper opening, align the outer and lining side seams with the zipper center, then sew one combined boxed-end seam through the four fabric layers and nylon zipper. Repeat at the other zipper end.",
+    "Close the zipper almost fully, keeping the pull out of the seam area. At one upper opening, align the outer and lining side seams with the zipper center, then sew one combined boxed-end seam through the four fabric layers, nylon zipper, and handle/tab. Repeat at the other zipper end.",
     "Open the zipper fully. Sew the outer bottom seam, then the lining bottom seam while leaving a generous turning gap.",
     `Match and sew the four remaining lower openings separately with the selected ${formatInches(plan.seamAllowance)} allowance: two outer box seams and two lining box seams.`,
     "Turn through the lining gap, check both zipper ends, close the gap, and gently shape the finished box.",
@@ -706,6 +840,8 @@ function buildPlanText(
   structureFeel: BagStructureFeel = "woven-interfaced",
   pocketStyle: BagPocketStyle = "none",
   pullTabs = true,
+  boxyHandleStyle: BagBoxyHandleStyle = "side-handle",
+  boxyBoxingMethod: BagBoxyBoxingMethod = "pinch-french-seam",
 ) {
   const closureLabel =
     closureChoices.find((choice) => choice.id === closure)?.label ?? closure;
@@ -713,7 +849,7 @@ function buildPlanText(
     (choice) => choice.id === bodyRecipe,
   )?.label ?? bodyRecipe;
   const sewingSteps = bodyRecipe === "four-corner-boxy"
-    ? boxyBagSewingSteps(plan, structureFeel, pocketStyle, pullTabs)
+    ? boxyBagSewingSteps(plan, structureFeel, pocketStyle, pullTabs, boxyHandleStyle, boxyBoxingMethod)
     : toteBagSewingSteps(plan, closure, options, structureFeel, pocketStyle);
   const lines = [
     "MONOSYTH BAG PATTERN STUDIO",
@@ -2653,6 +2789,8 @@ export function BagPatternStudio() {
   const [structureFeel, setStructureFeel] = useState<BagStructureFeel>("woven-interfaced");
   const [pocketStyle, setPocketStyle] = useState<BagPocketStyle>("none");
   const [pullTabs, setPullTabs] = useState(true);
+  const [boxyHandleStyle, setBoxyHandleStyle] = useState<BagBoxyHandleStyle>("side-handle");
+  const [boxyBoxingMethod, setBoxyBoxingMethod] = useState<BagBoxyBoxingMethod>("pinch-french-seam");
   const [mirror, setMirror] = useState(true);
   const [toolMode, setToolMode] = useState<ToolMode>("select");
   const [snapStep, setSnapStep] = useState<SnapStep>(0.5);
@@ -2695,6 +2833,8 @@ export function BagPatternStudio() {
       structureFeel,
       pocketStyle,
       pullTabs,
+      boxyHandleStyle,
+      boxyBoxingMethod,
       mirror,
       toolMode,
       snapStep,
@@ -2704,7 +2844,9 @@ export function BagPatternStudio() {
     [
       basis,
       bodyRecipe,
+      boxyBoxingMethod,
       boxyDraft,
+      boxyHandleStyle,
       closure,
       closureOptions,
       fabricSettings,
@@ -2780,6 +2922,8 @@ export function BagPatternStudio() {
       setStructureFeel(snapshot.structureFeel ?? "woven-interfaced");
       setPocketStyle(snapshot.pocketStyle ?? "none");
       setPullTabs(snapshot.pullTabs ?? true);
+      setBoxyHandleStyle(snapshot.boxyHandleStyle ?? (snapshot.pullTabs === false ? "none" : "side-handle"));
+      setBoxyBoxingMethod(snapshot.boxyBoxingMethod ?? "pinch-french-seam");
       setMirror(snapshot.mirror);
       setToolMode(snapshot.toolMode);
       setSnapStep(snapshot.snapStep);
@@ -2853,6 +2997,8 @@ export function BagPatternStudio() {
       structureFeel,
       pocketStyle,
       pullTabs,
+      boxyHandleStyle,
+      boxyBoxingMethod,
     ),
     [
       plan,
@@ -2864,14 +3010,16 @@ export function BagPatternStudio() {
       structureFeel,
       pocketStyle,
       pullTabs,
+      boxyHandleStyle,
+      boxyBoxingMethod,
     ],
   );
   const sewingSteps = useMemo(
     () =>
       bodyRecipe === "four-corner-boxy"
-        ? boxyBagSewingSteps(plan, structureFeel, pocketStyle, pullTabs)
+        ? boxyBagSewingSteps(plan, structureFeel, pocketStyle, pullTabs, boxyHandleStyle, boxyBoxingMethod)
         : toteBagSewingSteps(plan, closure, closureOptions, structureFeel, pocketStyle),
-    [bodyRecipe, plan, structureFeel, pocketStyle, pullTabs, closure, closureOptions],
+    [bodyRecipe, plan, structureFeel, pocketStyle, pullTabs, boxyHandleStyle, boxyBoxingMethod, closure, closureOptions],
   );
   const closureWarnings = useMemo(() => {
     const warnings: string[] = [];
@@ -3975,23 +4123,71 @@ export function BagPatternStudio() {
               <section className={styles.shapeSection}>
                 <div className={styles.subhead}>
                   <div>
-                    <span>Linked box corners</span>
-                    <strong>All four stay equal</strong>
+                    <span>Corner construction</span>
+                    <strong>Boxing method</strong>
                   </div>
                 </div>
-                <p>Keeping every square identical creates the true rectangular box. A later advanced method can unlock tapered top and bottom corners.</p>
-                <div className={styles.grabTabSection}>
-                  <label className={styles.toggleField}>
-                    <input
-                      type="checkbox"
-                      checked={pullTabs}
-                      onChange={(e) => setPullTabs(e.target.checked)}
-                    />
-                    <span>
-                      <strong>Zipper grab tabs (2× pull tabs)</strong>
-                      <small>Includes two 2″ × 2½″ cut tabs folded and basted to zipper ends</small>
-                    </span>
-                  </label>
+                <div className={styles.structureGrid}>
+                  {boxyBoxingChoices.map((choice) => (
+                    <button
+                      type="button"
+                      key={choice.id}
+                      aria-pressed={boxyBoxingMethod === choice.id}
+                      className={boxyBoxingMethod === choice.id ? styles.structureActive : ""}
+                      onClick={() => setBoxyBoxingMethod(choice.id)}
+                    >
+                      <strong>{choice.label}</strong>
+                      <b>{choice.detail}</b>
+                      <small>{choice.description}</small>
+                    </button>
+                  ))}
+                </div>
+
+                {boxyBoxingMethod === "pinch-french-seam" && (
+                  <div className={styles.frenchSeamCard}>
+                    <header>
+                      <span>📐 Compensated 2-pass math</span>
+                      <strong>Pass 1 compensation</strong>
+                    </header>
+                    {(() => {
+                      const frenchPlan = calculateFrenchCornerPlan(plan.cornerCut * 2, plan.seamAllowance);
+                      return (
+                        <div>
+                          <p>To keep finished {formatInches(plan.finishedDepth)} box depth accurate after enclosing raw edges:</p>
+                          <ul>
+                            {frenchPlan.guidance.map((g) => (
+                              <li key={g}>{g}</li>
+                            ))}
+                          </ul>
+                          {frenchPlan.warnings.map((w) => (
+                            <small key={w} className={styles.warningNote}>⚠️ {w}</small>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                <div className={styles.subhead} style={{ marginTop: "1rem" }}>
+                  <div>
+                    <span>End attachments</span>
+                    <strong>Handles & pull tabs</strong>
+                  </div>
+                </div>
+                <div className={styles.structureGrid}>
+                  {boxyHandleChoices.map((choice) => (
+                    <button
+                      type="button"
+                      key={choice.id}
+                      aria-pressed={boxyHandleStyle === choice.id}
+                      className={boxyHandleStyle === choice.id ? styles.structureActive : ""}
+                      onClick={() => setBoxyHandleStyle(choice.id)}
+                    >
+                      <strong>{choice.label}</strong>
+                      <b>{choice.detail}</b>
+                      <small>{choice.description}</small>
+                    </button>
+                  ))}
                 </div>
               </section>
             )}
