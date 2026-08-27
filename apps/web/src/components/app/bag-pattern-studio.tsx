@@ -494,7 +494,7 @@ function buildPlanText(
     `Seam allowance: ${formatInches(plan.seamAllowance)}`,
     `Raw-edge corner square: ${formatInches(plan.cornerCut)} × ${formatInches(plan.cornerCut)}`,
     bodyRecipe === "four-corner-boxy"
-      ? `Corner rule: ${formatInches(plan.cornerCut)} × 2 = ${formatInches(plan.finishedHeight)} finished height; cut all four corners of every panel`
+      ? `Corner rule: ${formatInches(plan.cornerCut)} × 2 = ${formatInches(plan.finishedDepth)} finished width; cut all four corners of every panel`
       : `Corner rule: ${formatInches(plan.cornerCut)} × 2 = ${formatInches(plan.finishedDepth)} finished depth`,
     "",
     "OUTER PANEL BUILD",
@@ -2944,17 +2944,17 @@ export function BagPatternStudio() {
         updateDraft({
           ...draft,
           cutWidth:
-            nextValue + current.finishedHeight + draft.seamAllowance * 2,
-        });
-      }
-      if (key === "depth") {
-        updateDraft({
-          ...draft,
-          cutHeight:
-            nextValue + current.finishedHeight + draft.seamAllowance * 2,
+            nextValue + current.finishedDepth + draft.seamAllowance * 2,
         });
       }
       if (key === "height") {
+        updateDraft({
+          ...draft,
+          cutHeight:
+            nextValue + current.finishedDepth + draft.seamAllowance * 2,
+        });
+      }
+      if (key === "depth") {
         updateDraft({
           ...draft,
           cornerCut: nextValue / 2,
@@ -2963,7 +2963,7 @@ export function BagPatternStudio() {
             nextValue +
             draft.seamAllowance * 2,
           cutHeight:
-            current.finishedDepth +
+            current.finishedHeight +
             nextValue +
             draft.seamAllowance * 2,
         });
@@ -3023,11 +3023,11 @@ export function BagPatternStudio() {
         topTakeUp: 0,
         cutWidth:
           plan.finishedBaseWidth +
-          plan.finishedHeight +
+          plan.finishedDepth +
           seamAllowance * 2,
         cutHeight:
-          plan.finishedDepth +
           plan.finishedHeight +
+          plan.finishedDepth +
           seamAllowance * 2,
       });
       return;
@@ -3448,8 +3448,8 @@ export function BagPatternStudio() {
               {basis === "finished" ? (
                 <>
                   <MeasurementField label={bodyRecipe === "four-corner-boxy" ? "Finished length" : "Bottom / base width"} hint={bodyRecipe === "four-corner-boxy" ? "along the centered zipper" : "finished front edge at the floor"} value={plan.finishedBaseWidth} min={1} onChange={(value) => updateFinished("baseWidth", value)} />
-                  <MeasurementField label="Standing height" hint={bodyRecipe === "four-corner-boxy" ? "created by all four corner squares" : "finished rim to bottom plane"} value={plan.finishedHeight} min={1} onChange={(value) => updateFinished("height", value)} />
-                  <MeasurementField label={bodyRecipe === "four-corner-boxy" ? "Finished width" : "Bag depth"} hint="front-to-back finished space" value={plan.finishedDepth} min={1} onChange={(value) => updateFinished("depth", value)} />
+                  <MeasurementField label="Standing height" hint={bodyRecipe === "four-corner-boxy" ? "finished rim to bottom plane" : "finished rim to bottom plane"} value={plan.finishedHeight} min={1} onChange={(value) => updateFinished("height", value)} />
+                  <MeasurementField label={bodyRecipe === "four-corner-boxy" ? "Finished width" : "Bag depth"} hint={bodyRecipe === "four-corner-boxy" ? "created by all four corner squares" : "front-to-back finished space"} value={plan.finishedDepth} min={1} onChange={(value) => updateFinished("depth", value)} />
                 </>
               ) : (
                 <>
@@ -3483,7 +3483,7 @@ export function BagPatternStudio() {
                   <span>Box-corner experiment</span>
                   <strong>{formatInches(draft.cornerCut)} square</strong>
                 </div>
-                <span className={styles.depthPill}>{bodyRecipe === "four-corner-boxy" ? `${formatInches(plan.finishedHeight)} high` : `${formatInches(plan.finishedDepth)} deep`}</span>
+                <span className={styles.depthPill}>{bodyRecipe === "four-corner-boxy" ? `${formatInches(plan.finishedDepth)} wide` : `${formatInches(plan.finishedDepth)} deep`}</span>
               </div>
               <input
                 className={styles.range}
@@ -3512,10 +3512,10 @@ export function BagPatternStudio() {
               <div className={styles.cornerEquation}>
                 <span>{formatInches(draft.cornerCut)}</span>
                 <i>× 2</i>
-                <span>{formatInches(bodyRecipe === "four-corner-boxy" ? plan.finishedHeight : plan.finishedDepth)}</span>
+                <span>{formatInches(plan.finishedDepth)}</span>
                 <small>raw square</small>
                 <small />
-                <small>{bodyRecipe === "four-corner-boxy" ? "finished height" : "finished depth"}</small>
+                <small>{bodyRecipe === "four-corner-boxy" ? "finished width" : "finished depth"}</small>
               </div>
               {bodyRecipe === "four-corner-boxy" ? (
                 <div className={`${styles.boxyShapeCheck} ${boxyHasTallProportions ? styles.boxyShapeAlert : ""}`} aria-live="polite">
@@ -3532,8 +3532,8 @@ export function BagPatternStudio() {
                       <dd>{formatInches(draft.cutWidth)} − {formatInches(draft.cornerCut * 2)} corners − {formatInches(draft.seamAllowance * 2)} seams = {formatInches(plan.finishedBaseWidth)}</dd>
                     </div>
                     <div>
-                      <dt>Finished width</dt>
-                      <dd>{formatInches(draft.cutHeight)} − {formatInches(draft.cornerCut * 2)} corners − {formatInches(draft.seamAllowance * 2)} seams = {formatInches(plan.finishedDepth)}</dd>
+                      <dt>Finished height</dt>
+                      <dd>{formatInches(draft.cutHeight)} − {formatInches(draft.cornerCut * 2)} corners − {formatInches(draft.seamAllowance * 2)} seams = {formatInches(plan.finishedHeight)}</dd>
                     </div>
                   </dl>
                   {boxyHasTallProportions && Math.abs(balancedBoxyCorner - draft.cornerCut) > 0.001 ? (
@@ -3551,8 +3551,8 @@ export function BagPatternStudio() {
               ) : null}
               <p>{bodyRecipe === "four-corner-boxy"
                 ? basis === "finished"
-                  ? "Finished mode keeps the length and width while all four linked corner squares change the height."
-                  : "Cut-first mode keeps the rectangles fixed: a larger square makes the box taller while shortening its length and width."
+                  ? "Finished mode keeps the length and height while all four linked corner squares change the width."
+                  : "Cut-first mode keeps the rectangles fixed: a larger square makes the box wider while shortening its length and height."
                 : basis === "finished"
                   ? "Finished mode keeps your base width and height while the panel grows or shrinks."
                   : "Cut-panel mode keeps the fabric fixed so you can see exactly what a larger corner steals."}</p>

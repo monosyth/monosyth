@@ -312,8 +312,8 @@ const easyCutBoxy = calculateBoxyBagPlan({
   fabricWidth: 44,
 });
 near(easyCutBoxy.finishedBaseWidth, 10, "easy-cut boxy length");
-near(easyCutBoxy.finishedDepth, 4, "easy-cut boxy width");
 near(easyCutBoxy.finishedHeight, 4, "easy-cut boxy height");
+near(easyCutBoxy.finishedDepth, 4, "easy-cut boxy width");
 near(easyCutBoxy.finishedFlatWidth, 10.5, "easy-cut zipper sewing span");
 yes(easyCutBoxy.valid, "easy-cut boxy draft is valid");
 
@@ -324,8 +324,8 @@ const tallNarrowBoxy = calculateBoxyBagPlan({
   cornerCut: 2.75,
 });
 near(tallNarrowBoxy.finishedBaseWidth, 5.5, "large boxy corners leave the expected finished length");
-near(tallNarrowBoxy.finishedDepth, 2.5, "large boxy corners leave the expected narrow width");
-near(tallNarrowBoxy.finishedHeight, 5.5, "large boxy corners create twice their size in height");
+near(tallNarrowBoxy.finishedHeight, 2.5, "large boxy corners leave the expected short height");
+near(tallNarrowBoxy.finishedDepth, 5.5, "large boxy corners create twice their size in width");
 near(tallNarrowBoxy.finishedFlatWidth, 6, "raw zipper edge remains one half inch longer than the finished zipper line");
 yes(tallNarrowBoxy.valid, "a tall narrow boxy draft remains valid even when its proportions are unusual");
 
@@ -337,8 +337,8 @@ const halfInchBoxy = calculateBoxyBagPlan({
   seamAllowance: 0.5,
 });
 near(halfInchBoxy.finishedBaseWidth, 7, "half-inch-seam boxy length");
-near(halfInchBoxy.finishedDepth, 3, "half-inch-seam boxy width");
-near(halfInchBoxy.finishedHeight, 4, "boxy corner square controls finished height");
+near(halfInchBoxy.finishedHeight, 3, "half-inch-seam boxy height");
+near(halfInchBoxy.finishedDepth, 4, "boxy corner square controls finished width");
 
 for (const size of [
   { length: 7, width: 3, height: 4 },
@@ -363,10 +363,10 @@ const impossibleBoxy = calculateBoxyBagPlan({
   ...easyCutBoxy,
   cutHeight: 4.5,
 });
-yes(!impossibleBoxy.valid, "boxy draft rejects corners that consume the panel width");
+yes(!impossibleBoxy.valid, "boxy draft rejects corners that consume the panel height");
 yes(
-  impossibleBoxy.warnings.some((warning) => warning.includes("width")),
-  "invalid boxy width explains what must change",
+  impossibleBoxy.warnings.some((warning) => warning.includes("height")),
+  "invalid boxy height explains what must change",
 );
 
 const crampedBoxy = calculateBoxyBagPlan({

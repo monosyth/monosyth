@@ -28,20 +28,20 @@ export type BoxyBagKit = {
  * from all four corners. With one seam allowance used throughout:
  *
  * length = panel length - 2 × corner - 2 × seam
- * width  = panel width  - 2 × corner - 2 × seam
- * height = 2 × corner
+ * height = panel height - 2 × corner - 2 × seam
+ * width  = 2 × corner
  */
 export function calculateBoxyBagPlan(
   draft: BagPatternDraft,
 ): BagPatternPlan {
-  const finishedHeight = Math.max(0, draft.cornerCut * 2);
+  const finishedDepth = Math.max(0, draft.cornerCut * 2);
   const finishedBaseWidth = Math.max(
     0,
-    draft.cutWidth - finishedHeight - draft.seamAllowance * 2,
+    draft.cutWidth - draft.cornerCut * 2 - draft.seamAllowance * 2,
   );
-  const finishedDepth = Math.max(
+  const finishedHeight = Math.max(
     0,
-    draft.cutHeight - finishedHeight - draft.seamAllowance * 2,
+    draft.cutHeight - draft.cornerCut * 2 - draft.seamAllowance * 2,
   );
   const installedZipperSeam = Math.max(
     0,
@@ -67,14 +67,14 @@ export function calculateBoxyBagPlan(
   if (finishedBaseWidth <= 0) {
     warnings.push("The corner squares consume the entire boxy-bag length.");
   }
-  if (finishedDepth <= 0) {
-    warnings.push("The corner squares consume the entire boxy-bag width.");
+  if (finishedHeight <= 0) {
+    warnings.push("The corner squares consume the entire boxy-bag height.");
   }
   if (finishedBaseWidth > 0 && finishedBaseWidth < 2) {
     warnings.push("Leave at least 2 inches of finished boxy-bag length for a practical zipper opening.");
   }
-  if (finishedDepth > 0 && finishedDepth < 1) {
-    warnings.push("Leave at least 1 inch of finished boxy-bag width so the box seams can turn cleanly.");
+  if (finishedHeight > 0 && finishedHeight < 1) {
+    warnings.push("Leave at least 1 inch of finished boxy-bag height so the box seams can turn cleanly.");
   }
   if (installedZipperSeam > 0 && installedZipperSeam < 2.5) {
     warnings.push("Leave at least 2 1/2 inches between the upper corner squares for the zipper seam.");
@@ -83,7 +83,7 @@ export function calculateBoxyBagPlan(
     warnings.push("Use a longer cut rectangle or smaller corner squares.");
   }
   if (draft.cornerCut * 2 + draft.seamAllowance * 2 >= draft.cutHeight) {
-    warnings.push("Use a wider cut rectangle or smaller corner squares.");
+    warnings.push("Use a taller cut rectangle or smaller corner squares.");
   }
 
   return {
@@ -117,10 +117,10 @@ export function draftFromFinishedBoxyBag({
   seamAllowance: number;
   fabricWidth?: number;
 }): BagPatternDraft {
-  const cornerCut = height / 2;
+  const cornerCut = width / 2;
   return {
-    cutWidth: length + height + seamAllowance * 2,
-    cutHeight: width + height + seamAllowance * 2,
+    cutWidth: length + width + seamAllowance * 2,
+    cutHeight: height + width + seamAllowance * 2,
     cornerCut,
     seamAllowance,
     topTakeUp: 0,
@@ -145,7 +145,7 @@ export function calculateBoxyBagKit(plan: BagPatternPlan): BoxyBagKit {
 export function boxyBagFormulaText(plan: BagPatternPlan) {
   return [
     `Length: ${formatInches(plan.cutWidth)} cut − 2 × ${formatInches(plan.cornerCut)} corner − 2 × ${formatInches(plan.seamAllowance)} seam = ${formatInches(plan.finishedBaseWidth)}`,
-    `Width: ${formatInches(plan.cutHeight)} cut − 2 × ${formatInches(plan.cornerCut)} corner − 2 × ${formatInches(plan.seamAllowance)} seam = ${formatInches(plan.finishedDepth)}`,
-    `Height: 2 × ${formatInches(plan.cornerCut)} corner = ${formatInches(plan.finishedHeight)}`,
+    `Height: ${formatInches(plan.cutHeight)} cut − 2 × ${formatInches(plan.cornerCut)} corner − 2 × ${formatInches(plan.seamAllowance)} seam = ${formatInches(plan.finishedHeight)}`,
+    `Width: 2 × ${formatInches(plan.cornerCut)} corner = ${formatInches(plan.finishedDepth)}`,
   ];
 }
