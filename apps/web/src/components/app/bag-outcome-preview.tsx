@@ -289,6 +289,30 @@ function SurfaceBuild({
       {cellPolygons.map((cell) => (
         <polygon key={cell.key} points={points(cell.corners)} fill={cell.color} />
       ))}
+      {pieced ? (
+        <g aria-hidden="true">
+          {visibleRowSegments.slice(1).map((row) => (
+            <line
+              key={`row-seam-${row.globalIndex}`}
+              className={styles.outcomePiecingSeam}
+              x1={pointOnQuad(quad, 0, row.topRatio).x}
+              y1={pointOnQuad(quad, 0, row.topRatio).y}
+              x2={pointOnQuad(quad, 1, row.topRatio).x}
+              y2={pointOnQuad(quad, 1, row.topRatio).y}
+            />
+          ))}
+          {visibleColumnSegments.slice(1).map((col) => (
+            <line
+              key={`col-seam-${col.globalIndex}`}
+              className={styles.outcomePiecingSeam}
+              x1={pointOnQuad(quad, projectRawX(col.left, 0), 0).x}
+              y1={pointOnQuad(quad, projectRawX(col.left, 0), 0).y}
+              x2={pointOnQuad(quad, projectRawX(col.left, 1), 1).x}
+              y2={pointOnQuad(quad, projectRawX(col.left, 1), 1).y}
+            />
+          ))}
+        </g>
+      ) : null}
       {composition.design.contrastEnabled ? (
         <>
           <polygon
@@ -1118,6 +1142,107 @@ export function BagOutcomePreview({
               y2={visibleSideMidBottom.y}
             />
           ) : null}
+
+          {/* Highlighted Structural Seam Lines matching fabric pattern */}
+          <g aria-hidden="true">
+            {!topCollapsesToZipper && closure !== "top-zipper" ? (
+              <>
+                <line
+                  className={styles.outcomeStitchLine}
+                  x1={project(frontTopLeft3).x}
+                  y1={project(frontTopLeft3).y}
+                  x2={project(frontTopRight3).x}
+                  y2={project(frontTopRight3).y}
+                />
+                <line
+                  className={styles.outcomeStitchLine}
+                  x1={project(backTopLeft3).x}
+                  y1={project(backTopLeft3).y}
+                  x2={project(backTopRight3).x}
+                  y2={project(backTopRight3).y}
+                />
+              </>
+            ) : null}
+
+            {boxy ? (
+              <>
+                {/* 4 Vertical Corner Box Seams */}
+                <line
+                  className={styles.outcomeBoxedSeam}
+                  x1={project(frontTopLeft3).x}
+                  y1={project(frontTopLeft3).y}
+                  x2={project(frontBottomLeft3).x}
+                  y2={project(frontBottomLeft3).y}
+                />
+                <line
+                  className={styles.outcomeBoxedSeam}
+                  x1={project(frontTopRight3).x}
+                  y1={project(frontTopRight3).y}
+                  x2={project(frontBottomRight3).x}
+                  y2={project(frontBottomRight3).y}
+                />
+                {backVisible ? (
+                  <>
+                    <line
+                      className={styles.outcomeBoxedSeam}
+                      x1={project(backTopLeft3).x}
+                      y1={project(backTopLeft3).y}
+                      x2={project(backBottomLeft3).x}
+                      y2={project(backBottomLeft3).y}
+                    />
+                    <line
+                      className={styles.outcomeBoxedSeam}
+                      x1={project(backTopRight3).x}
+                      y1={project(backTopRight3).y}
+                      x2={project(backBottomRight3).x}
+                      y2={project(backBottomRight3).y}
+                    />
+                  </>
+                ) : null}
+                {/* End Box Seams (Zipper drop to bottom) */}
+                {leftVisible ? (
+                  <line
+                    className={styles.outcomeBoxedSeam}
+                    x1={boxyLeftDrop.x}
+                    y1={boxyLeftDrop.y}
+                    x2={project({ x: -safeWidth / 2, y: 0, z: 0 }).x}
+                    y2={project({ x: -safeWidth / 2, y: 0, z: 0 }).y}
+                  />
+                ) : null}
+                {rightVisible ? (
+                  <line
+                    className={styles.outcomeBoxedSeam}
+                    x1={boxyRightDrop.x}
+                    y1={boxyRightDrop.y}
+                    x2={project({ x: safeWidth / 2, y: 0, z: 0 }).x}
+                    y2={project({ x: safeWidth / 2, y: 0, z: 0 }).y}
+                  />
+                ) : null}
+              </>
+            ) : (
+              <>
+                {/* Tote Bottom Boxed Corners */}
+                {leftVisible ? (
+                  <line
+                    className={styles.outcomeBoxedSeam}
+                    x1={project(frontBottomLeft3).x}
+                    y1={project(frontBottomLeft3).y}
+                    x2={project(backBottomLeft3).x}
+                    y2={project(backBottomLeft3).y}
+                  />
+                ) : null}
+                {rightVisible ? (
+                  <line
+                    className={styles.outcomeBoxedSeam}
+                    x1={project(frontBottomRight3).x}
+                    y1={project(frontBottomRight3).y}
+                    x2={project(backBottomRight3).x}
+                    y2={project(backBottomRight3).y}
+                  />
+                ) : null}
+              </>
+            )}
+          </g>
 
           {closure === "zipper-gusset" ? (
             <g aria-hidden="true">
