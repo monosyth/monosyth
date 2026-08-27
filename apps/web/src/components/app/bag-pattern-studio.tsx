@@ -59,6 +59,8 @@ import {
   BAG_STUDIO_SCHEMA_VERSION,
   MAX_SAVED_BAGS,
   createSavedBagId,
+  decodeBagStudioShare,
+  encodeBagStudioShare,
   readBagStudioState,
   writeBagStudioState,
   type BagPocketStyle,
@@ -999,24 +1001,52 @@ function MeasurementField({
   min?: number;
   onChange: (value: number) => void;
 }) {
+  const stepAmount = step || 0.125;
+  const decrement = () => {
+    onChange(Math.max(min, snapMeasurement(value - stepAmount, stepAmount)));
+  };
+  const increment = () => {
+    onChange(snapMeasurement(value + stepAmount, stepAmount));
+  };
+
   return (
-    <label className={styles.measureField}>
-      <span>
+    <div className={styles.measureField}>
+      <label className={styles.measureLabel}>
         <strong>{label}</strong>
         <small>{hint}</small>
-      </span>
-      <span className={styles.measureInput}>
-        <input
-          type="number"
-          inputMode="decimal"
-          value={formatDecimal(value, 3)}
-          min={min}
-          step={step}
-          onChange={(event) => onChange(cleanInput(event.target.valueAsNumber))}
-        />
-        <b>in</b>
-      </span>
-    </label>
+      </label>
+      <div className={styles.measureControlRow}>
+        <button
+          type="button"
+          className={styles.stepperButton}
+          onClick={decrement}
+          title={`Decrease by ${formatInches(stepAmount)}`}
+          aria-label={`Decrease ${label}`}
+        >
+          −
+        </button>
+        <span className={styles.measureInput}>
+          <input
+            type="number"
+            inputMode="decimal"
+            value={formatDecimal(value, 3)}
+            min={min}
+            step={step}
+            onChange={(event) => onChange(cleanInput(event.target.valueAsNumber))}
+          />
+          <b>in</b>
+        </span>
+        <button
+          type="button"
+          className={styles.stepperButton}
+          onClick={increment}
+          title={`Increase by ${formatInches(stepAmount)}`}
+          aria-label={`Increase ${label}`}
+        >
+          +
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -2644,6 +2674,10 @@ export function BagPatternStudio() {
     "idle" | "saved" | "error" | "limit"
   >("idle");
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const [shareState, setShareState] = useState<"idle" | "copied" | "error">("idle");
+  const [companionMode, setCompanionMode] = useState(false);
+  const [cutProgress, setCutProgress] = useState<Record<string, boolean>>({});
+  const [showMiniPip, setShowMiniPip] = useState(true);
   const workspaceTabRefs = useRef<
     Partial<Record<BagStudioTab, HTMLButtonElement | null>>
   >({});
@@ -2717,6 +2751,17 @@ export function BagPatternStudio() {
       .filter((saved) => !query || saved.name.toLocaleLowerCase().includes(query))
       .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
   }, [savedBags, savedSearch]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash.startsWith("#bag=")) {
+      const encoded = window.location.hash.slice(5);
+      const decoded = decodeBagStudioShare(encoded, defaultStudioSnapshot);
+      if (decoded) {
+        applySnapshot(decoded.snapshot);
+        if (decoded.name) setBagName(decoded.name);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (status !== "signed_in" || !user?.uid) return;
@@ -2820,6 +2865,13 @@ export function BagPatternStudio() {
       pocketStyle,
       pullTabs,
     ],
+  );
+  const sewingSteps = useMemo(
+    () =>
+      bodyRecipe === "four-corner-boxy"
+        ? boxyBagSewingSteps(plan, structureFeel, pocketStyle, pullTabs)
+        : toteBagSewingSteps(plan, closure, closureOptions, structureFeel, pocketStyle),
+    [bodyRecipe, plan, structureFeel, pocketStyle, pullTabs, closure, closureOptions],
   );
   const closureWarnings = useMemo(() => {
     const warnings: string[] = [];
@@ -3433,6 +3485,23 @@ export function BagPatternStudio() {
     }
   }
 
+  async function handleShareLink() {
+    try {
+      const encoded = encodeBagStudioShare(currentSnapshot, bagName);
+      const url = `${window.location.origin}${window.location.pathname}#bag=${encoded}`;
+      await navigator.clipboard.writeText(url);
+      setShareState("copied");
+      window.setTimeout(() => setShareState("idle"), 2500);
+    } catch {
+      setShareState("error");
+      window.setTimeout(() => setShareState("idle"), 2500);
+    }
+  }
+
+  function toggleCutProgress(pieceKey: string) {
+    setCutProgress((prev) => ({ ...prev, [pieceKey]: !prev[pieceKey] }));
+  }
+
   if (status === "loading") {
     return (
       <main className={styles.page}>
@@ -3485,10 +3554,12 @@ export function BagPatternStudio() {
             <b>inches</b>
           </div>
           <div className={styles.topActions}>
+            <button type="button" onClick={() => setCompanionMode(true)} className={styles.companionTriggerButton} title="Open full-screen sewing companion mode with cut checklist">🧵 Sewing mode</button>
+            <button type="button" onClick={() => void handleShareLink()} title="Copy shareable URL link">{shareState === "copied" ? "Link copied! ✓" : shareState === "error" ? "Error copying" : "Share link"}</button>
             <button type="button" onClick={startNewBag}>New bag</button>
             <button type="button" onClick={resetDraft}>Reset</button>
-            <button type="button" onClick={printPlan}>Print plan</button>
-            <button type="button" className={styles.downloadButton} disabled={!ready} onClick={() => bodyRecipe === "four-corner-boxy" ? downloadBoxyPatternSvg(plan) : downloadPatternSvg(plan, composition, closure, handlePlan)}>{bodyRecipe === "four-corner-boxy" ? "Boxy-panel SVG" : "Body-panel SVG"}</button>
+            <button type="button" onClick={printPlan}>Print</button>
+            <button type="button" className={styles.downloadButton} disabled={!ready} onClick={() => bodyRecipe === "four-corner-boxy" ? downloadBoxyPatternSvg(plan) : downloadPatternSvg(plan, composition, closure, handlePlan)}>{bodyRecipe === "four-corner-boxy" ? "Boxy SVG" : "Body SVG"}</button>
           </div>
         </header>
 
@@ -4109,6 +4180,42 @@ export function BagPatternStudio() {
               />
             )}
 
+            {showMiniPip ? (
+              <aside className={styles.miniPipCard} aria-label="3D live preview">
+                <div className={styles.miniPipHeader}>
+                  <span>Live 3D Outcome</span>
+                  <button
+                    type="button"
+                    className={styles.miniPipToggle}
+                    onClick={() => setShowMiniPip(false)}
+                    title="Hide mini preview"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className={styles.miniPipCanvas}>
+                  <BagOutcomePreview
+                    variant="thumbnail"
+                    bodyRecipe={bodyRecipe}
+                    plan={plan}
+                    closure={closure}
+                    options={closureOptions}
+                    composition={composition}
+                    yaw={previewYaw}
+                  />
+                </div>
+              </aside>
+            ) : (
+              <button
+                type="button"
+                className={styles.miniPipRestore}
+                onClick={() => setShowMiniPip(true)}
+                title="Show mini 3D outcome preview"
+              >
+                <span>3D PIP</span>
+              </button>
+            )}
+
             <div className={styles.liveStrip}>
               <div>
                 <span>{bodyRecipe === "four-corner-boxy" ? "Raw rectangle" : "Raw panel"}</span>
@@ -4356,6 +4463,86 @@ export function BagPatternStudio() {
 
           <p className={styles.savedLocalNote}>These early saves stay only in this browser, under your signed-in Monosyth profile. They are not published or shared.</p>
         </section>
+
+        {companionMode ? (
+          <div className={styles.companionOverlay} role="dialog" aria-label="Studio Sewing Table Companion Mode">
+            <div className={styles.companionModal}>
+              <header className={styles.companionHeader}>
+                <div>
+                  <span className={styles.companionBadge}>🧵 STUDIO SEWING COMPANION</span>
+                  <h2>{bagName.trim() || (bodyRecipe === "four-corner-boxy" ? "Boxy Zipper Pouch" : "Two-Panel Tote")}</h2>
+                  <p>
+                    {bodyRecipe === "four-corner-boxy"
+                      ? `${formatInches(plan.finishedBaseWidth)} L × ${formatInches(plan.finishedDepth)} W × ${formatInches(plan.finishedHeight)} H`
+                      : `${formatInches(plan.finishedBaseWidth)} W × ${formatInches(plan.finishedHeight)} H × ${formatInches(plan.finishedDepth)} D`}
+                    {" · "}
+                    {structureChoices.find((c) => c.id === structureFeel)?.label}
+                  </p>
+                </div>
+                <div className={styles.companionHeaderActions}>
+                  <button type="button" onClick={() => window.print()} className={styles.companionPrintBtn}>Print Sheet</button>
+                  <button type="button" onClick={() => setCompanionMode(false)} className={styles.companionCloseBtn}>✕ Close</button>
+                </div>
+              </header>
+
+              <div className={styles.companionBody}>
+                <section className={styles.companionCutSection}>
+                  <div className={styles.companionSectionTitle}>
+                    <h3>1. Fabric Cut Checklist</h3>
+                    <span>
+                      {pieces.filter((p) => cutProgress[`${p.material}-${p.name}`]).length} of {pieces.length} groups cut
+                    </span>
+                  </div>
+                  <div className={styles.companionPieceList}>
+                    {pieces.map((piece) => {
+                      const key = `${piece.material}-${piece.name}`;
+                      const isChecked = !!cutProgress[key];
+                      return (
+                        <label
+                          key={key}
+                          className={`${styles.companionPieceCard} ${isChecked ? styles.pieceCardChecked : ""}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleCutProgress(key)}
+                          />
+                          <div className={styles.companionPieceInfo}>
+                            <div className={styles.companionPieceTop}>
+                              <span className={`${styles.materialPill} ${styles[`material_${piece.material}`]}`}>
+                                {piece.quantity}× {piece.material.toUpperCase()}
+                              </span>
+                              <strong>{piece.name}</strong>
+                            </div>
+                            <b className={styles.companionDimension}>
+                              {formatInches(piece.width)} × {formatInches(piece.height)}
+                            </b>
+                            <small>{piece.note}</small>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                <section className={styles.companionStepsSection}>
+                  <div className={styles.companionSectionTitle}>
+                    <h3>2. Assembly Sequence & Checkpoints</h3>
+                    <span>{sewingSteps.length} step sequence</span>
+                  </div>
+                  <ol className={styles.companionStepList}>
+                    {sewingSteps.map((step, idx) => (
+                      <li key={step} className={styles.companionStepItem}>
+                        <span className={styles.companionStepNumber}>{idx + 1}</span>
+                        <p>{step}</p>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <footer className={styles.appFooter}>
           <span>Monosyth / Modular Bag Studio</span>

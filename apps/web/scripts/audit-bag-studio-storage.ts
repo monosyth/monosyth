@@ -4,6 +4,8 @@ import {
   BAG_STUDIO_SCHEMA_VERSION,
   bagStudioStorageKey,
   createDefaultBagStudioState,
+  decodeBagStudioShare,
+  encodeBagStudioShare,
   normalizeBagStudioSnapshot,
   normalizePreviewYaw,
   parseBagStudioState,
@@ -259,5 +261,18 @@ Object.defineProperty(globalThis, "window", {
 });
 same(readBagStudioState(fallback, "owner-1"), empty, "blocked browser reads recover without crashing hydration");
 same(writeBagStudioState(restored, "owner-1"), false, "blocked browser writes report failure without crashing");
+
+// Share link tests
+const encodedShare = encodeBagStudioShare(fallback, "My Custom Tote");
+yes(encodedShare.length > 0, "encodeBagStudioShare generates encoded string");
+const decodedShare = decodeBagStudioShare(encodedShare, fallback);
+yes(decodedShare !== null, "decodeBagStudioShare successfully decodes string");
+same(decodedShare?.name, "My Custom Tote", "decoded share preserves design name");
+same(decodedShare?.snapshot.bodyRecipe, "two-panel-tote", "decoded share preserves bodyRecipe");
+same(decodedShare?.snapshot.draft.cutWidth, fallback.draft.cutWidth, "decoded share preserves cut dimensions");
+
+// Corrupted share string recovery
+const invalidShare = decodeBagStudioShare("invalid-base64-gibberish!", fallback);
+same(invalidShare, null, "invalid share string returns null without crashing");
 
 process.stdout.write(`${checks} bag-studio storage checks passed\n`);

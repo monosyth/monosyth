@@ -290,26 +290,77 @@
 .basisToggle button[aria-pressed="true"] { color: var(--ink); background: var(--cyan); box-shadow: 0 0 1.2rem rgba(79, 227, 230, .13); }
 .basisToggle button[aria-pressed="true"] small { color: #24626a; }
 
-.fieldStack { display: grid; gap: .42rem; margin-top: .72rem; }
+.fieldStack { display: grid; gap: .48rem; margin-top: .72rem; }
 .measureField {
   display: grid;
-  grid-template-columns: 1fr minmax(5.8rem, .72fr);
+  grid-template-columns: 1fr auto;
   align-items: center;
-  gap: .5rem;
+  gap: .65rem;
   min-width: 0;
-  padding: .6rem .65rem;
-  border: 1px solid rgba(132, 151, 167, .14);
+  padding: .65rem .75rem;
+  border: 1px solid rgba(132, 151, 167, .18);
   border-radius: .72rem;
-  background: rgba(7, 16, 25, .54);
+  background: rgba(7, 16, 25, .62);
 }
-.measureField > span:first-child { min-width: 0; }
-.measureField strong, .measureField small { display: block; }
-.measureField strong { color: #dce8ea; font-size: .66rem; }
-.measureField small { margin-top: .12rem; overflow: hidden; color: #6f8494; font-size: .53rem; text-overflow: ellipsis; white-space: nowrap; }
-.measureInput { display: grid; grid-template-columns: 1fr auto; align-items: center; min-width: 0; border: 1px solid rgba(79, 227, 230, .24); border-radius: .52rem; background: #0b1723; }
-.measureInput:focus-within { border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(79, 227, 230, .1); }
-.measureInput input { width: 100%; min-width: 0; padding: .46rem .25rem .46rem .48rem; border: 0; outline: 0; color: white; background: transparent; font: 600 .72rem/1 var(--font-ibm-plex-mono), monospace; }
-.measureInput b { padding-right: .42rem; color: var(--cyan); font: 500 .49rem/1 var(--font-ibm-plex-mono), monospace; text-transform: uppercase; }
+.measureLabel { min-width: 0; cursor: pointer; }
+.measureLabel strong { display: block; color: #e1edf0; font-size: .76rem; }
+.measureLabel small { display: block; margin-top: .15rem; color: #8ba0ae; font-size: .62rem; line-height: 1.25; }
+
+.measureControlRow {
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+}
+.stepperButton {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid rgba(79, 227, 230, .28);
+  border-radius: .45rem;
+  background: rgba(11, 23, 35, .9);
+  color: var(--cyan);
+  cursor: pointer;
+  font: 700 .85rem/1 var(--font-ibm-plex-mono), monospace;
+  transition: all .15s ease;
+}
+.stepperButton:hover {
+  border-color: var(--cyan);
+  background: rgba(79, 227, 230, .2);
+  color: white;
+}
+.measureInput {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  min-width: 4.8rem;
+  max-width: 5.6rem;
+  border: 1px solid rgba(79, 227, 230, .28);
+  border-radius: .52rem;
+  background: #0b1723;
+}
+.measureInput:focus-within {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 2px rgba(79, 227, 230, .15);
+}
+.measureInput input {
+  width: 100%;
+  min-width: 0;
+  padding: .42rem .2rem .42rem .45rem;
+  border: 0;
+  outline: 0;
+  color: white;
+  background: transparent;
+  font: 700 .78rem/1 var(--font-ibm-plex-mono), monospace;
+  text-align: right;
+}
+.measureInput b {
+  padding: 0 .42rem 0 .2rem;
+  color: var(--cyan);
+  font: 600 .58rem/1 var(--font-ibm-plex-mono), monospace;
+  text-transform: uppercase;
+}
 
 .seamSection, .cornerLab, .shapeSection, .closureOptions, .fabricInput {
   margin-top: .72rem;
@@ -2116,3 +2167,281 @@
   font-size: .48rem;
   font-style: italic;
 }
+
+/* Sewing Table Companion Mode (Full Screen Overlay) */
+.companionTriggerButton {
+  border-color: rgba(188, 232, 89, .45) !important;
+  color: #d6f387 !important;
+  background: rgba(188, 232, 89, .1) !important;
+}
+.companionTriggerButton:hover {
+  border-color: var(--lime) !important;
+  background: rgba(188, 232, 89, .2) !important;
+}
+
+.companionOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgba(3, 8, 14, .88);
+  backdrop-filter: blur(12px);
+  overflow-y: auto;
+}
+
+.companionModal {
+  position: relative;
+  width: 100%;
+  max-width: 58rem;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(79, 227, 230, .35);
+  border-radius: 1.1rem;
+  background: #0a1522;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .65);
+  overflow: hidden;
+}
+
+.companionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(132, 151, 167, .2);
+  background: rgba(7, 16, 25, .95);
+}
+.companionBadge {
+  color: var(--lime);
+  font: 700 .65rem/1.2 var(--font-ibm-plex-mono), monospace;
+  letter-spacing: .1em;
+}
+.companionHeader h2 {
+  margin: .25rem 0 0;
+  color: white;
+  font-size: 1.25rem;
+}
+.companionHeader p {
+  margin: .25rem 0 0;
+  color: var(--cyan);
+  font: 600 .78rem/1.2 var(--font-ibm-plex-mono), monospace;
+}
+.companionHeaderActions {
+  display: flex;
+  gap: .5rem;
+}
+.companionPrintBtn {
+  padding: .5rem .85rem;
+  border: 1px solid rgba(246, 186, 76, .45);
+  border-radius: .6rem;
+  background: rgba(246, 186, 76, .12);
+  color: #ffe199;
+  cursor: pointer;
+  font: 600 .7rem/1 var(--font-ibm-plex-mono), monospace;
+}
+.companionCloseBtn {
+  padding: .5rem .85rem;
+  border: 1px solid rgba(132, 151, 167, .3);
+  border-radius: .6rem;
+  background: rgba(17, 30, 45, .8);
+  color: #d1e2e9;
+  cursor: pointer;
+  font: 600 .7rem/1 var(--font-ibm-plex-mono), monospace;
+}
+.companionCloseBtn:hover {
+  color: white;
+  border-color: var(--pink);
+}
+
+.companionBody {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+.companionSectionTitle {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .5rem;
+  margin-bottom: .85rem;
+}
+.companionSectionTitle h3 {
+  margin: 0;
+  color: white;
+  font-size: .95rem;
+}
+.companionSectionTitle span {
+  color: var(--amber);
+  font: 600 .68rem/1 var(--font-ibm-plex-mono), monospace;
+}
+
+.companionPieceList {
+  display: grid;
+  gap: .65rem;
+}
+.companionPieceCard {
+  display: flex;
+  align-items: flex-start;
+  gap: .85rem;
+  padding: .85rem;
+  border: 1px solid rgba(132, 151, 167, .2);
+  border-radius: .75rem;
+  background: rgba(12, 24, 37, .75);
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.companionPieceCard:hover {
+  border-color: rgba(79, 227, 230, .4);
+}
+.companionPieceCard input[type="checkbox"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: .15rem;
+  accent-color: var(--lime);
+  cursor: pointer;
+}
+.pieceCardChecked {
+  border-color: rgba(188, 232, 89, .4);
+  background: rgba(188, 232, 89, .06);
+  opacity: .75;
+}
+.pieceCardChecked strong {
+  text-decoration: line-through;
+  color: #8da4b0;
+}
+.companionPieceInfo {
+  flex: 1;
+  min-width: 0;
+}
+.companionPieceTop {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+}
+.materialPill {
+  padding: .2rem .45rem;
+  border-radius: 999px;
+  font: 700 .55rem/1 var(--font-ibm-plex-mono), monospace;
+  letter-spacing: .06em;
+}
+.material_outer { background: rgba(156, 140, 255, .22); color: #cfc6ff; border: 1px solid rgba(156, 140, 255, .4); }
+.material_lining { background: rgba(79, 227, 230, .2); color: #94f5f7; border: 1px solid rgba(79, 227, 230, .4); }
+.material_interfacing { background: rgba(188, 232, 89, .2); color: #d6f584; border: 1px solid rgba(188, 232, 89, .4); }
+.material_handle { background: rgba(246, 186, 76, .22); color: #ffd88a; border: 1px solid rgba(246, 186, 76, .4); }
+
+.companionPieceTop strong {
+  color: #e5f0f3;
+  font-size: .82rem;
+}
+.companionDimension {
+  display: block;
+  margin-top: .3rem;
+  color: var(--amber);
+  font: 700 .86rem/1.2 var(--font-ibm-plex-mono), monospace;
+}
+.companionPieceInfo small {
+  display: block;
+  margin-top: .25rem;
+  color: #8da4b0;
+  font-size: .68rem;
+  line-height: 1.35;
+}
+
+.companionStepList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: .75rem;
+}
+.companionStepItem {
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+  padding: .75rem;
+  border: 1px solid rgba(132, 151, 167, .16);
+  border-radius: .7rem;
+  background: rgba(7, 16, 25, .6);
+}
+.companionStepNumber {
+  display: grid;
+  place-items: center;
+  flex: 0 0 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--cyan);
+  color: var(--ink);
+  font: 700 .68rem/1 var(--font-ibm-plex-mono), monospace;
+}
+.companionStepItem p {
+  margin: 0;
+  color: #d1e2e8;
+  font-size: .74rem;
+  line-height: 1.45;
+}
+
+/* Mini 3D PIP in Step 1 */
+.miniPipCard {
+  position: absolute;
+  bottom: 4.5rem;
+  right: 1.25rem;
+  z-index: 10;
+  width: 11.5rem;
+  padding: .6rem;
+  border: 1px solid rgba(79, 227, 230, .35);
+  border-radius: .85rem;
+  background: rgba(8, 19, 30, .92);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .55);
+  backdrop-filter: blur(8px);
+}
+.miniPipHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .35rem;
+}
+.miniPipHeader span {
+  color: var(--cyan);
+  font: 700 .58rem/1 var(--font-ibm-plex-mono), monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.miniPipToggle {
+  padding: .15rem .35rem;
+  border: 0;
+  background: transparent;
+  color: #7b929e;
+  cursor: pointer;
+  font-size: .65rem;
+}
+.miniPipToggle:hover { color: white; }
+.miniPipCanvas {
+  height: 7.5rem;
+  border-radius: .5rem;
+  overflow: hidden;
+  background: #060e17;
+}
+.miniPipRestore {
+  position: absolute;
+  bottom: 4.5rem;
+  right: 1.25rem;
+  z-index: 10;
+  padding: .45rem .65rem;
+  border: 1px solid rgba(79, 227, 230, .35);
+  border-radius: .6rem;
+  background: rgba(8, 19, 30, .85);
+  color: var(--cyan);
+  cursor: pointer;
+  font: 700 .62rem/1 var(--font-ibm-plex-mono), monospace;
+}
+.miniPipRestore:hover {
+  border-color: var(--cyan);
+  background: var(--cyan);
+  color: var(--ink);
+}
+

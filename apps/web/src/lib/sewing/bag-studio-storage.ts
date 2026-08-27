@@ -484,3 +484,35 @@ export function createSavedBagId() {
   }
   return `bag-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
+
+export function encodeBagStudioShare(snapshot: BagStudioSnapshot, name = ""): string {
+  try {
+    const payload = JSON.stringify({ v: BAG_STUDIO_SCHEMA_VERSION, name, s: snapshot });
+    return typeof btoa !== "undefined"
+      ? btoa(encodeURIComponent(payload))
+      : Buffer.from(encodeURIComponent(payload)).toString("base64");
+  } catch {
+    return "";
+  }
+}
+
+export function decodeBagStudioShare(
+  encoded: string,
+  fallback: BagStudioSnapshot,
+): { snapshot: BagStudioSnapshot; name: string } | null {
+  try {
+    const json = typeof atob !== "undefined"
+      ? decodeURIComponent(atob(encoded))
+      : decodeURIComponent(Buffer.from(encoded, "base64").toString("utf-8"));
+    const data = JSON.parse(json);
+    if (data && typeof data === "object") {
+      const snapshot = normalizeBagStudioSnapshot(data.s ?? data, fallback);
+      const name = typeof data.name === "string" ? data.name : "";
+      return { snapshot, name };
+    }
+  } catch {
+    // ignore parse error and return null
+  }
+  return null;
+}
+
