@@ -348,6 +348,28 @@
 .cornerEquation span:last-of-type { color: var(--amber); }
 .cornerEquation i { color: var(--muted); font: 500 .63rem/1 var(--font-ibm-plex-mono), monospace; font-style: normal; }
 .cornerEquation small { color: #647989; font: 500 .46rem/1.2 var(--font-ibm-plex-mono), monospace; text-transform: uppercase; }
+.boxyShapeCheck {
+  display: grid;
+  gap: .55rem;
+  margin-top: .65rem;
+  padding: .68rem;
+  border: 1px solid rgba(79, 227, 230, .22);
+  border-radius: .65rem;
+  background: rgba(79, 227, 230, .045);
+}
+.boxyShapeCheck > div:first-child { display: flex; align-items: baseline; justify-content: space-between; gap: .6rem; }
+.boxyShapeCheck > div:first-child span { color: var(--cyan); font: 700 var(--type-meta)/1.1 var(--font-ibm-plex-mono), monospace; letter-spacing: .08em; text-transform: uppercase; }
+.boxyShapeCheck > div:first-child strong { color: #dffafa; font-size: var(--type-body); text-align: right; }
+.boxyShapeCheck p { margin: 0; color: #a9bcc2; font-size: var(--type-body); line-height: 1.5; }
+.boxyShapeCheck dl { display: grid; gap: .35rem; margin: 0; }
+.boxyShapeCheck dl div { display: grid; gap: .16rem; padding: .5rem; border-radius: .48rem; background: rgba(7, 16, 25, .55); }
+.boxyShapeCheck dt { color: #8196a1; font: 650 var(--type-meta)/1.2 var(--font-ibm-plex-mono), monospace; text-transform: uppercase; }
+.boxyShapeCheck dd { margin: 0; color: #e8eeee; font: 650 var(--type-support)/1.4 var(--font-ibm-plex-mono), monospace; }
+.boxyShapeCheck button { padding: .6rem .65rem; border: 1px solid var(--cyan); border-radius: .52rem; color: #07131d; background: var(--cyan); cursor: pointer; font: 750 var(--type-support)/1.35 var(--font-ibm-plex-mono), monospace; }
+.boxyShapeAlert { border-color: rgba(246, 186, 76, .48); background: rgba(246, 186, 76, .075); }
+.boxyShapeAlert > div:first-child span,
+.boxyShapeAlert > div:first-child strong { color: #ffd987; }
+.boxyShapeAlert button { border-color: var(--amber); background: var(--amber); }
 .mirrorButton { display: flex; align-items: center; gap: .3rem; padding: .38rem .45rem; border: 1px solid rgba(156, 140, 255, .28); border-radius: .48rem; color: #aaa0df; background: rgba(156, 140, 255, .06); cursor: pointer; font: 600 .5rem/1 var(--font-ibm-plex-mono), monospace; }
 .mirrorButton[aria-pressed="true"] { color: #17112d; background: var(--violet); }
 .mirrorButton i { font-size: .78rem; font-style: normal; }

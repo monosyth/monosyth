@@ -2655,6 +2655,36 @@ export function BagPatternStudio() {
     (measurement) =>
       Math.abs(measurement - snapMeasurement(measurement, easyCutGrid)) < 0.001,
   );
+  const balancedCornerGrid = snapStep === 0 ? 0.25 : Math.min(snapStep, 0.25);
+  const maximumBoxyCorner = Math.max(
+    0.5,
+    Math.min(
+      5,
+      draft.cutWidth / 2 - draft.seamAllowance - 0.5,
+      draft.cutHeight / 2 - draft.seamAllowance - 0.5,
+    ),
+  );
+  const balancedBoxyCorner = clamp(
+    snapMeasurement(
+      (Math.min(draft.cutWidth, draft.cutHeight) - draft.seamAllowance * 2) / 4,
+      balancedCornerGrid,
+    ),
+    0.5,
+    maximumBoxyCorner,
+  );
+  const balancedBoxyPlan = calculateBoxyBagPlan({
+    ...draft,
+    cornerCut: balancedBoxyCorner,
+  });
+  const boxyNarrowSide = Math.min(
+    plan.finishedBaseWidth,
+    plan.finishedDepth,
+  );
+  const boxyHasTallProportions =
+    bodyRecipe === "four-corner-boxy" &&
+    plan.valid &&
+    boxyNarrowSide > 0 &&
+    plan.finishedHeight > boxyNarrowSide * 1.5;
   const handleBuildAdvisories = useMemo(() => {
     if (closure !== "open-tote") return [];
     const advisories = [...handlePlan.advisories];
@@ -3424,7 +3454,7 @@ export function BagPatternStudio() {
               ) : (
                 <>
                   <MeasurementField label={bodyRecipe === "four-corner-boxy" ? "Panel cut length" : "Panel cut width"} hint={bodyRecipe === "four-corner-boxy" ? "long edge runs along the zipper" : "raw edge to raw edge"} value={draft.cutWidth} min={3} step={snapStep === 0 ? 0.125 : snapStep} onChange={(value) => updateDraft({ ...draft, cutWidth: Math.max(0, value) })} />
-                  <MeasurementField label={bodyRecipe === "four-corner-boxy" ? "Panel cut width" : "Panel cut height"} hint={bodyRecipe === "four-corner-boxy" ? "zipper edge to bottom edge" : "raw top to raw bottom"} value={draft.cutHeight} min={3} step={snapStep === 0 ? 0.125 : snapStep} onChange={(value) => updateDraft({ ...draft, cutHeight: Math.max(0, value) })} />
+                  <MeasurementField label={bodyRecipe === "four-corner-boxy" ? "Zipper-to-bottom wrap span" : "Panel cut height"} hint={bodyRecipe === "four-corner-boxy" ? "raw zipper edge to raw bottom edge" : "raw top to raw bottom"} value={draft.cutHeight} min={3} step={snapStep === 0 ? 0.125 : snapStep} onChange={(value) => updateDraft({ ...draft, cutHeight: Math.max(0, value) })} />
                   <MeasurementField label={bodyRecipe === "four-corner-boxy" ? "Four-corner square" : "Corner square"} hint={bodyRecipe === "four-corner-boxy" ? "remove from every corner" : "measure from both raw edges"} value={draft.cornerCut} min={0.5} step={snapStep === 0 ? 0.125 : snapStep} onChange={(value) => updateDraft({ ...draft, cornerCut: Math.max(0, value) })} />
                 </>
               )}
@@ -3487,6 +3517,38 @@ export function BagPatternStudio() {
                 <small />
                 <small>{bodyRecipe === "four-corner-boxy" ? "finished height" : "finished depth"}</small>
               </div>
+              {bodyRecipe === "four-corner-boxy" ? (
+                <div className={`${styles.boxyShapeCheck} ${boxyHasTallProportions ? styles.boxyShapeAlert : ""}`} aria-live="polite">
+                  <div>
+                    <span>Shape check</span>
+                    <strong>{boxyHasTallProportions ? "Tall, narrow pouch" : "Balanced boxy proportion"}</strong>
+                  </div>
+                  <p>{boxyHasTallProportions
+                    ? <>This is mathematically valid, but it will be {formatInches(plan.finishedHeight)} high while its narrow side is only {formatInches(boxyNarrowSide)}. The 3D tower shape is the actual result of these cuts.</>
+                    : <>The finished height stays reasonably close to the narrow side of the box.</>}</p>
+                  <dl>
+                    <div>
+                      <dt>Finished length</dt>
+                      <dd>{formatInches(draft.cutWidth)} − {formatInches(draft.cornerCut * 2)} corners − {formatInches(draft.seamAllowance * 2)} seams = {formatInches(plan.finishedBaseWidth)}</dd>
+                    </div>
+                    <div>
+                      <dt>Finished width</dt>
+                      <dd>{formatInches(draft.cutHeight)} − {formatInches(draft.cornerCut * 2)} corners − {formatInches(draft.seamAllowance * 2)} seams = {formatInches(plan.finishedDepth)}</dd>
+                    </div>
+                  </dl>
+                  {boxyHasTallProportions && Math.abs(balancedBoxyCorner - draft.cornerCut) > 0.001 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateDraft({ ...draft, cornerCut: balancedBoxyCorner });
+                        setBasis("cut");
+                      }}
+                    >
+                      Use balanced {formatInches(balancedBoxyCorner)} corners → {formatInches(balancedBoxyPlan.finishedBaseWidth)} L × {formatInches(balancedBoxyPlan.finishedDepth)} W × {formatInches(balancedBoxyPlan.finishedHeight)} H
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
               <p>{bodyRecipe === "four-corner-boxy"
                 ? basis === "finished"
                   ? "Finished mode keeps the length and width while all four linked corner squares change the height."

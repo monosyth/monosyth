@@ -195,6 +195,15 @@ function PanelDiagram({
             <path d={outline} />
           </clipPath>
         </defs>
+        {bodyRecipe === "four-corner-boxy" ? (
+          <rect
+            x={x(0)}
+            y={y(0)}
+            width={x(plan.cutWidth) - x(0)}
+            height={y(height) - y(0)}
+            className={styles.panelRawOutline}
+          />
+        ) : null}
         <path d={outline} className={styles.panelBase} />
         <g clipPath={`url(#${clipId})`}>
           {visibleCells.map((cell) => (
@@ -228,6 +237,11 @@ function PanelDiagram({
             className={styles.contrastSeam}
             clipPath={`url(#${clipId})`}
           />
+        ) : null}
+        {bodyRecipe === "four-corner-boxy" ? (
+          <text x="130" y={y(0) + 10} className={styles.boxyEdgeLabel}>
+            {formatInches(plan.finishedFlatWidth)} RAW ZIP EDGE
+          </text>
         ) : null}
         <text x="130" y="171">{label.toUpperCase()} · {isPieced ? composition.modeLabel.toUpperCase() : "SOLID"}</text>
       </svg>
@@ -397,9 +411,27 @@ export function BagPanelComposer({
 
           <div className={styles.metrics}>
             <div>
-              <span>Final outer blank</span>
+              <span>{bodyRecipe === "four-corner-boxy" ? "Trim rectangle first" : "Final outer blank"}</span>
               <strong>{formatInches(composition.targetWidth)} × {formatInches(composition.targetHeight)}</strong>
             </div>
+            {bodyRecipe === "four-corner-boxy" ? (
+              <div>
+                <span>Then remove from each panel</span>
+                <strong>4 × {formatInches(plan.cornerCut)} squares</strong>
+              </div>
+            ) : null}
+            {bodyRecipe === "four-corner-boxy" ? (
+              <div>
+                <span>Raw sewing spans</span>
+                <strong>{formatInches(plan.finishedFlatWidth)} zipper/bottom · {formatInches(plan.cutHeight - plan.cornerCut * 2)} side</strong>
+              </div>
+            ) : null}
+            {bodyRecipe === "four-corner-boxy" ? (
+              <div>
+                <span>Finished box</span>
+                <strong>{formatInches(plan.finishedBaseWidth)} L × {formatInches(plan.finishedDepth)} W × {formatInches(plan.finishedHeight)} H</strong>
+              </div>
+            ) : null}
             {value.mode !== "solid" ? (
               <div>
                 <span>{value.mode === "block-grid" ? "Grid after seams" : "Oversize slab"}</span>

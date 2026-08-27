@@ -662,6 +662,21 @@ export function BagOutcomePreview({
   const leftMidBottom3 = lerp3(frontBottomLeft3, backBottomLeft3, 0.5);
   const project = (point: Point3) =>
     projectPoint3(point, normalizedYaw, scale, baseline);
+  const verticalDimensionX = Math.max(
+    38,
+    Math.min(
+      ...[
+        frontTopLeft3,
+        frontTopRight3,
+        backTopLeft3,
+        backTopRight3,
+        frontBottomLeft3,
+        frontBottomRight3,
+        backBottomLeft3,
+        backBottomRight3,
+      ].map((point) => project(point).x),
+    ) - 34,
+  );
   const blankMinX = Math.min(0, plan.leftTopInset);
   const stitchGeometry = boxy ? null : calculatePanelStitchGeometry(plan);
   const toBlankX = (rawX: number) => rawX - blankMinX;
@@ -1120,7 +1135,9 @@ export function BagOutcomePreview({
             <ZipperLine
               from={topZipFrom}
               to={topZipTo}
-              label={`${formatInches(boxy ? plan.finishedBaseWidth : plan.finishedTopOpening)} TOP ZIP`}
+              label={boxy
+                ? `${formatInches(plan.finishedBaseWidth)} FINISHED ZIP LINE`
+                : `${formatInches(plan.finishedTopOpening)} TOP ZIP`}
             />
           ) : null}
 
@@ -1182,8 +1199,8 @@ export function BagOutcomePreview({
                 />
               ) : null}
               <DimensionLine
-                from={{ x: 82, y: baseline - safeHeight * scale }}
-                to={{ x: 82, y: baseline }}
+                from={{ x: verticalDimensionX, y: baseline - safeHeight * scale }}
+                to={{ x: verticalDimensionX, y: baseline }}
                 label={`${formatInches(plan.finishedHeight)} H`}
                 markerId={markerId}
                 textOffset={{ x: -15, y: 4 }}
@@ -1199,6 +1216,13 @@ export function BagOutcomePreview({
             </>
           ) : null}
         </svg>
+
+        {interactive && boxy ? (
+          <div className={styles.outcomeFinishedBadge} aria-hidden="true">
+            <span>Finished box</span>
+            <strong>{formatInches(plan.finishedBaseWidth)} L × {formatInches(plan.finishedDepth)} W × {formatInches(plan.finishedHeight)} H</strong>
+          </div>
+        ) : null}
 
         {interactive ? <div
           className={styles.outcomeInteraction}
@@ -1235,7 +1259,7 @@ export function BagOutcomePreview({
             : `${formatInches(plan.finishedBaseWidth)} W × ${formatInches(plan.finishedHeight)} H × ${formatInches(plan.finishedDepth)} D`}</strong>
         </div>
         <div>
-          <span>{boxy ? "Zipper seam / top length" : topCollapsesToZipper ? "Closed ridge / open-rim estimate" : "Approx. rim / flat top seam"}</span>
+          <span>{boxy ? "Raw zipper seam / finished zipper line" : topCollapsesToZipper ? "Closed ridge / open-rim estimate" : "Approx. rim / flat top seam"}</span>
           <strong>
             {boxy
               ? `${formatInches(plan.finishedFlatWidth)} / ${formatInches(plan.finishedBaseWidth)}`

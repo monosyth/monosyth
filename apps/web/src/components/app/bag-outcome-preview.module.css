@@ -311,6 +311,34 @@
   pointer-events: none;
 }
 
+.outcomeFinishedBadge {
+  position: absolute;
+  z-index: 4;
+  top: .72rem;
+  left: .72rem;
+  display: grid;
+  gap: .15rem;
+  max-width: calc(100% - 1.44rem);
+  padding: .48rem .58rem;
+  border: 1px solid rgba(246, 186, 76, .35);
+  border-radius: .58rem;
+  color: #f8fbfb;
+  background: rgba(7, 16, 25, .86);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, .18);
+  pointer-events: none;
+}
+
+.outcomeFinishedBadge span {
+  color: var(--amber);
+  font: 700 var(--type-meta, .75rem)/1.1 var(--font-ibm-plex-mono), monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.outcomeFinishedBadge strong {
+  font: 700 var(--type-body, .875rem)/1.25 var(--font-ibm-plex-mono), monospace;
+}
+
 .outcomeBadge i {
   width: .38rem;
   height: .38rem;
@@ -487,6 +515,7 @@
   .outcomeViewButtons,
   .outcomeInteraction,
   .outcomeBadge,
+  .outcomeFinishedBadge,
   .outcomeSpinHint {
     display: none;
   }

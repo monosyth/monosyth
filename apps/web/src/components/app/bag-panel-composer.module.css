@@ -423,12 +423,29 @@
   fill: #443b72;
 }
 
+.panelRawOutline {
+  fill: rgba(246, 186, 76, .035);
+  stroke: rgba(246, 186, 76, .72);
+  stroke-width: 1.1;
+  stroke-dasharray: 4 3;
+  vector-effect: non-scaling-stroke;
+}
+
 .panelOutline {
   fill: none;
   stroke: rgba(232, 228, 255, .9);
   stroke-width: 1.4;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
+}
+
+.panelFigure .boxyEdgeLabel {
+  fill: #f6d18a;
+  paint-order: stroke;
+  stroke: #302c50;
+  stroke-width: 2.4;
+  font-size: 6.2px;
+  letter-spacing: .035em;
 }
 
 .contrastFill {

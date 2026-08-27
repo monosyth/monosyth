@@ -317,6 +317,18 @@ near(easyCutBoxy.finishedHeight, 4, "easy-cut boxy height");
 near(easyCutBoxy.finishedFlatWidth, 10.5, "easy-cut zipper sewing span");
 yes(easyCutBoxy.valid, "easy-cut boxy draft is valid");
 
+const tallNarrowBoxy = calculateBoxyBagPlan({
+  ...easyCutBoxy,
+  cutWidth: 11.5,
+  cutHeight: 8.5,
+  cornerCut: 2.75,
+});
+near(tallNarrowBoxy.finishedBaseWidth, 5.5, "large boxy corners leave the expected finished length");
+near(tallNarrowBoxy.finishedDepth, 2.5, "large boxy corners leave the expected narrow width");
+near(tallNarrowBoxy.finishedHeight, 5.5, "large boxy corners create twice their size in height");
+near(tallNarrowBoxy.finishedFlatWidth, 6, "raw zipper edge remains one half inch longer than the finished zipper line");
+yes(tallNarrowBoxy.valid, "a tall narrow boxy draft remains valid even when its proportions are unusual");
+
 const halfInchBoxy = calculateBoxyBagPlan({
   ...easyCutBoxy,
   cutWidth: 12,
