@@ -35,6 +35,8 @@ export type BagOutcomeOptions = {
   zipperGap: number;
   recessDepth: number;
   recessEndGap: number;
+  recessEndStyle: "boxed" | "open";
+  recessNotch: number;
 };
 
 type Point = {
@@ -61,7 +63,8 @@ type BagOutcomePreviewProps = {
   options: BagOutcomeOptions;
   composition: OuterPanelComposition;
   yaw: number;
-  onYawChange: (yaw: number) => void;
+  onYawChange?: (yaw: number) => void;
+  variant?: "interactive" | "thumbnail";
 };
 
 const viewChoices: ReadonlyArray<{
@@ -468,7 +471,9 @@ export function BagOutcomePreview({
   composition,
   yaw: externalYaw,
   onYawChange,
+  variant = "interactive",
 }: BagOutcomePreviewProps) {
+  const interactive = variant === "interactive";
   const [previewYaw, setPreviewYaw] = useState(() => quantizeYaw(externalYaw));
   const [isSpinning, setIsSpinning] = useState(false);
   const previewYawRef = useRef(previewYaw);
@@ -512,7 +517,7 @@ export function BagOutcomePreview({
     const nextYaw = quantizeYaw(nextValue);
     previewYawRef.current = nextYaw;
     setPreviewYaw(nextYaw);
-    if (commit) onYawChange(nextYaw);
+    if (commit) onYawChange?.(nextYaw);
   };
 
   const beginSpin = (event: PointerEvent<HTMLDivElement>) => {
@@ -834,9 +839,16 @@ export function BagOutcomePreview({
   const title = `${closureLabels[closure]} — ${viewDetail}`;
   const accessibleDimensions = `${formatInches(plan.finishedBaseWidth)} wide by ${formatInches(plan.finishedHeight)} high by ${formatInches(plan.finishedDepth)} deep`;
   const outerBuildLabel = `${composition.modeLabel}${composition.design.mode !== "solid" ? ` on the ${composition.scopeLabel}` : ""}${composition.design.contrastEnabled ? ` with a ${formatInches(composition.design.contrastRise)} contrast bottom` : ""}`;
+  const closureNote = closure === "recessed-zipper"
+    ? options.recessEndStyle === "boxed"
+      ? "This is a generic recessed-plane concept view. The boxed end walls and fabric bulk are not modeled, and the vertical drop is only an estimate based on the selected panel depth."
+      : "The floating zipper panel sits below the rim and stops short of both side seams by the measured end gaps; the vertical drop is approximate."
+    : closureNotes[closure];
 
   const recessedEndRatio = clamp(
-    options.recessEndGap / Math.max(standingTopWidth, 0.5),
+    (options.recessEndStyle === "boxed"
+      ? standingTopWidth * 0.035
+      : options.recessEndGap) / Math.max(standingTopWidth, 0.5),
     0,
     0.5,
   );
@@ -932,8 +944,11 @@ export function BagOutcomePreview({
   );
 
   return (
-    <section className={styles.outcomeSection} aria-labelledby={`outcome-title-${rawId}`}>
-      <header className={styles.outcomeHeader}>
+    <section
+      className={`${styles.outcomeSection} ${interactive ? "" : styles.outcomeThumbnail}`}
+      aria-labelledby={interactive ? `outcome-title-${rawId}` : undefined}
+    >
+      {interactive ? <header className={styles.outcomeHeader}>
         <div>
           <p>Live 3D vector</p>
           <h2 id={`outcome-title-${rawId}`}>Finished outcome preview</h2>
@@ -955,7 +970,7 @@ export function BagOutcomePreview({
             </button>
           ))}
         </div>
-      </header>
+      </header> : null}
 
       <div
         className={`${styles.outcomeStage} ${isSpinning ? styles.outcomeStageSpinning : ""}`}
@@ -964,11 +979,14 @@ export function BagOutcomePreview({
           className={styles.outcomeSvg}
           viewBox="0 0 720 430"
           role="img"
+          focusable="false"
           aria-label={`${title}. ${accessibleDimensions}. Outer build: ${outerBuildLabel}.${closure === "open-tote" ? ` Handles are ${formatInches(options.handleWidth)} wide, centered ${formatInches(options.handleInset)} from each finished corner, and secured ${formatInches(options.handleAttachmentDepth)} below the rim.` : ""}${closure === "side-zipper" && !sideZipperVisible ? ` The ${options.sideZipperSide} side zipper is hidden at this angle.` : ""}`}
           preserveAspectRatio="xMidYMid meet"
         >
           <title>{title}</title>
-          <desc>A dimension-driven, 36-position orbit showing the finished bag volume, physical front, back, left, and right surfaces, selected closure, and relevant measurements.</desc>
+          <desc>{interactive
+            ? "A dimension-driven, 36-position orbit showing the finished bag volume, physical front, back, left, and right surfaces, selected closure, and relevant measurements."
+            : "A static saved-angle preview showing the finished bag volume, selected closure, handles, and outer-panel design."}</desc>
           <defs>
             <linearGradient id={frontGradientId} x1="0" y1="0" x2="1" y2="1">
               <stop offset="0" stopColor="#9d8cff" />
@@ -995,10 +1013,10 @@ export function BagOutcomePreview({
             </marker>
           </defs>
 
-          <g className={styles.outcomeGrid} aria-hidden="true">
+          {interactive ? <g className={styles.outcomeGrid} aria-hidden="true">
             <path d="M 68 372 H 654" />
             <path d="M 118 395 L 213 346 M 228 395 L 323 346 M 338 395 L 433 346 M 448 395 L 543 346 M 558 395 L 653 346" />
-          </g>
+          </g> : null}
           <ellipse cx="360" cy="360" rx={Math.max(105, orbitDiagonal * scale * 0.48)} ry="24" fill="rgba(0,0,0,.34)" filter={`url(#${shadowId})`} />
 
           {closure === "open-tote" ? (
@@ -1073,7 +1091,7 @@ export function BagOutcomePreview({
               <line x1={project(frontTopLeft3).x} y1={project(frontTopLeft3).y} x2={recessFrontLeft.x} y2={recessFrontLeft.y} className={styles.outcomeRecessDrop} />
               <line x1={project(frontTopRight3).x} y1={project(frontTopRight3).y} x2={recessFrontRight.x} y2={recessFrontRight.y} className={styles.outcomeRecessDrop} />
               <polygon points={points([recessFrontLeft, recessFrontRight, recessBackRight, recessBackLeft])} fill="#101a27" stroke="#4fe3e6" strokeWidth="1.4" />
-              <ZipperLine from={recessZipFrom} to={recessZipTo} accent="#4fe3e6" label={`${formatInches(options.recessDepth)} RECESS`} />
+              <ZipperLine from={recessZipFrom} to={recessZipTo} accent="#4fe3e6" label={`~${formatInches(options.recessDepth)} DROP`} />
             </g>
           ) : null}
 
@@ -1132,7 +1150,7 @@ export function BagOutcomePreview({
             <ZipperLine from={sideZipStart} to={sideZipEnd} accent="#ff7194" label={`${formatInches(options.sideZipperLength)} SIDE ZIP`} />
           ) : null}
 
-          {!isSpinning ? (
+          {interactive && !isSpinning ? (
             <>
               {visibleFlatBottom && Math.abs(cosine) > 0.34 ? (
                 <DimensionLine
@@ -1161,7 +1179,7 @@ export function BagOutcomePreview({
           ) : null}
         </svg>
 
-        <div
+        {interactive ? <div
           className={styles.outcomeInteraction}
           role="slider"
           tabIndex={0}
@@ -1178,17 +1196,17 @@ export function BagOutcomePreview({
           onPointerCancel={finishSpin}
           onLostPointerCapture={finishSpin}
           onKeyDown={rotateWithKeyboard}
-        />
+        /> : null}
 
-        <div className={styles.outcomeBadge} aria-hidden="true">
+        {interactive ? <div className={styles.outcomeBadge} aria-hidden="true">
           <i /> live vector · {normalizedYaw}°
-        </div>
-        <div className={styles.outcomeSpinHint} id={`outcome-spin-help-${rawId}`}>
+        </div> : null}
+        {interactive ? <div className={styles.outcomeSpinHint} id={`outcome-spin-help-${rawId}`}>
           <i aria-hidden="true">↔</i> drag 360° · arrows adjust {ORBIT_STEP}°
-        </div>
+        </div> : null}
       </div>
 
-      <div className={styles.outcomeReadout}>
+      {interactive ? <><div className={styles.outcomeReadout}>
         <div>
           <span>Finished shape</span>
           <strong>{formatInches(plan.finishedBaseWidth)} W × {formatInches(plan.finishedHeight)} H × {formatInches(plan.finishedDepth)} D</strong>
@@ -1212,7 +1230,7 @@ export function BagOutcomePreview({
           <strong>{closureLabels[closure]} · {composition.modeLabel}{composition.design.contrastEnabled ? " + contrast" : ""}</strong>
         </div>
       </div>
-      <p className={styles.outcomeNote}><strong>{closureNotes[closure]}</strong> The surface preview follows the selected {outerBuildLabel.toLowerCase()}. This is a proportional concept view based on stitch-line dimensions; fabric drape, foam, and turn-of-cloth can change the sewn silhouette.</p>
+      <p className={styles.outcomeNote}><strong>{closureNote}</strong> The surface preview follows the selected {outerBuildLabel.toLowerCase()}. This is a proportional concept view based on stitch-line dimensions; fabric drape, foam, and turn-of-cloth can change the sewn silhouette.</p></> : null}
     </section>
   );
 }

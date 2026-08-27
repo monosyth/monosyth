@@ -167,7 +167,7 @@
 .savedBagCardTop span, .savedBagCardTop b { color: var(--cyan); font: 650 .46rem/1 var(--font-ibm-plex-mono), monospace; letter-spacing: .09em; text-transform: uppercase; }
 .savedBagCardTop b { padding: .25rem .34rem; border-radius: .34rem; color: #243307; background: var(--lime); }
 .savedBagCard h3 { margin: .55rem 0 .24rem; overflow-wrap: anywhere; color: white; font-size: 1.02rem; }
-.savedBagCard > strong { color: var(--amber); font: 650 .64rem/1.25 var(--font-ibm-plex-mono), monospace; }
+.savedBagCard > strong { display: block; margin-top: .65rem; color: var(--amber); font: 650 .64rem/1.25 var(--font-ibm-plex-mono), monospace; }
 .savedBagCard dl { display: grid; gap: .3rem; margin: .72rem 0; }
 .savedBagCard dl > div { display: grid; grid-template-columns: 4.1rem 1fr; gap: .45rem; padding-top: .3rem; border-top: 1px solid rgba(132, 151, 167, .1); }
 .savedBagCard dt, .savedBagCard dd { margin: 0; font-size: .51rem; line-height: 1.3; }
@@ -1026,6 +1026,410 @@
 .fatQuarterNoFit .fatQuarterSheet > b { color: #8f2c4e; font-size: var(--type-body); }
 .fatQuarterNoFit > p { margin: .45rem 0 0; color: #ffafc1; font-size: var(--type-support); }
 
+.recessedControls {
+  display: grid;
+  gap: .45rem;
+  margin-top: .58rem;
+}
+.recessedControls .measureField { padding: .5rem; }
+.recessedMethodToggle > span {
+  display: block;
+  margin-bottom: .32rem;
+  color: #8196a0;
+  font: 650 var(--type-meta)/1.2 var(--font-ibm-plex-mono), monospace;
+  text-transform: uppercase;
+}
+.recessedInlineWarnings {
+  padding: .55rem .65rem;
+  border: 1px solid rgba(255, 113, 148, .3);
+  border-radius: .58rem;
+  background: rgba(255, 113, 148, .07);
+}
+.recessedInlineWarnings p {
+  margin: .18rem 0;
+  color: #ffb0c2;
+  font-size: var(--type-support);
+  line-height: 1.45;
+}
+
+.recessedCutPlan {
+  margin-top: 1rem;
+  overflow: hidden;
+  border: 1px solid rgba(79, 227, 230, .24);
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 88% 0%, rgba(79, 227, 230, .08), transparent 24rem),
+    linear-gradient(145deg, rgba(16, 29, 43, .96), rgba(7, 16, 25, .96));
+  box-shadow: 0 20px 42px rgba(0, 0, 0, .17);
+}
+.recessedCutPlanHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(132, 151, 167, .14);
+}
+.recessedCutPlanHeader p,
+.recessedCutPlanHeader h2,
+.recessedCutPlanHeader span { margin: 0; }
+.recessedCutPlanHeader p {
+  color: var(--cyan);
+  font: 700 var(--type-meta)/1.2 var(--font-ibm-plex-mono), monospace;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.recessedCutPlanHeader h2 {
+  margin-top: .28rem;
+  color: white;
+  font-size: clamp(1.25rem, 2vw, 1.65rem);
+  line-height: 1.15;
+  letter-spacing: -.03em;
+}
+.recessedCutPlanHeader span {
+  display: block;
+  margin-top: .35rem;
+  color: #8fa3ad;
+  font-size: var(--type-body);
+  line-height: 1.45;
+}
+.recessedCutPlanHeader > b {
+  flex: 0 0 auto;
+  padding: .45rem .6rem;
+  border: 1px solid rgba(188, 232, 89, .28);
+  border-radius: .55rem;
+  color: var(--lime);
+  background: rgba(188, 232, 89, .07);
+  font: 750 var(--type-meta)/1 var(--font-ibm-plex-mono), monospace;
+  letter-spacing: .08em;
+}
+
+.recessedCutSummary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .65rem;
+  padding: 1rem;
+}
+.recessedCutSummary > div {
+  min-width: 0;
+  padding: .75rem;
+  border: 1px solid rgba(246, 186, 76, .16);
+  border-radius: .72rem;
+  background: rgba(246, 186, 76, .045);
+}
+.recessedCutSummary span,
+.recessedCutSummary strong,
+.recessedCutSummary small { display: block; }
+.recessedCutSummary span {
+  color: #8296a1;
+  font: 650 var(--type-meta)/1.2 var(--font-ibm-plex-mono), monospace;
+  text-transform: uppercase;
+}
+.recessedCutSummary strong {
+  margin-top: .32rem;
+  color: var(--amber);
+  font: 750 1rem/1.25 var(--font-ibm-plex-mono), monospace;
+}
+.recessedCutSummary small {
+  margin-top: .25rem;
+  color: #9babb2;
+  font-size: var(--type-support);
+  line-height: 1.4;
+}
+
+.recessedColorKey {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem 1rem;
+  margin: 0 1rem;
+  padding: .65rem .75rem;
+  border: 1px solid rgba(132, 151, 167, .14);
+  border-radius: .68rem;
+  background: rgba(7, 16, 25, .55);
+}
+.recessedColorKey span {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  color: #c2d0d4;
+  font-size: var(--type-support);
+}
+.recessedColorKey i {
+  width: 1rem;
+  height: 1rem;
+  border-radius: .28rem;
+  border: 1px solid rgba(255, 255, 255, .28);
+}
+.recessedOuterSwatch { background: #7565d8; }
+.recessedLiningSwatch { background: #62dfe1; }
+.recessedStitchSwatch {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: repeating-linear-gradient(90deg, white 0 3px, transparent 3px 6px);
+}
+.recessedScaleNote {
+  margin: .55rem 1rem 0;
+  color: #90a3ac;
+  font-size: var(--type-support);
+  line-height: 1.45;
+}
+
+.recessedPieceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .8rem;
+  padding: 1rem;
+}
+.recessedPieceGrid article {
+  min-width: 0;
+  padding: .75rem;
+  border: 1px solid rgba(132, 151, 167, .16);
+  border-radius: .75rem;
+  background: rgba(7, 16, 25, .5);
+}
+.recessedPieceGrid article > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .6rem;
+}
+.recessedPieceGrid article > header strong {
+  color: white;
+  font-size: var(--type-body);
+}
+.recessedPieceGrid article > header span {
+  color: #91a4ad;
+  font: 700 var(--type-meta)/1 var(--font-ibm-plex-mono), monospace;
+  letter-spacing: .06em;
+}
+.recessedPieceGrid article > p {
+  margin: .5rem 0 0;
+  color: #9badb4;
+  font: 650 var(--type-support)/1.35 var(--font-ibm-plex-mono), monospace;
+}
+
+.recessedPatternPiece {
+  position: relative;
+  height: 8rem;
+  margin-top: .55rem;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, .78);
+  border-radius: .35rem;
+  box-shadow: inset 0 0 0 1px rgba(7, 16, 25, .3), 0 8px 18px rgba(0, 0, 0, .18);
+}
+.recessedPatternOuter {
+  color: white;
+  background:
+    linear-gradient(45deg, rgba(255, 255, 255, .09) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, .09) 75%),
+    #6657c4;
+  background-size: 16px 16px;
+}
+.recessedPatternLining {
+  color: #08252b;
+  background:
+    linear-gradient(45deg, rgba(255, 255, 255, .24) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, .24) 75%),
+    #62dfe1;
+  background-size: 16px 16px;
+}
+.recessedRimStitch,
+.recessedZipperStitch {
+  position: absolute;
+  z-index: 3;
+  right: .75rem;
+  left: .75rem;
+  border-top: 2px dashed currentColor;
+  opacity: .78;
+}
+.recessedRimStitch { top: .75rem; }
+.recessedZipperStitch {
+  right: max(.75rem, var(--notch-width));
+  bottom: .75rem;
+  left: max(.75rem, var(--notch-width));
+}
+.recessedRimEdge,
+.recessedZipperEdge,
+.recessedGrain,
+.recessedCenterMark,
+.recessedNotchLabel {
+  position: absolute;
+  z-index: 4;
+  padding: .22rem .34rem;
+  border-radius: .28rem;
+  background: rgba(7, 16, 25, .78);
+  color: white;
+  font: 750 var(--type-meta)/1 var(--font-ibm-plex-mono), monospace;
+  letter-spacing: .04em;
+}
+.recessedRimEdge { top: .18rem; left: 50%; transform: translateX(-50%); }
+.recessedZipperEdge { bottom: .18rem; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+.recessedGrain { top: 50%; left: 1rem; transform: translateY(-50%); }
+.recessedCenterMark { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+.recessedCenterMark::before {
+  position: absolute;
+  top: -2.25rem;
+  bottom: -2.25rem;
+  left: 50%;
+  z-index: -1;
+  border-left: 1px solid currentColor;
+  content: "";
+}
+.recessedNotchLeft,
+.recessedNotchRight {
+  position: absolute;
+  z-index: 5;
+  bottom: -2px;
+  width: var(--notch-width);
+  height: var(--notch-height);
+  background: #071019;
+}
+.recessedNotchLeft {
+  left: -2px;
+  border-top: 2px solid white;
+  border-right: 2px solid white;
+}
+.recessedNotchRight {
+  right: -2px;
+  border-top: 2px solid white;
+  border-left: 2px solid white;
+}
+.recessedNotchLabel {
+  left: calc(var(--notch-width) + .35rem);
+  bottom: calc(var(--notch-height) - .9rem);
+  color: var(--amber);
+}
+.recessedFoldLeft,
+.recessedFoldRight {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  bottom: 0;
+  width: .75rem;
+  border-left: 2px dashed rgba(255, 255, 255, .82);
+  border-right: 2px dashed rgba(255, 255, 255, .82);
+  background: rgba(7, 16, 25, .12);
+}
+.recessedFoldLeft { left: .75rem; }
+.recessedFoldRight { right: .75rem; }
+
+.recessedSquareLesson {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+  margin: 0 1rem 1rem;
+  padding: .9rem;
+  border: 1px solid rgba(246, 186, 76, .25);
+  border-radius: .78rem;
+  background: rgba(246, 186, 76, .06);
+}
+.recessedSquareExample {
+  position: relative;
+  height: 5.2rem;
+  overflow: hidden;
+  border: 2px solid #7565d8;
+  background: #6657c4;
+}
+.recessedSquareExample > span {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 2.8rem;
+  height: 2.8rem;
+  border-top: 2px solid white;
+  border-left: 2px solid white;
+  background: #071019;
+}
+.recessedSquareExample > b {
+  position: absolute;
+  right: 2.9rem;
+  bottom: 1rem;
+  color: var(--amber);
+  font: 750 var(--type-body)/1 var(--font-ibm-plex-mono), monospace;
+}
+.recessedSquareLesson strong {
+  color: white;
+  font-size: var(--type-body);
+}
+.recessedSquareLesson p {
+  margin: .35rem 0 0;
+  color: #a6b5ba;
+  font-size: var(--type-body);
+  line-height: 1.5;
+}
+.recessedSquareLesson em { color: var(--amber); font-style: normal; }
+.recessedOpenExplanation {
+  margin: 0 1rem 1rem;
+  padding: .85rem;
+  border-left: 3px solid var(--cyan);
+  color: #b5c5ca;
+  background: rgba(79, 227, 230, .05);
+  font-size: var(--type-body);
+  line-height: 1.5;
+}
+.recessedOpenExplanation strong { color: var(--cyan); }
+
+.recessedAssemblyGuide {
+  display: grid;
+  grid-template-columns: minmax(15rem, .75fr) minmax(0, 1.25fr);
+  gap: 1rem;
+  padding: 1rem;
+  border-top: 1px solid rgba(132, 151, 167, .14);
+  background: rgba(7, 16, 25, .36);
+}
+.recessedAssemblyModel {
+  display: grid;
+  align-content: center;
+  min-height: 9rem;
+  padding: 1rem;
+  perspective: 28rem;
+}
+.recessedAssemblyModel span {
+  display: grid;
+  place-items: center;
+  height: 2.65rem;
+  border: 1px solid rgba(255, 255, 255, .45);
+  font: 800 var(--type-meta)/1 var(--font-ibm-plex-mono), monospace;
+  letter-spacing: .1em;
+}
+.recessedAssemblyOuter {
+  color: white;
+  background: #6657c4;
+  transform: rotateX(8deg) translateY(.2rem);
+}
+.recessedAssemblyZipper {
+  z-index: 2;
+  height: 1.2rem !important;
+  color: #102028;
+  border-color: var(--amber) !important;
+  background: repeating-linear-gradient(90deg, #f6ba4c 0 6px, #3d2c0e 6px 9px);
+}
+.recessedAssemblyLining {
+  color: #08252b;
+  background: #62dfe1;
+  transform: rotateX(-8deg) translateY(-.2rem);
+}
+.recessedAssemblyGuide ol {
+  margin: 0;
+  padding-left: 1.4rem;
+  color: #c3d0d3;
+}
+.recessedAssemblyGuide li {
+  margin: .38rem 0;
+  padding-left: .2rem;
+  font-size: var(--type-body);
+  line-height: 1.5;
+}
+.recessedConstructionNote {
+  margin: 0;
+  padding: .85rem 1rem 1rem;
+  border-top: 1px solid rgba(132, 151, 167, .12);
+  color: #9eafb5;
+  background: rgba(246, 186, 76, .035);
+  font-size: var(--type-body);
+  line-height: 1.5;
+}
+.recessedConstructionNote strong { color: var(--amber); }
+
 /* Minimum readable type sizes for real instructions and controls. */
 .brandBlock p,
 .brandBlock h1 span,
@@ -1221,6 +1625,17 @@
   .fatQuarterPieceSummary > b,
   .fatQuarterPieceSummary > em { grid-column: 2; }
   .fatQuarterLayoutMeta { align-items: flex-start; flex-direction: column; }
+  .recessedCutSummary,
+  .recessedPieceGrid,
+  .recessedAssemblyGuide { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 520px) {
+  .recessedCutPlanHeader { flex-direction: column; }
+  .recessedSquareLesson { grid-template-columns: 1fr; }
+  .recessedPatternPiece { height: 9rem; }
+  .recessedRimEdge,
+  .recessedZipperEdge { max-width: calc(100% - 1rem); text-align: center; white-space: normal; }
 }
 
 @media print {
@@ -1236,5 +1651,30 @@
   .resultPanel { border: 0; }
   .fatQuarterLayout,
   .fatQuarterCard,
-  .fatQuarterSheet { break-inside: avoid; }
+  .fatQuarterSheet,
+  .recessedCutPlan,
+  .recessedPieceGrid article { break-inside: avoid; }
+  .recessedCutPlan {
+    color: #111;
+    background: white;
+    box-shadow: none;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .recessedCutPlanHeader *,
+  .recessedCutSummary *,
+  .recessedColorKey span,
+  .recessedScaleNote,
+  .recessedPieceGrid article > header *,
+  .recessedPieceGrid article > p,
+  .recessedSquareLesson *,
+  .recessedAssemblyGuide li,
+  .recessedConstructionNote { color: #111 !important; }
+  .recessedPatternPiece .recessedRimEdge,
+  .recessedPatternPiece .recessedZipperEdge,
+  .recessedPatternPiece .recessedGrain,
+  .recessedPatternPiece .recessedCenterMark,
+  .recessedPatternPiece .recessedNotchLabel,
+  .recessedAssemblyOuter { color: white !important; }
+  .recessedAssemblyLining { color: #08252b !important; }
 }

@@ -45,6 +45,8 @@ const fallback: BagStudioSnapshot = {
     zipperGap: 0.25,
     recessDepth: 1.5,
     recessEndGap: 0.5,
+    recessEndStyle: "boxed",
+    recessNotch: 0.75,
   },
   outerDesign: defaultOuterPanelDesign,
   mirror: true,
@@ -73,6 +75,8 @@ const custom: BagStudioSnapshot = {
     ...fallback.closureOptions,
     sideZipperSide: "left",
     sideZipperLength: 10,
+    recessEndStyle: "boxed",
+    recessNotch: 1,
   },
   outerDesign: {
     ...fallback.outerDesign,
@@ -118,6 +122,8 @@ same(restored.workingCopy.activeSavedBagId, "bag-1", "active named bag is restor
 same(restored.workingCopy.snapshot, custom, "every canonical draft setting round-trips");
 same(restored.savedBags.length, 1, "named bag collection round-trips");
 same(restored.savedBags[0]?.snapshot.closureOptions.sideZipperSide, "left", "side zipper side survives a save");
+same(restored.savedBags[0]?.snapshot.closureOptions.recessEndStyle, "boxed", "recessed zipper end style survives a save");
+same(restored.savedBags[0]?.snapshot.closureOptions.recessNotch, 1, "recessed zipper notch survives a save");
 same(restored.savedBags[0]?.snapshot.fabricSettings.source, "fat-quarters", "fat-quarter mode survives a save");
 same(restored.savedBags[0]?.snapshot.outerDesign.blockSizeBasis, "cut", "cut-square interpretation survives a save");
 same(restored.savedBags[0]?.snapshot.previewYaw, 350, "3D orbit position survives a save");
@@ -137,6 +143,32 @@ same(repaired.closureOptions.sideZipperSide, "right", "unknown zipper side falls
 same(repaired.fabricSettings.fatQuarterWidth, 21, "non-finite fabric size falls back safely");
 same(repaired.previewYaw, 350, "negative orbit values normalize around the bag");
 same(normalizePreviewYaw(720), 0, "full rotations normalize to the front");
+
+const legacyRecessed = normalizeBagStudioSnapshot(
+  {
+    ...fallback,
+    closure: "recessed-zipper",
+    closureOptions: {
+      ...fallback.closureOptions,
+      recessEndStyle: undefined,
+    },
+  },
+  fallback,
+);
+same(legacyRecessed.closureOptions.recessEndStyle, "open", "saved recessed designs from before boxed ends keep the original open-end construction");
+
+const legacyNonRecessed = normalizeBagStudioSnapshot(
+  {
+    ...fallback,
+    closure: "open-tote",
+    closureOptions: {
+      ...fallback.closureOptions,
+      recessEndStyle: undefined,
+    },
+  },
+  fallback,
+);
+same(legacyNonRecessed.closureOptions.recessEndStyle, "boxed", "older non-recessed bags receive the new boxed default when recessed zipper is selected later");
 
 const duplicateIds = parseBagStudioState(
   JSON.stringify({

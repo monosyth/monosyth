@@ -11,6 +11,7 @@ export type BagStudioToolMode = "select" | "shape";
 export type BagStudioSnapStep = 0 | 0.125 | 0.25 | 0.5 | 1;
 export type BagStudioTab = "studio" | "saved";
 export type SideZipperSide = "left" | "right";
+export type RecessedZipperEndStyle = "boxed" | "open";
 
 export type BagStudioClosureOptions = {
   handleMaterial: HandleMaterial;
@@ -23,6 +24,8 @@ export type BagStudioClosureOptions = {
   zipperGap: number;
   recessDepth: number;
   recessEndGap: number;
+  recessEndStyle: RecessedZipperEndStyle;
+  recessNotch: number;
 };
 
 export type BagStudioFabricSettings = {
@@ -82,6 +85,7 @@ const snapSteps: BagStudioSnapStep[] = [0, 0.125, 0.25, 0.5, 1];
 const tabs: BagStudioTab[] = ["studio", "saved"];
 const handleMaterials: HandleMaterial[] = ["webbing", "fabric"];
 const zipperSides: SideZipperSide[] = ["left", "right"];
+const recessedZipperEndStyles: RecessedZipperEndStyle[] = ["boxed", "open"];
 const piecingModes: OuterPanelDesign["mode"][] = [
   "solid",
   "vertical-strips",
@@ -141,9 +145,14 @@ export function normalizeBagStudioSnapshot(
   const fabricSettings = isRecord(input.fabricSettings)
     ? input.fabricSettings
     : {};
+  const normalizedClosure = enumValue(
+    input.closure,
+    closures,
+    fallback.closure,
+  );
 
   return {
-    closure: enumValue(input.closure, closures, fallback.closure),
+    closure: normalizedClosure,
     basis: enumValue(input.basis, sizeBases, fallback.basis),
     draft: {
       cutWidth: finiteNumber(draft.cutWidth, fallback.draft.cutWidth),
@@ -206,6 +215,20 @@ export function normalizeBagStudioSnapshot(
       recessEndGap: finiteNumber(
         closureOptions.recessEndGap,
         fallback.closureOptions.recessEndGap,
+      ),
+      recessEndStyle:
+        closureOptions.recessEndStyle === undefined
+          ? normalizedClosure === "recessed-zipper"
+            ? "open"
+            : fallback.closureOptions.recessEndStyle
+          : enumValue(
+              closureOptions.recessEndStyle,
+              recessedZipperEndStyles,
+              fallback.closureOptions.recessEndStyle,
+            ),
+      recessNotch: finiteNumber(
+        closureOptions.recessNotch,
+        fallback.closureOptions.recessNotch,
       ),
     },
     outerDesign: {

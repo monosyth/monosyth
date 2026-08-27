@@ -9,6 +9,7 @@ import {
   calculateOuterPanelComposition,
   defaultOuterPanelDesign,
 } from "../src/lib/sewing/panel-composition";
+import { calculateRecessedZipperKit } from "../src/lib/sewing/recessed-zipper";
 import { calculateToteHandlePlan } from "../src/lib/sewing/tote-handle";
 
 let checks = 0;
@@ -35,6 +36,74 @@ near(plan.cutHeight, 14.5, "14 × 12 × 4 tote cut height");
 near(plan.finishedBaseWidth, 14, "finished width round trip");
 near(plan.finishedHeight, 12, "finished height round trip");
 near(plan.finishedDepth, 4, "finished depth round trip");
+
+const boxedRecessedKit = calculateRecessedZipperKit(plan, {
+  recessDepth: 1.5,
+  recessEndGap: 0.5,
+  recessEndStyle: "boxed",
+  recessNotch: 0.75,
+});
+near(boxedRecessedKit.cutLength, 18.5, "boxed recessed panels use the raw top-edge width");
+near(boxedRecessedKit.cutWidth, 2, "boxed recessed cut depth includes two seam allowances");
+near(boxedRecessedKit.boxedEndWidth, 1.5, "boxed end width is twice the zipper-panel notch");
+near(boxedRecessedKit.zipperSeamSpan, 17, "boxed zipper seam spans between both notches");
+near(boxedRecessedKit.recommendedZipperLength, 20, "boxed zipper handling length rounds to an easy whole inch");
+
+const openRecessedKit = calculateRecessedZipperKit(plan, {
+  recessDepth: 1.5,
+  recessEndGap: 0.5,
+  recessEndStyle: "open",
+  recessNotch: 0.75,
+});
+near(openRecessedKit.finishedLength, 13, "open recessed panel keeps both selected side gaps");
+near(openRecessedKit.cutLength, 13.5, "open recessed panel adds two seam allowances to its finished length");
+near(openRecessedKit.notch, 0, "open recessed panel never inherits boxed notches");
+
+const largerNotchKit = calculateRecessedZipperKit(plan, {
+  recessDepth: 1.5,
+  recessEndGap: 0.5,
+  recessEndStyle: "boxed",
+  recessNotch: 1,
+});
+near(largerNotchKit.boxedEndWidth, 2, "larger zipper-panel square updates the boxed end width");
+near(largerNotchKit.zipperSeamSpan, 16.5, "larger zipper-panel square shortens the zipper seam span at both ends");
+
+const halfInchSeamPlan = calculateBagPatternPlan(
+  draftFromFinishedSize({
+    baseWidth: 14,
+    height: 12,
+    depth: 4,
+    seamAllowance: 0.5,
+  }),
+);
+const halfInchSeamKit = calculateRecessedZipperKit(halfInchSeamPlan, {
+  recessDepth: 1.5,
+  recessEndGap: 0.5,
+  recessEndStyle: "boxed",
+  recessNotch: 0.75,
+});
+near(halfInchSeamKit.cutWidth, 2.5, "recessed cut depth follows a changed construction seam");
+
+const taperedTopPlan = calculateBagPatternPlan({
+  ...plan,
+  leftTopInset: 1,
+  rightTopInset: 1.5,
+});
+const taperedTopKit = calculateRecessedZipperKit(taperedTopPlan, {
+  recessDepth: 1.5,
+  recessEndGap: 0.5,
+  recessEndStyle: "boxed",
+  recessNotch: 0.75,
+});
+near(taperedTopKit.cutLength, taperedTopPlan.topCutWidth, "boxed panel length follows a tapered raw top edge");
+
+const overNotchedKit = calculateRecessedZipperKit(plan, {
+  recessDepth: 1.5,
+  recessEndGap: 0.5,
+  recessEndStyle: "boxed",
+  recessNotch: 20,
+});
+near(overNotchedKit.notchedZipperEdge, 0, "impossible zipper notches clamp the remaining edge to zero for validation");
 
 const fatQuarterPanels = calculateFatQuarterPieceLayout({
   usableWidth: 21,

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  memo,
   startTransition,
   useEffect,
   useMemo,
@@ -59,6 +60,10 @@ import {
   type BagStudioToolMode,
   type SavedBagDesign,
 } from "@/lib/sewing/bag-studio-storage";
+import {
+  calculateRecessedZipperKit,
+  recessedPanelFinishedLength,
+} from "@/lib/sewing/recessed-zipper";
 
 type SizeBasis = BagStudioSizeBasis;
 type ToolMode = BagStudioToolMode;
@@ -118,7 +123,7 @@ const closureChoices: ReadonlyArray<{
     id: "recessed-zipper",
     label: "Recessed zipper",
     short: "RECESSED",
-    description: "Free-ended inset panel",
+    description: "Boxed or open inset panel",
   },
 ] as const;
 
@@ -170,6 +175,8 @@ const defaultClosureOptions: ClosureOptions = {
   zipperGap: 0.25,
   recessDepth: 1.5,
   recessEndGap: 0.5,
+  recessEndStyle: "boxed",
+  recessNotch: 0.75,
 };
 
 const defaultFabricSettings: BagStudioFabricSettings = {
@@ -223,13 +230,6 @@ function finishedSideSeamLength(plan: BagPatternPlan) {
   );
 }
 
-function recessedPanelFinishedLength(
-  plan: BagPatternPlan,
-  endGap: number,
-) {
-  return Math.max(0, standingTopRimWidth(plan) - endGap * 2);
-}
-
 function getCutPieces(
   plan: BagPatternPlan,
   closure: BagClosure,
@@ -249,11 +249,11 @@ function getCutPieces(
     },
     {
       material: "interfacing",
-      name: "Body support",
+      name: "Interfacing (main body)",
       quantity: 2,
       width: plan.boundingCutWidth,
       height: plan.cutHeight,
-      note: "Optional; trim out of the seam allowance for bulky support.",
+      note: "Optional; follow the product instructions and trim bulky interfacing out of the seam allowance.",
     },
   ];
 
@@ -307,28 +307,31 @@ function getCutPieces(
   }
 
   if (closure === "recessed-zipper") {
-    const finishedLength = recessedPanelFinishedLength(
-      plan,
-      options.recessEndGap,
-    );
-    const stripLength = finishedLength + plan.seamAllowance * 2;
-    const stripWidth = options.recessDepth + plan.seamAllowance * 2;
+    const kit = calculateRecessedZipperKit(plan, options);
     pieces.push(
       {
         material: "outer",
-        name: "Recessed zipper strip",
+        name: kit.endStyle === "boxed"
+          ? "Boxed zipper outer panel"
+          : "Open-end zipper outer strip",
         quantity: 2,
-        width: stripLength,
-        height: stripWidth,
-        note: "Free ends finish short of the side seams by the chosen end gap.",
+        width: kit.cutLength,
+        height: kit.cutWidth,
+        note: kit.endStyle === "boxed"
+          ? `From the zipper-edge corners, remove two ${formatInches(kit.notch)} squares from each panel.`
+          : "Free ends finish short of the side seams by the chosen end gap.",
       },
       {
         material: "lining",
-        name: "Recessed zipper lining",
+        name: kit.endStyle === "boxed"
+          ? "Boxed zipper lining panel"
+          : "Open-end zipper lining strip",
         quantity: 2,
-        width: stripLength,
-        height: stripWidth,
-        note: "Cut to match the two exterior zipper strips.",
+        width: kit.cutLength,
+        height: kit.cutWidth,
+        note: kit.endStyle === "boxed"
+          ? `Cut to match the outer panels, including two ${formatInches(kit.notch)} zipper-edge notches per panel.`
+          : "Cut to match the two exterior zipper strips.",
       },
     );
   }
@@ -353,11 +356,15 @@ function zipperNote(
     case "zipper-gusset":
       return `Zipper: ${formatInches(standingTopRimWidth(plan) + 2)} or longer. Finished reveal between folds: ${formatInches(options.zipperGap)}.`;
     case "recessed-zipper":
-      return `Inset zipper panel: ${formatInches(recessedPanelFinishedLength(plan, options.recessEndGap))} finished length with ${formatInches(options.recessEndGap)} free at each end.`;
+      if (options.recessEndStyle === "boxed") {
+        const kit = calculateRecessedZipperKit(plan, options);
+        return `Boxed zipper boat: the zipper seam spans ${formatInches(kit.zipperSeamSpan)} between the notches. Start with ${formatInches(kit.recommendedZipperLength)} or longer nylon coil zipper tape so there is handling room at both ends, then trim after boxing. Keep metal stops outside every stitch and trim line. Each of the four panels gets two ${formatInches(kit.notch)} zipper-edge notches (8 notches total), producing an approximately ${formatInches(kit.boxedEndWidth)} boxed end with matching seam allowances.`;
+      }
+      return `Open-end inset panel: ${formatInches(recessedPanelFinishedLength(plan, options.recessEndGap))} finished length with ${formatInches(options.recessEndGap)} free at each end.`;
   }
 }
 
-function closureTeaching(closure: BagClosure) {
+function closureTeaching(closure: BagClosure, options: ClosureOptions) {
   switch (closure) {
     case "open-tote":
       return "The top take-up is one matching seam allowance for a lined rim. Center each handle on the marks and reinforce the full box-and-X area from behind; a double-fold hem needs its own larger top allowance.";
@@ -368,7 +375,9 @@ function closureTeaching(closure: BagClosure) {
     case "zipper-gusset":
       return "The two symmetric strips are sized from the finished gusset width, zipper reveal, zipper seam, and outer attachment seam.";
     case "recessed-zipper":
-      return "This uses a floating free-ended panel. The end gap and strip depth stay editable because they control access and recess.";
+      return options.recessEndStyle === "boxed"
+        ? "Boxed ends make an enclosed zipper boat. The little zipper-panel notches are separate from the large body corner squares; cut them only after all four zipper panels are labeled."
+        : "Open ends make a floating zipper panel. The end gap and strip depth stay editable because they control side access and the recess.";
   }
 }
 
@@ -414,6 +423,12 @@ function buildPlanText(
     ),
     "",
     zipperNote(plan, closure, options),
+    ...(closure === "recessed-zipper" && options.recessEndStyle === "boxed"
+      ? [
+          `Closure-notch reminder: cut two ${formatInches(options.recessNotch)} squares from the zipper-edge corners of every recessed panel (8 notches total).`,
+          "These closure notches shape the zipper boat; they do not change the bag depth set by the main-panel corner squares.",
+        ]
+      : []),
     ...(closure === "open-tote"
       ? [
           handlePlacementInstruction(handlePlan),
@@ -1607,6 +1622,196 @@ function FabricLayoutPanel({
   );
 }
 
+function RecessedZipperCutPlan({
+  plan,
+  options,
+}: {
+  plan: BagPatternPlan;
+  options: ClosureOptions;
+}) {
+  const kit = calculateRecessedZipperKit(plan, options);
+  const boxed = kit.endStyle === "boxed";
+  const notchStyle = {
+    "--notch-width": boxed
+      ? `${clamp(
+          (kit.notch / Math.max(kit.cutLength, 0.01)) * 100,
+          8,
+          18,
+        )}%`
+      : "0%",
+    "--notch-height": boxed
+      ? `${clamp(
+          (kit.notch / Math.max(kit.cutWidth, 0.01)) * 100,
+          20,
+          58,
+        )}%`
+      : "0%",
+  } as CSSProperties;
+  const panels = [
+    { material: "outer" as const, name: "Outer panel A" },
+    { material: "outer" as const, name: "Outer panel B" },
+    { material: "lining" as const, name: "Lining panel A" },
+    { material: "lining" as const, name: "Lining panel B" },
+  ];
+  const assemblySteps = boxed
+    ? [
+        "Label all four rectangles, mark the zipper edge, and cut both notches from every panel.",
+        "Sandwich one zipper edge between one outer and one lining panel; sew and topstitch. Repeat on the other zipper edge.",
+        "Open the zipper partway and move the pull away from the end you are sewing.",
+        "At one end, bring the outer panels right sides together and sew the short end. Then bring the lining panels right sides together and sew their short end. Repeat at the other end.",
+        "Flatten each sewn end seam over the zipper centerline and match the straight raw edges made by the notches.",
+        "Sew across each boxed edge slowly. Sew across nylon teeth only; keep metal stops out of the seam.",
+        "Trim extra zipper tape and bulky seam allowance without cutting the stitching.",
+        "Turn the zipper boat right side out, match its center and end marks to the lining, and attach it at the rim.",
+      ]
+    : [
+        "Label all four strips, mark the zipper edge, and press the short-end folds.",
+        "Sandwich one zipper edge between one outer and one lining strip; sew and topstitch. Repeat on the other side.",
+        "Finish both free ends and keep the completed panel clear of the side seams by the chosen end gap.",
+        "Match the center marks and attach the floating panel to the lining at the rim.",
+      ];
+
+  return (
+    <section className={styles.recessedCutPlan} aria-labelledby="recessed-cut-plan-title">
+      <header className={styles.recessedCutPlanHeader}>
+        <div>
+          <p>Recessed zipper kit</p>
+          <h2 id="recessed-cut-plan-title">
+            {boxed ? "Cut four rectangles, then cut the little squares" : "Cut four strips and finish the open ends"}
+          </h2>
+          <span>
+            This closure plan is separate from the two main body panels above.
+          </span>
+        </div>
+        <b>{boxed ? "BOXED ENDS" : "OPEN ENDS"}</b>
+      </header>
+
+      <div className={styles.recessedCutSummary}>
+        <div>
+          <span>Cut each rectangle</span>
+          <strong>{formatInches(kit.cutLength)} × {formatInches(kit.cutWidth)}</strong>
+          <small>2 outer + 2 lining</small>
+        </div>
+        <div>
+          <span>{boxed ? "Remove from every panel" : "Fold at every short end"}</span>
+          <strong>{boxed ? `${formatInches(kit.notch)} square` : formatInches(plan.seamAllowance)}</strong>
+          <small>{boxed ? `2 each · 8 total · about ${formatInches(kit.boxedEndWidth)} boxed end` : "press before zipper assembly"}</small>
+        </div>
+        <div>
+          <span>Zipper seam span</span>
+          <strong>{formatInches(kit.zipperSeamSpan)}</strong>
+          <small>start with {formatInches(kit.recommendedZipperLength)} or longer for handling tails</small>
+        </div>
+        <div>
+          <span>Construction seam</span>
+          <strong>{formatInches(plan.seamAllowance)}</strong>
+          <small>assumed for zipper, ends, box, and rim</small>
+        </div>
+      </div>
+
+      <div className={styles.recessedColorKey} aria-label="Recessed zipper panel color key">
+        <span><i className={styles.recessedOuterSwatch} />Outer fabric · violet</span>
+        <span><i className={styles.recessedLiningSwatch} />Lining fabric · aqua</span>
+        <span><i className={styles.recessedStitchSwatch} />Dashed = labeled seam line</span>
+      </div>
+      <p className={styles.recessedScaleNote}>Diagram is enlarged for clarity and is not to scale. Cut from the written measurements.</p>
+
+      <div className={styles.recessedPieceGrid}>
+        {panels.map((panel) => (
+          <article key={`${panel.material}-${panel.name}`}>
+            <header>
+              <strong>{panel.name}</strong>
+              <span>{panel.material === "outer" ? "OUTER FABRIC" : "LINING FABRIC"}</span>
+            </header>
+            <div
+              className={`${styles.recessedPatternPiece} ${panel.material === "outer" ? styles.recessedPatternOuter : styles.recessedPatternLining}`}
+              style={notchStyle}
+              role="img"
+              aria-label={`${panel.name}, cut ${formatInches(kit.cutLength)} by ${formatInches(kit.cutWidth)}${boxed ? `, with a ${formatInches(kit.notch)} square removed from both zipper-edge corners` : ", with folded open ends"}`}
+            >
+              <span className={styles.recessedRimEdge}>RIM SEAM · {formatInches(plan.seamAllowance)}</span>
+              <span className={styles.recessedGrain}>grain →</span>
+              <span className={styles.recessedCenterMark}>CENTER</span>
+              <span className={styles.recessedZipperEdge}>
+                {boxed
+                  ? `ZIPPER SEAM · ${formatInches(plan.seamAllowance)} · BETWEEN NOTCHES`
+                  : `ZIPPER SEAM · ${formatInches(plan.seamAllowance)}`}
+              </span>
+              <i className={styles.recessedRimStitch} aria-hidden="true" />
+              <i className={styles.recessedZipperStitch} aria-hidden="true" />
+              {boxed ? (
+                <>
+                  <i className={styles.recessedNotchLeft} aria-hidden="true" />
+                  <i className={styles.recessedNotchRight} aria-hidden="true" />
+                  <b className={styles.recessedNotchLabel}>{formatInches(kit.notch)}</b>
+                </>
+              ) : (
+                <>
+                  <i className={styles.recessedFoldLeft} aria-hidden="true" />
+                  <i className={styles.recessedFoldRight} aria-hidden="true" />
+                </>
+              )}
+            </div>
+            <p>{formatInches(kit.cutLength)} long × {formatInches(kit.cutWidth)} deep</p>
+          </article>
+        ))}
+      </div>
+
+      {boxed ? (
+        <div className={styles.recessedSquareLesson}>
+          <div className={styles.recessedSquareExample} aria-hidden="true">
+            <span />
+            <b>{formatInches(kit.notch)}</b>
+          </div>
+          <div>
+            <strong>Measure this square from both raw zipper-edge corners.</strong>
+            <p>With the same allowance on the matching seams, this makes an end about <em>{formatInches(kit.boxedEndWidth)} wide</em>, which must fit inside the bag’s {formatInches(plan.finishedDepth)} depth. These closure notches do not set bag depth; the large body squares still do that.</p>
+          </div>
+        </div>
+      ) : (
+        <p className={styles.recessedOpenExplanation}>
+          Open-end panels do not use square notches. Fold and finish the short ends, then keep the completed zipper panel {formatInches(options.recessEndGap)} away from each side seam. To use the square-cut construction, return to Step 2 and choose <strong>Boxed ends</strong>.
+        </p>
+      )}
+
+      <div className={styles.recessedAssemblyGuide}>
+        <div className={styles.recessedAssemblyModel} role="img" aria-label="Color-coded zipper sandwich preview: violet outer fabric, zipper, then aqua lining fabric">
+          <span className={styles.recessedAssemblyOuter}>OUTER</span>
+          <span className={styles.recessedAssemblyZipper}>ZIPPER</span>
+          <span className={styles.recessedAssemblyLining}>LINING</span>
+        </div>
+        <ol>
+          {assemblySteps.map((step) => <li key={step}>{step}</li>)}
+        </ol>
+      </div>
+      <p className={styles.recessedConstructionNote}><strong>Construction assumption:</strong> this first version uses the selected {formatInches(plan.seamAllowance)} allowance for every recessed-panel seam. If the zipper panels need more body, interface the two outer panels before assembly. Test one end in scraps before cutting precious fabric, especially with foam, canvas, vinyl, or a different zipper-foot setup.</p>
+    </section>
+  );
+}
+
+const SavedBagThumbnail = memo(function SavedBagThumbnail({
+  snapshot,
+}: {
+  snapshot: BagStudioSnapshot;
+}) {
+  const plan = calculateBagPatternPlan(snapshot.draft);
+  const composition = calculateOuterPanelComposition(
+    plan,
+    snapshot.outerDesign,
+  );
+
+  return (
+    <BagOutcomePreview
+      variant="thumbnail"
+      plan={plan}
+      closure={snapshot.closure}
+      options={snapshot.closureOptions}
+      composition={composition}
+      yaw={snapshot.previewYaw}
+    />
+  );
+});
+
 export function BagPatternStudio() {
   const { status, user } = useAuth();
   const [closure, setClosure] = useState<BagClosure>("open-tote");
@@ -1789,6 +1994,7 @@ export function BagPatternStudio() {
     }
     if (
       closure === "recessed-zipper" &&
+      closureOptions.recessEndStyle === "open" &&
       recessedPanelFinishedLength(
         plan,
         closureOptions.recessEndGap,
@@ -1797,6 +2003,32 @@ export function BagPatternStudio() {
       warnings.push(
         "Leave at least 1 inch of usable recessed zipper panel after both end gaps.",
       );
+    }
+    if (
+      closure === "recessed-zipper" &&
+      closureOptions.recessEndStyle === "boxed"
+    ) {
+      const kit = calculateRecessedZipperKit(plan, closureOptions);
+      if (kit.notch <= plan.seamAllowance) {
+        warnings.push(
+          "Make the zipper-panel square larger than the seam allowance so the notch reaches beyond the stitch line.",
+        );
+      }
+      if (kit.notch >= kit.cutWidth - plan.seamAllowance) {
+        warnings.push(
+          "Make the zipper-panel square smaller than the panel depth so fabric remains above the notch.",
+        );
+      }
+      if (kit.notchedZipperEdge < 2) {
+        warnings.push(
+          "Use smaller zipper-panel squares or a longer top edge so at least 2 inches remain between the notches.",
+        );
+      }
+      if (kit.boxedEndWidth >= plan.finishedDepth) {
+        warnings.push(
+          `Use a smaller zipper-panel square: its approximately ${formatInches(kit.boxedEndWidth)} boxed end must be narrower than the bag's ${formatInches(plan.finishedDepth)} depth.`,
+        );
+      }
     }
     if (
       closure !== "top-zipper" &&
@@ -2600,13 +2832,29 @@ export function BagPatternStudio() {
                 <MeasurementField label="Zipper reveal" hint="finished gap between folds" value={closureOptions.zipperGap} min={0} onChange={(value) => setClosureOptions((current) => ({ ...current, zipperGap: Math.max(0, value) }))} />
               ) : null}
               {closure === "recessed-zipper" ? (
-                <>
-                  <MeasurementField label="Recess depth" hint="strip depth below the rim" value={closureOptions.recessDepth} min={0.5} onChange={(value) => setClosureOptions((current) => ({ ...current, recessDepth: Math.max(0.5, value) }))} />
-                  <MeasurementField label="End gap" hint="free space at each side seam" value={closureOptions.recessEndGap} min={0.25} onChange={(value) => setClosureOptions((current) => ({ ...current, recessEndGap: Math.max(0.25, value) }))} />
-                </>
+                <div className={styles.recessedControls}>
+                  <div className={styles.recessedMethodToggle}>
+                    <span>Panel end style</span>
+                    <div className={styles.handleMaterialToggle} role="group" aria-label="Recessed zipper panel end style">
+                      <button type="button" aria-pressed={closureOptions.recessEndStyle === "boxed"} onClick={() => setClosureOptions((current) => ({ ...current, recessEndStyle: "boxed" }))}>Boxed ends</button>
+                      <button type="button" aria-pressed={closureOptions.recessEndStyle === "open"} onClick={() => setClosureOptions((current) => ({ ...current, recessEndStyle: "open" }))}>Open ends</button>
+                    </div>
+                  </div>
+                  <MeasurementField label="Finished zipper-panel depth" hint="strip width after seam allowances" value={closureOptions.recessDepth} min={0.5} onChange={(value) => setClosureOptions((current) => ({ ...current, recessDepth: Math.max(0.5, value) }))} />
+                  {closureOptions.recessEndStyle === "boxed" ? (
+                    <MeasurementField label="Zipper-panel square" hint="cut from both zipper-edge corners" value={closureOptions.recessNotch} min={0.25} onChange={(value) => setClosureOptions((current) => ({ ...current, recessNotch: Math.max(0.25, value) }))} />
+                  ) : (
+                    <MeasurementField label="End gap" hint="free space at each side seam" value={closureOptions.recessEndGap} min={0.25} onChange={(value) => setClosureOptions((current) => ({ ...current, recessEndGap: Math.max(0.25, value) }))} />
+                  )}
+                  {closureWarnings.length ? (
+                    <div className={styles.recessedInlineWarnings} role="status">
+                      {closureWarnings.map((warning) => <p key={warning}>{warning}</p>)}
+                    </div>
+                  ) : null}
+                </div>
               ) : null}
               {closure === "top-zipper" ? <p className={styles.optionOnlyNote}>The zipper uses the full flat top seam; extra tape is added for handling and trimming.</p> : null}
-              <p className={styles.closureTeaching}>{closureTeaching(closure)}</p>
+              <p className={styles.closureTeaching}>{closureTeaching(closure, closureOptions)}</p>
             </section>
 
             <section className={styles.fabricInput} hidden={activeStudioStep !== "plan"}>
@@ -2696,6 +2944,9 @@ export function BagPatternStudio() {
               settings={fabricSettings}
               onSettingsChange={setFabricSettings}
             />
+            {closure === "recessed-zipper" ? (
+              <RecessedZipperCutPlan plan={plan} options={closureOptions} />
+            ) : null}
             </div>
           </section>
 
@@ -2847,6 +3098,9 @@ export function BagPatternStudio() {
                       {saved.id === activeSavedBagId ? <b>OPEN</b> : null}
                     </div>
                     <h3>{saved.name}</h3>
+                    {activeTab === "saved" ? (
+                      <SavedBagThumbnail snapshot={saved.snapshot} />
+                    ) : null}
                     <strong>{formatInches(savedPlan.finishedBaseWidth)} W × {formatInches(savedPlan.finishedHeight)} H × {formatInches(savedPlan.finishedDepth)} D</strong>
                     <dl>
                       <div><dt>Outer</dt><dd>{saved.snapshot.outerDesign.mode.replaceAll("-", " ")}</dd></div>
