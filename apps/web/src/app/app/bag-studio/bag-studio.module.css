@@ -774,17 +774,7 @@
   .spinner { animation: none; }
 }
 
-@media print {
-  .page { color: #111; background: white; }
-  .page::before, .topBar, .workspaceNav, .projectBar, .savedLibrary, .closureRail, .controlPanel, .canvasToolbar, .resultActions, .appFooter, .toolbarHint, .fabricSourceControls { display: none !important; }
-  .workbench { display: block; }
-  .canvasColumn, .resultPanel { padding: .35in; border: 0; background: white; }
-  .canvasFrame, .fabricSection, .finishedCard, .mathCard, .cutList, .notionCard { break-inside: avoid; border-color: #bbb; box-shadow: none; background: white; color: #111; }
-  .resultPanel { display: grid; grid-template-columns: 1fr 1fr; gap: .2in; }
-  .resultTitle { grid-column: 1 / -1; }
-  .resultPanel *, .fabricSection * { color: #111 !important; }
-  .patternCanvas { max-height: 7in; }
-}
+/* Print styles defined in the unified print section below */
 
 /* Readable, cut-first guided workspace. */
 .page {
@@ -1902,107 +1892,225 @@
 }
 
 @media print {
+  /* Reset and base page */
+  .page *, .page *::before, .page *::after {
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+
+  .page {
+    color: #111 !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+  }
+
+  .page::before,
+  .topBar,
+  .workspaceNav,
+  .projectBar,
+  .savedLibrary,
+  .closureRail,
+  .controlPanel,
+  .canvasToolbar,
+  .resultActions,
+  .appFooter,
+  .toolbarHint,
+  .fabricSourceControls,
   .studioGuide,
-  .studioStepFooter { display: none !important; }
-  .workbench { display: block; padding: 0; }
-  .cutCanvasWorkspace[hidden],
-  .buildWorkspace[hidden],
-  .fabricWorkspace[hidden],
-  .resultPanel[hidden] { display: block !important; }
-  .controlPanel { display: none !important; }
+  .studioStepFooter,
+  .presetsSection,
+  .basisToggle,
+  .stepHeader,
+  .companionHeaderActions {
+    display: none !important;
+  }
+
+  .workbench {
+    display: block !important;
+    padding: 0 !important;
+  }
+
   .canvasColumn,
-  .resultPanel { border: 0; }
+  .resultPanel {
+    padding: 0 !important;
+    border: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .cutCanvasWorkspace[hidden],
+  .buildWorkspace[hidden] {
+    display: none !important;
+  }
+
+  .fabricWorkspace[hidden],
+  .resultPanel[hidden] {
+    display: block !important;
+  }
+
+  /* All Cards, Boxes & Containers: pure white, clean light borders, zero dark mode backgrounds */
+  .canvasFrame,
+  .fabricSection,
+  .finishedCard,
+  .mathCard,
+  .cutList,
+  .notionCard,
   .fatQuarterLayout,
   .fatQuarterCard,
   .fatQuarterSheet,
   .recessedCutPlan,
-  .recessedPieceGrid article { break-inside: avoid; }
-  .recessedCutPlan {
-    color: #111;
-    background: white;
-    box-shadow: none;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+  .cutFirstCard,
+  .frenchSeamCard,
+  .fabricYardageCard,
+  .recessedAssemblyModel,
+  .recessedPieceGrid article {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    border: 1px solid #cccccc !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #111111 !important;
   }
+
+  .resultPanel {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.2in !important;
+    background: #ffffff !important;
+  }
+
+  .resultTitle {
+    grid-column: 1 / -1 !important;
+  }
+
+  .resultPanel *,
+  .fabricSection *,
   .recessedCutPlanHeader *,
   .recessedCutSummary *,
-  .recessedColorKey span,
   .recessedScaleNote,
   .recessedPieceGrid article > header *,
   .recessedPieceGrid article > p,
   .recessedSquareLesson *,
   .recessedAssemblyGuide li,
   .recessedConstructionNote,
-  .boxyFormulaGrid * { color: #111 !important; }
+  .boxyFormulaGrid *,
+  .frenchSeamCard * {
+    color: #111111 !important;
+  }
+
+  /* Pattern Pieces: Clean light tint fills with clear dark text and borders */
+  .recessedPatternPiece,
+  .boxyPatternPiece {
+    border: 1.5px solid #222222 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+  }
+
+  .recessedPatternOuter,
+  .boxyPatternOuter {
+    border: 1.5px solid #4a347f !important;
+    background: #fbf9ff !important;
+  }
+
+  .recessedPatternLining,
+  .boxyPatternLining {
+    border: 1.5px solid #0f636f !important;
+    background: #f4fbfb !important;
+  }
+
   .recessedPatternPiece .recessedRimEdge,
   .recessedPatternPiece .recessedZipperEdge,
   .recessedPatternPiece .recessedGrain,
   .recessedPatternPiece .recessedCenterMark,
   .recessedPatternPiece .recessedNotchLabel,
-  .recessedAssemblyOuter { color: white !important; }
-  .recessedAssemblyLining { color: #08252b !important; }
+  .boxyPieceZipper,
+  .boxyPieceBottom,
+  .boxyPieceSideLeft,
+  .boxyPieceSideRight {
+    color: #111111 !important;
+    font-weight: 600 !important;
+  }
+
+  .recessedAssemblyOuter {
+    background: #e9e3f7 !important;
+    color: #34215c !important;
+    border: 1px solid #b8a4e3 !important;
+  }
+  .recessedAssemblyZipper {
+    background: #fdf2d7 !important;
+    color: #7a5105 !important;
+    border: 1px solid #ebd08d !important;
+  }
+  .recessedAssemblyLining {
+    background: #daf3f6 !important;
+    color: #074650 !important;
+    border: 1px solid #9ddbe3 !important;
+  }
 
   /* Companion mode printable handbook */
   .companionOverlay {
     position: static !important;
     display: block !important;
     padding: 0 !important;
-    background: transparent !important;
+    background: #ffffff !important;
     z-index: auto !important;
   }
   .companionModal {
     max-width: 100% !important;
     max-height: none !important;
     border: 0 !important;
-    background: white !important;
-    color: #111 !important;
+    background: #ffffff !important;
+    color: #111111 !important;
     box-shadow: none !important;
     overflow: visible !important;
   }
   .companionHeader {
-    border-bottom: 2px solid #111 !important;
-    padding: 0 0 .15in 0 !important;
+    border-bottom: 2px solid #111111 !important;
+    padding: 0 0 0.15in 0 !important;
     background: transparent !important;
   }
-  .companionHeaderActions { display: none !important; }
-  .companionHeader * { color: #111 !important; }
+  .companionHeader * { color: #111111 !important; }
   .companionBody {
     overflow: visible !important;
-    padding: .15in 0 !important;
+    padding: 0.15in 0 !important;
   }
-  .companionSectionTitle * { color: #111 !important; }
+  .companionSectionTitle * { color: #111111 !important; }
   .companionPieceList {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
-    gap: .1in !important;
+    gap: 0.1in !important;
   }
   .companionPieceCard {
-    border: 1px solid #999 !important;
-    background: #fafafa !important;
-    color: #111 !important;
+    border: 1px solid #cccccc !important;
+    background: #ffffff !important;
+    color: #111111 !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
-  .companionPieceCard * { color: #111 !important; }
+  .companionPieceCard * { color: #111111 !important; }
+  .materialPill {
+    background: #eeeeee !important;
+    color: #111111 !important;
+    border: 1px solid #cccccc !important;
+  }
   .companionStepList {
     padding: 0 !important;
   }
   .companionStepItem {
-    border: 1px solid #ddd !important;
-    background: white !important;
-    color: #111 !important;
+    border: 1px solid #e0e0e0 !important;
+    background: #ffffff !important;
+    color: #111111 !important;
     break-inside: avoid !important;
-    margin-bottom: .1in !important;
     page-break-inside: avoid !important;
+    margin-bottom: 0.1in !important;
   }
   .companionStepNumber {
-    background: #111 !important;
-    color: white !important;
-    border-color: #111 !important;
+    background: #111111 !important;
+    color: #ffffff !important;
+    border-color: #111111 !important;
   }
   .companionStepItem p {
-    color: #111 !important;
-    font-size: .85rem !important;
+    color: #111111 !important;
+    font-size: 0.85rem !important;
     line-height: 1.4 !important;
   }
 }
