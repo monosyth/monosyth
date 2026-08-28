@@ -205,12 +205,12 @@ const sizePresets: ReadonlyArray<BagSizePreset> = [
   {
     id: "boxy-makeup",
     label: "Boxy Makeup Bag",
-    dimensions: "9″ × 5″ × 4½″",
-    description: "Wide-base cosmetics caddy with side carry loop and stand-up walls (Shannon's Summer Sewing Day 7)",
+    dimensions: "14″ × 11″ cut",
+    description: "Shannon's 12 Days of Summer Sewing Day 7 — starts with 14″ × 11″ cut rectangles with pinch-and-sew French corner seams",
     bodyRecipe: "four-corner-boxy",
     baseWidth: 9,
-    depth: 5,
-    height: 4.5,
+    depth: 4.5,
+    height: 6,
   },
   {
     id: "boxy-caddy",
@@ -396,9 +396,9 @@ const defaultDraft = draftFromFinishedSize({
 });
 
 const defaultBoxyDraft = draftFromFinishedBoxyBag({
-  length: 10,
-  width: 4,
-  height: 4,
+  length: 9,
+  width: 4.5,
+  height: 6,
   seamAllowance: 0.25,
   fabricWidth: 44,
 });
@@ -3252,6 +3252,11 @@ export function BagPatternStudio() {
     if (preset.bodyRecipe === "four-corner-boxy") {
       setBodyRecipe("four-corner-boxy");
       setClosure("top-zipper");
+      if (preset.id === "boxy-makeup") {
+        setBoxyBoxingMethod("pinch-french-seam");
+        setBoxyHandleStyle("side-handle");
+        setStructureFeel("fleece-padded");
+      }
       setBoxyDraft((current) =>
         draftFromFinishedBoxyBag({
           length: preset.baseWidth,
