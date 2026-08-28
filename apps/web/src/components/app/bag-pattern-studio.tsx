@@ -2722,9 +2722,7 @@ function BoxyBagCutPlan({
         <span><i className={styles.recessedStitchSwatch} />Dashed = seam line</span>
       </div>
       <p className={styles.recessedScaleNote}>
-        {isFrenchSeam
-          ? "Panels start as solid uncut rectangles. The corner triangles are pinched, measured, and stitched after turning right-side out."
-          : "Diagrams enlarge the corner squares for teaching. Use the written measurements, not the visual scale."}
+        True-to-scale visual proportions ({formatInches(kit.panelCutLength)} × {formatInches(kit.panelCutWidth)} aspect). Cut from the written dimensions.
       </p>
 
       <div className={`${styles.recessedPieceGrid} ${styles.boxyPieceGrid}`}>
@@ -2736,7 +2734,10 @@ function BoxyBagCutPlan({
             </header>
             <div
               className={`${styles.boxyPatternPiece} ${panel.material === "outer" ? styles.boxyPatternOuter : styles.boxyPatternLining}`}
-              style={isFrenchSeam ? undefined : cornerStyle}
+              style={{
+                ...(isFrenchSeam ? {} : cornerStyle),
+                aspectRatio: `${Math.max(1, kit.panelCutLength)} / ${Math.max(1, kit.panelCutWidth)}`,
+              }}
               role="img"
               aria-label={`${panel.name}, cut ${formatInches(kit.panelCutLength)} by ${formatInches(kit.panelCutWidth)}${isFrenchSeam ? " as full rectangle" : `, then remove a ${formatInches(kit.cornerSquare)} square from all four corners`}`}
             >
