@@ -1892,18 +1892,27 @@
 }
 
 @media print {
-  /* Reset and base page */
-  .page *, .page *::before, .page *::after {
+  /* Reset and base page - force pure white background on everything */
+  .page,
+  .page *,
+  .page *::before,
+  .page *::after {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    background-image: none !important;
+    color: #000000 !important;
     text-shadow: none !important;
     box-shadow: none !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   .page {
-    color: #111 !important;
-    background: #ffffff !important;
     padding: 0 !important;
+    margin: 0 !important;
   }
 
+  /* Hide screen-only interactive chrome */
   .page::before,
   .topBar,
   .workspaceNav,
@@ -1921,7 +1930,9 @@
   .presetsSection,
   .basisToggle,
   .stepHeader,
-  .companionHeaderActions {
+  .companionHeaderActions,
+  .cutCanvasWorkspace[hidden],
+  .buildWorkspace[hidden] {
     display: none !important;
   }
 
@@ -1934,12 +1945,6 @@
   .resultPanel {
     padding: 0 !important;
     border: 0 !important;
-    background: #ffffff !important;
-  }
-
-  .cutCanvasWorkspace[hidden],
-  .buildWorkspace[hidden] {
-    display: none !important;
   }
 
   .fabricWorkspace[hidden],
@@ -1947,7 +1952,7 @@
     display: block !important;
   }
 
-  /* All Cards, Boxes & Containers: pure white, clean light borders, zero dark mode backgrounds */
+  /* Clean structural borders */
   .canvasFrame,
   .fabricSection,
   .finishedCard,
@@ -1962,88 +1967,84 @@
   .frenchSeamCard,
   .fabricYardageCard,
   .recessedAssemblyModel,
-  .recessedPieceGrid article {
+  .recessedPieceGrid article,
+  .cutGroupCard,
+  .hardwareCard,
+  .companionPieceCard,
+  .companionStepItem {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
-    border: 1px solid #cccccc !important;
-    box-shadow: none !important;
+    border: 1px solid #999999 !important;
     background: #ffffff !important;
-    color: #111111 !important;
   }
 
   .resultPanel {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
     gap: 0.2in !important;
-    background: #ffffff !important;
   }
 
   .resultTitle {
     grid-column: 1 / -1 !important;
   }
 
-  .resultPanel *,
-  .fabricSection *,
-  .recessedCutPlanHeader *,
-  .recessedCutSummary *,
-  .recessedScaleNote,
-  .recessedPieceGrid article > header *,
-  .recessedPieceGrid article > p,
-  .recessedSquareLesson *,
-  .recessedAssemblyGuide li,
-  .recessedConstructionNote,
-  .boxyFormulaGrid *,
-  .frenchSeamCard * {
-    color: #111111 !important;
+  /* Fabric Map & Sheets */
+  .fabricSheet,
+  .fabricPiece {
+    border: 1.5px solid #000000 !important;
+    background: #ffffff !important;
   }
 
-  /* Pattern Pieces: Clean light tint fills with clear dark text and borders */
+  /* Pattern Pieces & Diagrams */
   .recessedPatternPiece,
   .boxyPatternPiece {
-    border: 1.5px solid #222222 !important;
+    border: 1.5px solid #000000 !important;
     background: #ffffff !important;
-    box-shadow: none !important;
   }
 
   .recessedPatternOuter,
-  .boxyPatternOuter {
-    border: 1.5px solid #4a347f !important;
-    background: #fbf9ff !important;
-  }
-
+  .boxyPatternOuter,
   .recessedPatternLining,
   .boxyPatternLining {
-    border: 1.5px solid #0f636f !important;
-    background: #f4fbfb !important;
+    border: 1.5px solid #000000 !important;
+    background: #ffffff !important;
   }
 
-  .recessedPatternPiece .recessedRimEdge,
-  .recessedPatternPiece .recessedZipperEdge,
-  .recessedPatternPiece .recessedGrain,
-  .recessedPatternPiece .recessedCenterMark,
-  .recessedPatternPiece .recessedNotchLabel,
   .boxyPieceZipper,
   .boxyPieceBottom,
   .boxyPieceSideLeft,
-  .boxyPieceSideRight {
-    color: #111111 !important;
-    font-weight: 600 !important;
+  .boxyPieceSideRight,
+  .recessedRimEdge,
+  .recessedZipperEdge,
+  .recessedGrain,
+  .recessedCenterMark,
+  .recessedNotchLabel,
+  .recessedCutPlanHeader b,
+  .recessedColorKey,
+  .finishedDimensions span,
+  .materialPill,
+  .companionStepNumber,
+  .validBadge,
+  .stepBadge {
+    border: 1px solid #000000 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
   }
 
-  .recessedAssemblyOuter {
-    background: #e9e3f7 !important;
-    color: #34215c !important;
-    border: 1px solid #b8a4e3 !important;
+  .recessedAssemblyModel span {
+    border: 1px solid #000000 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
   }
-  .recessedAssemblyZipper {
-    background: #fdf2d7 !important;
-    color: #7a5105 !important;
-    border: 1px solid #ebd08d !important;
-  }
-  .recessedAssemblyLining {
-    background: #daf3f6 !important;
-    color: #074650 !important;
-    border: 1px solid #9ddbe3 !important;
+
+  .recessedAssemblyGuide,
+  .recessedCutSummary,
+  .recessedSquareLesson,
+  .recessedConstructionNote,
+  .boxyFormulaGrid {
+    border: 1px solid #cccccc !important;
+    background: #ffffff !important;
   }
 
   /* Companion mode printable handbook */
@@ -2054,62 +2055,44 @@
     background: #ffffff !important;
     z-index: auto !important;
   }
+
   .companionModal {
     max-width: 100% !important;
     max-height: none !important;
     border: 0 !important;
     background: #ffffff !important;
-    color: #111111 !important;
-    box-shadow: none !important;
     overflow: visible !important;
   }
+
   .companionHeader {
-    border-bottom: 2px solid #111111 !important;
+    border-bottom: 2px solid #000000 !important;
     padding: 0 0 0.15in 0 !important;
-    background: transparent !important;
+    background: #ffffff !important;
   }
-  .companionHeader * { color: #111111 !important; }
+
   .companionBody {
     overflow: visible !important;
     padding: 0.15in 0 !important;
+    background: #ffffff !important;
   }
-  .companionSectionTitle * { color: #111111 !important; }
+
   .companionPieceList {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 0.1in !important;
   }
-  .companionPieceCard {
-    border: 1px solid #cccccc !important;
-    background: #ffffff !important;
-    color: #111111 !important;
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
-  }
-  .companionPieceCard * { color: #111111 !important; }
-  .materialPill {
-    background: #eeeeee !important;
-    color: #111111 !important;
-    border: 1px solid #cccccc !important;
-  }
+
   .companionStepList {
     padding: 0 !important;
   }
+
   .companionStepItem {
-    border: 1px solid #e0e0e0 !important;
+    border: 1px solid #cccccc !important;
     background: #ffffff !important;
-    color: #111111 !important;
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
     margin-bottom: 0.1in !important;
   }
-  .companionStepNumber {
-    background: #111111 !important;
-    color: #ffffff !important;
-    border-color: #111111 !important;
-  }
+
   .companionStepItem p {
-    color: #111111 !important;
     font-size: 0.85rem !important;
     line-height: 1.4 !important;
   }
