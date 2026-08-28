@@ -937,11 +937,23 @@ export function BagOutcomePreview({
   const recessZipFrom = lerp(recessFrontLeft, recessBackLeft, 0.48);
   const recessZipTo = lerp(recessFrontRight, recessBackRight, 0.48);
 
-  const boxySideDropHeight = Math.max(0, safeHeight - safeDepth / 2);
-  const boxyLeftDrop3: Point3 = { x: -safeWidth / 2, y: boxySideDropHeight, z: 0 };
-  const boxyRightDrop3: Point3 = { x: safeWidth / 2, y: boxySideDropHeight, z: 0 };
-  const boxyLeftDrop = project(boxyLeftDrop3);
-  const boxyRightDrop = project(boxyRightDrop3);
+  // Boxy Bag short end faces: horizontal midpoint seam (flattened tube seam)
+  const boxyLeftMidSeamFront = project({ x: -safeWidth / 2, y: safeHeight / 2, z: -safeDepth / 2 });
+  const boxyLeftMidSeamBack = project({ x: -safeWidth / 2, y: safeHeight / 2, z: safeDepth / 2 });
+  const boxyLeftMidSeamCenter = project({ x: -safeWidth / 2, y: safeHeight / 2, z: 0 });
+
+  const boxyRightMidSeamFront = project({ x: safeWidth / 2, y: safeHeight / 2, z: -safeDepth / 2 });
+  const boxyRightMidSeamBack = project({ x: safeWidth / 2, y: safeHeight / 2, z: safeDepth / 2 });
+  const boxyRightMidSeamCenter = project({ x: safeWidth / 2, y: safeHeight / 2, z: 0 });
+
+  // Boxy Side Carry Handle (curves out on the left end face)
+  const boxyHandleFront = project({ x: -safeWidth / 2, y: safeHeight / 2, z: -safeDepth / 2 + 0.6 });
+  const boxyHandleBack = project({ x: -safeWidth / 2, y: safeHeight / 2, z: safeDepth / 2 - 0.6 });
+  const boxyHandleApex = project({ x: -safeWidth / 2 - 2.8, y: safeHeight / 2, z: 0 });
+
+  // Boxy Pull Tab (right end face)
+  const boxyTabStart = project({ x: safeWidth / 2, y: safeHeight / 2, z: 0 });
+  const boxyTabEnd = project({ x: safeWidth / 2 + 1.2, y: safeHeight / 2, z: 0 });
 
   const zipperOnLeft = options.sideZipperSide === "left";
   const sideTop3 = zipperOnLeft ? leftMidTop3 : rightMidTop3;
@@ -1199,23 +1211,23 @@ export function BagOutcomePreview({
                     />
                   </>
                 ) : null}
-                {/* End Box Seams (Zipper drop to bottom) */}
+                {/* Horizontal Midpoint Seams across short end faces (tube closure seam) */}
                 {leftVisible ? (
                   <line
                     className={styles.outcomeBoxedSeam}
-                    x1={boxyLeftDrop.x}
-                    y1={boxyLeftDrop.y}
-                    x2={project({ x: -safeWidth / 2, y: 0, z: 0 }).x}
-                    y2={project({ x: -safeWidth / 2, y: 0, z: 0 }).y}
+                    x1={boxyLeftMidSeamFront.x}
+                    y1={boxyLeftMidSeamFront.y}
+                    x2={boxyLeftMidSeamBack.x}
+                    y2={boxyLeftMidSeamBack.y}
                   />
                 ) : null}
                 {rightVisible ? (
                   <line
                     className={styles.outcomeBoxedSeam}
-                    x1={boxyRightDrop.x}
-                    y1={boxyRightDrop.y}
-                    x2={project({ x: safeWidth / 2, y: 0, z: 0 }).x}
-                    y2={project({ x: safeWidth / 2, y: 0, z: 0 }).y}
+                    x1={boxyRightMidSeamFront.x}
+                    y1={boxyRightMidSeamFront.y}
+                    x2={boxyRightMidSeamBack.x}
+                    y2={boxyRightMidSeamBack.y}
                   />
                 ) : null}
               </>
@@ -1264,6 +1276,31 @@ export function BagOutcomePreview({
 
           {closure === "top-zipper" ? (
             <g aria-hidden="true">
+              {/* Twin parallel topstitching along the zipper */}
+              {boxy ? (
+                <>
+                  <line
+                    x1={project({ x: -safeWidth / 2 + 0.8, y: safeHeight, z: -0.6 }).x}
+                    y1={project({ x: -safeWidth / 2 + 0.8, y: safeHeight, z: -0.6 }).y}
+                    x2={project({ x: safeWidth / 2 - 0.8, y: safeHeight, z: -0.6 }).x}
+                    y2={project({ x: safeWidth / 2 - 0.8, y: safeHeight, z: -0.6 }).y}
+                    stroke="rgba(255,255,255,.35)"
+                    strokeWidth="1"
+                    strokeDasharray="4 3"
+                  />
+                  <line
+                    x1={project({ x: -safeWidth / 2 + 0.8, y: safeHeight, z: 0.6 }).x}
+                    y1={project({ x: -safeWidth / 2 + 0.8, y: safeHeight, z: 0.6 }).y}
+                    x2={project({ x: safeWidth / 2 - 0.8, y: safeHeight, z: 0.6 }).x}
+                    y2={project({ x: safeWidth / 2 - 0.8, y: safeHeight, z: 0.6 }).y}
+                    stroke="rgba(255,255,255,.35)"
+                    strokeWidth="1"
+                    strokeDasharray="4 3"
+                  />
+                </>
+              ) : null}
+
+              {/* Zipper running centered across top spine */}
               <ZipperLine
                 from={topZipFrom}
                 to={topZipTo}
@@ -1271,23 +1308,68 @@ export function BagOutcomePreview({
                   ? `${formatInches(plan.finishedBaseWidth)} TOP ZIP`
                   : `${formatInches(plan.finishedTopOpening)} TOP ZIP`}
               />
+
               {boxy ? (
                 <>
-                  {/* Left side zipper drop down halfway */}
-                  <ZipperLine
-                    from={topZipFrom}
-                    to={boxyLeftDrop}
-                    showPull={false}
+                  {/* Folded Zipper End Tabs */}
+                  <polygon
+                    points={points([
+                      project({ x: -safeWidth / 2 - 0.1, y: safeHeight, z: -0.6 }),
+                      project({ x: -safeWidth / 2 + 0.8, y: safeHeight, z: -0.6 }),
+                      project({ x: -safeWidth / 2 + 0.8, y: safeHeight, z: 0.6 }),
+                      project({ x: -safeWidth / 2 - 0.1, y: safeHeight, z: 0.6 }),
+                    ])}
+                    fill="#394b63"
+                    stroke="#f6ba4c"
+                    strokeWidth="1.2"
                   />
-                  {/* Right side zipper drop down halfway */}
-                  <ZipperLine
-                    from={topZipTo}
-                    to={boxyRightDrop}
-                    showPull={false}
+                  <polygon
+                    points={points([
+                      project({ x: safeWidth / 2 - 0.8, y: safeHeight, z: -0.6 }),
+                      project({ x: safeWidth / 2 + 0.1, y: safeHeight, z: -0.6 }),
+                      project({ x: safeWidth / 2 + 0.1, y: safeHeight, z: 0.6 }),
+                      project({ x: safeWidth / 2 - 0.8, y: safeHeight, z: 0.6 }),
+                    ])}
+                    fill="#394b63"
+                    stroke="#f6ba4c"
+                    strokeWidth="1.2"
                   />
-                  {/* Boxed end grab tab / carry handle anchor points */}
-                  <circle cx={boxyLeftDrop.x} cy={boxyLeftDrop.y} r="3.5" fill="#f6ba4c" stroke="#101a27" strokeWidth="1.5" />
-                  <circle cx={boxyRightDrop.x} cy={boxyRightDrop.y} r="3.5" fill="#f6ba4c" stroke="#101a27" strokeWidth="1.5" />
+
+                  {/* Left Side Carry Handle Loop spanning horizontally across end seam */}
+                  {leftVisible ? (
+                    <g aria-label="Side carry handle">
+                      <path
+                        d={`M ${boxyHandleFront.x} ${boxyHandleFront.y} Q ${boxyHandleApex.x} ${boxyHandleApex.y} ${boxyHandleBack.x} ${boxyHandleBack.y}`}
+                        fill="none"
+                        stroke="#f6ba4c"
+                        strokeWidth={Math.max(6, scale * 0.9)}
+                        strokeLinecap="round"
+                        opacity=".95"
+                      />
+                      <path
+                        d={`M ${boxyHandleFront.x} ${boxyHandleFront.y} Q ${boxyHandleApex.x} ${boxyHandleApex.y} ${boxyHandleBack.x} ${boxyHandleBack.y}`}
+                        fill="none"
+                        stroke="#1a2b3c"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
+                    </g>
+                  ) : null}
+
+                  {/* Right End Grab Tab centered over midpoint seam */}
+                  {rightVisible ? (
+                    <polygon
+                      points={points([
+                        project({ x: safeWidth / 2, y: safeHeight / 2 - 0.4, z: -0.4 }),
+                        project({ x: safeWidth / 2 + 1.2, y: safeHeight / 2 - 0.4, z: -0.4 }),
+                        project({ x: safeWidth / 2 + 1.2, y: safeHeight / 2 + 0.4, z: 0.4 }),
+                        project({ x: safeWidth / 2, y: safeHeight / 2 + 0.4, z: 0.4 }),
+                      ])}
+                      fill="#f6ba4c"
+                      stroke="#101a27"
+                      strokeWidth="1.5"
+                    />
+                  ) : null}
                 </>
               ) : null}
             </g>

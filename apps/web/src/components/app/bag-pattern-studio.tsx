@@ -209,8 +209,8 @@ const sizePresets: ReadonlyArray<BagSizePreset> = [
     description: "Shannon's 12 Days of Summer Sewing Day 7 — starts with 14″ × 11″ cut rectangles with pinch-and-sew French corner seams",
     bodyRecipe: "four-corner-boxy",
     baseWidth: 9,
-    depth: 4.5,
-    height: 6,
+    depth: 5,
+    height: 4.5,
   },
   {
     id: "boxy-caddy",
@@ -397,8 +397,8 @@ const defaultDraft = draftFromFinishedSize({
 
 const defaultBoxyDraft = draftFromFinishedBoxyBag({
   length: 9,
-  width: 4.5,
-  height: 6,
+  width: 5,
+  height: 4.5,
   seamAllowance: 0.25,
   fabricWidth: 44,
 });
