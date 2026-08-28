@@ -1941,6 +1941,70 @@
   .recessedPatternPiece .recessedNotchLabel,
   .recessedAssemblyOuter { color: white !important; }
   .recessedAssemblyLining { color: #08252b !important; }
+
+  /* Companion mode printable handbook */
+  .companionOverlay {
+    position: static !important;
+    display: block !important;
+    padding: 0 !important;
+    background: transparent !important;
+    z-index: auto !important;
+  }
+  .companionModal {
+    max-width: 100% !important;
+    max-height: none !important;
+    border: 0 !important;
+    background: white !important;
+    color: #111 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+  .companionHeader {
+    border-bottom: 2px solid #111 !important;
+    padding: 0 0 .15in 0 !important;
+    background: transparent !important;
+  }
+  .companionHeaderActions { display: none !important; }
+  .companionHeader * { color: #111 !important; }
+  .companionBody {
+    overflow: visible !important;
+    padding: .15in 0 !important;
+  }
+  .companionSectionTitle * { color: #111 !important; }
+  .companionPieceList {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: .1in !important;
+  }
+  .companionPieceCard {
+    border: 1px solid #999 !important;
+    background: #fafafa !important;
+    color: #111 !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  .companionPieceCard * { color: #111 !important; }
+  .companionStepList {
+    padding: 0 !important;
+  }
+  .companionStepItem {
+    border: 1px solid #ddd !important;
+    background: white !important;
+    color: #111 !important;
+    break-inside: avoid !important;
+    margin-bottom: .1in !important;
+    page-break-inside: avoid !important;
+  }
+  .companionStepNumber {
+    background: #111 !important;
+    color: white !important;
+    border-color: #111 !important;
+  }
+  .companionStepItem p {
+    color: #111 !important;
+    font-size: .85rem !important;
+    line-height: 1.4 !important;
+  }
 }
 
 /* Presets section */
