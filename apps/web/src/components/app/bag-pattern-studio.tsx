@@ -733,15 +733,16 @@ function boxyBagSewingSteps(
 ) {
   if (boxyBoxingMethod === "pinch-french-seam") {
     return [
-      structureFeel === "draped"
-        ? "1. Label outer and lining panels and zipper edges."
-        : "1. Fuse fleece or foam to wrong side of outer panels. (Optional: Quilt vertical or diamond channels with fabric pen lines and sew brand label 1.5″ below zipper edge).",
-      "2. Apply double-sided fabric tape along top edge of Outer A. Separate nylon zipper and stick one side teeth face-down. Apply tape over zipper, position Lining A face-down, and sew across using fabric edge as guide. Press and topstitch. Repeat for Side B.",
-      "3. Re-thread zipper pull onto coil. Sew 3″ × 3″ fabric tabs over both zipper ends, then trim excess zipper flush with panel edges.",
-      "4. Sew outer bottom seam all the way across. Sew lining bottom seam leaving a 4″ turning gap. OPEN ZIPPER HALFWAY!",
-      "5. Flatten tube with bottom seam centered over zipper. Sew across both short ends through all layers. Clip 4 outer corners at 45° and turn right-side out through lining gap. Stitch lining gap closed.",
-      `6. From outside, pinch each of the 4 corners into an isosceles triangle with seam centered. Measure and draw a ${formatInches(plan.cornerCut * 2)} (or 3″) line straight across all 4 corner triangles; sew along lines and trim excess corners close to stitching.`,
-      "7. Attach 4″ × 9″ folded carry handle across one end seam. Turn inside-out again, and sew French seams on all 4 corners to completely enclose raw edges with no bias binding needed!",
+      "1. Fuse fleece & quilt outer: Fuse 11″ × 14″ fusible fleece to the wrong side of both outer fabric rectangles. Use a fabric pen to mark quilting lines and quilt as desired (e.g. 1″ vertical channel lines). If using a brand label, stitch it centered 1.5″ below the top zipper edge now.",
+      "2. Tape & layer zipper: Apply double-sided wash-away fabric tape along the top raw edge of Outer A. Separate your 16″ nylon zipper; stick one half teeth face-down on the tape. Apply another strip of fabric tape over the zipper tape, place Lining A face-down on top, and sew across using the fabric edge as a guide (ensures an even margin of zipper tape).",
+      "3. Press & topstitch: Press both pieces nice and flat along the seam line, then topstitch along the zipper. Press lining down. Repeat the exact same taping and sewing steps for Outer B and Lining B.",
+      "4. Zipper slider & end tabs: Re-thread the zipper slider onto both halves to zip the two panels together. Fold the 3″ × 3″ fabric tabs over both zipper ends, sew across, and trim excess zipper ends flush with the fabric edges.",
+      "5. Outer & lining bottom seams: Fold outer panels right sides together, clip, and sew the bottom seam all the way across. Fold lining panels right sides together, clip, and sew across the bottom seam leaving a 4″ space in the center for turning.",
+      "6. Tube fold & end seams (CRITICAL): OPEN YOUR ZIPPER AT LEAST HALFWAY NOW! Flatten the bag tube so the outer and lining bottom seams align directly with the center zipper line. Clip both short ends and sew all the way across both ends through all layers.",
+      "7. Clip corners & turn: Clip the 4 outer corner points at 45° (do not cut thread stitches) and trim excess seam allowance. Pull the bag right-side out through the lining turning hole. Fold the raw edges of the opening inward and sew the lining opening closed.",
+      `8. The "Pinch & Measure" triangles: Turn right-side out, smooth out the lining, and poke all corners out completely. From the outside, pinch each of the 4 corners into an isosceles triangle with the seam centered down the middle. Use an acrylic ruler to measure and mark a 3″ line straight across the triangle base on all four corners. Check for wrinkles, then sew across all four marked lines.`,
+      "9. Trim & attach carry handle: Trim the excess triangle fabric super close to the stitching line (approx. 1/8″, do not cut your threads!). Fold the 4″ × 9″ handle piece lengthwise in fourths to create a 1″ wide strap, edgestitch both sides, and baste it looped across one boxed end seam.",
+      "10. Enclosed French seams & final turn: Turn the bag wrong-side out again through the open zipper and push the four corners out. Sew a second enclosing seam (approx. 1/4″ to 3/8″ inside the fold) on all four corners to completely encase the raw edges. Turn right-side out — all four boxed corners are cleanly enclosed with zero exposed raw edges!",
     ];
   }
 
@@ -2637,8 +2638,21 @@ function RecessedZipperCutPlan({
   );
 }
 
-function BoxyBagCutPlan({ plan }: { plan: BagPatternPlan }) {
+function BoxyBagCutPlan({
+  plan,
+  boxingMethod = "pinch-french-seam",
+  handleStyle = "side-handle",
+  structureFeel = "fleece-padded",
+  pocketStyle = "none",
+}: {
+  plan: BagPatternPlan;
+  boxingMethod?: BagBoxyBoxingMethod;
+  handleStyle?: BagBoxyHandleStyle;
+  structureFeel?: BagStructureFeel;
+  pocketStyle?: BagPocketStyle;
+}) {
   const kit = calculateBoxyBagKit(plan);
+  const isFrenchSeam = boxingMethod === "pinch-french-seam";
   const panels = [
     { material: "outer" as const, name: "Outer panel A" },
     { material: "outer" as const, name: "Outer panel B" },
@@ -2658,39 +2672,47 @@ function BoxyBagCutPlan({ plan }: { plan: BagPatternPlan }) {
     )}%`,
   } as CSSProperties;
   const formulas = boxyBagFormulaText(plan);
-  const sewingSteps = boxyBagSewingSteps(plan);
+  const sewingSteps = boxyBagSewingSteps(plan, structureFeel, pocketStyle, true, handleStyle, boxingMethod);
 
   return (
     <section className={`${styles.recessedCutPlan} ${styles.boxyCutPlan}`} aria-labelledby="boxy-cut-plan-title">
       <header className={styles.recessedCutPlanHeader}>
         <div>
-          <p>True boxy zipper bag</p>
-          <h2 id="boxy-cut-plan-title">Cut four matching rectangles, then remove every corner</h2>
-          <span>The upper squares box the zipper ends; the lower squares box the bottom.</span>
+          <p>{isFrenchSeam ? "Shannon's Boxy Makeup Bag Method" : "True boxy zipper bag"}</p>
+          <h2 id="boxy-cut-plan-title">
+            {isFrenchSeam
+              ? "Cut full matching rectangles — corners are pinched & French-seamed"
+              : "Cut four matching rectangles, then remove every corner"}
+          </h2>
+          <span>
+            {isFrenchSeam
+              ? "No corner cutouts! Sew full panels into a tube, measure 3″ corner triangles from outside, and enclose in French seams."
+              : "The upper squares box the zipper ends; the lower squares box the bottom."}
+          </span>
         </div>
-        <b>4 CORNERS / PANEL</b>
+        <b>{isFrenchSeam ? "FRENCH-SEAM BOXING" : "4 CORNERS / PANEL"}</b>
       </header>
 
       <div className={styles.recessedCutSummary}>
         <div>
           <span>Cut each rectangle</span>
           <strong>{formatInches(kit.panelCutLength)} × {formatInches(kit.panelCutWidth)}</strong>
-          <small>2 outer + 2 lining</small>
+          <small>2 outer + 2 fleece + 2 lining</small>
         </div>
         <div>
-          <span>Remove from every corner</span>
-          <strong>{formatInches(kit.cornerSquare)} square</strong>
-          <small>4 each · 16 total</small>
+          <span>{isFrenchSeam ? "Pinch corner triangle" : "Remove from every corner"}</span>
+          <strong>{isFrenchSeam ? "Mark 3″ across base" : `${formatInches(kit.cornerSquare)} square`}</strong>
+          <small>{isFrenchSeam ? "4 corner triangles" : "4 each · 16 total"}</small>
         </div>
         <div>
-          <span>Zipper edge between squares</span>
-          <strong>{formatInches(kit.installedZipperSeam)}</strong>
-          <small>start with {formatInches(kit.recommendedZipperLength)} or longer nylon coil · about 1 inch beyond each upper cutout</small>
+          <span>Zipper & accents</span>
+          <strong>{isFrenchSeam ? "16″ separated coil" : formatInches(kit.installedZipperSeam)}</strong>
+          <small>{isFrenchSeam ? "2× 3″ tabs + 4″ × 9″ side handle" : "zipper seam span between cutouts"}</small>
         </div>
         <div>
           <span>Expected finished box</span>
           <strong>{formatInches(plan.finishedBaseWidth)} L × {formatInches(plan.finishedDepth)} W × {formatInches(plan.finishedHeight)} H</strong>
-          <small>before thick-fabric turn-of-cloth</small>
+          <small>clean enclosed French seams</small>
         </div>
       </div>
 
@@ -2699,7 +2721,11 @@ function BoxyBagCutPlan({ plan }: { plan: BagPatternPlan }) {
         <span><i className={styles.recessedLiningSwatch} />Lining fabric · aqua</span>
         <span><i className={styles.recessedStitchSwatch} />Dashed = seam line</span>
       </div>
-      <p className={styles.recessedScaleNote}>Diagrams enlarge the corner squares for teaching. Use the written measurements, not the visual scale.</p>
+      <p className={styles.recessedScaleNote}>
+        {isFrenchSeam
+          ? "Panels start as solid uncut rectangles. The corner triangles are pinched, measured, and stitched after turning right-side out."
+          : "Diagrams enlarge the corner squares for teaching. Use the written measurements, not the visual scale."}
+      </p>
 
       <div className={`${styles.recessedPieceGrid} ${styles.boxyPieceGrid}`}>
         {panels.map((panel) => (
@@ -2710,28 +2736,28 @@ function BoxyBagCutPlan({ plan }: { plan: BagPatternPlan }) {
             </header>
             <div
               className={`${styles.boxyPatternPiece} ${panel.material === "outer" ? styles.boxyPatternOuter : styles.boxyPatternLining}`}
-              style={cornerStyle}
+              style={isFrenchSeam ? undefined : cornerStyle}
               role="img"
-              aria-label={`${panel.name}, cut ${formatInches(kit.panelCutLength)} by ${formatInches(kit.panelCutWidth)}, then remove a ${formatInches(kit.cornerSquare)} square from all four corners`}
+              aria-label={`${panel.name}, cut ${formatInches(kit.panelCutLength)} by ${formatInches(kit.panelCutWidth)}${isFrenchSeam ? " as full rectangle" : `, then remove a ${formatInches(kit.cornerSquare)} square from all four corners`}`}
             >
-              <i className={styles.boxyNotchTopLeft} aria-hidden="true" />
-              <i className={styles.boxyNotchTopRight} aria-hidden="true" />
-              <i className={styles.boxyNotchBottomLeft} aria-hidden="true" />
-              <i className={styles.boxyNotchBottomRight} aria-hidden="true" />
-              <span className={styles.boxyPieceZipper}>TOP / ZIPPER EDGE · {formatInches(kit.installedZipperSeam)}</span>
+              {!isFrenchSeam && (
+                <>
+                  <i className={styles.boxyNotchTopLeft} aria-hidden="true" />
+                  <i className={styles.boxyNotchTopRight} aria-hidden="true" />
+                  <i className={styles.boxyNotchBottomLeft} aria-hidden="true" />
+                  <i className={styles.boxyNotchBottomRight} aria-hidden="true" />
+                </>
+              )}
+              <span className={styles.boxyPieceZipper}>{isFrenchSeam ? "TOP / ZIPPER EDGE" : `TOP / ZIPPER EDGE · ${formatInches(kit.installedZipperSeam)}`}</span>
               <span className={styles.boxyPieceBottom}>BOTTOM SEAM</span>
               <span className={styles.boxyPieceSideLeft}>SIDE</span>
               <span className={styles.boxyPieceSideRight}>SIDE</span>
-              <b>{formatInches(kit.cornerSquare)} × 4</b>
+              {!isFrenchSeam && <b>{formatInches(kit.cornerSquare)} × 4</b>}
               <em>grain →</em>
             </div>
             <p>{formatInches(kit.panelCutLength)} long × {formatInches(kit.panelCutWidth)} wide</p>
           </article>
         ))}
-      </div>
-
-      <div className={styles.boxyFormulaGrid}>
-        {formulas.map((formula) => <p key={formula}>{formula}</p>)}
       </div>
 
       <div className={styles.recessedAssemblyGuide}>
@@ -2744,7 +2770,11 @@ function BoxyBagCutPlan({ plan }: { plan: BagPatternPlan }) {
           {sewingSteps.map((step) => <li key={step}>{step}</li>)}
         </ol>
       </div>
-      <p className={styles.recessedConstructionNote}><strong>Why this is a different bag:</strong> the tote pattern removes only two bottom squares. This boxy pattern removes four squares from every panel; each upper pair closes around a zipper end, while the four lower openings form the separate outer and lining box seams. Make a scrap sample when using foam, canvas, vinyl, or thick quilted blocks because bulk reduces the usable inside measurements.</p>
+      <p className={styles.recessedConstructionNote}>
+        <strong>{isFrenchSeam ? "Shannon's Technique Note:" : "Why this is a different bag:"}</strong> {isFrenchSeam
+          ? "This pinch-and-sew method encloses the raw corner triangles inside a French seam on the interior, leaving the bag fully lined with clean enclosed seams and no raw edges or binding tape needed. Make sure to open the zipper halfway before sewing the tube ends!"
+          : "The tote pattern removes only two bottom squares. This boxy pattern removes four squares from every panel; each upper pair closes around a zipper end, while the four lower openings form the separate outer and lining box seams."}
+      </p>
     </section>
   );
 }
@@ -4466,7 +4496,13 @@ export function BagPatternStudio() {
               <RecessedZipperCutPlan plan={plan} options={closureOptions} />
             ) : null}
             {bodyRecipe === "four-corner-boxy" ? (
-              <BoxyBagCutPlan plan={plan} />
+              <BoxyBagCutPlan
+                plan={plan}
+                boxingMethod={boxyBoxingMethod}
+                handleStyle={boxyHandleStyle}
+                structureFeel={structureFeel}
+                pocketStyle={pocketStyle}
+              />
             ) : null}
             </div>
           </section>
