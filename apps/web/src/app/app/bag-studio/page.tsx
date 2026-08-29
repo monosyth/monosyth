@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { BagPatternStudio } from "@/components/app/bag-pattern-studio";
+import { BagPatternStudio } from "@/components/app/bag-studio";
 
 export const metadata: Metadata = {
   title: "Modular Bag Studio · Monosyth Studio",

@@ -22,6 +22,29 @@ import {
 } from "@/lib/sewing/bag-pattern";
 import type { OuterPanelComposition } from "@/lib/sewing/panel-composition";
 import type { HandleMaterial } from "@/lib/sewing/tote-handle";
+import { ORBIT_STEP } from "./isometric-math";
+import { ORBIT_STEPS } from "./isometric-math";
+import { PROJECTION_PITCH } from "./isometric-math";
+import { ANGLE_EPSILON } from "./isometric-math";
+import { Point3 } from "./isometric-math";
+import { ProjectedPoint } from "./isometric-math";
+import { SurfaceBuild } from "./components/surface-build";
+import { ZipperLine } from "./components/zipper-line";
+import { DimensionLine } from "./components/dimension-line";
+import { add } from "./isometric-math";
+import { lerp } from "./isometric-math";
+import { midpoint } from "./isometric-math";
+import { points } from "./isometric-math";
+import { pointOnQuad } from "./isometric-math";
+import { shiftedSegment } from "./isometric-math";
+import { normalizeYaw } from "./isometric-math";
+import { quantizeYaw } from "./isometric-math";
+import { circularAngleDistance } from "./isometric-math";
+import { lerp3 } from "./isometric-math";
+import { projectPoint3 } from "./isometric-math";
+import { projectQuad } from "./isometric-math";
+import { averageDepth } from "./isometric-math";
+import { yawDescription } from "./isometric-math";
 
 type PreviewView = "left" | "front" | "back" | "right";
 
@@ -40,20 +63,11 @@ export type BagOutcomeOptions = {
   recessNotch: number;
 };
 
-type Point = {
+export type Point = {
   x: number;
   y: number;
 };
-
-type Point3 = Point & {
-  z: number;
-};
-
-type ProjectedPoint = Point & {
-  depth: number;
-};
-
-type SurfaceWindow = {
+export type SurfaceWindow = {
   top: { start: number; end: number };
   bottom: { start: number; end: number };
 };
@@ -69,7 +83,7 @@ type BagOutcomePreviewProps = {
   variant?: "interactive" | "thumbnail";
 };
 
-const viewChoices: ReadonlyArray<{
+export const viewChoices: ReadonlyArray<{
   id: PreviewView;
   label: string;
   detail: string;
@@ -80,12 +94,6 @@ const viewChoices: ReadonlyArray<{
   { id: "back", label: "Back", detail: "straight-on back view", yaw: 180 },
   { id: "left", label: "Left", detail: "straight-on left side", yaw: 270 },
 ];
-
-const ORBIT_STEP = 10;
-const ORBIT_STEPS = 360 / ORBIT_STEP;
-const PROJECTION_PITCH = 0.3;
-const ANGLE_EPSILON = 0.0001;
-
 const closureLabels: Record<BagClosure, string> = {
   "open-tote": "Open tote + handles",
   "top-zipper": "Top zipper",
@@ -101,390 +109,6 @@ const closureNotes: Record<BagClosure, string> = {
   "zipper-gusset": "The highlighted top panel spans the standing rim, with two gusset strips meeting at the measured reveal.",
   "recessed-zipper": "The zipper panel sits below the rim and stops short of both side seams by the measured end gaps.",
 };
-
-function add(point: Point, vector: Point): Point {
-  return { x: point.x + vector.x, y: point.y + vector.y };
-}
-
-function lerp(from: Point, to: Point, amount: number): Point {
-  return {
-    x: from.x + (to.x - from.x) * amount,
-    y: from.y + (to.y - from.y) * amount,
-  };
-}
-
-function midpoint(from: Point, to: Point): Point {
-  return lerp(from, to, 0.5);
-}
-
-function points(pointsToJoin: Point[]) {
-  return pointsToJoin.map((point) => `${point.x},${point.y}`).join(" ");
-}
-
-function pointOnQuad(
-  quad: [Point, Point, Point, Point],
-  across: number,
-  down: number,
-) {
-  const left = lerp(quad[0], quad[3], down);
-  const right = lerp(quad[1], quad[2], down);
-  return lerp(left, right, across);
-}
-
-function SurfaceBuild({
-  quad,
-  composition,
-  plan,
-  window,
-  reverseColumns = false,
-  face,
-}: {
-  quad: [Point, Point, Point, Point];
-  composition: OuterPanelComposition;
-  plan: BagPatternPlan;
-  window: SurfaceWindow;
-  reverseColumns?: boolean;
-  face: "front" | "back";
-}) {
-  const pieced =
-    composition.design.mode !== "solid" &&
-    (composition.design.scope === "both" ||
-      composition.design.scope === face);
-  const contrastRatio = composition.design.contrastEnabled
-    ? clamp(
-        1 -
-          composition.design.contrastRise /
-            Math.max(plan.finishedHeight, composition.design.contrastRise),
-        0,
-        1,
-      )
-    : 1;
-  const colors = ["#b8abff", "#ff9ab3", "#68e5e6", "#f6c563", "#c8e982"];
-  const rawColumnBoundaries =
-    composition.design.mode === "vertical-strips" ||
-    composition.design.mode === "block-grid"
-      ? [0, ...composition.columnSeams, composition.targetWidth]
-      : [0, composition.targetWidth];
-  const piecedRawBottom =
-    plan.topTakeUp + plan.finishedHeight * contrastRatio;
-  const rawRowBoundaries =
-    composition.design.mode === "horizontal-strips" ||
-    composition.design.mode === "block-grid"
-      ? [
-          0,
-          ...composition.rowSeams.filter(
-            (seam) => seam < piecedRawBottom - 0.001,
-          ),
-          piecedRawBottom,
-        ]
-      : [0, piecedRawBottom];
-  const horizontalWindowMin = Math.min(
-    window.top.start,
-    window.top.end,
-    window.bottom.start,
-    window.bottom.end,
-  );
-  const horizontalWindowMax = Math.max(
-    window.top.start,
-    window.top.end,
-    window.bottom.start,
-    window.bottom.end,
-  );
-  const visibleColumnSegments = rawColumnBoundaries
-    .slice(0, -1)
-    .map((left, index) => ({
-      left,
-      right: rawColumnBoundaries[index + 1],
-      globalIndex: index,
-    }))
-    .filter(
-      (segment) =>
-        segment.right > horizontalWindowMin + 0.001 &&
-        segment.left < horizontalWindowMax - 0.001,
-    );
-  const visibleRowSegments = rawRowBoundaries
-    .slice(0, -1)
-    .map((top, index) => ({
-      top,
-      bottom: rawRowBoundaries[index + 1],
-      globalIndex: index,
-    }))
-    .filter(
-      (segment) =>
-        segment.bottom > plan.topTakeUp + 0.001 &&
-        segment.top < piecedRawBottom - 0.001,
-    )
-    .map((segment) => ({
-      ...segment,
-      topRatio: clamp(
-        (Math.max(segment.top, plan.topTakeUp) - plan.topTakeUp) /
-          Math.max(0.001, plan.finishedHeight),
-        0,
-        contrastRatio,
-      ),
-      bottomRatio: clamp(
-        (Math.min(segment.bottom, piecedRawBottom) - plan.topTakeUp) /
-          Math.max(0.001, plan.finishedHeight),
-        0,
-        contrastRatio,
-      ),
-    }));
-  const cellPolygons: Array<{ key: string; corners: Point[]; color: string }> = [];
-
-  const projectRawX = (rawX: number, down: number) => {
-    const windowStart =
-      window.top.start +
-      (window.bottom.start - window.top.start) * down;
-    const windowEnd =
-      window.top.end +
-      (window.bottom.end - window.top.end) * down;
-    const rawWidth = windowEnd - windowStart;
-    const safeWidth = Math.abs(rawWidth) < 0.001
-      ? rawWidth < 0
-        ? -0.001
-        : 0.001
-      : rawWidth;
-    const ratio = clamp((rawX - windowStart) / safeWidth, 0, 1);
-    return reverseColumns ? 1 - ratio : ratio;
-  };
-
-  if (pieced) {
-    for (const row of visibleRowSegments) {
-      for (const column of visibleColumnSegments) {
-        cellPolygons.push({
-          key: `cell-${row.globalIndex}-${column.globalIndex}`,
-          corners: [
-            pointOnQuad(
-              quad,
-              projectRawX(column.left, row.topRatio),
-              row.topRatio,
-            ),
-            pointOnQuad(
-              quad,
-              projectRawX(column.right, row.topRatio),
-              row.topRatio,
-            ),
-            pointOnQuad(
-              quad,
-              projectRawX(column.right, row.bottomRatio),
-              row.bottomRatio,
-            ),
-            pointOnQuad(
-              quad,
-              projectRawX(column.left, row.bottomRatio),
-              row.bottomRatio,
-            ),
-          ],
-          color:
-            colors[
-              (row.globalIndex * 2 + column.globalIndex) % colors.length
-            ],
-        });
-      }
-    }
-  }
-
-  return (
-    <g className={styles.outcomeSurfaceBuild} aria-hidden="true">
-      {cellPolygons.map((cell) => (
-        <polygon key={cell.key} points={points(cell.corners)} fill={cell.color} />
-      ))}
-      {pieced ? (
-        <g aria-hidden="true">
-          {visibleRowSegments.slice(1).map((row) => (
-            <line
-              key={`row-seam-${row.globalIndex}`}
-              className={styles.outcomePiecingSeam}
-              x1={pointOnQuad(quad, 0, row.topRatio).x}
-              y1={pointOnQuad(quad, 0, row.topRatio).y}
-              x2={pointOnQuad(quad, 1, row.topRatio).x}
-              y2={pointOnQuad(quad, 1, row.topRatio).y}
-            />
-          ))}
-          {visibleColumnSegments.slice(1).map((col) => (
-            <line
-              key={`col-seam-${col.globalIndex}`}
-              className={styles.outcomePiecingSeam}
-              x1={pointOnQuad(quad, projectRawX(col.left, 0), 0).x}
-              y1={pointOnQuad(quad, projectRawX(col.left, 0), 0).y}
-              x2={pointOnQuad(quad, projectRawX(col.left, 1), 1).x}
-              y2={pointOnQuad(quad, projectRawX(col.left, 1), 1).y}
-            />
-          ))}
-        </g>
-      ) : null}
-      {composition.design.contrastEnabled ? (
-        <>
-          <polygon
-            className={styles.outcomeContrastFace}
-            points={points([
-              pointOnQuad(quad, 0, contrastRatio),
-              pointOnQuad(quad, 1, contrastRatio),
-              pointOnQuad(quad, 1, 1),
-              pointOnQuad(quad, 0, 1),
-            ])}
-          />
-          <line
-            className={styles.outcomeContrastJoin}
-            x1={pointOnQuad(quad, 0, contrastRatio).x}
-            y1={pointOnQuad(quad, 0, contrastRatio).y}
-            x2={pointOnQuad(quad, 1, contrastRatio).x}
-            y2={pointOnQuad(quad, 1, contrastRatio).y}
-          />
-        </>
-      ) : null}
-    </g>
-  );
-}
-
-function shiftedSegment(from: Point, to: Point, distance: number) {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const length = Math.max(1, Math.hypot(dx, dy));
-  const shift = { x: (-dy / length) * distance, y: (dx / length) * distance };
-  return { from: add(from, shift), to: add(to, shift) };
-}
-
-function ZipperLine({
-  from,
-  to,
-  accent = "#f6ba4c",
-  label,
-  showPull = true,
-}: {
-  from: Point;
-  to: Point;
-  accent?: string;
-  label?: string;
-  showPull?: boolean;
-}) {
-  const tapeA = shiftedSegment(from, to, -4.5);
-  const tapeB = shiftedSegment(from, to, 4.5);
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const length = Math.max(1, Math.hypot(dx, dy));
-  const normal = { x: (-dy / length) * 3.4, y: (dx / length) * 3.4 };
-  const numTicks = Math.max(3, Math.round(length / 8));
-  const ticks = Array.from({ length: numTicks }, (_, index) => {
-    const center = lerp(from, to, (index + 0.5) / numTicks);
-    return {
-      from: { x: center.x - normal.x, y: center.y - normal.y },
-      to: { x: center.x + normal.x, y: center.y + normal.y },
-    };
-  });
-  const pull = lerp(from, to, 0.68);
-  const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-
-  return (
-    <g aria-hidden="true">
-      <line x1={tapeA.from.x} y1={tapeA.from.y} x2={tapeA.to.x} y2={tapeA.to.y} stroke="rgba(255,255,255,.42)" strokeWidth="3" strokeLinecap="round" />
-      <line x1={tapeB.from.x} y1={tapeB.from.y} x2={tapeB.to.x} y2={tapeB.to.y} stroke="rgba(255,255,255,.22)" strokeWidth="3" strokeLinecap="round" />
-      <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={accent} strokeWidth="2" strokeLinecap="round" />
-      {ticks.map((tick, index) => (
-        <line key={index} x1={tick.from.x} y1={tick.from.y} x2={tick.to.x} y2={tick.to.y} stroke="#172638" strokeWidth="1.4" />
-      ))}
-      {showPull ? (
-        <g transform={`translate(${pull.x} ${pull.y}) rotate(${angle})`}>
-          <circle r="5" fill="#172638" stroke={accent} strokeWidth="1.6" />
-          <path d="M 3 -1 L 12 -1 Q 15 -1 15 2 Q 15 5 12 5 L 8 5" fill="none" stroke={accent} strokeWidth="2" strokeLinecap="round" />
-        </g>
-      ) : null}
-      {label ? (
-        <text x={midpoint(from, to).x} y={midpoint(from, to).y - 12} className={styles.outcomeSvgLabel}>{label}</text>
-      ) : null}
-    </g>
-  );
-}
-
-function DimensionLine({
-  from,
-  to,
-  label,
-  markerId,
-  textOffset = { x: 0, y: -8 },
-}: {
-  from: Point;
-  to: Point;
-  label: string;
-  markerId: string;
-  textOffset?: Point;
-}) {
-  const center = midpoint(from, to);
-  return (
-    <g className={styles.outcomeDimension} aria-hidden="true">
-      <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} markerStart={`url(#${markerId})`} markerEnd={`url(#${markerId})`} />
-      <text x={center.x + textOffset.x} y={center.y + textOffset.y}>{label}</text>
-    </g>
-  );
-}
-
-function normalizeYaw(value: number) {
-  const finite = Number.isFinite(value) ? value : 0;
-  return ((finite % 360) + 360) % 360;
-}
-
-function quantizeYaw(value: number) {
-  return normalizeYaw(Math.round(normalizeYaw(value) / ORBIT_STEP) * ORBIT_STEP);
-}
-
-function circularAngleDistance(left: number, right: number) {
-  return Math.abs(((normalizeYaw(left) - normalizeYaw(right) + 540) % 360) - 180);
-}
-
-function lerp3(from: Point3, to: Point3, amount: number): Point3 {
-  return {
-    x: from.x + (to.x - from.x) * amount,
-    y: from.y + (to.y - from.y) * amount,
-    z: from.z + (to.z - from.z) * amount,
-  };
-}
-
-function projectPoint3(
-  point: Point3,
-  yaw: number,
-  scale: number,
-  baseline: number,
-): ProjectedPoint {
-  const radians = (yaw * Math.PI) / 180;
-  const cosine = Math.cos(radians);
-  const sine = Math.sin(radians);
-  const rotatedX = point.x * cosine + point.z * sine;
-  const depth = -point.x * sine + point.z * cosine;
-  return {
-    x: 360 + rotatedX * scale,
-    y: baseline - point.y * scale - depth * PROJECTION_PITCH * scale,
-    depth,
-  };
-}
-
-function projectQuad(
-  quad: [Point3, Point3, Point3, Point3],
-  yaw: number,
-  scale: number,
-  baseline: number,
-): [ProjectedPoint, ProjectedPoint, ProjectedPoint, ProjectedPoint] {
-  return quad.map((point) =>
-    projectPoint3(point, yaw, scale, baseline)
-  ) as [ProjectedPoint, ProjectedPoint, ProjectedPoint, ProjectedPoint];
-}
-
-function averageDepth(pointsToAverage: ProjectedPoint[]) {
-  return pointsToAverage.reduce((total, point) => total + point.depth, 0) /
-    Math.max(1, pointsToAverage.length);
-}
-
-function yawDescription(value: number) {
-  const yaw = quantizeYaw(value);
-  const exact = viewChoices.find(
-    (choice) => circularAngleDistance(choice.yaw, yaw) < ANGLE_EPSILON,
-  );
-  if (exact) return exact.detail;
-  if (yaw < 90) return `front-right orbit view, ${yaw}° from front`;
-  if (yaw < 180) return `back-right orbit view, ${180 - yaw}° from back`;
-  if (yaw < 270) return `back-left orbit view, ${yaw - 180}° from back`;
-  return `front-left orbit view, ${360 - yaw}° from front`;
-}
-
 type ProjectedBodySurface = {
   id: string;
   quad: [ProjectedPoint, ProjectedPoint, ProjectedPoint, ProjectedPoint];
