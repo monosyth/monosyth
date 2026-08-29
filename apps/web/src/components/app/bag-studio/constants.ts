@@ -85,12 +85,12 @@ export const sizePresets: ReadonlyArray<BagSizePreset> = [
       {
         id: "boxy-makeup",
         label: "Boxy Makeup Bag",
-        dimensions: "14″ × 11″ cut",
-        description: "Shannon's 12 Days of Summer Sewing Day 7 — starts with 14″ × 11″ cut rectangles with pinch-and-sew French corner seams",
+        dimensions: "12″ × 9″ cut",
+        description: "Shannon's 12 Days of Summer Sewing Day 7 — starts with 12″ × 9″ cut rectangles with pinch-and-sew French corner seams",
         bodyRecipe: "four-corner-boxy",
-        baseWidth: 9,
-        depth: 5,
-        height: 4.5,
+        baseWidth: 8,
+        depth: 3.5,
+        height: 5,
       },
       {
         id: "boxy-caddy",
@@ -269,9 +269,9 @@ export const defaultDraft = draftFromFinishedSize({
       fabricWidth: 44,
     });
 export const defaultBoxyDraft = draftFromFinishedBoxyBag({
-      length: 9,
-      width: 5,
-      height: 4.5,
+      length: 8,
+      width: 3.5,
+      height: 5,
       seamAllowance: 0.25,
       fabricWidth: 44,
     });
