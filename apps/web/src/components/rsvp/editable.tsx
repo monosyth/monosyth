@@ -36,7 +36,7 @@ type EditableTextProps = {
   /** Current value. Pass from content.* so non-admins see it unchanged. */
   value: string;
   /** The wrapping element type for non-admin render. Defaults to span. */
-  as?: keyof React.JSX.IntrinsicElements;
+  as?: keyof HTMLElementTagNameMap;
   /** Render as a textarea for multi-line fields. Default: single-line input. */
   multiline?: boolean;
   /** Placeholder in edit mode when the value is empty. */

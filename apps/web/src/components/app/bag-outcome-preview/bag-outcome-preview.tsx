@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import styles from "@/components/app/bag-outcome-preview.module.css";
+import { InteractiveBagPreview } from "./interactive-bag-preview";
 import {
   calculatePanelStitchGeometry,
   clamp,
@@ -22,6 +23,7 @@ import {
 } from "@/lib/sewing/bag-pattern";
 import type { OuterPanelComposition } from "@/lib/sewing/panel-composition";
 import type { HandleMaterial } from "@/lib/sewing/tote-handle";
+import type { BagBoxyHandleStyle } from "@/lib/sewing/bag-studio-storage";
 import { ORBIT_STEP } from "./isometric-math";
 import { ORBIT_STEPS } from "./isometric-math";
 import { PROJECTION_PITCH } from "./isometric-math";
@@ -72,7 +74,7 @@ export type SurfaceWindow = {
   bottom: { start: number; end: number };
 };
 
-type BagOutcomePreviewProps = {
+export type BagOutcomePreviewProps = {
   bodyRecipe: BagBodyRecipe;
   plan: BagPatternPlan;
   closure: BagClosure;
@@ -81,6 +83,7 @@ type BagOutcomePreviewProps = {
   yaw: number;
   onYawChange?: (yaw: number) => void;
   variant?: "interactive" | "thumbnail";
+  boxyHandleStyle?: BagBoxyHandleStyle;
 };
 
 export const viewChoices: ReadonlyArray<{
@@ -119,7 +122,12 @@ type ProjectedBodySurface = {
   depth: number;
 };
 
-export function BagOutcomePreview({
+export function BagOutcomePreview(props: BagOutcomePreviewProps) {
+  if (props.variant === "thumbnail") return <SvgBagOutcomePreview {...props} />;
+  return <InteractiveBagPreview {...props} fallback={<SvgBagOutcomePreview {...props} />} />;
+}
+
+export function SvgBagOutcomePreview({
   bodyRecipe,
   plan,
   closure,

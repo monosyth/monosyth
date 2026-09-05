@@ -1787,6 +1787,7 @@ export function BagPatternStudio() {
               composition={composition}
               yaw={previewYaw}
               onYawChange={setPreviewYaw}
+              boxyHandleStyle={boxyHandleStyle}
             />
             </div>
 

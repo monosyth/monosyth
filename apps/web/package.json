@@ -11,10 +11,13 @@
     "start": "next start",
     "lint": "eslint",
     "audit:bag-studio": "tsx scripts/audit-bag-pattern-math.ts && tsx scripts/audit-bag-studio-storage.ts",
+    "audit:bag-preview": "tsx scripts/audit-bag-preview-3d.ts",
     "audit:quilting": "tsx scripts/audit-quilt-geometry.ts",
     "camera:capture": "node scripts/capture-station-camera.mjs"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.8",
+    "@react-three/fiber": "^9.7.0",
     "@sparticuz/chromium": "^143.0.4",
     "@types/suncalc": "^1.9.2",
     "ffmpeg-static": "^5.3.0",
@@ -24,13 +27,15 @@
     "playwright-core": "^1.58.2",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "suncalc": "^1.9.0"
+    "suncalc": "^1.9.0",
+    "three": "^0.180.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.180.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.0",
     "tailwindcss": "^4",
