@@ -195,10 +195,10 @@ export default function Home() {
 
         <section className={styles.productSection} aria-labelledby="product-title">
           <div className={styles.sectionHeading}>
-            <p className={styles.sectionEyebrow}>In the lab / Product 01</p>
+            <p className={styles.sectionEyebrow}>From the lab</p>
             <h2 id="product-title">
-              <span>One bright experiment,</span>
-              <span>out in the world.</span>
+              <span>Out in the world.</span>
+              <span>And on the workbench.</span>
             </h2>
           </div>
 
@@ -240,6 +240,18 @@ export default function Home() {
                 <span aria-hidden="true">↗</span>
               </a>
             </div>
+          </article>
+
+          <article className={styles.upcomingProduct}>
+            <div>
+              <p className={styles.upcomingLabel}>On the workbench / Coming soon</p>
+              <h3>MoveMorrow</h3>
+              <p>A personal checklist, a timeline, and moving costs in one place.
+                We’re building a clearer path from planning to settling in.</p>
+            </div>
+            <Link className={styles.productLink} href="/move">
+              <span>See what’s coming</span><span aria-hidden="true">→</span>
+            </Link>
           </article>
         </section>
       </div>

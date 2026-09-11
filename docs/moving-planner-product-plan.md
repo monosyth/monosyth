@@ -1,0 +1,112 @@
+# MoveMorrow: product plan
+
+Status: concept and Coming soon page. Updated September 11, 2026.
+
+## Product decision
+
+Turn the Seattle Move prototype into MoveMorrow, an independent consumer moving planner published by Monosyth Labs. The product name is MoveMorrow; “by Monosyth Labs” is a publisher credit. Use `/move` on `monosyth.com` as the stable initial route. Production stays on Monosyth-owned Firebase hosting.
+
+This phase delivers the plan and a public Coming soon page. It does not launch a working planner, collect signups, promise a release date, or connect the old personal move database to the public website.
+
+## The promise
+
+Help someone answer three questions: What should I do next? When does it need to happen? What will this move cost?
+
+The product should feel like a calm, practical companion. Open the planner to the next few useful actions and an honest picture of progress. Keep the complete checklist available without making it the first thing someone must digest.
+
+## Who the first version serves
+
+Start with individuals and households planning a residential move within the United States. Support local and long-distance moves, renters and homeowners, people hiring movers and people doing it themselves. Allow an undecided destination or approximate move date so planning can start before everything is settled.
+
+These are proposed scope choices, not validated market findings. The first research step is to check them with people actively preparing to move.
+
+## First-use journey
+
+1. Enter an origin and destination city, with “not sure yet” available. Exact street addresses are optional and unnecessary for the initial plan.
+2. Choose a target move date or date window; identify rent/own at each end and DIY/hired/undecided transport. Ask about pets, storage, and temporary housing only where they affect the checklist.
+3. Preview a tailored plan. Explain that suggested dates are editable planning prompts. Do not present lease, legal, or building deadlines as universal rules.
+4. Create an account to save the plan. Use a consumer account flow distinct from the private Monosyth Studio's approved-account access.
+5. Land on “Next up”: overdue tasks, tasks due soon, and the nearest milestone. Open the full checklist, costs, and move details from there.
+6. Return to complete, skip, edit, or add tasks. Keep completed moves available for export and let the owner delete their records.
+
+## Version one
+
+| Area | Included | Done when |
+| --- | --- | --- |
+| Move setup | Cities, date/date window, housing situation, transport choice, relevant household needs | Renters and homeowners receive appropriate tasks without personal example data |
+| Personal checklist | Task templates, categories, custom tasks, editable dates, done/skipped status | Changing one task persists across refresh and another signed-in device |
+| Timeline | Before, during, and after the move; due-soon and overdue views | Date changes show a preview and preserve manually chosen deadlines unless the user elects to move them |
+| Budget | User-entered estimates and actual costs, categories, paid status | Estimated, actual, and unpaid totals are clearly distinguished; blank amounts are not presented as confirmed zero costs |
+| Move details | Notes and manually entered contacts | Information stays private to the owner and can be edited and removed |
+| Moving day | A short view of essential tasks and contacts | Usable on a phone without navigating the full planning history |
+| Portability | Printable checklist and export of the user's plan | A user can keep a usable copy outside the product |
+| Accounts and saves | Sign-in, private records, visible save/failure state | One user cannot read or change another user's move; failed saves cannot look successful |
+
+### Checklist content
+
+Organize templates into planning, current-home preparation, packing, transportation, utilities and address updates, moving day, and settling in. Add optional groups for ending a lease, selling a home, pets, storage, and temporary housing.
+
+Generate dates from the user's move date and template offsets. If the date is unknown, show phases with undated tasks. If someone starts late, highlight catch-up tasks without pretending they already missed a contractual deadline. Mark tasks complete or skipped separately; only applicable tasks count toward progress.
+
+Example: a renter moving in six weeks with a cat and hired movers sees lease-review, mover-comparison, pet-transport, packing, utility, and handover tasks. They do not get realtor-selection or home-sale closing tasks. All defaults are neutral and editable.
+
+### Budget behavior
+
+Begin with moving services, truck rental, packing supplies, storage, travel, temporary housing, cleaning, and move-in expenses. Show deposits separately from nonrefundable expenses so the app does not imply they are permanently spent. Store currency and integer minor units; initially support USD. Do not carry over personal debts, house values, proceeds, realtor percentages, or financial assumptions from the prototype.
+
+## What waits
+
+After the core planner proves useful, consider household collaboration with explicit invitations and roles, opt-in reminders, calendar export, and a basic room/box inventory. A household should never gain access through a guessable link.
+
+Later possibilities include reusable plans and user-added property comparisons. AI-assisted task suggestions may be useful after reliability and costs are understood. Suggestions must be reviewable and must not silently edit the plan.
+
+Defer listing scraping, automatic apartment matching, mover marketplaces, paid referrals, mortgage/debt calculations, document uploads, native mobile apps, and international relocation. These add data, trust, or support requirements before the essential planning experience is validated.
+
+## What to carry over from Seattle Move
+
+| Existing idea | Product treatment |
+| --- | --- |
+| Staged checklist | Preserve the concept; replace hardcoded steps with conditional templates |
+| Timeline | Generalize dates and phases; remove Seattle-specific and seller-only assumptions |
+| Financials | Rebuild as a general moving budget; keep home-sale calculations out of version one |
+| Realtor and rental research | Keep generic contact/note concepts; defer search integrations |
+| Notes and history | Keep notes; add clear saved/failed state before a detailed user-facing history |
+| Firebase persistence | Reuse platform experience; build private per-user records, not one shared document |
+| Local fallback | Make any future offline behavior explicit and recoverable; never silently replace cloud data |
+| Password screen and direct AI calls | Do not reuse as public-app authentication or secret handling |
+
+Rebuild the public experience in the existing Next.js app with small, separate components. Use the old app as a workflow reference, not as a directory to copy wholesale. No personal photos, contacts, notes, financial records, API credentials, or old database identifiers should enter the new app or its public assets.
+
+## Implementation outline
+
+- Public product page: `/move`.
+- Proposed working planner: `/move/planner`, with consumer authentication.
+- Hosting: existing Next.js application on Firebase App Hosting through this repository's `main` branch.
+- Data: `users/{uid}/moves/{moveId}` with separate `tasks`, `expenses`, and `contacts` subcollections. Version the template set and saved schema; give every record a stable identifier.
+- Access: authenticated owner-only reads and writes, field validation, and meaningful cross-account denial tests before beta. Review the current global auth provider before exposing consumer sign-in; preserve private Studio restrictions.
+- Saves: update individual records rather than replacing the entire move. Track pending, saved, and failed changes visibly. Define conflict behavior for two devices; retry without duplicating tasks or expenses.
+- Dates: store date-only deadlines explicitly; do not let timezone conversion shift a task to the previous day. Handle daylight saving, unknown dates, and rescheduling.
+- Privacy: collect only what the planner needs, provide export/deletion, document retention, and keep private move text out of analytics and logs. Write product-specific privacy information before collecting real user data.
+- AI, if added later: call providers from authenticated server endpoints with rate limits and usage controls; keep secrets out of browser bundles.
+
+## Build sequence and release gates
+
+1. **Concept and announcement — current phase.** Use the selected name MoveMorrow, settle scope, publish an honest Coming soon page, and link it from the Monosyth Labs homepage. No inactive sign-up form or invented launch date.
+2. **Core private alpha.** Implement setup, conditional tasks, date logic, and personal persistence. Demonstrate two different household scenarios with synthetic data. Verify users cannot access each other's records and all save failures are visible.
+3. **Complete planning alpha.** Add costs, contacts, moving-day view, and export. Check budget math, rescheduling, keyboard use, and narrow phone layouts. Run a full create/edit/reload/export/delete journey.
+4. **Small invited beta.** Recruit 5–10 people with upcoming moves, with permission, and observe setup and return visits. Fix the tasks and confusing steps they actually encounter. Treat the sample as directional feedback, not proof of product-market fit.
+5. **Public launch.** Confirm account recovery, privacy/deletion, support contact, monitoring, and operational costs. Replace Coming soon only after the complete journey works with real accounts.
+
+No launch date is committed. Estimate calendar time after choosing the alpha scope and completing the account/data foundation.
+
+## Learning and business model
+
+For the beta, ask whether someone can reach a useful plan without help, whether they know what to do next, whether they return to update it, and which tasks they expected but could not find. Record aggregate setup completion and return usage only after choosing an appropriate analytics/privacy approach. A proposed usability target is a useful initial plan within three minutes; this is a target to test, not a product claim.
+
+Start with a free invited beta. Because moving is episodic, evaluate a one-time payment per move before assuming a recurring subscription. Pricing and paid features remain open until users demonstrate value and hosting/support costs are known. Do not make referral revenue or selling personal information part of the initial model.
+
+## Naming decision
+
+Selected September 11, 2026: **MoveMorrow**. Preserve this capitalization. Use “by Monosyth Labs” as a small publisher credit, not as part of the product name. The name covers both planning and settling in without tying the product to a particular city.
+
+Launch-page tagline: **A big move. A clear next step.** A preliminary web search is not verification of domain or trademark availability. The initial announcement uses the existing Monosyth domain; no separate domain has been purchased or claimed. Check domain options and brand conflicts before investing in a standalone domain or formal brand registration.

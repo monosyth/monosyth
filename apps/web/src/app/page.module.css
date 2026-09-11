@@ -762,6 +762,25 @@
   box-shadow: 0 2.5rem 8rem rgba(0, 0, 0, 0.24);
 }
 
+.upcomingProduct {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  margin-top: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 1.6rem;
+  background: var(--instrument);
+}
+
+.upcomingProduct > div { flex: 1 1 20rem; min-width: 0; }
+.upcomingProduct h3 { margin: .5rem 0 .75rem; font-size: 2rem; line-height: 1.15; letter-spacing: -.035em; font-weight: 500; }
+.upcomingProduct p { max-width: 42rem; margin: 0; font-size: 1rem; color: var(--blueprint); }
+.upcomingProduct .upcomingLabel { color: var(--lime); font: 500 .875rem/1.5 var(--font-ibm-plex-mono), monospace; }
+.upcomingProduct .productLink { margin-top: 0; font-size: .875rem; }
+
 .productIdentity {
   display: flex;
   min-height: 19rem;

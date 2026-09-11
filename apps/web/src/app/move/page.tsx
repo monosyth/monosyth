@@ -1,0 +1,71 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+
+import styles from "./page.module.css";
+
+const title = "MoveMorrow — Coming soon | Monosyth Labs";
+const description =
+  "MoveMorrow is a moving planner in development: a personal checklist, a timeline, and a clearer picture of your moving costs. By Monosyth Labs.";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://monosyth.com";
+
+export const metadata: Metadata = {
+  title,
+  description,
+  alternates: { canonical: `${siteUrl}/move` },
+  openGraph: { title, description, url: `${siteUrl}/move`, type: "website", siteName: "Monosyth Labs" },
+  twitter: { card: "summary", title, description },
+};
+
+const stages = [
+  { when: "Make a plan", title: "Start with your move.", detail: "Where you’re going, when you’re leaving, and what needs to happen along the way." },
+  { when: "Get ready", title: "Know what comes next.", detail: "A checklist built around your situation, with space for the things only you know about." },
+  { when: "Moving day & beyond", title: "Keep the details together.", detail: "Costs, contacts, and last-minute tasks, all the way through settling in." },
+];
+
+export default function MovePage() {
+  return (
+    <main className={styles.page}>
+      <a className={styles.skipLink} href="#move-content">Skip to content</a>
+      <header className={styles.header}>
+        <Link className={styles.brand} href="/" aria-label="Monosyth Labs home">monosyth <span>Labs</span></Link>
+        <span className={styles.status}>In the lab / Coming soon</span>
+      </header>
+
+      <div id="move-content" className={styles.content}>
+        <section className={styles.hero} aria-labelledby="move-title">
+          <p className={styles.eyebrow}>A moving planner by Monosyth Labs</p>
+          <h1 id="move-title">Move<span>Morrow</span></h1>
+          <p className={styles.tagline}>A big move. A clear next step.</p>
+          <p className={styles.intro}>Moving comes with a lot to remember. We’re building a place to turn it into a plan: what to do, when to do it, and what it will cost.</p>
+          <p className={styles.availability}>Coming soon. The planner is in development and isn’t available to use yet.</p>
+          <a className={styles.link} href="#the-plan">See what we’re planning <span aria-hidden="true">↓</span></a>
+        </section>
+
+        <section className={styles.plan} id="the-plan" aria-labelledby="plan-title">
+          <div className={styles.sectionHead}>
+            <p className={styles.eyebrow}>The plan</p>
+            <h2 id="plan-title">From “we’re moving”<br />to “we’re home.”</h2>
+            <p>For renters and homeowners. Across town or across the country. Built around your move.</p>
+          </div>
+          <ol className={styles.stages}>
+            {stages.map((stage, index) => (
+              <li key={stage.when}>
+                <span className={styles.number} aria-hidden="true">0{index + 1}</span>
+                <div><p className={styles.when}>{stage.when}</p><h3>{stage.title}</h3><p>{stage.detail}</p></div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section className={styles.features} aria-label="Planned features">
+          <article><span>01 / Tasks</span><h2>A checklist that fits.</h2><p>Relevant tasks for your situation, with dates you can adjust and your own items alongside them.</p></article>
+          <article><span>02 / Timing</span><h2>The weeks ahead.</h2><p>A timeline organized around your move date, so urgent tasks don’t get buried in the whole list.</p></article>
+          <article><span>03 / Money</span><h2>Costs in one place.</h2><p>Keep estimates and actual expenses together, from packing supplies to movers and deposits.</p></article>
+        </section>
+        <p className={styles.note}>This is an early look at the direction. Features may change as we build.</p>
+      </div>
+
+      <footer className={styles.footer}><Link href="/">Back to Monosyth Labs</Link><span>© {new Date().getFullYear()} Monosyth Labs, LLC</span></footer>
+    </main>
+  );
+}
