@@ -1,3 +1,4 @@
+import { patchExpense, type MoveExpense } from "./budget";
 import {
   MoveError,
   generateTasks,
@@ -28,6 +29,7 @@ export function applyCommand(
       id: crypto.randomUUID(),
       setup,
       tasks: generateTasks(setup),
+      expenses: [],
       revision: 1,
       updatedAt: now,
     };
@@ -40,6 +42,7 @@ export function applyCommand(
       409,
     );
   if (command.type === "delete") return null;
+  let expenses = current.expenses ?? [];
   let tasks = current.tasks;
   let setup = current.setup;
   if (command.type === "task") {
@@ -76,11 +79,51 @@ export function applyCommand(
       throw new MoveError("Choose a valid date, or leave it blank.");
     setup = { ...setup, date: command.date as string };
     tasks = reschedule(tasks, setup.date);
+  } else if (command.type === "expense-add") {
+    if (expenses.length >= 100)
+      throw new MoveError(
+        "This version supports up to 100 budget items per move.",
+      );
+    const id = text(command.id, 100, true);
+    if (!/^[a-zA-Z0-9_-]+$/.test(id) || expenses.some((item) => item.id === id))
+      throw new MoveError("Please try adding this item again.");
+    const initial: MoveExpense = {
+      id,
+      title: "",
+      category: "other",
+      kind: "cost",
+      currency: "USD",
+      estimatedCents: null,
+      actualCents: null,
+      paid: false,
+      notes: "",
+      revision: 0,
+    };
+    const expense = patchExpense(initial, command.patch);
+    if (!expense.title) throw new MoveError("Give the budget item a name.");
+    expenses = [...expenses, expense];
+  } else if (
+    command.type === "expense-update" ||
+    command.type === "expense-delete"
+  ) {
+    const id = text(command.id, 100, true);
+    if (!expenses.some((item) => item.id === id))
+      throw new MoveError(
+        "That budget item no longer exists. Reload your plan.",
+        404,
+      );
+    expenses =
+      command.type === "expense-delete"
+        ? expenses.filter((item) => item.id !== id)
+        : expenses.map((item) =>
+            item.id === id ? patchExpense(item, command.patch) : item,
+          );
   } else throw new MoveError("This change is not supported.");
   return {
     id: current.id,
     setup,
     tasks,
+    expenses,
     revision: current.revision + 1,
     updatedAt: now,
   };

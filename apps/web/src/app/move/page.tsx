@@ -5,7 +5,7 @@ import styles from "./page.module.css";
 
 const title = "MoveMorrow — Plan your next chapter | Monosyth Labs";
 const description =
-  "Plan your move with MoveMorrow: preview a tailored checklist and timeline, then sign in to save your plan. An early planner by Monosyth Labs.";
+  "Plan your move with MoveMorrow: preview a tailored checklist, then sign in to save your timeline and moving budget. An early planner by Monosyth Labs.";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://monosyth.com";
 
 export const metadata: Metadata = {
@@ -37,7 +37,7 @@ export default function MovePage() {
           <h1 id="move-title">Move<span>Morrow</span></h1>
           <p className={styles.tagline}>A big move. A clear next step.</p>
           <p className={styles.intro}>Moving comes with a lot to remember. We’re building a place to turn it into a plan: what to do, when to do it, and what it will cost.</p>
-          <p className={styles.availability}>The first checklist and timeline are ready to try. Budget tools are still in development.</p>
+          <p className={styles.availability}>Your checklist, timeline, and moving budget are ready to try.</p>
           <Link className={styles.link} href="/move/planner">Try the early planner <span aria-hidden="true">→</span></Link>
         </section>
 
@@ -57,12 +57,12 @@ export default function MovePage() {
           </ol>
         </section>
 
-        <section className={styles.features} aria-label="Planned features">
+        <section className={styles.features} aria-label="Planner features">
           <article><span>01 / Tasks</span><h2>A checklist that fits.</h2><p>Relevant tasks for your situation, with dates you can adjust and your own items alongside them.</p></article>
           <article><span>02 / Timing</span><h2>The weeks ahead.</h2><p>A timeline organized around your move date, so urgent tasks don’t get buried in the whole list.</p></article>
-          <article><span>03 / Money · Planned</span><h2>Costs in one place.</h2><p>Keep estimates and actual expenses together, from packing supplies to movers and deposits.</p></article>
+          <article><span>03 / Money</span><h2>Costs in one place.</h2><p>Track estimates, actual costs, and paid items, with refundable deposits shown separately.</p></article>
         </section>
-        <p className={styles.note}>Try the checklist and timeline today. Costs, contacts, and household sharing are planned for later releases.</p>
+        <p className={styles.note}>Try the checklist, timeline, and budget today. Contacts and household sharing are planned for later releases.</p>
       </div>
 
       <footer className={styles.footer}><Link href="/">Back to Monosyth Labs</Link><span>© {new Date().getFullYear()} Monosyth Labs, LLC</span></footer>

@@ -118,6 +118,81 @@ async function main() {
     );
     assert.deepEqual(concurrent.map((r) => r.status).sort(), [200, 409]);
     plan = (await (await request(uids[0])).json()).plan;
+    // Exercise a pre-budget schema without touching any existing user's plan.
+    await taskRef.parent.parent!.update({ schemaVersion: 1 });
+    const tasksBeforeBudget = structuredClone(plan.tasks);
+    const taskBeforeBudget = await taskRef.get();
+    const addBudget = await request(uids[0], {
+      type: "expense-add",
+      planId: plan.id,
+      revision: plan.revision,
+      id: "movers",
+      patch: { title: "Synthetic movers", estimate: "500.25" },
+    });
+    assert.equal(addBudget.status, 200);
+    plan = (await addBudget.json()).plan;
+    assert.deepEqual(plan.tasks, tasksBeforeBudget);
+    assert.ok(
+      taskBeforeBudget.updateTime!.isEqual((await taskRef.get()).updateTime!),
+    );
+    assert.equal(plan.expenses[0].estimatedCents, 50025);
+    assert.equal(
+      (
+        await request(uids[1], {
+          type: "expense-update",
+          uid: uids[0],
+          planId: plan.id,
+          revision: plan.revision,
+          id: "movers",
+          patch: { actual: "9999" },
+        })
+      ).status,
+      404,
+    );
+    const updateBudget = await request(uids[0], {
+      type: "expense-update",
+      planId: plan.id,
+      revision: plan.revision,
+      id: "movers",
+      patch: { actual: "480.10", paid: true },
+    });
+    assert.equal(updateBudget.status, 200);
+    plan = (await (await request(uids[0])).json()).plan;
+    assert.equal(plan.expenses[0].actualCents, 48010);
+    assert.equal(plan.expenses[0].paid, true);
+    assert.deepEqual(plan.tasks, tasksBeforeBudget);
+    const depositResponse = await request(uids[0], {
+      type: "expense-add",
+      planId: plan.id,
+      revision: plan.revision,
+      id: "deposit",
+      patch: {
+        title: "Synthetic deposit",
+        kind: "deposit",
+        actual: "800",
+        paid: true,
+      },
+    });
+    assert.equal(depositResponse.status, 200);
+    plan = (await depositResponse.json()).plan;
+    const expenseRef = taskRef.parent.parent!.collection("expenses");
+    const depositBefore = await expenseRef.doc("deposit").get();
+    const removal = await request(uids[0], {
+      type: "expense-delete",
+      planId: plan.id,
+      revision: plan.revision,
+      id: "movers",
+    });
+    assert.equal(removal.status, 200);
+    plan = (await removal.json()).plan;
+    assert.equal((await expenseRef.doc("movers").get()).exists, false);
+    assert.ok(
+      depositBefore.updateTime!.isEqual(
+        (await expenseRef.doc("deposit").get()).updateTime!,
+      ),
+    );
+    assert.equal(plan.expenses.length, 1);
+    assert.equal(plan.expenses[0].kind, "deposit");
     const direct = await fetch(
       `https://firestore.googleapis.com/v1/projects/monosyth/databases/(default)/documents/movemorrowUsers/${uids[0]}/moves/current`,
     );
@@ -138,8 +213,9 @@ async function main() {
     );
     assert.equal((await (await request(uids[0])).json()).plan, null);
     assert.equal((await taskRef.parent.get()).size, 0);
+    assert.equal((await expenseRef.get()).size, 0);
     console.log(
-      "PASS: real Firestore create/edit/reload/delete; synthetic owner routing; unchanged task preservation; concurrent/stale write denial; unauthenticated database denial; task cleanup.",
+      "PASS: real Firestore create/edit/reload/delete; synthetic owner routing; unchanged task preservation; concurrent/stale write denial; unauthenticated database denial; task and budget cleanup; legacy upgrade; budget persistence and owner isolation.",
     );
   } finally {
     const cleanup = await Promise.allSettled(

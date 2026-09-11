@@ -1,3 +1,5 @@
+import type { MoveExpense } from "./budget";
+
 export type Housing = "rent" | "own" | "undecided";
 export type MoveSetup = {
   origin: string;
@@ -27,6 +29,7 @@ export type MovePlan = {
   id: string;
   setup: MoveSetup;
   tasks: MoveTask[];
+  expenses: MoveExpense[];
   revision: number;
   updatedAt: string;
 };

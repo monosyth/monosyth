@@ -26,6 +26,7 @@ import {
   type MoveSetup,
   type MoveTask,
 } from "@/lib/move/model";
+import { BudgetPlanner } from "./budget";
 import { SetupForm } from "./setup-form";
 import styles from "./planner.module.css";
 
@@ -65,6 +66,7 @@ export function MovePlanner() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [view, setView] = useState<"checklist" | "budget">("checklist");
   const [filter, setFilter] = useState<Filter>("next");
   const [today, setToday] = useState("");
   const [newDate, setNewDate] = useState("");
@@ -84,6 +86,7 @@ export function MovePlanner() {
     const unsubscribe = onAuthStateChanged(auth, (next) => {
       currentUid.current = next?.uid ?? null;
       setUser(next);
+      setView("checklist");
       setAuthReady(true);
       setPlan(null);
       setError("");
@@ -213,7 +216,7 @@ export function MovePlanner() {
     const blob = new Blob(
       [
         JSON.stringify(
-          { product: "MoveMorrow", schemaVersion: 1, ...plan },
+          { product: "MoveMorrow", schemaVersion: 2, ...plan },
           null,
           2,
         ),
@@ -296,8 +299,8 @@ export function MovePlanner() {
       </header>
       <div className={styles.content} id="planner">
         <p className={styles.fine}>
-          First release: your checklist and timeline. Budget tools and shared
-          household planning are still to come.
+          Your checklist, timeline, and moving budget. Shared household planning
+          is still to come.
         </p>
         {!configured && (
           <p className={`${styles.banner} ${styles.error}`}>
@@ -414,7 +417,7 @@ export function MovePlanner() {
                     </Link>
                   </p>
                 </>
-              ) : (
+              ) : view === "checklist" ? (
                 <>
                   <div className={styles.stats}>
                     <p>
@@ -448,133 +451,172 @@ export function MovePlanner() {
                     Last saved: {formatDate(plan.updatedAt.slice(0, 10))}.
                   </p>
                 </>
+              ) : (
+                <p className={styles.fine}>
+                  Last saved: {formatDate(plan.updatedAt.slice(0, 10))}.
+                </p>
               )}
             </section>
             {plan && (
-              <nav className={styles.tabs} aria-label="Checklist views">
-                {(
-                  [
-                    ["next", "Next up"],
-                    ["all", "All tasks"],
-                    ["timeline", "Timeline"],
-                    ["done", "Completed"],
-                    ["skipped", "Skipped"],
-                  ] as const
-                ).map(([value, label]) => (
-                  <button
-                    key={value}
-                    className={filter === value ? styles.active : ""}
-                    aria-pressed={filter === value}
-                    onClick={() => setFilter(value)}
-                  >
-                    {label}
-                  </button>
-                ))}
+              <nav className={styles.tabs} aria-label="Planner sections">
+                <button
+                  className={view === "checklist" ? styles.active : ""}
+                  aria-pressed={view === "checklist"}
+                  onClick={() => setView("checklist")}
+                >
+                  Checklist & timeline
+                </button>
+                <button
+                  className={view === "budget" ? styles.active : ""}
+                  aria-pressed={view === "budget"}
+                  onClick={() => setView("budget")}
+                >
+                  Budget
+                </button>
               </nav>
             )}
-            {!plan && (
-              <h2 className={styles.section}>Your tailored checklist</h2>
-            )}
-            {plan && filter === "next" && (
-              <p className={styles.muted}>
-                The next six unfinished tasks, earliest dates first.
-              </p>
-            )}
-            {visible.length ? (
-              <ul className={styles.list}>
-                {visible.map((task, index) => (
-                  <li key={task.id}>
-                    {plan &&
-                      filter === "timeline" &&
-                      (index === 0 || task.due !== visible[index - 1].due) && (
-                        <h2 className={styles.timelineDate}>
-                          {formatDate(task.due)}
-                        </h2>
-                      )}
-                    <TaskCard
-                      task={task}
-                      today={today}
-                      editable={Boolean(plan)}
-                      busy={locked}
-                      onChange={(patch) =>
-                        change({ type: "task", id: task.id, patch })
-                      }
-                    />
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className={styles.empty}>
-                <h2>
-                  {filter === "next" || filter === "timeline"
-                    ? "Nothing left in this view."
-                    : "No tasks here yet."}
-                </h2>
-                <p>Use All tasks to review your whole checklist.</p>
+            {plan && (
+              <div hidden={view !== "budget"}>
+                <BudgetPlanner
+                  key={plan.id}
+                  expenses={plan.expenses ?? []}
+                  busy={locked}
+                  onChange={change}
+                />
               </div>
             )}
+            <div hidden={Boolean(plan) && view !== "checklist"}>
+              {plan && (
+                <nav className={styles.tabs} aria-label="Checklist views">
+                  {(
+                    [
+                      ["next", "Next up"],
+                      ["all", "All tasks"],
+                      ["timeline", "Timeline"],
+                      ["done", "Completed"],
+                      ["skipped", "Skipped"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <button
+                      key={value}
+                      className={filter === value ? styles.active : ""}
+                      aria-pressed={filter === value}
+                      onClick={() => setFilter(value)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </nav>
+              )}
+              {!plan && (
+                <h2 className={styles.section}>Your tailored checklist</h2>
+              )}
+              {plan && filter === "next" && (
+                <p className={styles.muted}>
+                  The next six unfinished tasks, earliest dates first.
+                </p>
+              )}
+              {visible.length ? (
+                <ul className={styles.list}>
+                  {visible.map((task, index) => (
+                    <li key={task.id}>
+                      {plan &&
+                        filter === "timeline" &&
+                        (index === 0 ||
+                          task.due !== visible[index - 1].due) && (
+                          <h2 className={styles.timelineDate}>
+                            {formatDate(task.due)}
+                          </h2>
+                        )}
+                      <TaskCard
+                        task={task}
+                        today={today}
+                        editable={Boolean(plan)}
+                        busy={locked}
+                        onChange={(patch) =>
+                          change({ type: "task", id: task.id, patch })
+                        }
+                      />
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className={styles.empty}>
+                  <h2>
+                    {filter === "next" || filter === "timeline"
+                      ? "Nothing left in this view."
+                      : "No tasks here yet."}
+                  </h2>
+                  <p>Use All tasks to review your whole checklist.</p>
+                </div>
+              )}
+              {plan && (
+                <>
+                  <section className={styles.section}>
+                    <AddTask
+                      busy={locked}
+                      onAdd={(patch) =>
+                        change({
+                          type: "add",
+                          id: `custom-${crypto.randomUUID()}`,
+                          patch,
+                        })
+                      }
+                    />
+                  </section>
+                  <section className={`${styles.panel} ${styles.section}`}>
+                    <h2>Move date changed?</h2>
+                    <p className={styles.muted}>
+                      Only unfinished tasks with suggested dates will move.
+                      Completed tasks, custom tasks, and dates you edited stay
+                      as they are.
+                    </p>
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        void change({ type: "date", date: newDate });
+                      }}
+                    >
+                      <label>
+                        New target move date
+                        <input
+                          type="date"
+                          min="2000-01-01"
+                          max="2100-12-31"
+                          value={newDate}
+                          onChange={(e) => setNewDate(e.target.value)}
+                          disabled={locked}
+                        />
+                      </label>
+                      {newDate !== plan.setup.date && (
+                        <div className={styles.datePreview}>
+                          <strong>
+                            {shifted.length} suggested task dates will change.
+                          </strong>
+                          <ul>
+                            {shifted.map((t) => (
+                              <li key={t.id}>
+                                {t.title}: {formatDate(t.due)}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      <div className={styles.actions}>
+                        <button
+                          className={styles.primary}
+                          disabled={locked || newDate === plan.setup.date}
+                        >
+                          Apply date change
+                        </button>
+                      </div>
+                    </form>
+                  </section>
+                </>
+              )}
+            </div>
             {plan && (
               <>
-                <section className={styles.section}>
-                  <AddTask
-                    busy={locked}
-                    onAdd={(patch) =>
-                      change({
-                        type: "add",
-                        id: `custom-${crypto.randomUUID()}`,
-                        patch,
-                      })
-                    }
-                  />
-                </section>
-                <section className={`${styles.panel} ${styles.section}`}>
-                  <h2>Move date changed?</h2>
-                  <p className={styles.muted}>
-                    Only unfinished tasks with suggested dates will move.
-                    Completed tasks, custom tasks, and dates you edited stay as
-                    they are.
-                  </p>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      void change({ type: "date", date: newDate });
-                    }}
-                  >
-                    <label>
-                      New target move date
-                      <input
-                        type="date"
-                        min="2000-01-01"
-                        max="2100-12-31"
-                        value={newDate}
-                        onChange={(e) => setNewDate(e.target.value)}
-                        disabled={locked}
-                      />
-                    </label>
-                    {newDate !== plan.setup.date && (
-                      <div className={styles.datePreview}>
-                        <strong>
-                          {shifted.length} suggested task dates will change.
-                        </strong>
-                        <ul>
-                          {shifted.map((t) => (
-                            <li key={t.id}>
-                              {t.title}: {formatDate(t.due)}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    <div className={styles.actions}>
-                      <button
-                        className={styles.primary}
-                        disabled={locked || newDate === plan.setup.date}
-                      >
-                        Apply date change
-                      </button>
-                    </div>
-                  </form>
-                </section>
                 <section className={styles.section}>
                   <button
                     className={styles.danger}
@@ -594,9 +636,9 @@ export function MovePlanner() {
                     >
                       <h2>Delete your saved move?</h2>
                       <p>
-                        This removes the move and all its tasks from your
-                        account. Export a copy first if you want to keep it.
-                        This cannot be undone.
+                        This removes the move, all its tasks, and all budget
+                        items from your account. Export a copy first if you want
+                        to keep it. This cannot be undone.
                       </p>
                       <label>
                         Type DELETE to confirm

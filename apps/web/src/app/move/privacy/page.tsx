@@ -29,17 +29,18 @@ export default function MovePrivacy() {
           Before saving, your checklist preview stays in this page’s memory and
           disappears when you leave or refresh. Google sign-in identifies your
           account. When you save, we store the cities, move date, household
-          choices, and task details you enter, along with your account
+          choices, task details, and budget items (including estimates, actual
+          amounts, payment status, and notes) you enter, along with your account
           identifier and save timestamps. We display your Google account name
           while you’re signed in.
         </p>
         <h2>How it is used</h2>
         <p>
-          Your details create and save your checklist so you can return on
-          another device. Google Firebase provides account sign-in, database
-          storage, and hosting. MoveMorrow’s server checks your account before
-          returning or changing a saved plan. Plans are not publicly shared.
-          Authorized service operators may access records when needed to
+          Your details create and save your checklist and budget so you can
+          return on another device. Google Firebase provides account sign-in,
+          database storage, and hosting. MoveMorrow’s server checks your account
+          before returning or changing a saved plan. Plans are not publicly
+          shared. Authorized service operators may access records when needed to
           maintain the service.
         </p>
         <p>
@@ -50,12 +51,12 @@ export default function MovePrivacy() {
         </p>
         <h2>Keep a copy or remove your plan</h2>
         <p>
-          Use Export plan in the planner to download your details and tasks, or
-          print a checklist view. Delete this move removes the active saved plan
-          and its tasks. Signing out does not delete it. Google authentication
-          records and provider operational logs are separate from your plan and
-          are not deleted by that button. We keep the active plan until you
-          delete it.
+          Use Export plan in the planner to download your details, tasks, and
+          budget items, or print the current planner view. Delete this move
+          removes the active saved plan and all its tasks and budget items.
+          Signing out does not delete it. Google authentication records and
+          provider operational logs are separate from your plan and are not
+          deleted by that button. We keep the active plan until you delete it.
         </p>
         <h2>What to leave out</h2>
         <p>

@@ -246,7 +246,7 @@ export default function Home() {
             <div>
               <p className={styles.upcomingLabel}>On the workbench / Early planner</p>
               <h3>MoveMorrow</h3>
-              <p>A tailored checklist and timeline for your next move.
+              <p>A tailored checklist, timeline, and budget for your next move.
                 Preview your plan, then sign in to save it.</p>
             </div>
             <Link className={styles.productLink} href="/move">
