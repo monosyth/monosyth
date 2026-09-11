@@ -244,13 +244,13 @@ export default function Home() {
 
           <article className={styles.upcomingProduct}>
             <div>
-              <p className={styles.upcomingLabel}>On the workbench / Coming soon</p>
+              <p className={styles.upcomingLabel}>On the workbench / Early planner</p>
               <h3>MoveMorrow</h3>
-              <p>A personal checklist, a timeline, and moving costs in one place.
-                We’re building a clearer path from planning to settling in.</p>
+              <p>A tailored checklist and timeline for your next move.
+                Preview your plan, then sign in to save it.</p>
             </div>
             <Link className={styles.productLink} href="/move">
-              <span>See what’s coming</span><span aria-hidden="true">→</span>
+              <span>Explore MoveMorrow</span><span aria-hidden="true">→</span>
             </Link>
           </article>
         </section>

@@ -1,12 +1,12 @@
 # MoveMorrow: product plan
 
-Status: concept and Coming soon page. Updated September 11, 2026.
+Status: core early planner implemented. Updated September 11, 2026.
 
 ## Product decision
 
 Turn the Seattle Move prototype into MoveMorrow, an independent consumer moving planner published by Monosyth Labs. The product name is MoveMorrow; “by Monosyth Labs” is a publisher credit. Use `/move` on `monosyth.com` as the stable initial route. Production stays on Monosyth-owned Firebase hosting.
 
-This phase delivers the plan and a public Coming soon page. It does not launch a working planner, collect signups, promise a release date, or connect the old personal move database to the public website.
+The first release provides setup, a tailored checklist, a dated timeline, and private account saving at `/move/planner`. It uses new neutral templates and separate records; no old personal move data is connected. Budget, contacts, household sharing, and a dedicated moving-day view remain planned.
 
 ## The promise
 
@@ -80,9 +80,9 @@ Rebuild the public experience in the existing Next.js app with small, separate c
 ## Implementation outline
 
 - Public product page: `/move`.
-- Proposed working planner: `/move/planner`, with consumer authentication.
+- Working early planner: `/move/planner`, with consumer authentication.
 - Hosting: existing Next.js application on Firebase App Hosting through this repository's `main` branch.
-- Data: `users/{uid}/moves/{moveId}` with separate `tasks`, `expenses`, and `contacts` subcollections. Version the template set and saved schema; give every record a stable identifier.
+- Data: `movemorrowUsers/{uid}/moves/current` with a `tasks` subcollection. This release supports one active move and up to 100 tasks per account. Schema version 1; every move has a generation UUID and each task a stable ID. Expenses and contacts are future additions.
 - Access: authenticated owner-only reads and writes, field validation, and meaningful cross-account denial tests before beta. Review the current global auth provider before exposing consumer sign-in; preserve private Studio restrictions.
 - Saves: update individual records rather than replacing the entire move. Track pending, saved, and failed changes visibly. Define conflict behavior for two devices; retry without duplicating tasks or expenses.
 - Dates: store date-only deadlines explicitly; do not let timezone conversion shift a task to the previous day. Handle daylight saving, unknown dates, and rescheduling.
@@ -91,11 +91,11 @@ Rebuild the public experience in the existing Next.js app with small, separate c
 
 ## Build sequence and release gates
 
-1. **Concept and announcement — current phase.** Use the selected name MoveMorrow, settle scope, publish an honest Coming soon page, and link it from the Monosyth Labs homepage. No inactive sign-up form or invented launch date.
-2. **Core private alpha.** Implement setup, conditional tasks, date logic, and personal persistence. Demonstrate two different household scenarios with synthetic data. Verify users cannot access each other's records and all save failures are visible.
+1. **Concept and announcement — complete.** Use the selected name MoveMorrow, settle scope, publish an honest Coming soon page, and link it from the Monosyth Labs homepage. No inactive sign-up form or invented launch date.
+2. **Core early planner — current phase.** Implement setup, conditional tasks, date logic, and personal persistence. Demonstrate two different household scenarios with synthetic data. Verify users cannot access each other's records and all save failures are visible.
 3. **Complete planning alpha.** Add costs, contacts, moving-day view, and export. Check budget math, rescheduling, keyboard use, and narrow phone layouts. Run a full create/edit/reload/export/delete journey.
 4. **Small invited beta.** Recruit 5–10 people with upcoming moves, with permission, and observe setup and return visits. Fix the tasks and confusing steps they actually encounter. Treat the sample as directional feedback, not proof of product-market fit.
-5. **Public launch.** Confirm account recovery, privacy/deletion, support contact, monitoring, and operational costs. Replace Coming soon only after the complete journey works with real accounts.
+5. **Public launch.** Confirm account recovery, privacy/deletion, support contact, monitoring, and operational costs. Keep early-version labeling until the complete planning journey is validated with users.
 
 No launch date is committed. Estimate calendar time after choosing the alpha scope and completing the account/data foundation.
 
@@ -110,3 +110,19 @@ Start with a free invited beta. Because moving is episodic, evaluate a one-time 
 Selected September 11, 2026: **MoveMorrow**. Preserve this capitalization. Use “by Monosyth Labs” as a small publisher credit, not as part of the product name. The name covers both planning and settling in without tying the product to a particular city.
 
 Launch-page tagline: **A big move. A clear next step.** A preliminary web search is not verification of domain or trademark availability. The initial announcement uses the existing Monosyth domain; no separate domain has been purchased or claimed. Check domain options and brand conflicts before investing in a standalone domain or formal brand registration.
+
+
+## First release: implementation and limits
+
+- Setup asks for optional cities and a single target date, housing and transport choices, pets, storage, and temporary housing. Date windows remain future work. Preview is held in memory and can be revised before saving.
+- A separate named Firebase client app (`movemorrow`) provides Google sign-in without changing the private Studio account allowlist. Preview requires no account; Save my plan is explicit after sign-in.
+- `/api/move` verifies the Firebase ID token, revocation, and verified email. Ownership comes only from that token. Existing deployed Firestore rules deny all direct client access to the new collection. The server uses existing Firebase Admin credentials.
+- Server transactions write changed task documents and plan metadata together. Move generation IDs and revisions reject stale updates, including tabs holding a deleted/recreated plan. Requests have field validation and a 12 KB body limit. Private responses are not cached.
+- Next up shows the first six unfinished tasks; All tasks, Timeline, Completed, and Skipped expose the rest. Timeline groups unfinished tasks by date. Completion, skip/restore, names, notes, dates, and custom tasks save explicitly.
+- Date changes preview affected tasks and preserve completed/skipped, custom, and manually dated tasks. Suggested dates are planning prompts rather than contractual deadlines.
+- JSON export and printing the current view are available. Deletion requires typing DELETE and removes the active move and its task documents. Authentication records and provider logs remain separate, as explained at `/move/privacy`.
+- The early release has no offline persistence, reminders, multiple moves, expense tracking, contacts, or collaboration. Saved setup choices other than the move date cannot yet be changed; individual tasks remain editable. Failed saves stay visible and never silently substitute an empty cloud plan.
+
+Validation commands: `npm run audit:move`, scoped ESLint, and `npm run build` in `apps/web`. The opt-in `scripts/audit-movemorrow-firebase.ts` exercises real Firestore persistence with temporary synthetic owners, including owner routing, concurrent/stale versions, unchanged task preservation, unauthenticated direct database denial, and cleanup. Identity verification is stubbed in that standalone audit; production always verifies real Firebase ID tokens. Run with `GOOGLE_CLOUD_QUOTA_PROJECT=monosyth MOVEMORROW_LIVE_AUDIT=1 node --import tsx scripts/audit-movemorrow-firebase.ts` using authorized application default credentials. A live signed-in end-to-end test remains outstanding: local credentials cannot mint custom tokens and password sign-in is disabled. No auth settings or permissions were changed for testing. Browser Google sign-in and phone/keyboard usability require a separate hands-on review before expanding the beta.
+
+September 11 validation: all 11 logic/HTTP tests and scoped lint pass; production build passes. Real Firestore audit passes, including concurrent writes and complete synthetic-record cleanup. Full-repository lint still reports the existing Bag Studio declaration-order error and 1,068 warnings.

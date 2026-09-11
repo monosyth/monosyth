@@ -13,7 +13,7 @@ export function getFirebaseApp(): FirebaseApp | null {
     return null;
   }
 
-  return getApps().length > 0 ? getApp() : initializeApp(config);
+  return getApps().some(app => app.name === "[DEFAULT]") ? getApp() : initializeApp(config);
 }
 
 export function getFirebaseAuth(): Auth | null {

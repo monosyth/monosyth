@@ -3,9 +3,9 @@ import Link from "next/link";
 
 import styles from "./page.module.css";
 
-const title = "MoveMorrow — Coming soon | Monosyth Labs";
+const title = "MoveMorrow — Plan your next chapter | Monosyth Labs";
 const description =
-  "MoveMorrow is a moving planner in development: a personal checklist, a timeline, and a clearer picture of your moving costs. By Monosyth Labs.";
+  "Plan your move with MoveMorrow: preview a tailored checklist and timeline, then sign in to save your plan. An early planner by Monosyth Labs.";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://monosyth.com";
 
 export const metadata: Metadata = {
@@ -28,7 +28,7 @@ export default function MovePage() {
       <a className={styles.skipLink} href="#move-content">Skip to content</a>
       <header className={styles.header}>
         <Link className={styles.brand} href="/" aria-label="Monosyth Labs home">monosyth <span>Labs</span></Link>
-        <span className={styles.status}>In the lab / Coming soon</span>
+        <span className={styles.status}>In the lab / Early planner</span>
       </header>
 
       <div id="move-content" className={styles.content}>
@@ -37,8 +37,8 @@ export default function MovePage() {
           <h1 id="move-title">Move<span>Morrow</span></h1>
           <p className={styles.tagline}>A big move. A clear next step.</p>
           <p className={styles.intro}>Moving comes with a lot to remember. We’re building a place to turn it into a plan: what to do, when to do it, and what it will cost.</p>
-          <p className={styles.availability}>Coming soon. The planner is in development and isn’t available to use yet.</p>
-          <a className={styles.link} href="#the-plan">See what we’re planning <span aria-hidden="true">↓</span></a>
+          <p className={styles.availability}>The first checklist and timeline are ready to try. Budget tools are still in development.</p>
+          <Link className={styles.link} href="/move/planner">Try the early planner <span aria-hidden="true">→</span></Link>
         </section>
 
         <section className={styles.plan} id="the-plan" aria-labelledby="plan-title">
@@ -60,9 +60,9 @@ export default function MovePage() {
         <section className={styles.features} aria-label="Planned features">
           <article><span>01 / Tasks</span><h2>A checklist that fits.</h2><p>Relevant tasks for your situation, with dates you can adjust and your own items alongside them.</p></article>
           <article><span>02 / Timing</span><h2>The weeks ahead.</h2><p>A timeline organized around your move date, so urgent tasks don’t get buried in the whole list.</p></article>
-          <article><span>03 / Money</span><h2>Costs in one place.</h2><p>Keep estimates and actual expenses together, from packing supplies to movers and deposits.</p></article>
+          <article><span>03 / Money · Planned</span><h2>Costs in one place.</h2><p>Keep estimates and actual expenses together, from packing supplies to movers and deposits.</p></article>
         </section>
-        <p className={styles.note}>This is an early look at the direction. Features may change as we build.</p>
+        <p className={styles.note}>Try the checklist and timeline today. Costs, contacts, and household sharing are planned for later releases.</p>
       </div>
 
       <footer className={styles.footer}><Link href="/">Back to Monosyth Labs</Link><span>© {new Date().getFullYear()} Monosyth Labs, LLC</span></footer>

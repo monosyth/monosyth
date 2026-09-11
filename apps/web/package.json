@@ -13,7 +13,8 @@
     "audit:bag-studio": "tsx scripts/audit-bag-pattern-math.ts && tsx scripts/audit-bag-studio-storage.ts",
     "audit:bag-preview": "tsx scripts/audit-bag-preview-3d.ts",
     "audit:quilting": "tsx scripts/audit-quilt-geometry.ts",
-    "camera:capture": "node scripts/capture-station-camera.mjs"
+    "camera:capture": "node scripts/capture-station-camera.mjs",
+    "audit:move": "node --import tsx --test scripts/audit-movemorrow.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",
