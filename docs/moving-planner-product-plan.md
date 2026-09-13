@@ -1,12 +1,12 @@
 # MoveMorrow: product plan
 
-Status: core early planner implemented. Updated September 11, 2026.
+Status: core early planner implemented. Updated September 12, 2026.
 
 ## Product decision
 
 Turn the Seattle Move prototype into MoveMorrow, an independent consumer moving planner published by Monosyth Labs. The product name is MoveMorrow; “by Monosyth Labs” is a publisher credit. Use `/move` on `monosyth.com` as the stable initial route. Production stays on Monosyth-owned Firebase hosting.
 
-The first release provides setup, a tailored checklist, a dated timeline, and private account saving at `/move/planner`. It uses new neutral templates and separate records; no old personal move data is connected. Budget tracking is now included. Contacts, household sharing, and a dedicated moving-day view remain planned.
+The first release provides setup, a tailored checklist, a dated timeline, and private account saving at `/move/planner`. It uses new neutral templates and separate records; no old personal move data is connected. Budget tracking is now included. Contacts, move notes, and a dedicated moving-day view are now included; household sharing remains planned.
 
 ## The promise
 
@@ -82,7 +82,7 @@ Rebuild the public experience in the existing Next.js app with small, separate c
 - Public product page: `/move`.
 - Working early planner: `/move/planner`, with consumer authentication.
 - Hosting: existing Next.js application on Firebase App Hosting through this repository's `main` branch.
-- Data: `movemorrowUsers/{uid}/moves/current` with `tasks` and `expenses` subcollections. This release supports one active move, up to 100 tasks, and up to 100 budget items per account. Schema version 2; every move has a generation UUID and each task a stable ID. Contacts remain a future addition.
+- Data: `movemorrowUsers/{uid}/moves/current` with `tasks`, `expenses`, and `contacts` subcollections. This release supports one active move, up to 100 tasks, up to 100 budget items, and up to 50 contacts per account. Schema version 3; every move has a generation UUID and each task a stable ID. Move notes are stored on the move record.
 - Access: authenticated owner-only reads and writes, field validation, and meaningful cross-account denial tests before beta. Review the current global auth provider before exposing consumer sign-in; preserve private Studio restrictions.
 - Saves: update individual records rather than replacing the entire move. Track pending, saved, and failed changes visibly. Define conflict behavior for two devices; retry without duplicating tasks or expenses.
 - Dates: store date-only deadlines explicitly; do not let timezone conversion shift a task to the previous day. Handle daylight saving, unknown dates, and rescheduling.
@@ -120,8 +120,8 @@ Launch-page tagline: **A big move. A clear next step.** A preliminary web search
 - Server transactions write changed task documents and plan metadata together. Move generation IDs and revisions reject stale updates, including tabs holding a deleted/recreated plan. Requests have field validation and a 12 KB body limit. Private responses are not cached.
 - Next up shows the first six unfinished tasks; All tasks, Timeline, Completed, and Skipped expose the rest. Timeline groups unfinished tasks by date. Completion, skip/restore, names, notes, dates, and custom tasks save explicitly.
 - Date changes preview affected tasks and preserve completed/skipped, custom, and manually dated tasks. Suggested dates are planning prompts rather than contractual deadlines.
-- JSON export and printing the current view are available. Deletion requires typing DELETE and removes the active move and its task documents. Authentication records and provider logs remain separate, as explained at `/move/privacy`.
-- The early release has no offline persistence, reminders, multiple moves, contacts, or collaboration. Saved setup choices other than the move date cannot yet be changed; individual tasks remain editable. Failed saves stay visible and never silently substitute an empty cloud plan.
+- JSON export and printing the current view are available. Deletion requires typing DELETE and removes the active move and its task, expense, and contact documents. Authentication records and provider logs remain separate, as explained at `/move/privacy`.
+- The early release has no offline persistence, reminders, multiple moves, or collaboration. Saved setup choices other than the move date cannot yet be changed; individual tasks remain editable. Failed saves stay visible and never silently substitute an empty cloud plan.
 
 Validation commands: `npm run audit:move`, scoped ESLint, and `npm run build` in `apps/web`. The opt-in `scripts/audit-movemorrow-firebase.ts` exercises real Firestore persistence with temporary synthetic owners, including owner routing, concurrent/stale versions, unchanged task preservation, unauthenticated direct database denial, and cleanup. Identity verification is stubbed in that standalone audit; production always verifies real Firebase ID tokens. Run with `GOOGLE_CLOUD_QUOTA_PROJECT=monosyth MOVEMORROW_LIVE_AUDIT=1 node --import tsx scripts/audit-movemorrow-firebase.ts` using authorized application default credentials. Scott confirmed that the live setup, Google sign-in, save, task completion, and refresh flow all worked. No auth settings or permissions were changed for testing. Broader phone/keyboard usability review remains part of beta validation.
 
@@ -139,3 +139,16 @@ Existing schema-v1 moves read with an empty budget and upgrade on their next wri
 Validation adds money precision, unknown/zero amounts, payment rules, separate deposit totals, legacy compatibility, budget ownership, stale edits, and deletion coverage. The real Firestore audit now checks a synthetic legacy upgrade, budget add/edit/reload/removal, unchanged tasks and unrelated expenses, and complete move deletion. It continues to stub identity verification and never reads an existing user's move.
 
 Budget-release verification: all 18 logic/HTTP tests, scoped ESLint, and the production build passed. The expanded real Firestore audit passed and removed all synthetic records. Scott’s earlier hands-on test confirmed the live Google sign-in and checklist save/reload flow. The new budget UI has not yet had a hands-on browser walkthrough.
+
+
+## Contacts and moving-day release — September 12, 2026
+
+Contacts & notes supports up to 50 manually entered contacts, with name, company, role, phone, email, notes, and a moving-day visibility option. Phone links normalize digits, country codes, and optional extensions. Email addresses are encoded into mail links. These actions open the user's phone or email app; adding a contact sends nothing and grants no access. Move notes (up to 2,000 characters) save explicitly and appear on moving day.
+
+Moving day shows non-skipped tasks due on the target move date, default final-preparation tasks from the final two days (when dates have not been manually overridden), and any task the user pins in its details. Completed tasks remain visible after unfinished tasks. It uses the same task records and completion controls as the checklist. Rescheduling changes which custom dated tasks qualify, while explicit pins persist. Selected contacts and move notes appear below the tasks. Printing this view includes contact details; internet access is required to load and save the live plan.
+
+Schema version 3 adds a contacts subcollection, a move-level notes field, and an optional movingDay flag on tasks. Older plans load with empty contacts and notes. Unrelated task/budget commands preserve these fields; edits update only affected records and metadata. Export includes contacts and notes. Full move deletion removes all child records.
+
+Validation covers phone/email link handling, validation and limits, contacts and notes ownership, legacy loading, stale updates, moving-day selection with missing/rescheduled dates, task pins, and real Firestore persistence/deletion with temporary synthetic records. The new interfaces still need a hands-on browser walkthrough; automated database tests stub identity verification as in earlier releases.
+
+September 12 release checks: all 25 logic/HTTP tests and scoped lint pass; production build passes. The expanded Firestore audit verifies contact and notes persistence, owner isolation, task pinning, and complete cleanup using synthetic records. Full-site lint retains the pre-existing Bag Studio declaration-order error.

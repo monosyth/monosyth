@@ -1,3 +1,4 @@
+import type { MoveContact } from "./contacts";
 import type { MoveExpense } from "./budget";
 
 export type Housing = "rent" | "own" | "undecided";
@@ -23,6 +24,7 @@ export type MoveTask = {
   manualDate: boolean;
   status: TaskStatus;
   custom: boolean;
+  movingDay?: boolean;
   revision: number;
 };
 export type MovePlan = {
@@ -30,6 +32,8 @@ export type MovePlan = {
   setup: MoveSetup;
   tasks: MoveTask[];
   expenses: MoveExpense[];
+  contacts: MoveContact[];
+  notes: string;
   revision: number;
   updatedAt: string;
 };
@@ -369,6 +373,11 @@ export function patchTask(task: MoveTask, raw: unknown): MoveTask {
     if (!["todo", "done", "skipped"].includes(value.status as string))
       throw new MoveError("Choose a valid task status.");
     next.status = value.status as TaskStatus;
+  }
+  if (value.movingDay !== undefined) {
+    if (typeof value.movingDay !== "boolean")
+      throw new MoveError("Choose whether to pin this task to moving day.");
+    next.movingDay = value.movingDay;
   }
   if (value.due !== undefined) {
     if (value.due !== "" && !isDate(value.due))

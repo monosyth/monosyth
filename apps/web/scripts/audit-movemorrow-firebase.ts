@@ -5,7 +5,7 @@ import {
   initializeApp,
   deleteApp,
 } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { accessPlan } from "../src/lib/move/server";
 import { createMoveHandler } from "../src/lib/move/http";
 import { emptySetup, type MovePlan } from "../src/lib/move/model";
@@ -193,6 +193,96 @@ async function main() {
     );
     assert.equal(plan.expenses.length, 1);
     assert.equal(plan.expenses[0].kind, "deposit");
+    await taskRef.parent.parent!.update({
+      schemaVersion: 2,
+      notes: FieldValue.delete(),
+    });
+    plan = (await (await request(uids[0])).json()).plan;
+    assert.equal(plan.notes, "");
+    assert.deepEqual(plan.contacts, []);
+    const beforeContacts = structuredClone(plan);
+    const contactResponse = await request(uids[0], {
+      type: "contact-add",
+      planId: plan.id,
+      revision: plan.revision,
+      id: "helper",
+      patch: {
+        name: "Synthetic helper",
+        phone: "206-555-0123",
+        movingDay: true,
+      },
+    });
+    assert.equal(contactResponse.status, 200);
+    plan = (await contactResponse.json()).plan;
+    assert.deepEqual(plan.tasks, beforeContacts.tasks);
+    assert.deepEqual(plan.expenses, beforeContacts.expenses);
+    assert.equal(
+      (
+        await request(uids[1], {
+          type: "contact-delete",
+          uid: uids[0],
+          planId: plan.id,
+          revision: plan.revision,
+          id: "helper",
+        })
+      ).status,
+      404,
+    );
+    const notesResponse = await request(uids[0], {
+      type: "notes",
+      planId: plan.id,
+      revision: plan.revision,
+      notes: "Synthetic arrival instructions",
+    });
+    assert.equal(notesResponse.status, 200);
+    plan = (await (await request(uids[0])).json()).plan;
+    assert.equal(plan.notes, "Synthetic arrival instructions");
+    assert.equal(plan.contacts[0].movingDay, true);
+    const contactsRef = taskRef.parent.parent!.collection("contacts");
+    const untouchedContact = await contactsRef.doc("helper").get();
+    const pinResponse = await request(uids[0], {
+      type: "task",
+      planId: plan.id,
+      revision: plan.revision,
+      id: "inventory",
+      patch: { movingDay: true },
+    });
+    assert.equal(pinResponse.status, 200);
+    plan = (await pinResponse.json()).plan;
+    assert.ok(
+      untouchedContact.updateTime!.isEqual(
+        (await contactsRef.doc("helper").get()).updateTime!,
+      ),
+    );
+    const contactEdit = await request(uids[0], {
+      type: "contact-update",
+      planId: plan.id,
+      revision: plan.revision,
+      id: "helper",
+      patch: { company: "Synthetic movers", email: "helper@example.com" },
+    });
+    assert.equal(contactEdit.status, 200);
+    plan = (await contactEdit.json()).plan;
+    const anotherContact = await request(uids[0], {
+      type: "contact-add",
+      planId: plan.id,
+      revision: plan.revision,
+      id: "remove",
+      patch: { name: "Temporary contact" },
+    });
+    assert.equal(anotherContact.status, 200);
+    plan = (await anotherContact.json()).plan;
+    const removeContact = await request(uids[0], {
+      type: "contact-delete",
+      planId: plan.id,
+      revision: plan.revision,
+      id: "remove",
+    });
+    assert.equal(removeContact.status, 200);
+    plan = (await removeContact.json()).plan;
+    assert.equal((await contactsRef.doc("remove").get()).exists, false);
+    assert.equal(plan.contacts[0].email, "helper@example.com");
+    assert.equal(plan.notes, "Synthetic arrival instructions");
     const direct = await fetch(
       `https://firestore.googleapis.com/v1/projects/monosyth/databases/(default)/documents/movemorrowUsers/${uids[0]}/moves/current`,
     );
@@ -214,8 +304,9 @@ async function main() {
     assert.equal((await (await request(uids[0])).json()).plan, null);
     assert.equal((await taskRef.parent.get()).size, 0);
     assert.equal((await expenseRef.get()).size, 0);
+    assert.equal((await contactsRef.get()).size, 0);
     console.log(
-      "PASS: real Firestore create/edit/reload/delete; synthetic owner routing; unchanged task preservation; concurrent/stale write denial; unauthenticated database denial; task and budget cleanup; legacy upgrade; budget persistence and owner isolation.",
+      "PASS: real Firestore create/edit/reload/delete; synthetic owner routing; unchanged task preservation; concurrent/stale write denial; unauthenticated database denial; task and budget cleanup; legacy upgrade; budget/contact/notes persistence and owner isolation; pinned tasks; full contact cleanup.",
     );
   } finally {
     const cleanup = await Promise.allSettled(

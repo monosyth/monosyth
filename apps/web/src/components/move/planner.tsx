@@ -24,8 +24,9 @@ import {
   todayLocal,
   type MovePlan,
   type MoveSetup,
-  type MoveTask,
 } from "@/lib/move/model";
+import { TaskCard } from "./task-card";
+import { ContactsPlanner, MovingDay } from "./contacts";
 import { BudgetPlanner } from "./budget";
 import { SetupForm } from "./setup-form";
 import styles from "./planner.module.css";
@@ -66,7 +67,9 @@ export function MovePlanner() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [view, setView] = useState<"checklist" | "budget">("checklist");
+  const [view, setView] = useState<"checklist" | "budget" | "contacts" | "day">(
+    "checklist",
+  );
   const [filter, setFilter] = useState<Filter>("next");
   const [today, setToday] = useState("");
   const [newDate, setNewDate] = useState("");
@@ -216,7 +219,7 @@ export function MovePlanner() {
     const blob = new Blob(
       [
         JSON.stringify(
-          { product: "MoveMorrow", schemaVersion: 2, ...plan },
+          { product: "MoveMorrow", schemaVersion: 3, ...plan },
           null,
           2,
         ),
@@ -299,8 +302,8 @@ export function MovePlanner() {
       </header>
       <div className={styles.content} id="planner">
         <p className={styles.fine}>
-          Your checklist, timeline, and moving budget. Shared household planning
-          is still to come.
+          Your checklist, budget, contacts, and moving-day essentials. Shared
+          household planning is still to come.
         </p>
         {!configured && (
           <p className={`${styles.banner} ${styles.error}`}>
@@ -473,6 +476,20 @@ export function MovePlanner() {
                 >
                   Budget
                 </button>
+                <button
+                  className={view === "contacts" ? styles.active : ""}
+                  aria-pressed={view === "contacts"}
+                  onClick={() => setView("contacts")}
+                >
+                  Contacts & notes
+                </button>
+                <button
+                  className={view === "day" ? styles.active : ""}
+                  aria-pressed={view === "day"}
+                  onClick={() => setView("day")}
+                >
+                  Moving day
+                </button>
               </nav>
             )}
             {plan && (
@@ -484,6 +501,28 @@ export function MovePlanner() {
                   onChange={change}
                 />
               </div>
+            )}
+            {plan && (
+              <>
+                <div hidden={view !== "contacts"}>
+                  <ContactsPlanner
+                    key={plan.id}
+                    contacts={plan.contacts ?? []}
+                    notes={plan.notes ?? ""}
+                    busy={locked}
+                    onChange={change}
+                  />
+                </div>
+                <div hidden={view !== "day"}>
+                  <MovingDay
+                    plan={plan}
+                    today={today}
+                    busy={locked}
+                    onChange={change}
+                    onContacts={() => setView("contacts")}
+                  />
+                </div>
+              </>
             )}
             <div hidden={Boolean(plan) && view !== "checklist"}>
               {plan && (
@@ -636,9 +675,9 @@ export function MovePlanner() {
                     >
                       <h2>Delete your saved move?</h2>
                       <p>
-                        This removes the move, all its tasks, and all budget
-                        items from your account. Export a copy first if you want
-                        to keep it. This cannot be undone.
+                        This removes the move, tasks, budget items, contacts,
+                        and notes from your account. Export a copy first if you
+                        want to keep it. This cannot be undone.
                       </p>
                       <label>
                         Type DELETE to confirm
@@ -679,144 +718,6 @@ export function MovePlanner() {
   );
 }
 
-function TaskCard({
-  task,
-  today,
-  editable,
-  busy,
-  onChange,
-}: {
-  task: MoveTask;
-  today: string;
-  editable: boolean;
-  busy: boolean;
-  onChange: (patch: Command) => Promise<boolean>;
-}) {
-  const [title, setTitle] = useState(task.title);
-  const [detail, setDetail] = useState(task.detail);
-  const [due, setDue] = useState(task.due);
-  const [editing, setEditing] = useState(false);
-  function openEditor() {
-    setTitle(task.title);
-    setDetail(task.detail);
-    setDue(task.due);
-    setEditing(true);
-  }
-  async function save(e: FormEvent) {
-    e.preventDefault();
-    const patch: Command = { title, detail };
-    if (due !== task.due) patch.due = due;
-    if (await onChange(patch)) setEditing(false);
-  }
-  return (
-    <article
-      className={`${styles.task} ${task.status === "done" ? styles.complete : ""}`}
-    >
-      <div className={styles.taskTop}>
-        <label>
-          {editable && (
-            <input
-              type="checkbox"
-              checked={task.status === "done"}
-              disabled={busy}
-              onChange={(e) =>
-                void onChange({ status: e.target.checked ? "done" : "todo" })
-              }
-              aria-label={`Complete: ${task.title}`}
-            />
-          )}
-          <span className={styles.taskTitle}>{task.title}</span>
-        </label>
-        {editable && (
-          <button
-            onClick={() =>
-              void onChange({
-                status: task.status === "skipped" ? "todo" : "skipped",
-              })
-            }
-            disabled={busy}
-          >
-            {task.status === "skipped" ? "Restore" : "Skip"}
-          </button>
-        )}
-      </div>
-      <div className={styles.taskMeta}>
-        <span>{task.category}</span>
-        <span
-          className={
-            task.status === "todo" && task.due && today && task.due < today
-              ? styles.overdue
-              : ""
-          }
-        >
-          {formatDate(task.due)}
-          {task.status === "todo" && task.due && today && task.due < today
-            ? " · past suggested date"
-            : ""}
-        </span>
-        <span>
-          {task.status === "skipped"
-            ? "Skipped"
-            : task.manualDate
-              ? "Your date"
-              : "Suggested"}
-        </span>
-      </div>
-      <details>
-        <summary>Details{editable ? " & edit" : ""}</summary>
-        <p>{task.detail}</p>
-        {editable && !editing && (
-          <button onClick={openEditor} disabled={busy}>
-            Edit task
-          </button>
-        )}
-        {editing && (
-          <form onSubmit={save} className={styles.taskForm}>
-            <label>
-              Task name
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-                maxLength={180}
-              />
-            </label>
-            <label>
-              Notes
-              <textarea
-                value={detail}
-                onChange={(e) => setDetail(e.target.value)}
-                maxLength={1500}
-              />
-            </label>
-            <label>
-              Due date
-              <input
-                type="date"
-                value={due}
-                min="2000-01-01"
-                max="2100-12-31"
-                onChange={(e) => setDue(e.target.value)}
-              />
-            </label>
-            <div className={styles.actions}>
-              <button className={styles.primary} disabled={busy}>
-                Save task
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditing(false)}
-                disabled={busy}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
-      </details>
-    </article>
-  );
-}
 function AddTask({
   busy,
   onAdd,

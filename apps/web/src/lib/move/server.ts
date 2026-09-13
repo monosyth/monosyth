@@ -1,3 +1,4 @@
+import type { MoveContact } from "./contacts";
 import { getFirebaseAdminDb } from "@/lib/firebase/admin";
 import { applyCommand } from "./commands";
 import type { MoveExpense } from "./budget";
@@ -18,6 +19,7 @@ export async function accessPlan(
     const snapshot = await transaction.get(ref);
     const taskDocs = await transaction.get(ref.collection("tasks"));
     const expenseDocs = await transaction.get(ref.collection("expenses"));
+    const contactDocs = await transaction.get(ref.collection("contacts"));
     const data = snapshot.data();
     const current: MovePlan | null = data
       ? {
@@ -25,6 +27,10 @@ export async function accessPlan(
           setup: data.setup,
           revision: data.revision,
           updatedAt: data.updatedAt,
+          notes: data.notes ?? "",
+          contacts: contactDocs.docs
+            .map((d) => d.data() as MoveContact)
+            .sort((a, b) => a.id.localeCompare(b.id)),
           expenses: expenseDocs.docs
             .map((d) => d.data() as MoveExpense)
             .sort((a, b) => a.id.localeCompare(b.id)),
@@ -38,6 +44,7 @@ export async function accessPlan(
     if (!next) {
       for (const task of taskDocs.docs) transaction.delete(task.ref);
       for (const expense of expenseDocs.docs) transaction.delete(expense.ref);
+      for (const contact of contactDocs.docs) transaction.delete(contact.ref);
       transaction.delete(ref);
       return null;
     }
@@ -46,7 +53,8 @@ export async function accessPlan(
       setup: next.setup,
       revision: next.revision,
       updatedAt: next.updatedAt,
-      schemaVersion: 2,
+      notes: next.notes,
+      schemaVersion: 3,
     });
     const previous = new Map(current?.tasks.map((t) => [t.id, t]));
     for (const task of next.tasks) {
@@ -62,6 +70,15 @@ export async function accessPlan(
     for (const expense of next.expenses)
       if (expense.revision !== previousExpenses.get(expense.id)?.revision)
         transaction.set(ref.collection("expenses").doc(expense.id), expense);
+    const previousContacts = new Map(
+      current?.contacts.map((item) => [item.id, item]),
+    );
+    const nextContactIds = new Set(next.contacts.map((item) => item.id));
+    for (const contact of contactDocs.docs)
+      if (!nextContactIds.has(contact.id)) transaction.delete(contact.ref);
+    for (const contact of next.contacts)
+      if (contact.revision !== previousContacts.get(contact.id)?.revision)
+        transaction.set(ref.collection("contacts").doc(contact.id), contact);
     return next;
   });
 }

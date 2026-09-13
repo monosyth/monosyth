@@ -1,3 +1,4 @@
+import { phoneHref, emailHref, movingDayTasks } from "../src/lib/move/contacts";
 import {
   parseMoney,
   moneyInput,
@@ -556,4 +557,229 @@ test("expense commands cannot change another owner's budget", async () => {
       404,
     );
   assert.equal(f.plans.get("alice")!.expenses[0].actualCents, 1000);
+});
+
+test("contact links normalize phone extensions and contain email content in the address", () => {
+  assert.equal(phoneHref("+1 (206) 555-0123 x42"), "tel:+12065550123;ext=42");
+  assert.equal(phoneHref("206.555.0123 ext. 9"), "tel:2065550123;ext=9");
+  for (const phone of [
+    "javascript:alert(1)",
+    "2065550123;123",
+    "123",
+    "+1234567890123456",
+    "1234567\n?body=oops",
+  ])
+    assert.equal(phoneHref(phone), null);
+  assert.equal(
+    emailHref("person+move@example.com"),
+    "mailto:person%2Bmove%40example.com",
+  );
+  assert.equal(emailHref("person@example.com\r\nBcc:other@example.com"), null);
+  assert.equal(
+    emailHref("a?subject=hello@example.com"),
+    "mailto:a%3Fsubject%3Dhello%40example.com",
+  );
+});
+function addContact(
+  plan: MovePlan,
+  id: string,
+  patch: Record<string, unknown> = {},
+) {
+  return change(plan, {
+    type: "contact-add",
+    id,
+    patch: { name: id, ...patch },
+  })!;
+}
+test("contacts validate fields, IDs, and limits while preserving tasks and budget", () => {
+  const plan = addExpense(create(), "movers", { estimate: "10" });
+  const saved = addContact(plan, "person", {
+    phone: "206-555-0123",
+    email: "person@example.com",
+    movingDay: true,
+  });
+  assert.deepEqual(saved.tasks, plan.tasks);
+  assert.deepEqual(saved.expenses, plan.expenses);
+  for (const patch of [
+    { name: "" },
+    { phone: "no phone" },
+    { email: "not an email" },
+    { company: "x".repeat(121) },
+    { notes: "x".repeat(1501) },
+    { role: "__proto__" },
+    { movingDay: "yes" },
+  ])
+    rejectsStatus(() => addContact(plan, "bad", patch), 400);
+  for (const id of ["../victim", "person"])
+    rejectsStatus(() => addContact(saved, id), 400);
+  rejectsStatus(
+    () =>
+      addContact(
+        {
+          ...saved,
+          contacts: Array.from({ length: 50 }, () => saved.contacts[0]),
+        },
+        "extra",
+      ),
+    400,
+  );
+  const edited = change(saved, {
+    type: "contact-update",
+    id: "person",
+    patch: { company: "Moving Co", phone: "" },
+  })!;
+  assert.equal(edited.contacts[0].revision, 2);
+  assert.equal(edited.contacts[0].phone, "");
+  assert.equal(edited.contacts[0].email, "person@example.com");
+  const removed = change(edited, { type: "contact-delete", id: "person" })!;
+  assert.deepEqual(removed.contacts, []);
+  assert.deepEqual(removed.expenses, plan.expenses);
+  rejectsStatus(
+    () => change(removed, { type: "contact-delete", id: "person" }),
+    404,
+  );
+  rejectsStatus(
+    () =>
+      applyCommand(edited, {
+        type: "contact-delete",
+        id: "person",
+        planId: saved.id,
+        revision: saved.revision,
+      }),
+    409,
+  );
+});
+test("move notes are explicit, bounded, clearable, and survive unrelated edits", () => {
+  const saved = change(create(), {
+    type: "notes",
+    notes: "  Truck arrives at 9\nBring the keys  ",
+  })!;
+  assert.equal(saved.notes, "Truck arrives at 9\nBring the keys");
+  const withContact = addContact(saved, "helper");
+  assert.equal(withContact.notes, saved.notes);
+  const withBudget = addExpense(withContact, "boxes", { actual: "20" });
+  assert.equal(withBudget.notes, saved.notes);
+  assert.deepEqual(withBudget.contacts, withContact.contacts);
+  const cleared = change(withBudget, { type: "notes", notes: "" })!;
+  assert.equal(cleared.notes, "");
+  rejectsStatus(
+    () => change(saved, { type: "notes", notes: "x".repeat(2001) }),
+    400,
+  );
+});
+test("older plans gain empty contacts and notes without losing existing records", () => {
+  const legacy = addExpense(create(), "cost", { actual: "5" });
+  delete (legacy as Partial<MovePlan>).contacts;
+  delete (legacy as Partial<MovePlan>).notes;
+  const next = change(legacy, {
+    type: "task",
+    id: "budget",
+    patch: { status: "done" },
+  })!;
+  assert.deepEqual(next.contacts, []);
+  assert.equal(next.notes, "");
+  assert.deepEqual(next.expenses, legacy.expenses);
+  assert.equal(addContact(next, "helper").contacts.length, 1);
+});
+test("moving day selects final preparations, due-date matches, and pinned tasks, omitting skipped tasks", () => {
+  let plan = create();
+  plan = change(plan, {
+    type: "add",
+    id: "day-custom",
+    patch: { title: "Meet helper", due: plan.setup.date },
+  })!;
+  plan = change(plan, {
+    type: "task",
+    id: "budget",
+    patch: { movingDay: true },
+  })!;
+  plan = change(plan, {
+    type: "task",
+    id: "essentials",
+    patch: { status: "skipped" },
+  })!;
+  plan = change(plan, {
+    type: "task",
+    id: "walkthrough",
+    patch: { status: "done" },
+  })!;
+  const tasks = movingDayTasks(plan),
+    ids = tasks.map((t) => t.id);
+  for (const id of [
+    "confirm",
+    "walkthrough",
+    "arrival",
+    "day-custom",
+    "budget",
+  ])
+    assert.ok(ids.includes(id));
+  for (const id of ["essentials", "inventory", "pets"])
+    assert.ok(!ids.includes(id));
+  assert.equal(tasks[tasks.length - 1].id, "walkthrough");
+  plan = change(plan, {
+    type: "task",
+    id: "arrival",
+    patch: { due: "2026-12-25" },
+  })!;
+  assert.ok(!movingDayTasks(plan).some((t) => t.id === "arrival"));
+  plan = change(plan, {
+    type: "task",
+    id: "budget",
+    patch: { movingDay: false },
+  })!;
+  assert.ok(!movingDayTasks(plan).some((t) => t.id === "budget"));
+  rejectsStatus(
+    () =>
+      change(plan, {
+        type: "task",
+        id: "budget",
+        patch: { movingDay: "true" },
+      }),
+    400,
+  );
+});
+test("moving day works without a date and follows a rescheduled move", () => {
+  const undated = applyCommand(null, { type: "create", setup: emptySetup })!;
+  assert.deepEqual(
+    movingDayTasks(undated)
+      .map((t) => t.id)
+      .sort(),
+    ["arrival", "confirm", "essentials", "walkthrough"],
+  );
+  let plan = create();
+  plan = change(plan, {
+    type: "add",
+    id: "dated",
+    patch: { title: "A date I chose", due: plan.setup.date },
+  })!;
+  const rescheduled = change(plan, { type: "date", date: "2026-12-20" })!;
+  assert.ok(!movingDayTasks(rescheduled).some((t) => t.id === "dated"));
+  assert.equal(
+    movingDayTasks(rescheduled).find((t) => t.id === "arrival")!.due,
+    "2026-12-20",
+  );
+});
+test("another account cannot edit contacts or notes even with the owner's IDs", async () => {
+  const f = fixture();
+  const response = await f.request("alice", { type: "create", setup });
+  const plan = (await response.json()).plan as MovePlan;
+  for (const command of [
+    { type: "contact-add", id: "helper", patch: { name: "Intruder" } },
+    { type: "contact-update", id: "helper", patch: { name: "Intruder" } },
+    { type: "contact-delete", id: "helper" },
+    { type: "notes", notes: "Intrusion" },
+  ])
+    assert.equal(
+      (
+        await f.request("bob", {
+          ...command,
+          uid: "alice",
+          planId: plan.id,
+          revision: plan.revision,
+        })
+      ).status,
+      404,
+    );
+  assert.deepEqual(f.plans.get("alice")!.contacts, []);
+  assert.equal(f.plans.get("alice")!.notes, "");
 });

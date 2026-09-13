@@ -37,7 +37,7 @@ export default function MovePage() {
           <h1 id="move-title">Move<span>Morrow</span></h1>
           <p className={styles.tagline}>A big move. A clear next step.</p>
           <p className={styles.intro}>Moving comes with a lot to remember. We’re building a place to turn it into a plan: what to do, when to do it, and what it will cost.</p>
-          <p className={styles.availability}>Your checklist, timeline, and moving budget are ready to try.</p>
+          <p className={styles.availability}>Your checklist, budget, contacts, and moving-day essentials are ready to try.</p>
           <Link className={styles.link} href="/move/planner">Try the early planner <span aria-hidden="true">→</span></Link>
         </section>
 
@@ -62,7 +62,7 @@ export default function MovePage() {
           <article><span>02 / Timing</span><h2>The weeks ahead.</h2><p>A timeline organized around your move date, so urgent tasks don’t get buried in the whole list.</p></article>
           <article><span>03 / Money</span><h2>Costs in one place.</h2><p>Track estimates, actual costs, and paid items, with refundable deposits shown separately.</p></article>
         </section>
-        <p className={styles.note}>Try the checklist, timeline, and budget today. Contacts and household sharing are planned for later releases.</p>
+        <p className={styles.note}>Keep tasks, costs, contacts, and moving-day essentials together. Household sharing is planned for a later release.</p>
       </div>
 
       <footer className={styles.footer}><Link href="/">Back to Monosyth Labs</Link><span>© {new Date().getFullYear()} Monosyth Labs, LLC</span></footer>

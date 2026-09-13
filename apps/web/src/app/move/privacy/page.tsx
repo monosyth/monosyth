@@ -17,7 +17,7 @@ export default function MovePrivacy() {
       </header>
       <article className={`${styles.content} ${styles.panel}`}>
         <p className={styles.kicker}>
-          Early planner / Updated September 11, 2026
+          Early planner / Updated September 12, 2026
         </p>
         <h1>Your move. Your information.</h1>
         <p>
@@ -31,16 +31,18 @@ export default function MovePrivacy() {
           account. When you save, we store the cities, move date, household
           choices, task details, and budget items (including estimates, actual
           amounts, payment status, and notes) you enter, along with your account
-          identifier and save timestamps. We display your Google account name
-          while you’re signed in.
+          identifier and save timestamps. We also store move notes and the
+          names, companies, roles, phone numbers, email addresses, and notes you
+          add for your contacts. Adding a contact does not invite or notify
+          them. We display your Google account name while you’re signed in.
         </p>
         <h2>How it is used</h2>
         <p>
-          Your details create and save your checklist and budget so you can
-          return on another device. Google Firebase provides account sign-in,
-          database storage, and hosting. MoveMorrow’s server checks your account
-          before returning or changing a saved plan. Plans are not publicly
-          shared. Authorized service operators may access records when needed to
+          Your details create and save your moving plan so you can return on
+          another device. Google Firebase provides account sign-in, database
+          storage, and hosting. MoveMorrow’s server checks your account before
+          returning or changing a saved plan. Plans are not publicly shared.
+          Authorized service operators may access records when needed to
           maintain the service.
         </p>
         <p>
@@ -52,11 +54,12 @@ export default function MovePrivacy() {
         <h2>Keep a copy or remove your plan</h2>
         <p>
           Use Export plan in the planner to download your details, tasks, and
-          budget items, or print the current planner view. Delete this move
-          removes the active saved plan and all its tasks and budget items.
-          Signing out does not delete it. Google authentication records and
-          provider operational logs are separate from your plan and are not
-          deleted by that button. We keep the active plan until you delete it.
+          budget items, contacts, and notes, or print the current planner view.
+          Delete this move removes the active saved plan and all its tasks,
+          budget items, contacts, and notes. Signing out does not delete it.
+          Google authentication records and provider operational logs are
+          separate from your plan and are not deleted by that button. We keep
+          the active plan until you delete it.
         </p>
         <h2>What to leave out</h2>
         <p>

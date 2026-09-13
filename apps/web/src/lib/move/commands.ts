@@ -1,3 +1,4 @@
+import { patchContact, type MoveContact } from "./contacts";
 import { patchExpense, type MoveExpense } from "./budget";
 import {
   MoveError,
@@ -30,6 +31,8 @@ export function applyCommand(
       setup,
       tasks: generateTasks(setup),
       expenses: [],
+      contacts: [],
+      notes: "",
       revision: 1,
       updatedAt: now,
     };
@@ -42,6 +45,8 @@ export function applyCommand(
       409,
     );
   if (command.type === "delete") return null;
+  let contacts = current.contacts ?? [];
+  let notes = current.notes ?? "";
   let expenses = current.expenses ?? [];
   let tasks = current.tasks;
   let setup = current.setup;
@@ -118,12 +123,52 @@ export function applyCommand(
         : expenses.map((item) =>
             item.id === id ? patchExpense(item, command.patch) : item,
           );
+  } else if (command.type === "contact-add") {
+    if (contacts.length >= 50)
+      throw new MoveError("This version supports up to 50 contacts per move.");
+    const id = text(command.id, 100, true);
+    if (!/^[a-zA-Z0-9_-]+$/.test(id) || contacts.some((item) => item.id === id))
+      throw new MoveError("Please try adding this contact again.");
+    const initial: MoveContact = {
+      id,
+      name: "",
+      company: "",
+      role: "other",
+      phone: "",
+      email: "",
+      notes: "",
+      movingDay: false,
+      revision: 0,
+    };
+    const contact = patchContact(initial, command.patch);
+    if (!contact.name) throw new MoveError("Give the contact a name.");
+    contacts = [...contacts, contact];
+  } else if (
+    command.type === "contact-update" ||
+    command.type === "contact-delete"
+  ) {
+    const id = text(command.id, 100, true);
+    if (!contacts.some((item) => item.id === id))
+      throw new MoveError(
+        "That contact no longer exists. Reload your plan.",
+        404,
+      );
+    contacts =
+      command.type === "contact-delete"
+        ? contacts.filter((item) => item.id !== id)
+        : contacts.map((item) =>
+            item.id === id ? patchContact(item, command.patch) : item,
+          );
+  } else if (command.type === "notes") {
+    notes = text(command.notes, 2000);
   } else throw new MoveError("This change is not supported.");
   return {
     id: current.id,
     setup,
     tasks,
     expenses,
+    contacts,
+    notes,
     revision: current.revision + 1,
     updatedAt: now,
   };

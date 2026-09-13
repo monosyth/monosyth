@@ -493,3 +493,26 @@
     grid-template-columns: 1fr;
   }
 }
+
+.contactLinks {
+  margin: 1rem 0;
+}
+.contactLinks a {
+  color: #22d3ee;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.task > .actions {
+  margin-top: 1rem;
+}
+@media print {
+  .contactLinks a {
+    color: black;
+  }
+  .contactLinks {
+    display: flex !important;
+  }
+}
