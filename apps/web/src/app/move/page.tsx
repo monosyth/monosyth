@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { MoveBrand } from "@/components/move/brand";
 import styles from "./page.module.css";
 
-const title = "MoveMorrow — Plan your next chapter | Monosyth Labs";
+const title = "MoveMorrow — More room for what’s next.";
 const description =
   "Plan your move with MoveMorrow: preview a tailored checklist, then sign in to save your timeline and moving budget. An early planner by Monosyth Labs.";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://monosyth.com";
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
   title,
   description,
   alternates: { canonical: `${siteUrl}/move` },
-  openGraph: { title, description, url: `${siteUrl}/move`, type: "website", siteName: "Monosyth Labs" },
+  openGraph: { title, description, url: `${siteUrl}/move`, type: "website", siteName: "MoveMorrow" },
   twitter: { card: "summary", title, description },
 };
 
@@ -27,18 +28,24 @@ export default function MovePage() {
     <main className={styles.page}>
       <a className={styles.skipLink} href="#move-content">Skip to content</a>
       <header className={styles.header}>
-        <Link className={styles.brand} href="/" aria-label="Monosyth Labs home">monosyth <span>Labs</span></Link>
-        <span className={styles.status}>In the lab / Early planner</span>
+        <MoveBrand />
+        <Link href="/move/planner" className={styles.headerLink}>Your planner <span aria-hidden="true">↗</span></Link>
       </header>
 
       <div id="move-content" className={styles.content}>
         <section className={styles.hero} aria-labelledby="move-title">
-          <p className={styles.eyebrow}>A moving planner by Monosyth Labs</p>
-          <h1 id="move-title">Move<span>Morrow</span></h1>
-          <p className={styles.tagline}>A big move. A clear next step.</p>
-          <p className={styles.intro}>Moving comes with a lot to remember. We’re building a place to turn it into a plan: what to do, when to do it, and what it will cost.</p>
-          <p className={styles.availability}>Your checklist, budget, contacts, and moving-day essentials are ready to try.</p>
-          <Link className={styles.link} href="/move/planner">Try the early planner <span aria-hidden="true">→</span></Link>
+          <div>
+            <p className={styles.eyebrow}>A little order. A new beginning.</p>
+            <h1 id="move-title">More room<br />for what’s<br /><span>next.</span></h1>
+            <p className={styles.intro}>A move is a lot of small decisions. Bring the tasks, dates, costs, and contacts together—and see your next step.</p>
+            <Link className={styles.link} href="/move/planner">Plan your move <span aria-hidden="true">↗</span></Link>
+            <p className={styles.availability}>Free to try. No account needed to preview.</p>
+          </div>
+          <aside className={styles.heroNote} aria-label="A place for your next chapter">
+            <div className={styles.noteTop}><span>YOUR NEXT CHAPTER</span><span aria-hidden="true">↗</span></div>
+            <p className={styles.noteTitle}>A place<br />to begin<br />again.</p>
+            <div className={styles.noteBottom}><span>Across town.<br />Across the country.</span><span>One step<br />at a time.</span></div>
+          </aside>
         </section>
 
         <section className={styles.plan} id="the-plan" aria-labelledby="plan-title">
@@ -65,7 +72,7 @@ export default function MovePage() {
         <p className={styles.note}>Keep tasks, costs, contacts, and moving-day essentials together. Household sharing is planned for a later release.</p>
       </div>
 
-      <footer className={styles.footer}><Link href="/">Back to Monosyth Labs</Link><span>© {new Date().getFullYear()} Monosyth Labs, LLC</span></footer>
+      <footer className={styles.footer}><Link href="/">By Monosyth Labs</Link><Link href="/move/privacy">Privacy & your data</Link><span>© {new Date().getFullYear()} Monosyth Labs, LLC</span></footer>
     </main>
   );
 }

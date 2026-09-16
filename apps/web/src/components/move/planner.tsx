@@ -25,6 +25,8 @@ import {
   type MovePlan,
   type MoveSetup,
 } from "@/lib/move/model";
+import { MoveBrand } from "./brand";
+import { MoveHeading } from "./move-heading";
 import { TaskCard } from "./task-card";
 import { ContactsPlanner, MovingDay } from "./contacts";
 import { BudgetPlanner } from "./budget";
@@ -277,9 +279,7 @@ export function MovePlanner() {
         Skip to your planner
       </a>
       <header className={styles.header}>
-        <Link className={styles.brand} href="/move">
-          Move<span>Morrow</span>
-        </Link>
+        <MoveBrand />
         <nav aria-label="MoveMorrow">
           <span>Early planner</span>
           <Link href="/move/privacy">Privacy</Link>
@@ -349,24 +349,9 @@ export function MovePlanner() {
         )}
         {!cloudLoading && !loadFailed && setup && (
           <>
-            <section className={styles.panel} aria-labelledby="plan-heading">
-              <div className={styles.topline}>
-                <div>
-                  <p className={styles.kicker}>
-                    {plan ? "Your move" : "02 / Your plan preview"}
-                  </p>
-                  <h1 id="plan-heading">
-                    {setup.destination
-                      ? `Next stop: ${setup.destination}`
-                      : "Your next chapter"}
-                  </h1>
-                  <p className={styles.muted}>
-                    {setup.origin || "Origin undecided"} →{" "}
-                    {setup.destination || "Destination undecided"}
-                    <br />
-                    Target move: {formatDate(setup.date)}
-                  </p>
-                </div>
+            <section className={styles.overview} aria-labelledby="plan-heading">
+              <MoveHeading setup={setup} today={today} saved={Boolean(plan)} />
+              <div className={styles.planTools}>
                 {plan && (
                   <div className={styles.actions}>
                     <button onClick={refresh} disabled={locked}>
@@ -461,7 +446,7 @@ export function MovePlanner() {
               )}
             </section>
             {plan && (
-              <nav className={styles.tabs} aria-label="Planner sections">
+              <nav className={styles.sectionTabs} aria-label="Planner sections">
                 <button
                   className={view === "checklist" ? styles.active : ""}
                   aria-pressed={view === "checklist"}
@@ -555,40 +540,53 @@ export function MovePlanner() {
                   The next six unfinished tasks, earliest dates first.
                 </p>
               )}
-              {visible.length ? (
-                <ul className={styles.list}>
-                  {visible.map((task, index) => (
-                    <li key={task.id}>
-                      {plan &&
-                        filter === "timeline" &&
-                        (index === 0 ||
-                          task.due !== visible[index - 1].due) && (
-                          <h2 className={styles.timelineDate}>
-                            {formatDate(task.due)}
-                          </h2>
-                        )}
-                      <TaskCard
-                        task={task}
-                        today={today}
-                        editable={Boolean(plan)}
-                        busy={locked}
-                        onChange={(patch) =>
-                          change({ type: "task", id: task.id, patch })
-                        }
-                      />
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className={styles.empty}>
-                  <h2>
-                    {filter === "next" || filter === "timeline"
-                      ? "Nothing left in this view."
-                      : "No tasks here yet."}
-                  </h2>
-                  <p>Use All tasks to review your whole checklist.</p>
+              <div className={plan && filter === "next" ? styles.nextLayout : undefined}>
+                <div>
+                {visible.length ? (
+                  <ul className={styles.list}>
+                    {visible.map((task, index) => (
+                      <li key={task.id}>
+                        {plan &&
+                          filter === "timeline" &&
+                          (index === 0 ||
+                            task.due !== visible[index - 1].due) && (
+                            <h2 className={styles.timelineDate}>
+                              {formatDate(task.due)}
+                            </h2>
+                          )}
+                        <TaskCard
+                          task={task}
+                          today={today}
+                          editable={Boolean(plan)}
+                          busy={locked}
+                          onChange={(patch) =>
+                            change({ type: "task", id: task.id, patch })
+                          }
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className={styles.empty}>
+                    <h2>
+                      {filter === "next" || filter === "timeline"
+                        ? "Nothing left in this view."
+                        : "No tasks here yet."}
+                    </h2>
+                    <p>Use All tasks to review your whole checklist.</p>
+                  </div>
+                )}
                 </div>
-              )}
+                {plan && filter === "next" && (
+                  <aside className={styles.roomNote}>
+                    <p className={styles.kicker}>A little room to breathe</p>
+                    <span aria-hidden="true" className={styles.noteArrow}>↗</span>
+                    <h2>Start with<br />one room.</h2>
+                    <p>Keep. Give. Let go.</p>
+                    <p>You don’t have to sort everything today. One shelf is a start.</p>
+                  </aside>
+                )}
+              </div>
               {plan && (
                 <>
                   <section className={styles.section}>
@@ -710,6 +708,7 @@ export function MovePlanner() {
         )}
       </div>
       <footer className={styles.footer}>
+        <span>More room for what’s next.</span>
         <Link href="/move">About MoveMorrow</Link>
         <Link href="/move/privacy">Privacy & your data</Link>
         <Link href="/">By Monosyth Labs</Link>

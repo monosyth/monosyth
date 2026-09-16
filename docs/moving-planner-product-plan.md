@@ -1,12 +1,16 @@
 # MoveMorrow: product plan
 
-Status: core early planner implemented. Updated September 12, 2026.
+Status: core early planner implemented. Updated September 16, 2026.
 
 ## Product decision
 
 Turn the Seattle Move prototype into MoveMorrow, an independent consumer moving planner published by Monosyth Labs. The product name is MoveMorrow; “by Monosyth Labs” is a publisher credit. Use `/move` on `monosyth.com` as the stable initial route. Production stays on Monosyth-owned Firebase hosting.
 
 The first release provides setup, a tailored checklist, a dated timeline, and private account saving at `/move/planner`. It uses new neutral templates and separate records; no old personal move data is connected. Budget tracking is now included. Contacts, move notes, and a dedicated moving-day view are now included; household sharing remains planned.
+
+## Identity
+
+The approved identity uses oxblood, chalk, charcoal, and mineral blue, with strong Archivo Black headings and IBM Plex Sans body text. The tagline is “More room for what’s next.” See [the brand guide](movemorrow-brand.md) for the shared visual and voice rules. US city autocomplete is available; editing saved housing and transport choices is the next planned enhancement.
 
 ## The promise
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { MoveBrand } from "@/components/move/brand";
 import styles from "@/components/move/planner.module.css";
 export const metadata: Metadata = {
   title: "Privacy & your data | MoveMorrow",
@@ -10,12 +11,10 @@ export default function MovePrivacy() {
   return (
     <main className={styles.shell}>
       <header className={styles.header}>
-        <Link className={styles.brand} href="/move">
-          Move<span>Morrow</span>
-        </Link>
+        <MoveBrand />
         <Link href="/move/planner">Your planner</Link>
       </header>
-      <article className={`${styles.content} ${styles.panel}`}>
+      <article className={`${styles.content} ${styles.panel} ${styles.privacy}`}>
         <p className={styles.kicker}>
           Early planner / Updated September 16, 2026
         </p>

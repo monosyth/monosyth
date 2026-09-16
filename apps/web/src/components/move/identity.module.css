@@ -1,0 +1,25 @@
+.identity {
+  --move-paper: #f7f7f2;
+  --move-ink: #242520;
+  --move-muted: #65665e;
+  --move-rule: #cacbc2;
+  --move-line-strong: #818378;
+  --move-panel: #eeeee7;
+  --move-blue: #d5e0e4;
+  --move-oxblood: #642b3b;
+  --move-white: #fffaf6;
+  color-scheme: light;
+  background: var(--move-paper);
+  color: var(--move-ink);
+  font-family: var(--font-move-sans), sans-serif;
+  min-height: 100vh;
+}
+.wordmark {
+  font: 400 clamp(1.45rem, 3vw, 1.95rem)/1 var(--font-move-display), sans-serif;
+  letter-spacing: -.06em;
+  color: var(--move-ink);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.wordmark span { color: var(--move-oxblood); }
+.wordmark:focus-visible { outline: 3px solid var(--move-oxblood); outline-offset: 6px; }
