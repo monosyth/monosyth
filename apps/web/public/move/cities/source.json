@@ -1,0 +1,14 @@
+{
+  "source": "GeoNames cities500",
+  "countryFilter": "US",
+  "sourceUrl": "https://download.geonames.org/export/dump/",
+  "license": "CC BY 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "generatedAt": "2026-09-16T20:10:11.518734+00:00",
+  "cities": 21785,
+  "shards": 267,
+  "sha256": {
+    "cities500.zip": "1de7392062a6e6c41e201b9de725464070b0a0abbcd6769cc120549e9afcab0a",
+    "admin1CodesASCII.txt": "1da92a6323a5fec3176f3f743bf4cf4040fd56a876da55e46fbca23c863aa60a"
+  }
+}

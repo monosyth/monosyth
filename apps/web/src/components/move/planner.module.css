@@ -516,3 +516,67 @@
     display: flex !important;
   }
 }
+
+.cityField {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.cityInputWrap {
+  position: relative;
+}
+.cityPopup {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: #17223e;
+  border: 1px solid #61708b;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.6rem 1.5rem #0006;
+  overflow: hidden;
+}
+.cityResults {
+  list-style: none;
+  padding: 0.25rem;
+  margin: 0;
+  max-height: 17rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.cityResults li {
+  padding: 0.7rem 0.75rem;
+  min-height: 2.75rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.cityResults li:hover,
+.cityResults .citySelected {
+  background: #22d3ee;
+  color: #090d1f;
+}
+.cityMessage {
+  padding: 0.85rem 1rem;
+  margin: 0;
+  font-size: 0.875rem;
+  color: #b8c6df;
+}
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+@media print {
+  .cityPopup {
+    display: none;
+  }
+}

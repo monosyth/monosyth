@@ -17,7 +17,7 @@ export default function MovePrivacy() {
       </header>
       <article className={`${styles.content} ${styles.panel}`}>
         <p className={styles.kicker}>
-          Early planner / Updated September 12, 2026
+          Early planner / Updated September 16, 2026
         </p>
         <h1>Your move. Your information.</h1>
         <p>
@@ -37,6 +37,13 @@ export default function MovePrivacy() {
           them. We display your Google account name while you’re signed in.
         </p>
         <h2>How it is used</h2>
+        <p>
+          City suggestions use public GeoNames data hosted by Monosyth. Typing
+          a city loads a small list based on its first two characters, which
+          may appear in hosting logs. Your search text is not sent to GeoNames
+          or another city lookup provider. Choosing a suggestion does not save
+          your plan; use Save my plan when you’re ready.
+        </p>
         <p>
           Your details create and save your moving plan so you can return on
           another device. Google Firebase provides account sign-in, database

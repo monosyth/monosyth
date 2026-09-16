@@ -1,6 +1,7 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import { emptySetup, type MoveSetup } from "@/lib/move/model";
+import { CityInput } from "./city-input";
 import styles from "./planner.module.css";
 
 export function SetupForm({
@@ -29,26 +30,8 @@ export function SetupForm({
         if you’re still deciding.
       </p>
       <div className={styles.grid}>
-        <label>
-          Moving from
-          <input
-            value={setup.origin}
-            onChange={(e) => field("origin", e.target.value)}
-            maxLength={100}
-            placeholder="City, state"
-            autoComplete="off"
-          />
-        </label>
-        <label>
-          Moving to
-          <input
-            value={setup.destination}
-            onChange={(e) => field("destination", e.target.value)}
-            maxLength={100}
-            placeholder="City, state"
-            autoComplete="off"
-          />
-        </label>
+        <CityInput label="Moving from" value={setup.origin} onChange={(value) => field("origin", value)} />
+        <CityInput label="Moving to" value={setup.destination} onChange={(value) => field("destination", value)} />
         <label>
           Target move date
           <input
@@ -124,6 +107,10 @@ export function SetupForm({
       </button>
       <p className={styles.fine}>
         No account needed to preview. Sign in when you’re ready to save.
+      </p>
+      <p className={styles.fine}>
+        City data from <a href="https://www.geonames.org/">GeoNames</a>, adapted under{" "}
+        <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.
       </p>
     </form>
   );
