@@ -218,7 +218,7 @@ test("invalid edits, path injection, duplicates, and excessive task counts are r
   );
 });
 
-function fixture() {
+function fixture(options: { publicOrigin?: string } = {}) {
   const plans = new Map<string, MovePlan>();
   const calls: string[] = [];
   const handle = createMoveHandler({
@@ -237,7 +237,7 @@ function fixture() {
       else plans.delete(uid);
       return next;
     },
-  });
+  }, options);
   async function request(
     token?: string,
     command?: unknown,
@@ -340,6 +340,32 @@ test("API rejects cross-origin writes, malformed JSON, and oversized streamed bo
     ).status,
     200,
   );
+});
+test("Firebase proxy accepts the configured public origin and rejects spoofed hosts", async () => {
+  const f = fixture({ publicOrigin: "https://monosyth.com" });
+  const internalUrl = "https://monosyth-143451727719.us-east4.run.app/api/move";
+  const post = (origin: string, token = "alice") => f.handle(
+    new Request(internalUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Origin: origin,
+        "X-Forwarded-Host": new URL(origin === "null" ? "https://other.example" : origin).host,
+        "X-Forwarded-Proto": "https",
+      },
+      body: JSON.stringify({ type: "create", setup }),
+    }),
+  );
+  for (const origin of ["https://other.example", "https://monosyth.com.evil.example", "http://monosyth.com", "null", new URL(internalUrl).origin])
+    assert.equal((await post(origin)).status, 403);
+  assert.equal((await post("https://monosyth.com", "invalid")).status, 401);
+  assert.equal((await post("https://monosyth.com", "unverified")).status, 403);
+  assert.deepEqual(f.calls, []);
+  const saved = await post("https://monosyth.com");
+  assert.equal(saved.status, 200);
+  const plan = (await saved.json()).plan as MovePlan;
+  assert.equal((await (await f.request("alice")).json()).plan.id, plan.id);
 });
 test("storage failures do not expose internal details or return an empty plan as success", async () => {
   const handler = createMoveHandler({

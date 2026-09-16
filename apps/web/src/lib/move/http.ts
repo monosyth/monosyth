@@ -11,7 +11,15 @@ const headers = {
   Vary: "Authorization",
   "X-Content-Type-Options": "nosniff",
 };
-export function createMoveHandler(backend: MoveBackend) {
+export function createMoveHandler(
+  backend: MoveBackend,
+  options: { publicOrigin?: string } = {},
+) {
+  // Firebase forwards the public site to an internal Cloud Run URL. Trust only
+  // deployment configuration, never client-supplied forwarded host headers.
+  const publicOrigin = options.publicOrigin
+    ? new URL(options.publicOrigin).origin
+    : undefined;
   return async function handle(request: Request): Promise<Response> {
     try {
       const match = /^Bearer ([^\s]+)$/.exec(
@@ -44,7 +52,7 @@ export function createMoveHandler(backend: MoveBackend) {
           { status: 405, headers },
         );
       const origin = request.headers.get("origin");
-      if (origin && origin !== new URL(request.url).origin)
+      if (origin && origin !== (publicOrigin ?? new URL(request.url).origin))
         throw new MoveError("Open MoveMorrow directly to make changes.", 403);
       if (!request.headers.get("content-type")?.startsWith("application/json"))
         throw new MoveError("Send valid move details.", 415);
