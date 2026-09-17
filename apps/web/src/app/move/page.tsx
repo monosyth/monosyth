@@ -51,7 +51,7 @@ export default function MovePage() {
         <section className={styles.plan} id="the-plan" aria-labelledby="plan-title">
           <div className={styles.sectionHead}>
             <p className={styles.eyebrow}>The plan</p>
-            <h2 id="plan-title">From “we’re moving”<br />to “we’re home.”</h2>
+            <h2 id="plan-title">From “we’re moving”<br />to “we’re home”</h2>
             <p>For renters and homeowners moving across town or across the country</p>
           </div>
           <ol className={styles.stages}>
