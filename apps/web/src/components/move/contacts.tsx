@@ -31,7 +31,7 @@ export function ContactsPlanner({
       <div className={styles.topline}>
         <div>
           <p className={styles.kicker}>People & details</p>
-          <h2 id="contacts-heading">Keep the right people close.</h2>
+          <h2 id="contacts-heading">Keep the right people close</h2>
           <p className={styles.muted}>
             Save the people and companies involved in your move. These contacts
             stay private to your account; adding someone does not invite or
@@ -439,7 +439,7 @@ export function MovingDay({
       <p className={styles.kicker}>
         Moving day / {formatDate(plan.setup.date)}
       </p>
-      <h2 id="day-heading">Your essentials, in one place.</h2>
+      <h2 id="day-heading">Your essentials, in one place</h2>
       <p className={styles.muted}>
         Tasks due on your move date, default final preparations, and tasks you
         pin here. Complete them here or in the checklist; both views stay in

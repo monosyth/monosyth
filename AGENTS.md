@@ -16,3 +16,9 @@ that support it.
   hosting at `monosyth.com`.
 
 For work inside `apps/web`, also follow `apps/web/AGENTS.md`.
+
+## Standing design and copy preference
+
+Scott does not want decorative terminal periods after standalone words, short
+phrases, headings, labels, or slogans. Never use that treatment in new designs
+or copy. Normal sentence punctuation in explanatory body text is appropriate.

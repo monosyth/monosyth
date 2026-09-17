@@ -570,8 +570,8 @@ export function MovePlanner() {
                   <div className={styles.empty}>
                     <h2>
                       {filter === "next" || filter === "timeline"
-                        ? "Nothing left in this view."
-                        : "No tasks here yet."}
+                        ? "Nothing left in this view"
+                        : "No tasks here yet"}
                     </h2>
                     <p>Use All tasks to review your whole checklist.</p>
                   </div>
@@ -581,8 +581,8 @@ export function MovePlanner() {
                   <aside className={styles.roomNote}>
                     <p className={styles.kicker}>A little room to breathe</p>
                     <span aria-hidden="true" className={styles.noteArrow}>↗</span>
-                    <h2>Start with<br />one room.</h2>
-                    <p>Keep. Give. Let go.</p>
+                    <h2>Start with<br />one room</h2>
+                    <p>Keep / Give / Let go</p>
                     <p>You don’t have to sort everything today. One shelf is a start.</p>
                   </aside>
                 )}
@@ -708,7 +708,7 @@ export function MovePlanner() {
         )}
       </div>
       <footer className={styles.footer}>
-        <span>More room for what’s next.</span>
+        <span>More room for what’s next</span>
         <Link href="/move">About MoveMorrow</Link>
         <Link href="/move/privacy">Privacy & your data</Link>
         <Link href="/">By Monosyth Labs</Link>

@@ -10,7 +10,7 @@ The first release provides setup, a tailored checklist, a dated timeline, and pr
 
 ## Identity
 
-The approved identity uses oxblood, chalk, charcoal, and mineral blue, with strong Archivo Black headings and IBM Plex Sans body text. The tagline is “More room for what’s next.” See [the brand guide](movemorrow-brand.md) for the shared visual and voice rules. US city autocomplete is available; editing saved housing and transport choices is the next planned enhancement.
+The approved identity uses oxblood, chalk, charcoal, and mineral blue, with strong Archivo Black headings and IBM Plex Sans body text. The tagline is “More room for what’s next” See [the brand guide](movemorrow-brand.md) for the shared visual and voice rules. US city autocomplete is available; editing saved housing and transport choices is the next planned enhancement.
 
 ## The promise
 

@@ -4,7 +4,11 @@ Approved direction, September 16, 2026: warm and calming, confident and practica
 
 ## Name and voice
 
-Use **MoveMorrow**, with the tagline **More room for what’s next.** Monosyth Labs is the publisher, credited quietly in the footer. The product has its own wordmark and visual identity.
+Use **MoveMorrow**, with the tagline **More room for what’s next** Monosyth Labs is the publisher, credited quietly in the footer. The product has its own wordmark and visual identity.
+
+Scott’s standing copy preference: **never use decorative terminal periods after standalone words, short phrases, headings, labels, or slogans**. Use normal sentence punctuation in explanatory body copy. This rule applies to future designs as well as MoveMorrow.
+
+Display places as **City, State**. Preserve the state from the selected city; do not strip it or append a period.
 
 Write clear, specific next steps. Acknowledge that moving involves many small decisions. Dates are planning prompts, not pressure; distinguish suggested dates from confirmed obligations. Keep important controls and save states explicit.
 

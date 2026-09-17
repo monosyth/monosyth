@@ -18,7 +18,7 @@ export default function MovePrivacy() {
         <p className={styles.kicker}>
           Early planner / Updated September 16, 2026
         </p>
-        <h1>Your move. Your information.</h1>
+        <h1>Your move. Your information</h1>
         <p>
           MoveMorrow is operated by Monosyth Labs, LLC. This first version saves
           one moving plan per account.

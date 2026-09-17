@@ -581,8 +581,9 @@
 .moveRoute { min-width: 0; }
 .shell .routeHeading { font-size: clamp(2.5rem, 5.7vw, 5rem); line-height: 1.05; letter-spacing: -.065em; margin: 1.25rem 0; overflow-wrap: anywhere; text-transform: capitalize; }
 .routeHeading > span { display: block; }
+.routeState { font-size: .43em; letter-spacing: -.035em; }
 .routeDestination { color: var(--move-oxblood); }
-.routeDestination > span { display: inline-block; margin-right: .15em; font-family: var(--font-move-sans), sans-serif; }
+.routeArrow { display: inline-block; margin-right: .15em; font-family: var(--font-move-sans), sans-serif; }
 .routeCaption { margin-top: 1.25rem; }
 .moveTicket { background: var(--move-oxblood); color: var(--move-white); padding: 1.5rem; min-width: 0; }
 .ticketTop, .ticketBottom { display: flex; align-items: center; justify-content: space-between; gap: 1rem; font-size: .85rem; }

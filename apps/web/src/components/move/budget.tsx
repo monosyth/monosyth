@@ -33,7 +33,7 @@ export function BudgetPlanner({
         <div>
           <p className={styles.kicker}>Your moving budget / USD</p>
           <h2 id="budget-heading">
-            Know what’s quoted, spent, and still to pay.
+            Know what’s quoted, spent, and still to pay
           </h2>
           <p className={styles.muted}>
             Add your own amounts as you learn them. Blank amounts stay unknown;
