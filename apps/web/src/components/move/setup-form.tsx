@@ -8,8 +8,12 @@ export function SetupForm({
   onPreview,
   busy = false,
   initialSetup = emptySetup,
+  editing = false,
+  onCancel,
 }: {
   initialSetup?: MoveSetup;
+  editing?: boolean;
+  onCancel?: () => void;
   onPreview: (setup: MoveSetup) => void;
   busy?: boolean;
 }) {
@@ -23,11 +27,13 @@ export function SetupForm({
   }
   return (
     <form className={styles.panel} onSubmit={submit}>
-      <p className={styles.kicker}>01 / Your move</p>
-      <h1>Where does your next chapter begin?</h1>
+      <fieldset className={styles.setupFields} disabled={busy}>
+      <p className={styles.kicker}>{editing ? "Your move / Details" : "01 / Your move"}</p>
+      <h1>{editing ? "Edit move details" : "Where does your next chapter begin?"}</h1>
       <p className={styles.muted}>
-        A few details make the checklist yours. Leave cities or the date blank
-        if you’re still deciding.
+        {editing
+          ? "Update what has changed, then review the effect on your checklist before saving. Leave cities or the date blank if you’re still deciding."
+          : "A few details make the checklist yours. Leave cities or the date blank if you’re still deciding."}
       </p>
       <div className={styles.grid}>
         <CityInput label="Moving from" value={setup.origin} onChange={(value) => field("origin", value)} />
@@ -102,16 +108,20 @@ export function SetupForm({
           </label>
         ))}
       </fieldset>
-      <button className={styles.primary} disabled={busy}>
-        Preview my plan
-      </button>
+      <div className={styles.actions}>
+        <button className={styles.primary} disabled={busy}>
+          {editing ? "Review changes" : "Preview my plan"}
+        </button>
+        {onCancel && <button type="button" onClick={onCancel} disabled={busy}>Cancel</button>}
+      </div>
       <p className={styles.fine}>
-        No account needed to preview. Sign in when you’re ready to save.
+        {editing ? "Nothing changes until you review and save." : "No account needed to preview. Sign in when you’re ready to save."}
       </p>
       <p className={styles.fine}>
         City data from <a href="https://www.geonames.org/">GeoNames</a>, adapted under{" "}
         <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.
       </p>
+      </fieldset>
     </form>
   );
 }

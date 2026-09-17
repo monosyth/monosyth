@@ -8,6 +8,7 @@ import {
   parseSetup,
   patchTask,
   reschedule,
+  reviewSetupChange,
   text,
   type MovePlan,
   type MoveTask,
@@ -79,6 +80,11 @@ export function applyCommand(
     const next = patchTask(task, patch);
     if (!next.title) throw new MoveError("Give the task a name.");
     tasks = [...tasks, next];
+  } else if (command.type === "setup") {
+    setup = parseSetup(command.setup);
+    tasks = reviewSetupChange(current, setup).tasks;
+    if (tasks.length > 100)
+      throw new MoveError("These details would exceed the 100-task limit. Your saved move has not changed.");
   } else if (command.type === "date") {
     if (command.date !== "" && !isDate(command.date))
       throw new MoveError("Choose a valid date, or leave it blank.");

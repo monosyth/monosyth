@@ -633,3 +633,13 @@
   .nextLayout { display: block; }
   .routeDestination { color: black; }
 }
+
+.setupFields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.detailsEditor:focus { outline: none; }
+.detailChanges { margin: 2rem 0; }
+.detailChanges > div { padding: 1rem 0; border-top: 1px solid var(--move-rule); }
+.detailChanges dt { font-size: .85rem; color: var(--move-muted); }
+.detailChanges dd { margin: .3rem 0 0; overflow-wrap: anywhere; }
+.reviewGroup { border-top: 1px solid var(--move-rule); padding-top: 1.5rem; margin-top: 1.5rem; }
+.reviewGroup ul { padding-left: 1.25rem; margin: 1rem 0; }
+.reviewGroup li { margin: .6rem 0; overflow-wrap: anywhere; }

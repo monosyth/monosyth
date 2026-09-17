@@ -25,6 +25,7 @@ export type MoveTask = {
   status: TaskStatus;
   custom: boolean;
   movingDay?: boolean;
+  setupSkipped?: boolean;
   revision: number;
 };
 export type MovePlan = {
@@ -344,6 +345,50 @@ export function generateTasks(setup: MoveSetup): MoveTask[] {
       revision: 1,
     }));
 }
+/** Shared by the review screen and the server so the accepted changes match. */
+export function reviewSetupChange(current: MovePlan, setup: MoveSetup) {
+  const suggested = generateTasks(setup);
+  const applicable = new Set(suggested.map((task) => task.id));
+  const previouslyApplicable = new Set(generateTasks(current.setup).map((task) => task.id));
+  const existing = new Set(current.tasks.map((task) => task.id));
+  const added = suggested.filter((task) => !existing.has(task.id));
+  const skipped: MoveTask[] = [];
+  const restored: MoveTask[] = [];
+  const kept: MoveTask[] = [];
+  const dates: { id: string; title: string; before: string; after: string }[] = [];
+  const tasks = current.tasks.map((task) => {
+    if (task.custom || task.status === "done") return task;
+    const template = templates.find((item) => item.id === task.id);
+    if (!template) return task;
+    let next = task;
+    if (!applicable.has(task.id)) {
+      if (task.status !== "todo" || !previouslyApplicable.has(task.id)) return task;
+      // Preserve the user's own wording, deadlines, and moving-day pins.
+      if (task.manualDate || task.movingDay || task.title !== template.title || task.detail !== template.detail) {
+        kept.push(task);
+        return task;
+      }
+      next = { ...task, status: "skipped", setupSkipped: true };
+      skipped.push(next);
+    } else {
+      if (task.status === "skipped" && task.setupSkipped) {
+        next = { ...task, status: "todo", setupSkipped: false };
+        restored.push(next);
+      }
+      if (next.status === "todo" && !next.manualDate &&
+          (setup.date !== current.setup.date || next !== task)) {
+        const due = shiftDate(setup.date, next.offset);
+        if (due !== next.due) {
+          dates.push({ id: task.id, title: task.title, before: task.due, after: due });
+          next = { ...next, due };
+        }
+      }
+    }
+    return next === task ? task : { ...next, revision: task.revision + 1 };
+  });
+  return { tasks: [...tasks, ...added], added, skipped, restored, kept, dates };
+}
+
 export function reschedule(tasks: MoveTask[], date: string): MoveTask[] {
   return tasks.map((task) =>
     task.manualDate || task.custom || task.status !== "todo"
@@ -373,6 +418,8 @@ export function patchTask(task: MoveTask, raw: unknown): MoveTask {
     if (!["todo", "done", "skipped"].includes(value.status as string))
       throw new MoveError("Choose a valid task status.");
     next.status = value.status as TaskStatus;
+    // A deliberate status choice takes precedence over automatic setup changes.
+    if (next.setupSkipped) next.setupSkipped = false;
   }
   if (value.movingDay !== undefined) {
     if (typeof value.movingDay !== "boolean")

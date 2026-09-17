@@ -16,6 +16,7 @@ import {
   MoveError,
   parseSetup,
   progress,
+  reviewSetupChange,
   shiftDate,
   type MovePlan,
 } from "../src/lib/move/model";
@@ -808,4 +809,115 @@ test("another account cannot edit contacts or notes even with the owner's IDs", 
     );
   assert.deepEqual(f.plans.get("alice")!.contacts, []);
   assert.equal(f.plans.get("alice")!.notes, "");
+});
+
+test("move details review and save agree across housing, transport, and household changes", () => {
+  const plan = create();
+  const before = structuredClone(plan);
+  const setup = { ...plan.setup, leaving: "own" as const, arriving: "rent" as const, transport: "diy" as const, pets: false, storage: true, temporary: true, date: "2026-12-15" };
+  const review = reviewSetupChange(plan, setup);
+  assert.deepEqual(review.added.map((t) => t.id).sort(), ["new-lease", "sale", "storage", "temporary", "truck"]);
+  assert.deepEqual(review.skipped.map((t) => t.id).sort(), ["lease", "movers", "new-home", "pets"]);
+  const next = change(plan, { type: "setup", setup })!;
+  assert.deepEqual(next.tasks, review.tasks);
+  assert.deepEqual(next.setup, setup);
+  for (const task of plan.tasks) assert.ok(next.tasks.some((t) => t.id === task.id), "Never delete existing tasks");
+  assert.equal(next.tasks.find((t) => t.id === "arrival")!.due, "2026-12-15");
+  assert.equal(next.tasks.find((t) => t.id === "movers")!.status, "skipped");
+  assert.equal(next.tasks.find((t) => t.id === "truck")!.due, "2026-11-17");
+  assert.deepEqual(plan, before, "Review must not mutate the saved move");
+});
+
+test("details changes preserve completed and personalized tasks and unrelated move information", () => {
+  let plan = create();
+  for (const [id, patch] of [
+    ["lease", { status: "done" }],
+    ["movers", { title: "Call the mover we chose", detail: "Keep this quote" }],
+    ["pets", { due: "2026-10-04" }],
+    ["new-home", { movingDay: true }],
+    ["inventory", { status: "skipped" }],
+  ] as const) plan = change(plan, { type: "task", id, patch })!;
+  plan = change(plan, { type: "add", id: "custom-pickup", patch: { title: "Pick up keys", due: "2026-10-25" } })!;
+  plan = change(plan, { type: "expense-add", id: "truck-cost", patch: { title: "Truck", estimatedCents: 12000 } })!;
+  plan = change(plan, { type: "contact-add", id: "helper", patch: { name: "Moving helper" } })!;
+  plan = change(plan, { type: "notes", notes: "Load after 10 AM" })!;
+  const setup = { ...plan.setup, leaving: "own" as const, arriving: "rent" as const, transport: "diy" as const, pets: false, date: "2026-12-15" };
+  const review = reviewSetupChange(plan, setup);
+  assert.deepEqual(review.kept.map((t) => t.id).sort(), ["movers", "new-home", "pets"]);
+  const next = change(plan, { type: "setup", setup })!;
+  for (const id of ["lease", "movers", "pets", "new-home", "inventory", "custom-pickup"])
+    assert.deepEqual(next.tasks.find((t) => t.id === id), plan.tasks.find((t) => t.id === id));
+  assert.deepEqual(next.expenses, plan.expenses);
+  assert.deepEqual(next.contacts, plan.contacts);
+  assert.equal(next.notes, plan.notes);
+  assert.equal(next.id, plan.id);
+});
+
+test("changing choices back restores only automatically skipped tasks without duplicates", () => {
+  let plan = create();
+  plan = change(plan, { type: "task", id: "pets", patch: { status: "skipped" } })!;
+  const original = plan.setup;
+  plan = change(plan, { type: "setup", setup: { ...original, transport: "diy", pets: false } })!;
+  assert.equal(plan.tasks.find((t) => t.id === "movers")!.setupSkipped, true);
+  const revised = { ...original, date: "2027-01-10" };
+  const review = reviewSetupChange(plan, revised);
+  assert.deepEqual(review.restored.map((t) => t.id), ["movers"]);
+  plan = change(plan, { type: "setup", setup: revised })!;
+  assert.equal(plan.tasks.find((t) => t.id === "movers")!.status, "todo");
+  assert.equal(plan.tasks.find((t) => t.id === "movers")!.due, "2026-11-29");
+  assert.equal(plan.tasks.find((t) => t.id === "pets")!.status, "skipped");
+  assert.equal(plan.tasks.find((t) => t.id === "truck")!.status, "skipped");
+  assert.equal(new Set(plan.tasks.map((t) => t.id)).size, plan.tasks.length);
+  assert.deepEqual(change(plan, { type: "setup", setup: revised })!.tasks, plan.tasks);
+});
+
+test("manual task status choices override automatic skipping and city-only edits leave tasks intact", () => {
+  let plan = create();
+  plan = change(plan, { type: "setup", setup: { ...plan.setup, transport: "diy" } })!;
+  plan = change(plan, { type: "task", id: "movers", patch: { status: "todo" } })!;
+  const cityOnly = change(plan, { type: "setup", setup: { ...plan.setup, destination: "Seattle, Washington" } })!;
+  assert.deepEqual(cityOnly.tasks, plan.tasks);
+  plan = change(cityOnly, { type: "task", id: "movers", patch: { status: "skipped" } })!;
+  const next = change(plan, { type: "setup", setup: { ...plan.setup, transport: "movers" } })!;
+  assert.equal(next.tasks.find((t) => t.id === "movers")!.status, "skipped");
+});
+
+test("removing or adding a move date only adjusts unfinished suggested deadlines", () => {
+  let plan = create();
+  plan = change(plan, { type: "task", id: "lease", patch: { due: "2026-10-04" } })!;
+  plan = change(plan, { type: "task", id: "budget", patch: { status: "done" } })!;
+  const undated = change(plan, { type: "setup", setup: { ...plan.setup, date: "" } })!;
+  assert.equal(undated.tasks.find((t) => t.id === "arrival")!.due, "");
+  for (const id of ["lease", "budget"])
+    assert.deepEqual(undated.tasks.find((t) => t.id === id), plan.tasks.find((t) => t.id === id));
+  const dated = change(undated, { type: "setup", setup: { ...undated.setup, date: "2026-12-31" } })!;
+  assert.equal(dated.tasks.find((t) => t.id === "arrival")!.due, "2026-12-31");
+});
+
+test("setup commands validate details and task limits and reject stale reviews", () => {
+  const plan = create();
+  for (const invalid of [{ date: "2026-02-30" }, { origin: "x".repeat(101) }, { pets: "yes" }, { transport: "boat" }])
+    rejectsStatus(() => change(plan, { type: "setup", setup: { ...plan.setup, ...invalid } }), 400);
+  const full = { ...plan, tasks: [...plan.tasks] };
+  while (full.tasks.length < 100) full.tasks.push({ ...plan.tasks[0], id: `custom-${full.tasks.length}`, custom: true });
+  rejectsStatus(() => change(full, { type: "setup", setup: { ...full.setup, storage: true } }), 400);
+  const updated = change(plan, { type: "notes", notes: "Changed elsewhere" })!;
+  rejectsStatus(() => applyCommand(updated, { type: "setup", planId: plan.id, revision: plan.revision, setup: { ...plan.setup, pets: false } }), 409);
+});
+
+test("API saves reviewed move details only to the authenticated account and preserves other records", async () => {
+  const f = fixture();
+  const plan = (await (await f.request("alice", { type: "create", setup })).json()).plan as MovePlan;
+  const command = { type: "setup", setup: { ...setup, destination: "Seattle, Washington", transport: "diy", uid: "bob" }, planId: plan.id, revision: plan.revision, uid: "bob", tasks: [], expenses: [], notes: "overwrite" };
+  assert.equal((await f.request("bob", command)).status, 404);
+  const response = await f.request("alice", command);
+  assert.equal(response.status, 200);
+  const saved = (await response.json()).plan as MovePlan;
+  assert.equal(saved.setup.destination, "Seattle, Washington");
+  assert.equal(saved.tasks.find((t) => t.id === "movers")!.status, "skipped");
+  assert.ok(saved.tasks.some((t) => t.id === "truck"));
+  assert.equal(saved.notes, "");
+  assert.ok(!("uid" in saved.setup));
+  assert.equal((await f.request("alice", command)).status, 409);
+  assert.deepEqual((await (await f.request("alice")).json()).plan, saved);
 });

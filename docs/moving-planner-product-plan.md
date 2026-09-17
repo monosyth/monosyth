@@ -10,7 +10,7 @@ The first release provides setup, a tailored checklist, a dated timeline, and pr
 
 ## Identity
 
-The approved identity uses oxblood, chalk, charcoal, and mineral blue, with strong Archivo Black headings and IBM Plex Sans body text. The tagline is “More room for what’s next” See [the brand guide](movemorrow-brand.md) for the shared visual and voice rules. US city autocomplete is available; editing saved housing and transport choices is the next planned enhancement.
+The approved identity uses oxblood, chalk, charcoal, and mineral blue, with strong Archivo Black headings and IBM Plex Sans body text. The tagline is “More room for what’s next”. See [the brand guide](movemorrow-brand.md) for the shared visual and voice rules. US city autocomplete and reviewed editing of all saved setup choices are available.
 
 ## The promise
 
@@ -113,7 +113,7 @@ Start with a free invited beta. Because moving is episodic, evaluate a one-time 
 
 Selected September 11, 2026: **MoveMorrow**. Preserve this capitalization. Use “by Monosyth Labs” as a small publisher credit, not as part of the product name. The name covers both planning and settling in without tying the product to a particular city.
 
-Launch-page tagline: **A big move. A clear next step.** A preliminary web search is not verification of domain or trademark availability. The initial announcement uses the existing Monosyth domain; no separate domain has been purchased or claimed. Check domain options and brand conflicts before investing in a standalone domain or formal brand registration.
+Current launch-page tagline: **More room for what’s next**. A preliminary web search is not verification of domain or trademark availability. The initial announcement uses the existing Monosyth domain; no separate domain has been purchased or claimed. Check domain options and brand conflicts before investing in a standalone domain or formal brand registration.
 
 
 ## First release: implementation and limits
@@ -127,7 +127,7 @@ Launch-page tagline: **A big move. A clear next step.** A preliminary web search
 - Next up shows the first six unfinished tasks; All tasks, Timeline, Completed, and Skipped expose the rest. Timeline groups unfinished tasks by date. Completion, skip/restore, names, notes, dates, and custom tasks save explicitly.
 - Date changes preview affected tasks and preserve completed/skipped, custom, and manually dated tasks. Suggested dates are planning prompts rather than contractual deadlines.
 - JSON export and printing the current view are available. Deletion requires typing DELETE and removes the active move and its task, expense, and contact documents. Authentication records and provider logs remain separate, as explained at `/move/privacy`.
-- The early release has no offline persistence, reminders, multiple moves, or collaboration. Saved setup choices other than the move date cannot yet be changed; individual tasks remain editable. Failed saves stay visible and never silently substitute an empty cloud plan.
+- The early release has no offline persistence, reminders, multiple moves, or collaboration. Saved setup choices can be changed through Edit move details, with a review before saving. Failed saves stay visible and never silently substitute an empty cloud plan.
 
 Validation commands: `npm run audit:move`, scoped ESLint, and `npm run build` in `apps/web`. The opt-in `scripts/audit-movemorrow-firebase.ts` exercises real Firestore persistence with temporary synthetic owners, including owner routing, concurrent/stale versions, unchanged task preservation, unauthenticated direct database denial, and cleanup. Identity verification is stubbed in that standalone audit; production always verifies real Firebase ID tokens. Run with `GOOGLE_CLOUD_QUOTA_PROJECT=monosyth MOVEMORROW_LIVE_AUDIT=1 node --import tsx scripts/audit-movemorrow-firebase.ts` using authorized application default credentials. Scott confirmed that the live setup, Google sign-in, save, task completion, and refresh flow all worked. No auth settings or permissions were changed for testing. Broader phone/keyboard usability review remains part of beta validation.
 
@@ -158,3 +158,14 @@ Schema version 3 adds a contacts subcollection, a move-level notes field, and an
 Validation covers phone/email link handling, validation and limits, contacts and notes ownership, legacy loading, stale updates, moving-day selection with missing/rescheduled dates, task pins, and real Firestore persistence/deletion with temporary synthetic records. The new interfaces still need a hands-on browser walkthrough; automated database tests stub identity verification as in earlier releases.
 
 September 12 release checks: all 25 logic/HTTP tests and scoped lint pass; production build passes. The expanded Firestore audit verifies contact and notes persistence, owner isolation, task pinning, and complete cleanup using synthetic records. Full-site lint retains the pre-existing Bag Studio declaration-order error.
+
+
+## Edit move details release — September 16, 2026
+
+Edit move details is available beside the saved planner’s refresh/export controls in every section. The same setup fields now support initial previews and edits, including US city suggestions. Date changes live in this editor rather than a separate form. Review shows before/after details, suggested task additions, moves to Skipped, tasks returning from an earlier automatic skip, and individual date changes. Back keeps the draft; Cancel returns without saving. Unchanged details cannot be saved through the UI.
+
+The shared review function is also used by the authenticated server command. Existing tasks are never deleted. Newly irrelevant, unedited unfinished suggestions move to Skipped with an optional `setupSkipped` marker. Completed/custom tasks, manually set deadlines, customized wording, and moving-day pins are preserved. Automatically skipped suggestions return when applicable again; explicit user status changes clear the marker. City-only edits do not rewrite existing tasks. Changing a date only adjusts unfinished, noncustom, nonmanual suggested dates, with completed and explicitly skipped tasks left alone. New tasks receive dates from the new move date.
+
+Changes retain the move ID, budget, contacts, and notes. The transaction writes setup metadata and changed/new task documents together. Existing revision checks reject stale reviews and cross-account requests; input validation and the 100-task limit apply before any write. The optional marker is additive to schema 3 and included in exports. Older saved plans need no migration.
+
+Verification: 37 logic/HTTP/city checks pass. The real Firestore audit uses temporary synthetic owners to verify reviewed changes and reversals after reload, unchanged completed-task and budget/contact document timestamps, owner isolation, stale-version rejection, and cleanup. The local browser walkthrough verifies prefilled fields, unchanged-review behavior, task additions/skips/restoration, save, back, cancel, and mobile layout. Local UI test fixtures are removed before the production build; no real user plan is edited during testing.

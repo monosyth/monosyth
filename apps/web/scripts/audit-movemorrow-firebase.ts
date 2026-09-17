@@ -8,7 +8,7 @@ import {
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { accessPlan } from "../src/lib/move/server";
 import { createMoveHandler } from "../src/lib/move/http";
-import { emptySetup, type MovePlan } from "../src/lib/move/model";
+import { emptySetup, reviewSetupChange, type MovePlan } from "../src/lib/move/model";
 
 async function main() {
   if (process.env.MOVEMORROW_LIVE_AUDIT !== "1")
@@ -283,6 +283,34 @@ async function main() {
     assert.equal((await contactsRef.doc("remove").get()).exists, false);
     assert.equal(plan.contacts[0].email, "helper@example.com");
     assert.equal(plan.notes, "Synthetic arrival instructions");
+    const beforeSetup = structuredClone(plan);
+    const unchangedBudget = await expenseRef.doc("deposit").get();
+    const unchangedContact = await contactsRef.doc("helper").get();
+    const completedTask = await taskRef.parent.doc("budget").get();
+    const newSetup = { ...plan.setup, destination: "Synthetic revised destination", transport: "movers" as const, pets: false, storage: true, date: "2027-01-15" };
+    const preview = reviewSetupChange(plan, newSetup);
+    const detailsCommand = { type: "setup", planId: plan.id, revision: plan.revision, setup: newSetup };
+    const detailsResponse = await request(uids[0], detailsCommand);
+    assert.equal(detailsResponse.status, 200);
+    plan = (await (await request(uids[0])).json()).plan;
+    assert.deepEqual(plan.setup, newSetup);
+    assert.deepEqual([...plan.tasks].sort((a, b) => a.id.localeCompare(b.id)), [...preview.tasks].sort((a, b) => a.id.localeCompare(b.id)));
+    assert.equal(plan.tasks.find((t) => t.id === "transport")!.setupSkipped, true);
+    assert.equal(plan.tasks.find((t) => t.id === "pets")!.status, "skipped");
+    assert.equal(plan.tasks.find((t) => t.id === "arrival")!.due, "2027-01-15");
+    assert.equal((await request(uids[0], detailsCommand)).status, 409);
+    assert.deepEqual(plan.expenses, beforeSetup.expenses);
+    assert.deepEqual(plan.contacts, beforeSetup.contacts);
+    assert.equal(plan.notes, beforeSetup.notes);
+    assert.ok(unchangedBudget.updateTime!.isEqual((await expenseRef.doc("deposit").get()).updateTime!));
+    assert.ok(unchangedContact.updateTime!.isEqual((await contactsRef.doc("helper").get()).updateTime!));
+    assert.ok(completedTask.updateTime!.isEqual((await taskRef.parent.doc("budget").get()).updateTime!));
+    const restoreDetails = await request(uids[0], { type: "setup", planId: plan.id, revision: plan.revision, setup: beforeSetup.setup });
+    assert.equal(restoreDetails.status, 200);
+    plan = (await (await request(uids[0])).json()).plan;
+    assert.equal(plan.tasks.find((t) => t.id === "transport")!.status, "todo");
+    assert.equal(plan.tasks.find((t) => t.id === "pets")!.status, "todo");
+    assert.equal(plan.tasks.find((t) => t.id === "movers")!.status, "skipped");
     const direct = await fetch(
       `https://firestore.googleapis.com/v1/projects/monosyth/databases/(default)/documents/movemorrowUsers/${uids[0]}/moves/current`,
     );
@@ -306,7 +334,7 @@ async function main() {
     assert.equal((await expenseRef.get()).size, 0);
     assert.equal((await contactsRef.get()).size, 0);
     console.log(
-      "PASS: real Firestore create/edit/reload/delete; synthetic owner routing; unchanged task preservation; concurrent/stale write denial; unauthenticated database denial; task and budget cleanup; legacy upgrade; budget/contact/notes persistence and owner isolation; pinned tasks; full contact cleanup.",
+      "PASS: real Firestore create/edit/reload/delete; synthetic owner routing; unchanged task preservation; concurrent/stale write denial; unauthenticated database denial; task and budget cleanup; legacy upgrade; budget/contact/notes persistence and owner isolation; pinned tasks; reviewed setup changes and restoration persisted; completed and unrelated records unchanged; full contact cleanup.",
     );
   } finally {
     const cleanup = await Promise.allSettled(

@@ -81,7 +81,7 @@ export function TaskCard({
         </span>
         <span>
           {task.status === "skipped"
-            ? "Skipped"
+            ? task.setupSkipped ? "Skipped after details changed" : "Skipped"
             : task.manualDate
               ? "Your date"
               : "Suggested"}

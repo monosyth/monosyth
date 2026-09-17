@@ -19,7 +19,6 @@ import {
   formatDate,
   generateTasks,
   progress,
-  reschedule,
   shiftDate,
   todayLocal,
   type MovePlan,
@@ -30,6 +29,7 @@ import { MoveHeading } from "./move-heading";
 import { TaskCard } from "./task-card";
 import { ContactsPlanner, MovingDay } from "./contacts";
 import { BudgetPlanner } from "./budget";
+import { EditMoveDetails } from "./edit-details";
 import { SetupForm } from "./setup-form";
 import styles from "./planner.module.css";
 
@@ -74,7 +74,7 @@ export function MovePlanner() {
   );
   const [filter, setFilter] = useState<Filter>("next");
   const [today, setToday] = useState("");
-  const [newDate, setNewDate] = useState("");
+  const [editingDetails, setEditingDetails] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteText, setDeleteText] = useState("");
   const currentUid = useRef<string | null>(null);
@@ -94,6 +94,7 @@ export function MovePlanner() {
       setView("checklist");
       setAuthReady(true);
       setPlan(null);
+      setEditingDetails(false);
       setError("");
       setMessage("");
       setLoadFailed(false);
@@ -115,7 +116,6 @@ export function MovePlanner() {
       .then((next) => {
         if (cancelled) return;
         setPlan(next);
-        setNewDate(next?.setup.date ?? "");
         setCloudLoading(false);
         setLoadFailed(false);
       })
@@ -191,7 +191,6 @@ export function MovePlanner() {
       });
       if (currentUid.current !== uid) return false;
       setPlan(next);
-      setNewDate(next?.setup.date ?? "");
       setPreview(null);
       setDraft(emptySetup);
       setMessage(
@@ -266,11 +265,6 @@ export function MovePlanner() {
     if (filter === "skipped")
       visible = sorted.filter((t) => t.status === "skipped");
   }
-  const shifted = plan
-    ? reschedule(plan.tasks, newDate).filter(
-        (t, i) => t.due !== plan.tasks[i].due,
-      )
-    : [];
   const locked = busy || cloudLoading || loadFailed;
 
   return (
@@ -348,12 +342,27 @@ export function MovePlanner() {
           />
         )}
         {!cloudLoading && !loadFailed && setup && (
-          <>
+          editingDetails && plan ? (
+            <EditMoveDetails
+              key={`${plan.id}-${plan.revision}`}
+              plan={plan}
+              busy={locked}
+              onCancel={() => setEditingDetails(false)}
+              onSave={async (setup) => {
+                const saved = await change({ type: "setup", setup });
+                if (saved) setEditingDetails(false);
+                return saved;
+              }}
+            />
+          ) : <>
             <section className={styles.overview} aria-labelledby="plan-heading">
               <MoveHeading setup={setup} today={today} saved={Boolean(plan)} />
               <div className={styles.planTools}>
                 {plan && (
                   <div className={styles.actions}>
+                    <button className={styles.primary} onClick={() => { setError(""); setMessage(""); setEditingDetails(true); }} disabled={locked}>
+                      Edit move details
+                    </button>
                     <button onClick={refresh} disabled={locked}>
                       Refresh
                     </button>
@@ -600,54 +609,6 @@ export function MovePlanner() {
                         })
                       }
                     />
-                  </section>
-                  <section className={`${styles.panel} ${styles.section}`}>
-                    <h2>Move date changed?</h2>
-                    <p className={styles.muted}>
-                      Only unfinished tasks with suggested dates will move.
-                      Completed tasks, custom tasks, and dates you edited stay
-                      as they are.
-                    </p>
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        void change({ type: "date", date: newDate });
-                      }}
-                    >
-                      <label>
-                        New target move date
-                        <input
-                          type="date"
-                          min="2000-01-01"
-                          max="2100-12-31"
-                          value={newDate}
-                          onChange={(e) => setNewDate(e.target.value)}
-                          disabled={locked}
-                        />
-                      </label>
-                      {newDate !== plan.setup.date && (
-                        <div className={styles.datePreview}>
-                          <strong>
-                            {shifted.length} suggested task dates will change.
-                          </strong>
-                          <ul>
-                            {shifted.map((t) => (
-                              <li key={t.id}>
-                                {t.title}: {formatDate(t.due)}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      <div className={styles.actions}>
-                        <button
-                          className={styles.primary}
-                          disabled={locked || newDate === plan.setup.date}
-                        >
-                          Apply date change
-                        </button>
-                      </div>
-                    </form>
                   </section>
                 </>
               )}
