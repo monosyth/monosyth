@@ -65,6 +65,11 @@ committing it to source control.
 - `/app`: first protected app shell
 - `/rsvp`: multi-event RSVP route with online submissions and admin editing
 - `/weather`: Ambient Weather dashboard route
+- `/shop`: quilt pattern storefront, product pages and private purchased downloads
+
+The pattern shop's catalog, account setup, private file upload and launch checks
+are documented in [`docs/pattern-shop.md`](../../docs/pattern-shop.md). Checkout
+stays disabled until Stripe, email delivery and private storage are configured.
 
 ## Notes
 

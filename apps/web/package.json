@@ -6,6 +6,8 @@
     "node": "22"
   },
   "scripts": {
+    "audit:shop": "node --conditions=react-server --import tsx --test scripts/audit-shop.ts",
+    "shop:files": "node --import tsx scripts/shop-files.ts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -28,6 +30,8 @@
     "playwright-core": "^1.58.2",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "server-only": "^0.0.1",
+    "stripe": "^22.6.2",
     "suncalc": "^1.9.0",
     "three": "^0.180.0"
   },

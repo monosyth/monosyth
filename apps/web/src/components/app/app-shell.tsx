@@ -22,6 +22,15 @@ type StudioProject = {
 
 const studioProjects: readonly StudioProject[] = [
   {
+    name: "Pattern shop",
+    href: "/shop",
+    label: "Open shop",
+    details: "Trellis quilt patterns, illustrated PDFs + EQ8 companions",
+    meta: "Monosyth / Pattern collection",
+    accent: "amber",
+    glyph: "quilt",
+  },
+  {
     name: "Quilt field guide",
     href: "/app/quilt-guide",
     label: "Open guide",

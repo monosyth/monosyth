@@ -1,0 +1,424 @@
+[
+  {
+    "slug": "harvest-trellis",
+    "name": "Harvest Trellis",
+    "version": "1.4",
+    "priceCents": 695,
+    "currency": "usd",
+    "tagline": "Autumn leaves, pumpkin days",
+    "description": "Warm leaves and tall pumpkins meet in a woven trellis, with a rich olive border.",
+    "theme": "Leaves and pumpkins",
+    "size": "52 × 64 inches",
+    "image": "/shop/harvest-trellis.jpg",
+    "imageAlt": "Harvest Trellis quilt shown in an illustrative lifestyle mockup",
+    "imageNote": "Illustrative mockup",
+    "sourceSlug": "autumn-leaves-pumpkins-framed",
+    "sourceVerifiedOn": "2026-09-19",
+    "files": [
+      {
+        "id": "file-1",
+        "name": "Monosyth-Harvest-Trellis-v1.4-review.pdf",
+        "label": "Illustrated pattern PDF",
+        "bytes": 149110,
+        "sha256": "cc254b58ee62c25ab4cd79d4635661752dd6e1844cb525bff4b94c3595fc351e",
+        "source": "patterns/autumn-leaves-pumpkins-framed/releases/1.4/etsy-package/01-Customer-Downloads/Monosyth-Harvest-Trellis-v1.4-review.pdf"
+      },
+      {
+        "id": "file-2",
+        "name": "Monosyth-Harvest-Trellis-Labels-v1.4.pdf",
+        "label": "Printable labels",
+        "bytes": 93173,
+        "sha256": "97db76e5f55fb3f19a775237a84c20928eb9c3bc84009211e6725598681714d0",
+        "source": "patterns/autumn-leaves-pumpkins-framed/releases/1.4/etsy-package/01-Customer-Downloads/Monosyth-Harvest-Trellis-Labels-v1.4.pdf"
+      },
+      {
+        "id": "file-3",
+        "name": "Monosyth-Harvest-Trellis-EQ8-v1.4.zip",
+        "label": "EQ8 project + opening guide",
+        "bytes": 3063331,
+        "sha256": "9929f9f96d75fa6a5777002c80b7d282b5c104b2d0628d5876f133ad9207583b",
+        "source": "patterns/autumn-leaves-pumpkins-framed/releases/1.4/etsy-package/01-Customer-Downloads/Monosyth-Harvest-Trellis-EQ8-v1.4.zip"
+      }
+    ],
+    "layoutImage": "/shop/harvest-trellis-layout.png",
+    "imageWidth": 1259,
+    "imageHeight": 1254,
+    "layoutWidth": 2400,
+    "layoutHeight": 2400
+  },
+  {
+    "slug": "evergreen-trellis",
+    "name": "Evergreen Trellis",
+    "version": "1.0",
+    "priceCents": 695,
+    "currency": "usd",
+    "tagline": "A little forest to make your own",
+    "description": "Evergreen trees nestle inside geometric frames for a woodland throw you can recolor for any season.",
+    "theme": "Woodland",
+    "size": "52 × 64 inches",
+    "image": "/shop/evergreen-trellis.jpg",
+    "imageAlt": "Evergreen Trellis quilt shown in an illustrative lifestyle mockup",
+    "imageNote": "Illustrative mockup",
+    "sourceSlug": "evergreen-trellis",
+    "sourceVerifiedOn": "2026-09-19",
+    "files": [
+      {
+        "id": "file-1",
+        "name": "Evergreen-Trellis-Pattern-v1.0.pdf",
+        "label": "Illustrated pattern PDF",
+        "bytes": 314825,
+        "sha256": "cfd30bf32f342ba77d17c317c4101f8651d1a3177e073a28a7bb1bbc093e4a32",
+        "source": "patterns/evergreen-trellis/etsy/Evergreen-Trellis-Etsy-Draft-v1.0/customer-downloads/Evergreen-Trellis-Pattern-v1.0.pdf"
+      },
+      {
+        "id": "file-2",
+        "name": "Evergreen-Trellis-EQ8-v1.0.zip",
+        "label": "EQ8 project + opening guide",
+        "bytes": 537739,
+        "sha256": "d0a9cbb104e2606b6090aa5e1726ad0ce5f43a2b9778cb3ea6f016b8b529f773",
+        "source": "patterns/evergreen-trellis/etsy/Evergreen-Trellis-Etsy-Draft-v1.0/customer-downloads/Evergreen-Trellis-EQ8-v1.0.zip"
+      }
+    ],
+    "layoutImage": "/shop/evergreen-trellis-layout.jpg",
+    "imageWidth": 1454,
+    "imageHeight": 1086,
+    "layoutWidth": 3000,
+    "layoutHeight": 2250
+  },
+  {
+    "slug": "orchard-trellis",
+    "name": "Orchard Trellis",
+    "version": "1.0",
+    "priceCents": 695,
+    "currency": "usd",
+    "tagline": "Fresh from the fabric orchard",
+    "description": "Red, green, and golden apples fill a garden of trellis blocks, finished with a forest green border.",
+    "theme": "Apples",
+    "size": "52 × 64 inches",
+    "image": "/shop/orchard-trellis.jpg",
+    "imageAlt": "Orchard Trellis quilt shown in an illustrative lifestyle mockup",
+    "imageNote": "Illustrative mockup",
+    "sourceSlug": "orchard-trellis",
+    "sourceVerifiedOn": "2026-09-19",
+    "files": [
+      {
+        "id": "file-1",
+        "name": "Orchard-Trellis-Quilt-Pattern-v1.0.pdf",
+        "label": "Illustrated pattern PDF",
+        "bytes": 5166105,
+        "sha256": "1441c8a9b6f3461c520d3f6fc6a9e57a97cbcdecf3b53149e2a621416c978519",
+        "source": "patterns/orchard-trellis/etsy/Orchard-Trellis-Etsy-Package-v1.0/customer-downloads/Orchard-Trellis-Quilt-Pattern-v1.0.pdf"
+      },
+      {
+        "id": "file-2",
+        "name": "Orchard-Trellis-Cut-Apart-Labels-v1.0.pdf",
+        "label": "Printable labels",
+        "bytes": 65128,
+        "sha256": "a2ec8cbb849ffaf2934c4afc89574361c1242c1b5382d8e0db837742c425441a",
+        "source": "patterns/orchard-trellis/etsy/Orchard-Trellis-Etsy-Package-v1.0/customer-downloads/Orchard-Trellis-Cut-Apart-Labels-v1.0.pdf"
+      },
+      {
+        "id": "file-3",
+        "name": "Orchard-Trellis-EQ8-v1.0.zip",
+        "label": "EQ8 project + opening guide",
+        "bytes": 1908153,
+        "sha256": "6821d31aea74a0e7f7464e9428fdb05741a0bca7aaaf356088394f3404dc548c",
+        "source": "patterns/orchard-trellis/etsy/Orchard-Trellis-Etsy-Package-v1.0/customer-downloads/Orchard-Trellis-EQ8-v1.0.zip"
+      }
+    ],
+    "layoutImage": "/shop/orchard-trellis-layout.png",
+    "imageWidth": 1259,
+    "imageHeight": 1112,
+    "layoutWidth": 2400,
+    "layoutHeight": 2400
+  },
+  {
+    "slug": "butterfly-trellis",
+    "name": "Butterfly Trellis",
+    "version": "1.0",
+    "priceCents": 695,
+    "currency": "usd",
+    "tagline": "Let your colors take flight",
+    "description": "Butterfly centers bring movement and color to a repeating trellis of framed blocks.",
+    "theme": "Butterflies",
+    "size": "52 × 64 inches",
+    "image": "/shop/butterfly-trellis.jpg",
+    "imageAlt": "Butterfly Trellis quilt shown in an illustrative lifestyle mockup",
+    "imageNote": "Illustrative mockup",
+    "sourceSlug": "butterfly-trellis",
+    "sourceVerifiedOn": "2026-09-19",
+    "files": [
+      {
+        "id": "file-1",
+        "name": "Butterfly-Trellis-Pattern-v1.0.pdf",
+        "label": "Illustrated pattern PDF",
+        "bytes": 322457,
+        "sha256": "34693c550fe083b643685908a3a2fea6e024c9ea7d60f06c01947ef8380d4e83",
+        "source": "patterns/butterfly-trellis/etsy/Butterfly-Trellis-Etsy-Draft-v1.0/customer-downloads/Butterfly-Trellis-Pattern-v1.0.pdf"
+      },
+      {
+        "id": "file-2",
+        "name": "Butterfly-Trellis-EQ8-v1.0.zip",
+        "label": "EQ8 project + opening guide",
+        "bytes": 939246,
+        "sha256": "3a8c05db11be07e54443eafdb98422b9b593dad6084013085acef570e12298e1",
+        "source": "patterns/butterfly-trellis/etsy/Butterfly-Trellis-Etsy-Draft-v1.0/customer-downloads/Butterfly-Trellis-EQ8-v1.0.zip"
+      }
+    ],
+    "layoutImage": "/shop/butterfly-trellis-layout.jpg",
+    "imageWidth": 1456,
+    "imageHeight": 1086,
+    "layoutWidth": 3000,
+    "layoutHeight": 2250
+  },
+  {
+    "slug": "berry-trellis",
+    "name": "Berry Trellis",
+    "version": "1.0",
+    "priceCents": 695,
+    "currency": "usd",
+    "tagline": "A patch of something sweet",
+    "description": "Berry motifs and geometric frames come together in a cheerful, fruit-filled throw.",
+    "theme": "Berries",
+    "size": "52 × 64 inches",
+    "image": "/shop/berry-trellis.jpg",
+    "imageAlt": "Berry Trellis quilt shown in an illustrative lifestyle mockup",
+    "imageNote": "Illustrative mockup",
+    "sourceSlug": "berry-trellis",
+    "sourceVerifiedOn": "2026-09-19",
+    "files": [
+      {
+        "id": "file-1",
+        "name": "Berry-Trellis-Pattern-v1.0.pdf",
+        "label": "Illustrated pattern PDF",
+        "bytes": 307697,
+        "sha256": "e4d2f4ae58443e09a3810e4298ab4789558554c5b6062fb3ba327192fc53c9fb",
+        "source": "patterns/berry-trellis/etsy/Berry-Trellis-Etsy-Draft-v1.0/customer-downloads/Berry-Trellis-Pattern-v1.0.pdf"
+      },
+      {
+        "id": "file-2",
+        "name": "Berry-Trellis-EQ8-v1.0.zip",
+        "label": "EQ8 project + opening guide",
+        "bytes": 706042,
+        "sha256": "f804679adfe172cfaf3c17ba1a82d5f8fc52ea4819333806563d3f26edfc69f0",
+        "source": "patterns/berry-trellis/etsy/Berry-Trellis-Etsy-Draft-v1.0/customer-downloads/Berry-Trellis-EQ8-v1.0.zip"
+      }
+    ],
+    "layoutImage": "/shop/berry-trellis-layout.jpg",
+    "imageWidth": 1143,
+    "imageHeight": 852,
+    "layoutWidth": 3000,
+    "layoutHeight": 2250
+  },
+  {
+    "slug": "cottage-trellis",
+    "name": "Cottage Trellis",
+    "version": "1.0",
+    "priceCents": 695,
+    "currency": "usd",
+    "tagline": "Piece a place to call home",
+    "description": "Little houses with pieced roofs, windows, and doors sit within a repeating trellis.",
+    "theme": "Cottages",
+    "size": "52 × 64 inches",
+    "image": "/shop/cottage-trellis.jpg",
+    "imageAlt": "Cottage Trellis quilt shown in an illustrative lifestyle mockup",
+    "imageNote": "Illustrative mockup",
+    "sourceSlug": "cottage-trellis",
+    "sourceVerifiedOn": "2026-09-19",
+    "files": [
+      {
+        "id": "file-1",
+        "name": "Cottage-Trellis-Pattern-v1.0.pdf",
+        "label": "Illustrated pattern PDF",
+        "bytes": 326251,
+        "sha256": "6a881e9b2640465fa844a6200e1883a32860d43f7eee78fa4205caf73c34f8a3",
+        "source": "patterns/cottage-trellis/etsy/Cottage-Trellis-Etsy-Draft-v1.0/customer-downloads/Cottage-Trellis-Pattern-v1.0.pdf"
+      },
+      {
+        "id": "file-2",
+        "name": "Cottage-Trellis-EQ8-v1.0.zip",
+        "label": "EQ8 project + opening guide",
+        "bytes": 521338,
+        "sha256": "866f134316ab4d819c43e5cc27fee316ced811d1bf7c8ad00f62c3f95c8be2a3",
+        "source": "patterns/cottage-trellis/etsy/Cottage-Trellis-Etsy-Draft-v1.0/customer-downloads/Cottage-Trellis-EQ8-v1.0.zip"
+      }
+    ],
+    "layoutImage": "/shop/cottage-trellis-layout.jpg",
+    "imageWidth": 1456,
+    "imageHeight": 1086,
+    "layoutWidth": 3000,
+    "layoutHeight": 2250
+  },
+  {
+    "slug": "seaside-trellis",
+    "name": "Seaside Trellis",
+    "version": "1.0",
+    "priceCents": 695,
+    "currency": "usd",
+    "tagline": "Bring the shoreline home",
+    "description": "Sailboats and seashells share a coastal trellis, with a foundation-pieced seashell fan.",
+    "theme": "Coastal",
+    "size": "52 × 64 inches",
+    "image": "/shop/seaside-trellis.jpg",
+    "imageAlt": "Seaside Trellis quilt shown in an illustrative lifestyle mockup",
+    "imageNote": "Illustrative mockup",
+    "sourceSlug": "seaside-trellis",
+    "sourceVerifiedOn": "2026-09-19",
+    "files": [
+      {
+        "id": "file-1",
+        "name": "Seaside-Trellis-Pattern-v1.0.pdf",
+        "label": "Illustrated pattern PDF",
+        "bytes": 370497,
+        "sha256": "c91faf42ac80d617be2c79ff1f29733cac79cec47081debda885fb5c3dd33a44",
+        "source": "patterns/seaside-trellis/etsy/Seaside-Trellis-Etsy-Draft-v1.0/customer-downloads/Seaside-Trellis-Pattern-v1.0.pdf"
+      },
+      {
+        "id": "file-2",
+        "name": "Seaside-Trellis-EQ8-v1.0.zip",
+        "label": "EQ8 project + opening guide",
+        "bytes": 525217,
+        "sha256": "78f2bf6d9dac8ba97b90ee615daaf2e6f5c2c1dda0e4b54e2e88ba1beb8c909f",
+        "source": "patterns/seaside-trellis/etsy/Seaside-Trellis-Etsy-Draft-v1.0/customer-downloads/Seaside-Trellis-EQ8-v1.0.zip"
+      }
+    ],
+    "layoutImage": "/shop/seaside-trellis-layout.jpg",
+    "imageWidth": 1454,
+    "imageHeight": 1086,
+    "layoutWidth": 3000,
+    "layoutHeight": 2250
+  },
+  {
+    "slug": "spool-trellis",
+    "name": "Spool Trellis",
+    "version": "1.0",
+    "priceCents": 695,
+    "currency": "usd",
+    "tagline": "Made for the love of making",
+    "description": "Colorful thread spools turn the familiar shapes of your sewing room into a quilt.",
+    "theme": "Sewing room",
+    "size": "52 × 64 inches",
+    "image": "/shop/spool-trellis.jpg",
+    "imageAlt": "Spool Trellis quilt shown in an illustrative lifestyle mockup",
+    "imageNote": "Illustrative mockup",
+    "sourceSlug": "spool-trellis",
+    "sourceVerifiedOn": "2026-09-19",
+    "files": [
+      {
+        "id": "file-1",
+        "name": "Spool-Trellis-Pattern-v1.0.pdf",
+        "label": "Illustrated pattern PDF",
+        "bytes": 309077,
+        "sha256": "d34a4e7920d4e41d85094fabde5cd3773e35e535d7b4aa3aaf90c54727f9a4c5",
+        "source": "patterns/spool-trellis/etsy/Spool-Trellis-Etsy-Draft-v1.0/customer-downloads/Spool-Trellis-Pattern-v1.0.pdf"
+      },
+      {
+        "id": "file-2",
+        "name": "Spool-Trellis-EQ8-v1.0.zip",
+        "label": "EQ8 project + opening guide",
+        "bytes": 659887,
+        "sha256": "8a96b969f6a19ed0c65518d51d8ba080d9b33c5e76236852804945240b6fd336",
+        "source": "patterns/spool-trellis/etsy/Spool-Trellis-Etsy-Draft-v1.0/customer-downloads/Spool-Trellis-EQ8-v1.0.zip"
+      }
+    ],
+    "layoutImage": "/shop/spool-trellis-layout.jpg",
+    "imageWidth": 1455,
+    "imageHeight": 1086,
+    "layoutWidth": 3000,
+    "layoutHeight": 2250
+  },
+  {
+    "slug": "sweetheart-trellis",
+    "name": "Sweetheart Trellis",
+    "version": "1.0",
+    "priceCents": 695,
+    "currency": "usd",
+    "tagline": "A quilt with a little heart",
+    "description": "Heart motifs and a geometric trellis make a warm, personal throw for someone you love.",
+    "theme": "Hearts",
+    "size": "52 × 64 inches",
+    "image": "/shop/sweetheart-trellis.jpg",
+    "imageAlt": "Sweetheart Trellis quilt shown in an illustrative lifestyle mockup",
+    "imageNote": "Illustrative mockup",
+    "sourceSlug": "sweetheart-trellis",
+    "sourceVerifiedOn": "2026-09-19",
+    "files": [
+      {
+        "id": "file-1",
+        "name": "Monosyth-Sweetheart-Trellis-Pattern-v1.0.pdf",
+        "label": "Illustrated pattern PDF",
+        "bytes": 14647765,
+        "sha256": "7dca3625ff58d4c41ad19f4093c211582e7fd2d24f08e18d0b5a7cfecb58eb1d",
+        "source": "patterns/sweetheart-trellis/etsy/Sweetheart-Trellis-Etsy-Package-v1.0/01-Customer-Downloads/Monosyth-Sweetheart-Trellis-Pattern-v1.0.pdf"
+      },
+      {
+        "id": "file-2",
+        "name": "Monosyth-Sweetheart-Trellis-Labels-v1.0.pdf",
+        "label": "Printable labels",
+        "bytes": 93172,
+        "sha256": "de2e1eb0e2e7f12cd5342b0502ce35d22deb90e5e94e4e0c9b95465599392dfb",
+        "source": "patterns/sweetheart-trellis/etsy/Sweetheart-Trellis-Etsy-Package-v1.0/01-Customer-Downloads/Monosyth-Sweetheart-Trellis-Labels-v1.0.pdf"
+      },
+      {
+        "id": "file-3",
+        "name": "Monosyth-Sweetheart-Trellis-EQ8-v1.0.zip",
+        "label": "EQ8 project + opening guide",
+        "bytes": 3051860,
+        "sha256": "b586d96880956379bbe5d28a4db25ca1beeb89f37724d8c200fc579ab5c63fab",
+        "source": "patterns/sweetheart-trellis/etsy/Sweetheart-Trellis-Etsy-Package-v1.0/01-Customer-Downloads/Monosyth-Sweetheart-Trellis-EQ8-v1.0.zip"
+      }
+    ],
+    "layoutImage": "/shop/sweetheart-trellis-layout.png",
+    "imageWidth": 1261,
+    "imageHeight": 1254,
+    "layoutWidth": 2400,
+    "layoutHeight": 2400
+  },
+  {
+    "slug": "tulip-trellis",
+    "name": "Tulip Trellis",
+    "version": "1.1",
+    "priceCents": 695,
+    "currency": "usd",
+    "tagline": "A garden in every block",
+    "description": "Twenty tulips in yellow, pink, purple, and peach bloom above dark green stems.",
+    "theme": "Florals",
+    "size": "52 × 64 inches",
+    "image": "/shop/tulip-trellis.jpg",
+    "imageAlt": "Tulip Trellis quilt shown in an illustrative lifestyle mockup",
+    "imageNote": "Illustrative mockup",
+    "sourceSlug": "tulip-trellis",
+    "sourceVerifiedOn": "2026-09-19",
+    "files": [
+      {
+        "id": "file-1",
+        "name": "Monosyth-Tulip-Trellis-EQ8-v1.0.zip",
+        "label": "EQ8 project + opening guide",
+        "bytes": 8262077,
+        "sha256": "bb656860fbb9eceaba99f600cb63db617cec20878e2fb79f619e6e5e92dd93d6",
+        "source": "patterns/tulip-trellis/etsy/Tulip-Trellis-Etsy-Package-v1.0/customer-downloads/Monosyth-Tulip-Trellis-EQ8-v1.0.zip"
+      },
+      {
+        "id": "file-2",
+        "name": "Monosyth-Tulip-Trellis-Labels-v1.0.pdf",
+        "label": "Printable labels",
+        "bytes": 93198,
+        "sha256": "042f8f1b0564701df872d6f8592bb5e50519bcc886a31488e6b08efcf35de56a",
+        "source": "patterns/tulip-trellis/etsy/Tulip-Trellis-Etsy-Package-v1.0/customer-downloads/Monosyth-Tulip-Trellis-Labels-v1.0.pdf"
+      },
+      {
+        "id": "file-3",
+        "name": "Monosyth-Tulip-Trellis-Pattern-v1.1.pdf",
+        "label": "Illustrated pattern PDF",
+        "bytes": 8337053,
+        "sha256": "6df0e02b93b471d34896bb27f3d41f3403859689c4ad26c4e55e3ac35235a9bc",
+        "source": "patterns/tulip-trellis/etsy/Tulip-Trellis-Etsy-Package-v1.1/customer-downloads/Monosyth-Tulip-Trellis-Pattern-v1.1.pdf"
+      }
+    ],
+    "layoutImage": "/shop/tulip-trellis-layout.png",
+    "imageWidth": 1262,
+    "imageHeight": 1254,
+    "layoutWidth": 2400,
+    "layoutHeight": 2400
+  }
+]

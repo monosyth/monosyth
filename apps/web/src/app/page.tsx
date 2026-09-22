@@ -244,6 +244,18 @@ export default function Home() {
 
           <article className={styles.upcomingProduct}>
             <div>
+              <p className={styles.upcomingLabel}>From the sewing studio / Quilt patterns</p>
+              <h3>Monosyth Patterns</h3>
+              <p>Original quilts with a playful spirit. Explore the Trellis collection,
+                with illustrated PDF instructions and editable EQ8 projects.</p>
+            </div>
+            <Link className={styles.productLink} href="/shop">
+              <span>Explore quilt patterns</span><span aria-hidden="true">→</span>
+            </Link>
+          </article>
+
+          <article className={styles.upcomingProduct}>
+            <div>
               <p className={styles.upcomingLabel}>On the workbench / Early planner</p>
               <h3>MoveMorrow</h3>
               <p>A tailored checklist, timeline, and budget for your next move.
