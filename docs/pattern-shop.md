@@ -6,6 +6,28 @@ local listing records dated September 19, 2026. Older README and draft records
 show $8.95 for some patterns; the newer per-pattern records take precedence.
 This work does not change any Etsy listings.
 
+## Business registration record
+
+- Legal business name: **Monosyth Labs, LLC** (owner-provided and matched in
+  Washington DOR's public general-license search)
+- Washington Unified Business Identifier (UBI): **606 274 538**
+  (`606274538` for forms), provided by Scott on September 22, 2026 (Pacific)
+- This is the Washington business identifier, not a federal EIN or an SSN
+- Washington DOR's public **General license** search by this UBI returned
+  `MONOSYTH LABS, LLC` with UBI `606-274-538`. The results row did not show a
+  business ID, location ID, city or state, and no active-license status was
+  confirmed from that row.
+- Washington DOR's public **Tax account** lookup on September 22, 2026
+  returned “Account does not exist or the account has been closed more than
+  5 years” when searched by this UBI with the business-name field empty.
+  A name search for `Monosyth` also returned no account. These results do not
+  verify sales-tax registration; do not configure Stripe as registered on this
+  evidence alone.
+- The owner's My DOR profile is complete but has no linked business account.
+  Adding access to an existing account requests a DOR Letter ID. No Letter ID
+  has been supplied, and no business-license or tax-registration application
+  has been submitted during this setup.
+
 ## Current state
 
 - Storefront, ten product pages, cancellation handling and private order page implemented
