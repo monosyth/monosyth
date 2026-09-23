@@ -17,13 +17,18 @@ This work does not change any Etsy listings.
 - Checkout is disabled by default and in `apphosting.yaml`
 - All 24 buyer files uploaded to the dedicated private `monosyth-pattern-downloads` bucket in project `monosyth`, region `us-east4`
 - Public access prevention and uniform access enforced; the existing App Hosting service account has read access
-- Stripe onboarding, email-sender configuration and a full sandbox purchase remain outstanding; checkout stays disabled for the storefront launch
+- Stripe business onboarding completed by the owner; bank details also completed per owner confirmation
+- Live restricted Stripe key stored as `STRIPE_SECRET_KEY` version 1 in Google Secret Manager; Checkout Sessions write, Payment Intents read, Charges and Refunds read; all three read-only API checks passed
+- Live webhook `we_1UIhuL9FGEoNhiRQZnOSCNkz` targets `https://monosyth.com/api/shop/webhook` for `checkout.session.completed` and `checkout.session.async_payment_succeeded`, using API version `2026-08-26.dahlia`
+- Webhook signing secret and stable download-link signing secret stored as `STRIPE_WEBHOOK_SECRET` and `SHOP_DOWNLOAD_SECRET`, each version 1; Firebase backend access granted
+- Runtime configuration references these secret versions and uses owner-confirmed `scott@monosyth.com` for customer support
+- Resend sender configuration, final tax configuration, sandbox integration credentials and a full sandbox purchase remain outstanding; checkout stays disabled
 
 ## Complete setup
 
-1. Create a Stripe account for Monosyth Labs, LLC at https://dashboard.stripe.com/register.
-   The owner completes business verification, bank details and public customer
-   support information directly in Stripe. Start with Stripe test mode/sandbox.
+1. Stripe account setup is complete. Live account: `acct_1UIh7V9FGEoNhiRQ`.
+   Sandbox: `acct_1UIh7e7H9c3XazXS`. The owner completed onboarding directly
+   in Stripe. Use separate sandbox credentials for the acceptance checks below.
 2. Set up Resend (https://resend.com), verify a sending domain owned by Monosyth,
    and choose a support mailbox. Set `SHOP_FROM_EMAIL` to the verified sender
    and `SHOP_SUPPORT_EMAIL` to the real support address. No address is invented

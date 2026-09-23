@@ -14,6 +14,22 @@ env:
     value: monosyth-pattern-downloads
     availability:
       - RUNTIME
+  - variable: STRIPE_SECRET_KEY
+    secret: STRIPE_SECRET_KEY@1
+    availability:
+      - RUNTIME
+  - variable: STRIPE_WEBHOOK_SECRET
+    secret: STRIPE_WEBHOOK_SECRET@1
+    availability:
+      - RUNTIME
+  - variable: SHOP_DOWNLOAD_SECRET
+    secret: SHOP_DOWNLOAD_SECRET@1
+    availability:
+      - RUNTIME
+  - variable: SHOP_SUPPORT_EMAIL
+    value: scott@monosyth.com
+    availability:
+      - RUNTIME
   - variable: NEXT_PUBLIC_SITE_URL
     value: https://monosyth.com
     availability:
