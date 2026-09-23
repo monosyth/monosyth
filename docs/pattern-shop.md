@@ -22,17 +22,23 @@ This work does not change any Etsy listings.
 - Live webhook `we_1UIhuL9FGEoNhiRQZnOSCNkz` targets `https://monosyth.com/api/shop/webhook` for `checkout.session.completed` and `checkout.session.async_payment_succeeded`, using API version `2026-08-26.dahlia`
 - Webhook signing secret and stable download-link signing secret stored as `STRIPE_WEBHOOK_SECRET` and `SHOP_DOWNLOAD_SECRET`, each version 1; Firebase backend access granted
 - Runtime configuration references these secret versions and uses owner-confirmed `scott@monosyth.com` for customer support
-- Resend sender configuration, final tax configuration, sandbox integration credentials and a full sandbox purchase remain outstanding; checkout stays disabled
+- Resend verified `monosyth.com` after three DNS records were added at GoDaddy; existing Google mail records remain in place
+- Sending-only Resend key scoped to `monosyth.com` stored as `RESEND_API_KEY` version 1, with Firebase backend access granted; runtime sender is `Monosyth Patterns <scott@monosyth.com>`
+- Resend accepted the owner-authorized sender test to `scott@monosyth.com` on September 22, 2026 (Pacific); this test did not create a payment or a customer download link
+- Final tax configuration, sandbox integration credentials and a full sandbox purchase remain outstanding; checkout stays disabled
 
 ## Complete setup
 
 1. Stripe account setup is complete. Live account: `acct_1UIh7V9FGEoNhiRQ`.
    Sandbox: `acct_1UIh7e7H9c3XazXS`. The owner completed onboarding directly
    in Stripe. Use separate sandbox credentials for the acceptance checks below.
-2. Set up Resend (https://resend.com), verify a sending domain owned by Monosyth,
-   and choose a support mailbox. Set `SHOP_FROM_EMAIL` to the verified sender
-   and `SHOP_SUPPORT_EMAIL` to the real support address. No address is invented
-   or hardcoded in the shop. Email delivery is a required part of checkout setup.
+2. Resend domain `monosyth.com` is verified (domain ID
+   `2fe1a942-86f6-45fc-867f-f60b63009ca5`). `SHOP_FROM_EMAIL` uses
+   `Monosyth Patterns <scott@monosyth.com>` and `SHOP_SUPPORT_EMAIL` uses the
+   owner-confirmed support address. Receiving through Resend is disabled;
+   Google continues to handle the domain's incoming mail. The sending key has
+   sending access only, scoped to this domain. Email delivery is a required
+   part of checkout setup.
 3. Private storage is provisioned: **`monosyth-pattern-downloads`**, in project
    `monosyth`, region `us-east4`. It has **uniform bucket-level access** and
    **public access prevention** enforced. Do not use Firebase public download

@@ -30,6 +30,14 @@ env:
     value: scott@monosyth.com
     availability:
       - RUNTIME
+  - variable: RESEND_API_KEY
+    secret: RESEND_API_KEY@1
+    availability:
+      - RUNTIME
+  - variable: SHOP_FROM_EMAIL
+    value: Monosyth Patterns <scott@monosyth.com>
+    availability:
+      - RUNTIME
   - variable: NEXT_PUBLIC_SITE_URL
     value: https://monosyth.com
     availability:
