@@ -23,10 +23,28 @@ This work does not change any Etsy listings.
   A name search for `Monosyth` also returned no account. These results do not
   verify sales-tax registration; do not configure Stripe as registered on this
   evidence alone.
-- The owner's My DOR profile is complete but has no linked business account.
-  Adding access to an existing account requests a DOR Letter ID. No Letter ID
-  has been supplied, and no business-license or tax-registration application
-  has been submitted during this setup.
+- Before the application, the owner's My DOR profile had no linked business
+  account. Adding access requested a DOR Letter ID; none was supplied.
+- The owner submitted the Washington Business License Application and supplied
+  the DOR confirmation receipt in this task. Filing timestamp as displayed:
+  **September 22, 2026, 10:45:53 PM** (receipt does not specify a time zone).
+  Confirmation number: **0-054-250-878**.
+- Receipt identifies legal entity **MONOSYTH LABS, LLC**, firm name
+  **MONOSYTH**, and UBI **606-274-538**. Business location: Shoreline, WA.
+- Receipt lists **$55.00** amount due plus **$1.63** card processing fee,
+  totaling **$56.63**, with payment method credit or debit card. No card
+  details are retained in this record.
+- Status: **submitted, pending processing**. DOR's receipt says processing
+  within **10 business days**, with approximately **3 additional weeks** if
+  city or state endorsements require approval. Submission does not establish
+  that the license or sales-tax registration is active.
+- Check application status in My DOR: **Manage My Profile → View, Edit, or
+  Print Drafts or Submissions**, in the Drafts and Submissions area. DOR says
+  the license will be emailed to the linked SAW email when possible.
+- Shoreline's city license is handled separately through FileLocal after
+  obtaining the state license and full 16-digit UBI. City application has not
+  been confirmed complete. Official instructions:
+  <https://www.shorelinewa.gov/government/departments/city-clerk-s-office/business-licenses>.
 
 ## Current state
 
@@ -48,6 +66,7 @@ This work does not change any Etsy listings.
 - Sending-only Resend key scoped to `monosyth.com` stored as `RESEND_API_KEY` version 1, with Firebase backend access granted; runtime sender is `Monosyth Patterns <scott@monosyth.com>`
 - Resend accepted the owner-authorized sender test to `scott@monosyth.com` on September 22, 2026 (Pacific); this test did not create a payment or a customer download link
 - Final tax configuration, sandbox integration credentials and a full sandbox purchase remain outstanding; checkout stays disabled
+- Washington Business License Application submitted by the owner; DOR processing and active tax registration verification remain pending
 
 ## Complete setup
 
