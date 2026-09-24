@@ -7,6 +7,7 @@ import { findProduct, releaseId, storagePath, type ShopProduct, type ShopFile } 
 import { checkoutEnabled, shopConfig, shopOrigin } from "./config";
 import { paidRelease } from "./orders";
 import { orderKey, verifyOrderKey, validateSessionId, ShopError } from "./security";
+import { checkoutLineItem } from "./stripe-prices";
 
 export function stripeClient() {
   return new Stripe(shopConfig().stripeKey, { maxNetworkRetries: 2, timeout: 15000, httpClient: Stripe.createFetchHttpClient() });
@@ -48,10 +49,7 @@ export async function createCheckout(slug: string, attemptId: string) {
     payment_method_types: ["card"],
     billing_address_collection: "required",
     automatic_tax: { enabled: config.taxMode === "automatic" },
-    line_items: [{ quantity: 1, price_data: {
-      currency: "usd", unit_amount: product.priceCents, tax_behavior: "exclusive",
-      product_data: { name: `${product.name} — PDF + EQ8`, description: `Digital quilt pattern · ${product.size} finished · Edition ${product.version}`, metadata: { sku: releaseId(product) } },
-    } }],
+    line_items: [checkoutLineItem(product, config.stripeKey)],
     metadata,
     payment_intent_data: { metadata },
     success_url: `${origin}/shop/order?session_id={CHECKOUT_SESSION_ID}&key=${key}`,

@@ -1,0 +1,17 @@
+{
+  "accountId": "acct_1UIh7V9FGEoNhiRQ",
+  "verifiedOn": "2026-09-24",
+  "taxCode": "txcd_10503000",
+  "prices": [
+    { "sku": "harvest-trellis@1.4", "productId": "prod_VJzVm4Se4URjlH", "priceId": "price_1UJLWZ9FGEoNhiRQYpvNNsDg", "unitAmount": 695, "currency": "usd" },
+    { "sku": "evergreen-trellis@1.0", "productId": "prod_VJzW817ksMdXlW", "priceId": "price_1UJLXK9FGEoNhiRQTy7lFbMt", "unitAmount": 695, "currency": "usd" },
+    { "sku": "orchard-trellis@1.0", "productId": "prod_VJzWK8tovEjNwt", "priceId": "price_1UJLXs9FGEoNhiRQmRIitsFT", "unitAmount": 695, "currency": "usd" },
+    { "sku": "butterfly-trellis@1.0", "productId": "prod_VJzWujSQdKEzCZ", "priceId": "price_1UJLXw9FGEoNhiRQApVuGT8F", "unitAmount": 695, "currency": "usd" },
+    { "sku": "berry-trellis@1.0", "productId": "prod_VJzXWQn8JLz6jD", "priceId": "price_1UJLXz9FGEoNhiRQmyRfaT3z", "unitAmount": 695, "currency": "usd" },
+    { "sku": "cottage-trellis@1.0", "productId": "prod_VJzX7zQaqQYiMF", "priceId": "price_1UJLYM9FGEoNhiRQ10mhQYJN", "unitAmount": 695, "currency": "usd" },
+    { "sku": "seaside-trellis@1.0", "productId": "prod_VJzX6lvvJhOxgS", "priceId": "price_1UJLYQ9FGEoNhiRQ26csL2QJ", "unitAmount": 695, "currency": "usd" },
+    { "sku": "spool-trellis@1.0", "productId": "prod_VJzXzX0byzggs0", "priceId": "price_1UJLYT9FGEoNhiRQCqqXnscx", "unitAmount": 695, "currency": "usd" },
+    { "sku": "sweetheart-trellis@1.0", "productId": "prod_VJzXva9ryBk27p", "priceId": "price_1UJLYe9FGEoNhiRQueepPy65", "unitAmount": 695, "currency": "usd" },
+    { "sku": "tulip-trellis@1.1", "productId": "prod_VJzXqQnknk8xdr", "priceId": "price_1UJLYi9FGEoNhiRQmghXdnj4", "unitAmount": 695, "currency": "usd" }
+  ]
+}

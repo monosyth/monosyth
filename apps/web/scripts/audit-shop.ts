@@ -8,6 +8,8 @@ import { shopProducts, releaseId, storagePath } from "../src/lib/shop/catalog";
 import { paidRelease } from "../src/lib/shop/orders";
 import { orderKey, verifyOrderKey, ShopError, readLimitedText } from "../src/lib/shop/security";
 import { createCheckout, downloadFile, fulfillOrder, retrieveOrder } from "../src/lib/shop/server";
+import { checkoutLineItem } from "../src/lib/shop/stripe-prices";
+import liveCatalog from "../src/lib/shop/stripe-live-catalog.json";
 import { POST as checkoutRoute } from "../src/app/api/shop/checkout/route";
 import { POST as webhookRoute } from "../src/app/api/shop/webhook/route";
 import { GET as downloadRoute } from "../src/app/api/shop/download/route";
@@ -38,7 +40,7 @@ process.env.SHOP_SUPPORT_EMAIL = "support@example.invalid";
 process.env.SHOP_TAX_MODE = "manual";
 process.env.NEXT_PUBLIC_SITE_URL = "https://monosyth.com";
 
-afterEach(() => { mock.restoreAll(); process.env.SHOP_ENABLED = "true"; process.env.SHOP_TAX_MODE = "manual"; });
+afterEach(() => { mock.restoreAll(); process.env.SHOP_ENABLED = "true"; process.env.SHOP_TAX_MODE = "manual"; process.env.STRIPE_SECRET_KEY = "sk_test_offline"; });
 
 function mockBucket(options: { private?: boolean; badHash?: boolean; bytes?: Buffer } = {}) {
   const storage = getStorage(getFirebaseAdminApp());
@@ -132,9 +134,54 @@ test("checkout ignores a buyer-supplied price and uses stable retry idempotency"
   const params = new URLSearchParams(requests[0].body);
   assert.equal(params.get("line_items[0][price_data][unit_amount]"), "695");
   assert.equal(params.get("line_items[0][quantity]"), "1");
+  assert.equal(params.get("line_items[0][price]"), null);
+  assert.equal(params.get("line_items[0][price_data][product_data][tax_code]"), liveCatalog.taxCode);
   assert.equal(params.get("automatic_tax[enabled]"), "false");
   assert.equal(requests[0].headers.get("idempotency-key"), requests[1].headers.get("idempotency-key"));
   assert.equal(params.get("success_url"), `https://monosyth.com/shop/order?session_id={CHECKOUT_SESSION_ID}&key=${orderKey(orderId, secret)}`);
+});
+
+test("all live editions use distinct saved Stripe prices, while sandbox uses inline prices", () => {
+  const prices = new Set<string>();
+  const products = new Set<string>();
+  for (const p of shopProducts) {
+    const saved = liveCatalog.prices.find((entry) => entry.sku === releaseId(p));
+    assert.ok(saved);
+    assert.match(saved.productId, /^prod_[A-Za-z0-9]+$/);
+    assert.match(saved.priceId, /^price_[A-Za-z0-9]+$/);
+    products.add(saved.productId);
+    prices.add(saved.priceId);
+    for (const key of ["rk_live_offline", "sk_live_offline"]) {
+      assert.deepEqual(checkoutLineItem(p, key), { quantity: 1, price: saved.priceId });
+    }
+    for (const key of ["rk_test_offline", "sk_test_offline"]) {
+      const item = checkoutLineItem(p, key);
+      assert.equal(item.price, undefined);
+      assert.equal(item.price_data?.unit_amount, p.priceCents);
+      assert.equal(item.price_data?.product_data?.metadata?.sku, releaseId(p));
+    }
+  }
+  assert.equal(prices.size, shopProducts.length);
+  assert.equal(products.size, shopProducts.length);
+});
+
+test("live checkout refuses an unmapped edition or a changed catalog price or currency", () => {
+  for (const changed of [{ ...product, version: "unpublished" }, { ...product, priceCents: 895 }, { ...product, currency: "cad" }]) {
+    assert.throws(() => checkoutLineItem(changed, "rk_live_offline"), (e: unknown) => e instanceof ShopError && e.status === 503);
+  }
+});
+
+test("live checkout sends the saved price and retains private order fulfillment metadata", async () => {
+  process.env.STRIPE_SECRET_KEY = "rk_live_offline";
+  mockBucket(); const requests = mockNetwork();
+  await createCheckout(product.slug, orderId);
+  const params = new URLSearchParams(requests[0].body);
+  assert.equal(params.get("line_items[0][price]"), liveCatalog.prices[0].priceId);
+  assert.equal(params.get("line_items[0][price_data][unit_amount]"), null);
+  assert.equal(params.get("metadata[sku]"), releaseId(product));
+  assert.equal(params.get("metadata[price_cents]"), "695");
+  assert.equal(params.get("payment_intent_data[metadata][order_id]"), orderId);
+  assert.equal(params.get("mode"), "payment");
 });
 
 test("checkout rejects cross-origin requests and malformed input", async () => {

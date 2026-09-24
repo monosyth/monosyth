@@ -45,6 +45,12 @@ This work does not change any Etsy listings.
   obtaining the state license and full 16-digit UBI. City application has not
   been confirmed complete. Official instructions:
   <https://www.shorelinewa.gov/government/departments/city-clerk-s-office/business-licenses>.
+- On September 24, 2026, Scott requested an email check for approval. The
+  connected `monosyth@gmail.com` search returned no recent DOR/license mail.
+  Apple Mail's All Mailboxes searches for `dor.wa.gov` and the exact phrase
+  `"business license"` found September 22 account-access messages and older
+  LLC formation messages, but no business-license approval. This is a mail
+  search result, not a fresh determination of DOR's application status.
 
 ## Current state
 
@@ -67,6 +73,31 @@ This work does not change any Etsy listings.
 - Resend accepted the owner-authorized sender test to `scott@monosyth.com` on September 22, 2026 (Pacific); this test did not create a payment or a customer download link
 - Final tax configuration, sandbox integration credentials and a full sandbox purchase remain outstanding; checkout stays disabled
 - Washington Business License Application submitted by the owner; DOR processing and active tax registration verification remain pending
+
+## Stripe product catalog
+
+On September 24, 2026, all ten patterns were created in the live Monosyth Labs
+Stripe account as active products, each with a **one-time $6.95 USD price**.
+Tax behavior is **exclusive** (tax, when configured, is added to the price).
+The existing category preset is `txcd_10503000`, digital other news/documents,
+downloadable, non-subscription, permanent rights. Product descriptions identify
+the PDF and EQ8 deliverables, finished quilt size, edition, and EQ8 requirement.
+Creating these entries did not enable website checkout or configure tax collection.
+
+The exact product and price IDs are retained by edition in
+`apps/web/src/lib/shop/stripe-live-catalog.json`. Live website checkout uses these
+saved prices and keeps the existing signed private-download flow. Sandbox
+checkout uses separate inline test prices and does not reference live IDs.
+A changed website price, currency, or edition without a matching catalog record
+is blocked in live mode. When changing a price, create a new Stripe price and
+update the mapping together with the website catalog. Retain old release records
+for customers' existing download links.
+
+Verification: each saved product and its $6.95 default-price detail page was
+checked in Stripe. The 32 automated shop checks cover live price selection,
+sandbox separation, mismatched editions/prices, payment validation, fulfillment,
+and private downloads. These mocked checks do not replace the outstanding full
+sandbox purchase and delivery acceptance test.
 
 ## Complete setup
 
