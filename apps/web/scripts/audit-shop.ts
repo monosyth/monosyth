@@ -7,7 +7,7 @@ import { getFirebaseAdminApp } from "../src/lib/firebase/admin";
 import { shopProducts, releaseId, storagePath } from "../src/lib/shop/catalog";
 import { paidRelease } from "../src/lib/shop/orders";
 import { orderKey, verifyOrderKey, ShopError, readLimitedText } from "../src/lib/shop/security";
-import { createCheckout, downloadFile, fulfillOrder, retrieveOrder } from "../src/lib/shop/server";
+import { createCheckout, createFormCheckout, downloadFile, fulfillOrder, retrieveOrder } from "../src/lib/shop/server";
 import { checkoutLineItem } from "../src/lib/shop/stripe-prices";
 import liveCatalog from "../src/lib/shop/stripe-live-catalog.json";
 import { POST as checkoutRoute } from "../src/app/api/shop/checkout/route";
@@ -31,6 +31,7 @@ const fixture = () => ({
 
 process.env.SHOP_ENABLED = "true";
 process.env.STRIPE_SECRET_KEY = "sk_test_offline";
+process.env.STRIPE_PUBLISHABLE_KEY = "pk_test_offline";
 process.env.STRIPE_WEBHOOK_SECRET = "whsec_offline_test";
 process.env.SHOP_DOWNLOAD_SECRET = secret;
 process.env.SHOP_STORAGE_BUCKET = "offline-test-bucket";
@@ -40,7 +41,7 @@ process.env.SHOP_SUPPORT_EMAIL = "support@example.invalid";
 process.env.SHOP_TAX_MODE = "manual";
 process.env.NEXT_PUBLIC_SITE_URL = "https://monosyth.com";
 
-afterEach(() => { mock.restoreAll(); process.env.SHOP_ENABLED = "true"; process.env.SHOP_TAX_MODE = "manual"; process.env.STRIPE_SECRET_KEY = "sk_test_offline"; });
+afterEach(() => { mock.restoreAll(); process.env.SHOP_ENABLED = "true"; process.env.SHOP_TAX_MODE = "manual"; process.env.STRIPE_SECRET_KEY = "sk_test_offline"; process.env.STRIPE_PUBLISHABLE_KEY = "pk_test_offline"; });
 
 function mockBucket(options: { private?: boolean; badHash?: boolean; bytes?: Buffer } = {}) {
   const storage = getStorage(getFirebaseAdminApp());
@@ -67,7 +68,7 @@ function mockNetwork(session = fixture(), emailStatus = 200) {
     requests.push({ url, method, body, headers: new Headers(init?.headers) });
     if (url === "https://api.resend.com/emails") return Response.json(emailStatus === 200 ? { id: "email_test_1" } : { error: "failed" }, { status: emailStatus });
     if (!url.startsWith("https://api.stripe.com/v1/checkout/sessions")) throw new Error(`Unexpected network request: ${url}`);
-    if (method === "POST" && new URL(url).pathname.endsWith("/sessions")) return Response.json({ id: sessionId, url: "https://checkout.stripe.com/c/pay/test_only" });
+    if (method === "POST" && new URL(url).pathname.endsWith("/sessions")) return Response.json({ id: sessionId, client_secret: "cs_test_fixture_secret_example", url: "https://checkout.stripe.com/c/pay/test_only" });
     if (method === "POST") {
       const data = new URLSearchParams(body);
       session.metadata!.delivery_email_id = data.get("metadata[delivery_email_id]") || "";
@@ -204,6 +205,45 @@ test("automatic tax is explicit in checkout", async () => {
   mockBucket(); const requests = mockNetwork(); process.env.SHOP_TAX_MODE = "automatic";
   await createCheckout(product.slug, orderId);
   assert.equal(new URLSearchParams(requests[0].body).get("automatic_tax[enabled]"), "true");
+});
+
+test("embedded form keeps tax, edition and private return link on the server", async () => {
+  mockBucket(); const requests = mockNetwork(); process.env.SHOP_TAX_MODE = "automatic";
+  const response = await checkoutRoute(new Request("https://monosyth.com/api/shop/checkout", {
+    method: "POST", headers: { Origin: "https://monosyth.com" },
+    body: JSON.stringify({ slug: product.slug, attemptId: orderId, uiMode: "form", returnUrl: "https://evil.invalid", priceCents: 1 }),
+  }));
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.equal(result.publishableKey, "pk_test_offline");
+  assert.equal(result.clientSecret, "cs_test_fixture_secret_example");
+  assert.equal(result.returnUrl, `https://monosyth.com/shop/order?session_id=${sessionId}&key=${orderKey(orderId, secret)}`);
+  assert.match(response.headers.get("cache-control") || "", /no-store/);
+  assert.equal(JSON.stringify(result).includes("sk_test_offline"), false);
+  const params = new URLSearchParams(requests[0].body);
+  assert.equal(params.get("ui_mode"), "form");
+  assert.equal(params.get("integration_identifier"), "custom_embedded_web_0001");
+  assert.equal(params.get("automatic_tax[enabled]"), "true");
+  assert.equal(params.get("adaptive_pricing[enabled]"), "false");
+  assert.equal(params.get("metadata[sku]"), releaseId(product));
+  assert.equal(params.get("success_url"), null);
+  assert.equal(params.get("cancel_url"), null);
+  assert.match(params.get("return_url") || "", /session_id=\{CHECKOUT_SESSION_ID\}&key=/);
+  assert.match(requests[0].headers.get("stripe-version") || "", /custom_checkout_payment_form_preview=v1/);
+  await createCheckout(product.slug, orderId);
+  assert.notEqual(requests[0].headers.get("idempotency-key"), requests[1].headers.get("idempotency-key"));
+});
+
+test("embedded form refuses missing or mismatched keys and an unset tax mode", async () => {
+  const requests = mockNetwork();
+  for (const key of ["", "pk_live_wrongmode"]) {
+    process.env.STRIPE_PUBLISHABLE_KEY = key;
+    await assert.rejects(createFormCheckout(product.slug, orderId), ShopError);
+  }
+  process.env.STRIPE_PUBLISHABLE_KEY = "pk_test_offline";
+  process.env.SHOP_TAX_MODE = "";
+  await assert.rejects(createFormCheckout(product.slug, orderId), ShopError);
+  assert.equal(requests.length, 0);
 });
 
 test("tampered links and unpurchased file IDs cannot download", async () => {

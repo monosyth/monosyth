@@ -118,3 +118,11 @@
   .detailCopy { order: 1; }
   .detailGallery > figure:last-child { order: 2; }
 }
+.checkoutPage { max-width: 1120px; margin: auto; padding: 32px 5% 70px; }
+.checkoutPage > h1 { font-size: clamp(30px, 4vw, 46px); font-weight: 400; letter-spacing: -.04em; margin: 0 0 32px; }
+.checkoutGrid { display: grid; grid-template-columns: .85fr 1.15fr; gap: 48px; align-items: start; }
+.checkoutSummary img { display: block; width: 100%; height: auto; max-height: 320px; object-fit: contain; background: #ebe7db; border-radius: 4px; }
+.checkoutSummary p, .checkoutSummary li { line-height: 1.8; }
+.checkoutSummary ul { padding-left: 20px; font-size: 14px; }
+.checkoutPayment { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 24px; min-height: 180px; }
+@media (max-width: 760px) { .checkoutGrid { grid-template-columns: 1fr; gap: 24px; } .checkoutPayment { padding: 16px; } }

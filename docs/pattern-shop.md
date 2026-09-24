@@ -8,6 +8,9 @@ This work does not change any Etsy listings.
 
 ## Business registration record
 
+Local company document index: `business-records/README.md`. Original company
+documents and private administration records belong in that Git-ignored folder.
+
 - Legal business name: **Monosyth Labs, LLC** (owner-provided and matched in
   Washington DOR's public general-license search)
 - Washington Unified Business Identifier (UBI): **606 274 538**
@@ -34,7 +37,12 @@ This work does not change any Etsy listings.
 - Receipt lists **$55.00** amount due plus **$1.63** card processing fee,
   totaling **$56.63**, with payment method credit or debit card. No card
   details are retained in this record.
-- Status: **submitted, pending processing**. DOR's receipt says processing
+- Status: **Tax Registration pending**, confirmed in signed-in My DOR on
+  September 24, 2026. The license account is now linked; the endorsement list
+  displays Pending, with no issuance or expiration date. Action Items reports
+  no actions requiring attention. Detailed private observation notes are in
+  `business-records/registration/2026-09-24-license-and-stripe-status.md`.
+  DOR's receipt says processing
   within **10 business days**, with approximately **3 additional weeks** if
   city or state endorsements require approval. Submission does not establish
   that the license or sales-tax registration is active.
@@ -51,11 +59,20 @@ This work does not change any Etsy listings.
   `"business license"` found September 22 account-access messages and older
   LLC formation messages, but no business-license approval. This is a mail
   search result, not a fresh determination of DOR's application status.
+- On September 24, 2026, located and visually reviewed the owner's saved
+  **Certificate of Formation**, issued by the Washington Secretary of State
+  for **MONOSYTH LABS, LLC**, effective and issued **August 12, 2026**, with
+  UBI **606 274 538**. Source:
+  `business-records/registration/2026-08-12 Monosyth Labs LLC - Certificate of Formation.pdf`
+  (an unchanged copy of `/Users/scottwaite/Desktop/0024672852_Certificate.pdf`).
+  This establishes the formation document's contents; it is not a DOR
+  business-license or tax-registration endorsement. The owner's report of an
+  existing business license remains to be checked against that separate record.
 
 ## Current state
 
 - Storefront, ten product pages, cancellation handling and private order page implemented
-- Stripe-hosted guest checkout; one pattern per transaction
+- Embedded Stripe guest checkout at `/shop/checkout/[slug]`; one pattern per transaction
 - PDF, EQ8 ZIP and separate labels (where included): 24 exact versioned files
 - Verified Stripe webhook sends a private download link through Resend
 - Every download rechecks the Stripe payment, full-refund and dispute state
@@ -72,7 +89,9 @@ This work does not change any Etsy listings.
 - Sending-only Resend key scoped to `monosyth.com` stored as `RESEND_API_KEY` version 1, with Firebase backend access granted; runtime sender is `Monosyth Patterns <scott@monosyth.com>`
 - Resend accepted the owner-authorized sender test to `scott@monosyth.com` on September 22, 2026 (Pacific); this test did not create a payment or a customer download link
 - Final tax configuration, sandbox integration credentials and a full sandbox purchase remain outstanding; checkout stays disabled
-- Washington Business License Application submitted by the owner; DOR processing and active tax registration verification remain pending
+- Washington Business License Application submitted by the owner; signed-in My DOR confirms Tax Registration is Pending as of September 24, with no action items
+- Stripe account status checked September 24: Payments and Payouts active, no active tasks; Company / Single-member LLC tax information marked Verified. No tax identity fields changed
+- The saved IRS CP575G letter confirms the LLC already has an EIN; see the private business-records index. Do not store the EIN in tracked website documentation
 
 ## Stripe product catalog
 
@@ -98,6 +117,36 @@ checked in Stripe. The 32 automated shop checks cover live price selection,
 sandbox separation, mismatched editions/prices, payment validation, fulfillment,
 and private downloads. These mocked checks do not replace the outstanding full
 sandbox purchase and delivery acceptance test.
+
+## Embedded checkout draft
+
+On September 24, the owner supplied Stripe Checkout builder draft
+`chkplan_61VSk406KFrCfxSBU16VS54s81SQPMgX0jLeglQyO` (Embedded form 1).
+Its implementation uses `ui_mode=form`, the request API version
+`2026-08-26.dahlia; custom_checkout_payment_form_preview=v1`, and the Dahlia
+Stripe.js SDK with `custom_checkout_payment_form_1`. The form uses the draft's
+expanded layout and appearance settings. The Dashboard URL is an admin draft,
+not a customer payment URL; no draft link is placed on the public website.
+
+The shop creates each session on the server with the selected edition's saved
+price, private-download metadata, and a signed return URL. Customer card fields
+are hosted inside Stripe's iframe. The preview header applies only to form
+session creation; existing webhook/order verification uses the normal API.
+The original hosted-checkout API remains available to clients that omit
+`uiMode`, with separate idempotency keys for the two formats.
+
+The integration retains card payments, USD prices with adaptive conversion
+disabled, and billing-address collection. These keep the existing payment
+verification and tax-address handling consistent. The draft's disabled tax
+setting does not override `SHOP_TAX_MODE`: this remains an explicit launch
+configuration. Form requests return the matching runtime
+`STRIPE_PUBLISHABLE_KEY`, never the secret key. Key-mode mismatches fail closed.
+
+Validation so far: 34 automated shop checks passed, including form-session tax
+settings, server-owned pricing and private return URL, idempotency separation,
+and rejection of missing/mismatched keys. Scoped lint and production build passed.
+The form rendered successfully with the owner's existing Stripe sandbox account.
+Full payment and delivery verification is still in progress.
 
 ## Complete setup
 
@@ -146,6 +195,7 @@ Required runtime environment:
 | --- | --- |
 | `SHOP_ENABLED` | `false` until launch; `true` enables configured checkout |
 | `STRIPE_SECRET_KEY` | Secret Stripe API key; never `NEXT_PUBLIC_` |
+| `STRIPE_PUBLISHABLE_KEY` | Public key from the same account and mode, supplied to the embedded form at runtime |
 | `STRIPE_WEBHOOK_SECRET` | This environment's `whsec_…` signing secret |
 | `SHOP_DOWNLOAD_SECRET` | Random secret, at least 32 characters; keep stable |
 | `SHOP_STORAGE_BUCKET` | Dedicated private bucket name |

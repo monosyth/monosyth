@@ -6,6 +6,7 @@
 # Company records may live beside the website checkout, but never belong in
 # the public website repository.
 /*.pdf
+/business-records/
 
 # Local-only secrets used by Claude sessions to authenticate to GitHub.
 # Committing this would leak your token. Only secrets.env.example is

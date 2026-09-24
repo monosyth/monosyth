@@ -4,7 +4,7 @@ import Stripe from "stripe";
 import { getStorage } from "firebase-admin/storage";
 import { getFirebaseAdminApp } from "@/lib/firebase/admin";
 import { findProduct, releaseId, storagePath, type ShopProduct, type ShopFile } from "./catalog";
-import { checkoutEnabled, shopConfig, shopOrigin } from "./config";
+import { checkoutEnabled, formPublishableKey, shopConfig, shopOrigin } from "./config";
 import { paidRelease } from "./orders";
 import { orderKey, verifyOrderKey, validateSessionId, ShopError } from "./security";
 import { checkoutLineItem } from "./stripe-prices";
@@ -32,7 +32,7 @@ export async function verifyPrivateFiles(product: ShopProduct) {
   }));
 }
 
-export async function createCheckout(slug: string, attemptId: string) {
+async function createCheckoutSession(slug: string, attemptId: string, form = false) {
   if (!checkoutEnabled()) throw new ShopError(503, "The pattern shop is getting ready. Please check back soon.");
   const product = findProduct(slug);
   if (!product) throw new ShopError(404, "That pattern isn’t available.");
@@ -44,20 +44,39 @@ export async function createCheckout(slug: string, attemptId: string) {
   const orderId = attemptId;
   const key = orderKey(orderId, config.downloadSecret);
   const metadata = { shop: "monosyth-patterns-v1", sku: releaseId(product), order_id: orderId, price_cents: String(product.priceCents) };
+  const returnUrl = `${origin}/shop/order?session_id={CHECKOUT_SESSION_ID}&key=${key}`;
   const session = await stripeClient().checkout.sessions.create({
     mode: "payment",
+    ...(form ? { ui_mode: "form", integration_identifier: "custom_embedded_web_0001", return_url: returnUrl } : {
+      success_url: returnUrl,
+      cancel_url: `${origin}/shop/${product.slug}?checkout=cancelled`,
+    }),
     payment_method_types: ["card"],
+    adaptive_pricing: { enabled: false },
     billing_address_collection: "required",
     automatic_tax: { enabled: config.taxMode === "automatic" },
     line_items: [checkoutLineItem(product, config.stripeKey)],
     metadata,
     payment_intent_data: { metadata },
-    success_url: `${origin}/shop/order?session_id={CHECKOUT_SESSION_ID}&key=${key}`,
-    cancel_url: `${origin}/shop/${product.slug}?checkout=cancelled`,
-    custom_text: { submit: { message: "Digital files only. Your PDF and EQ8 download link will be emailed after payment. EQ8 software is required only for the editable project." } },
-  }, { idempotencyKey: `shop-checkout:${product.slug}:${attemptId}` });
+    ...(!form ? { custom_text: { submit: { message: "Digital files only. Your PDF and EQ8 download link will be emailed after payment. EQ8 software is required only for the editable project." } } } : {}),
+  }, {
+    idempotencyKey: `shop-checkout${form ? "-form" : ""}:${product.slug}:${attemptId}`,
+    ...(form ? { apiVersion: "2026-08-26.dahlia; custom_checkout_payment_form_preview=v1" } : {}),
+  });
+  return { session, returnUrl: returnUrl.replace("{CHECKOUT_SESSION_ID}", session.id) };
+}
+
+export async function createCheckout(slug: string, attemptId: string) {
+  const { session } = await createCheckoutSession(slug, attemptId);
   if (!session.url) throw new Error("Checkout URL missing");
   return session.url;
+}
+
+export async function createFormCheckout(slug: string, attemptId: string) {
+  const publishableKey = formPublishableKey();
+  const { session, returnUrl } = await createCheckoutSession(slug, attemptId, true);
+  if (!session.client_secret) throw new Error("Checkout client secret missing");
+  return { clientSecret: session.client_secret, publishableKey, returnUrl };
 }
 
 export async function retrieveOrder(sessionId: string, key?: string) {

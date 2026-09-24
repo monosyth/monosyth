@@ -30,3 +30,17 @@ export function checkoutEnabled() {
   if (process.env.SHOP_ENABLED !== "true") return false;
   try { shopConfig(); shopOrigin(); return true; } catch { return false; }
 }
+
+export function formPublishableKey() {
+  const key = process.env.STRIPE_PUBLISHABLE_KEY?.trim() || "";
+  const live = /^(sk|rk)_live_/.test(shopConfig().stripeKey);
+  if (!key.startsWith(live ? "pk_live_" : "pk_test_")) {
+    throw new ShopError(503, "The pattern shop is getting ready. Please check back soon.");
+  }
+  return key;
+}
+
+export function formCheckoutEnabled() {
+  if (!checkoutEnabled()) return false;
+  try { formPublishableKey(); return true; } catch { return false; }
+}

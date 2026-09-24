@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { findProduct, formatPrice, shopProducts } from "@/lib/shop/catalog";
-import { checkoutEnabled } from "@/lib/shop/config";
+import { formCheckoutEnabled } from "@/lib/shop/config";
 import { BuyButton } from "@/components/shop/buy-button";
 import styles from "../shop.module.css";
 
@@ -32,7 +32,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
         <h1>{product.name}</h1><p className={styles.tagline}>{product.tagline}</p><p>{product.description}</p>
         <div className={styles.specs}><div><span>Finished size</span><strong>{product.size}</strong></div><div><span>Format</span><strong>PDF + EQ8</strong></div><div><span>Edition</span><strong>{product.version}</strong></div></div>
         <p className={styles.price}>{formatPrice(product.priceCents)} <span>USD · Digital download</span></p>
-        <BuyButton slug={product.slug} price={formatPrice(product.priceCents)} available={checkoutEnabled()} />
+        <BuyButton slug={product.slug} price={formatPrice(product.priceCents)} available={formCheckoutEnabled()} />
         <div className={styles.included}><h2>Inside your download</h2><ul>{product.files.map((file) => <li key={file.id}><span aria-hidden="true">✓</span>{file.label}</li>)}</ul><p>The PDF works with a regular PDF reader. Electric Quilt 8 is required to use the editable EQ8 project.</p></div>
         <p className={styles.small}>This is a digital quilt pattern. Fabric, a finished quilt, and a printed booklet are not included.</p>
       </div>

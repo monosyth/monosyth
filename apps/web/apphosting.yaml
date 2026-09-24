@@ -18,6 +18,10 @@ env:
     secret: STRIPE_SECRET_KEY@1
     availability:
       - RUNTIME
+  - variable: STRIPE_PUBLISHABLE_KEY
+    value: pk_live_51UIh7V9FGEoNhiRQ0ogfbq906CxJne5qHUoqIuEPle2lu8td16lNhszO8s4hnkd7HAQYQ3hTxiXt8YGsRiraKGVG00wWCd0VEk
+    availability:
+      - RUNTIME
   - variable: STRIPE_WEBHOOK_SECRET
     secret: STRIPE_WEBHOOK_SECRET@1
     availability:
