@@ -7,7 +7,7 @@ runConfig:
 
 env:
   - variable: SHOP_ENABLED
-    value: "false"
+    value: "true"
     availability:
       - RUNTIME
   - variable: SHOP_TAX_MODE

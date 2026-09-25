@@ -74,7 +74,7 @@ documents and private administration records belong in that Git-ignored folder.
 - Verified Stripe webhook sends a private download link through Resend
 - Every download rechecks the Stripe payment, full-refund and dispute state
 - Catalog prices and file entitlements are controlled by the server
-- Checkout is disabled by default and in `apphosting.yaml`
+- Checkout remains disabled by default unless explicitly enabled; production `apphosting.yaml` now enables sales with automatic tax
 - All 24 buyer files uploaded to the dedicated private `monosyth-pattern-downloads` bucket in project `monosyth`, region `us-east4`
 - Public access prevention and uniform access enforced; the existing App Hosting service account has read access
 - Stripe business onboarding completed by the owner; bank details also completed per owner confirmation
@@ -88,7 +88,8 @@ documents and private administration records belong in that Git-ignored folder.
 - Owner approved Stripe Tax pay-as-you-go; Washington live sales-tax registration was added with immediate collection. Runtime configuration now selects automatic tax. Automatic filing is not enabled
 - Embedded sandbox purchase passed with $6.95 subtotal, $0.73 Washington test-address tax and $7.68 total; the signed order page and all three file hashes verified
 - Actual sandbox completion event replayed twice with the local webhook signing secret: one email delivered (Resend confirmed), then full sandbox refund correctly denied future downloads. This does not verify Stripe-to-local webhook network delivery
-- Customer checkout stays disabled pending the Shoreline city-license applicability answer
+- Owner confirms company Shoreline-based revenue below $4,000 this year; city-license threshold does not currently apply based on that answer and the published city rule
+- Live restricted-key preflight accepted an embedded session with the saved $6.95 price and automatic tax; the unpaid preflight session was immediately expired
 - Washington tax registration confirmed by the official September 24 DOR letter, superseding the earlier Pending observation; separate Shoreline city-license status remains unverified
 - Stripe account status checked September 24: Payments and Payouts active, no active tasks; Company / Single-member LLC tax information marked Verified. No tax identity fields changed
 - The saved IRS CP575G letter confirms the LLC already has an EIN; see the private business-records index. Do not store the EIN in tracked website documentation
@@ -341,7 +342,17 @@ paid downloads and webhook delivery continue while credentials remain configured
 
 Shoreline's current general-license page states a $4,000 annual Shoreline-based
 revenue threshold for businesses located in the city. A city license must not be
-assumed necessary regardless of revenue. The owner has been asked whether total
-company revenue reaches that threshold and whether a city license already exists.
+assumed necessary regardless of revenue. On September 25, the owner confirmed total company revenue is under that
+threshold this year. Revisit city licensing if Shoreline-based revenue reaches
+$4,000; do not infer indefinite exemption from this year’s answer.
 Source: <https://www.shorelinewa.gov/government/departments/city-clerk-s-office/business-licenses>.
 The latest private account and test records are in `business-records/registration/`.
+
+## Sales launch, September 25
+
+After owner approval, Washington tax setup, successful sandbox acceptance checks
+and the live unpaid-session preflight, production configuration was changed to
+`SHOP_ENABLED=true` and `SHOP_TAX_MODE=automatic`. Production deployment and
+public checkout verification must confirm the rollout before reporting sales live.
+Automatic filing remains off. The DOR first-return deadline remains November 2,
+2026, including a no-activity return when applicable.
