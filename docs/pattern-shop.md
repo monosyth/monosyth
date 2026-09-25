@@ -69,7 +69,7 @@ documents and private administration records belong in that Git-ignored folder.
 ## Current state
 
 - Storefront, ten product pages, cancellation handling and private order page implemented
-- Embedded Stripe guest checkout at `/shop/checkout/[slug]`; one pattern per transaction
+- Persistent cart at `/shop/cart` and embedded Stripe guest checkout at `/shop/checkout`; single-pattern Buy now remains at `/shop/checkout/[slug]`
 - PDF, EQ8 ZIP and separate labels (where included): 24 exact versioned files
 - Verified Stripe webhook sends a private download link through Resend
 - Every download rechecks the Stripe payment, full-refund and dispute state
