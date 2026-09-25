@@ -13,7 +13,7 @@ type StripeForm = {
 type StripeFormSdk = {
   createForm: (options: { layout: "expanded" }) => StripeForm;
   loadActions: () => Promise<
-    { type: "success"; actions: { confirm: (options: { formConfirmEvent: unknown; returnUrl: string }) => Promise<{ type: string; error?: { message?: string } }> } }
+    { type: "success"; actions: { confirm: (options: { formConfirmEvent: unknown }) => Promise<{ type: string; error?: { message?: string } }> } }
     | { type: "error"; error?: { message?: string } }
   >;
 };
@@ -64,7 +64,8 @@ export function CheckoutForm({ slug }: { slug: string }) {
         form = sdk.createForm({ layout: "expanded" });
         form.on("confirm", (event) => {
           setError(null);
-          void loaded.actions.confirm({ formConfirmEvent: event, returnUrl: returnUrl.href }).then(result => {
+          // The server already supplies the signed return_url on the session.
+          void Promise.resolve().then(() => loaded.actions.confirm({ formConfirmEvent: event })).then(result => {
             if (cancelled) return;
             if (result.type === "error") setError(result.error?.message || "Payment could not be completed. Please try again.");
           }).catch(() => { if (!cancelled) setError("Payment could not be completed. Please try again."); });

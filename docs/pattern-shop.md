@@ -37,15 +37,12 @@ documents and private administration records belong in that Git-ignored folder.
 - Receipt lists **$55.00** amount due plus **$1.63** card processing fee,
   totaling **$56.63**, with payment method credit or debit card. No card
   details are retained in this record.
-- Status: **Tax Registration pending**, confirmed in signed-in My DOR on
-  September 24, 2026. The license account is now linked; the endorsement list
-  displays Pending, with no issuance or expiration date. Action Items reports
-  no actions requiring attention. Detailed private observation notes are in
-  `business-records/registration/2026-09-24-license-and-stripe-status.md`.
-  DOR's receipt says processing
-  within **10 business days**, with approximately **3 additional weeks** if
-  city or state endorsements require approval. Submission does not establish
-  that the license or sales-tax registration is active.
+- **Current status: Washington tax registration confirmed.** The official DOR
+  letter dated September 24, 2026 confirms registration and an Excise Tax account.
+  This supersedes the earlier same-day signed-in My DOR Pending observation.
+  Filing is quarterly; the first return covers the period ending September 30,
+  2026 and is due November 2, 2026, even without business activity. Original
+  letter and private notes are indexed in `business-records/README.md`.
 - Check application status in My DOR: **Manage My Profile → View, Edit, or
   Print Drafts or Submissions**, in the Drafts and Submissions area. DOR says
   the license will be emailed to the linked SAW email when possible.
@@ -67,7 +64,7 @@ documents and private administration records belong in that Git-ignored folder.
   (an unchanged copy of `/Users/scottwaite/Desktop/0024672852_Certificate.pdf`).
   This establishes the formation document's contents; it is not a DOR
   business-license or tax-registration endorsement. The owner's report of an
-  existing business license remains to be checked against that separate record.
+  existing business registration is now confirmed separately by the DOR letter above.
 
 ## Current state
 
@@ -88,8 +85,11 @@ documents and private administration records belong in that Git-ignored folder.
 - Resend verified `monosyth.com` after three DNS records were added at GoDaddy; existing Google mail records remain in place
 - Sending-only Resend key scoped to `monosyth.com` stored as `RESEND_API_KEY` version 1, with Firebase backend access granted; runtime sender is `Monosyth Patterns <scott@monosyth.com>`
 - Resend accepted the owner-authorized sender test to `scott@monosyth.com` on September 22, 2026 (Pacific); this test did not create a payment or a customer download link
-- Final tax configuration, sandbox integration credentials and a full sandbox purchase remain outstanding; checkout stays disabled
-- Washington Business License Application submitted by the owner; signed-in My DOR confirms Tax Registration is Pending as of September 24, with no action items
+- Owner approved Stripe Tax pay-as-you-go; Washington live sales-tax registration was added with immediate collection. Runtime configuration now selects automatic tax. Automatic filing is not enabled
+- Embedded sandbox purchase passed with $6.95 subtotal, $0.73 Washington test-address tax and $7.68 total; the signed order page and all three file hashes verified
+- Actual sandbox completion event replayed twice with the local webhook signing secret: one email delivered (Resend confirmed), then full sandbox refund correctly denied future downloads. This does not verify Stripe-to-local webhook network delivery
+- Customer checkout stays disabled pending the Shoreline city-license applicability answer
+- Washington tax registration confirmed by the official September 24 DOR letter, superseding the earlier Pending observation; separate Shoreline city-license status remains unverified
 - Stripe account status checked September 24: Payments and Payouts active, no active tasks; Company / Single-member LLC tax information marked Verified. No tax identity fields changed
 - The saved IRS CP575G letter confirms the LLC already has an EIN; see the private business-records index. Do not store the EIN in tracked website documentation
 
@@ -146,7 +146,13 @@ Validation so far: 34 automated shop checks passed, including form-session tax
 settings, server-owned pricing and private return URL, idempotency separation,
 and rejection of missing/mismatched keys. Scoped lint and production build passed.
 The form rendered successfully with the owner's existing Stripe sandbox account.
-Full payment and delivery verification is still in progress.
+A real sandbox browser purchase completed on September 25 after fixing duplicate
+return-address parameters: `return_url` is set by the server; `confirm()` receives
+only the form event. Its synchronous errors also reach the customer error handler.
+The signed order page, three exact file downloads, delivered email via actual-event
+replay, duplicate-email suppression, tampered-link rejection and full-refund denial
+were verified. No live payment was created. The temporary email used a localhost
+link; production uses the configured public origin.
 
 ## Complete setup
 
@@ -330,3 +336,12 @@ This first version buys one pattern at a time, without a cart, discount codes,
 subscriptions or a customer account library. Product edits are made in the
 versioned catalog. Keep `SHOP_ENABLED=false` to pause new checkouts; existing
 paid downloads and webhook delivery continue while credentials remain configured.
+
+## City-license applicability check, September 25
+
+Shoreline's current general-license page states a $4,000 annual Shoreline-based
+revenue threshold for businesses located in the city. A city license must not be
+assumed necessary regardless of revenue. The owner has been asked whether total
+company revenue reaches that threshold and whether a city license already exists.
+Source: <https://www.shorelinewa.gov/government/departments/city-clerk-s-office/business-licenses>.
+The latest private account and test records are in `business-records/registration/`.
