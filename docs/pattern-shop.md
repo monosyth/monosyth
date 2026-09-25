@@ -333,10 +333,28 @@ after the provider's idempotency window; replays within 24 hours may be deduplic
 There is no public email lookup endpoint. Do not share an order link before
 verifying the requester owns that purchase.
 
-This first version buys one pattern at a time, without a cart, discount codes,
-subscriptions or a customer account library. Product edits are made in the
+The shop supports a persistent browser cart with up to ten distinct patterns,
+one copy of each, paid together. Single-pattern Buy now links remain available.
+There are no discount codes, subscriptions or customer account library. Product edits are made in the
 versioned catalog. Keep `SHOP_ENABLED=false` to pause new checkouts; existing
 paid downloads and webhook delivery continue while credentials remain configured.
+
+## Cart and order email
+
+Cart checkout at `/shop/checkout` uses Stripe's embedded form, with explicit
+sans-serif typography, a clear order summary and accurate Stripe attribution.
+Prices, release identifiers and private-file availability are checked on the
+server. Cart orders record their purchased releases and prices in Stripe
+metadata; older single-pattern orders remain supported. Downloads are scoped
+to the purchased release as well as the file ID, since file IDs repeat across
+patterns. A successful return clears only the purchased items from the matching
+checkout attempt's cart.
+
+Resend delivers the shop's transactional download email, from the verified
+Monosyth domain. It does not process payments or replace the company's incoming
+email service. One branded HTML email contains all purchased patterns, a private
+download button, the total paid and support details, plus a plain-text fallback.
+Existing delivery markers and provider idempotency prevent duplicate emails.
 
 ## City-license applicability check, September 25
 

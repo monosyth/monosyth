@@ -5,7 +5,9 @@ import Stripe from "stripe";
 import { getStorage } from "firebase-admin/storage";
 import { getFirebaseAdminApp } from "../src/lib/firebase/admin";
 import { shopProducts, releaseId, storagePath } from "../src/lib/shop/catalog";
-import { paidRelease } from "../src/lib/shop/orders";
+import { paidRelease, paidReleases } from "../src/lib/shop/orders";
+import { cartProducts } from "../src/lib/shop/cart";
+import { orderEmail } from "../src/lib/shop/email";
 import { orderKey, verifyOrderKey, ShopError, readLimitedText } from "../src/lib/shop/security";
 import { createCheckout, createFormCheckout, downloadFile, fulfillOrder, retrieveOrder } from "../src/lib/shop/server";
 import { checkoutLineItem } from "../src/lib/shop/stripe-prices";
@@ -49,7 +51,7 @@ function mockBucket(options: { private?: boolean; badHash?: boolean; bytes?: Buf
     getMetadata: async () => [{ iamConfiguration: { publicAccessPrevention: options.private === false ? "inherited" : "enforced", uniformBucketLevelAccess: { enabled: true } } }],
     file: (path: string) => ({
       getMetadata: async () => {
-        const file = product.files.find((file) => storagePath(product, file) === path);
+        const file = shopProducts.flatMap(product => product.files.filter(file => storagePath(product, file) === path)).at(0);
         assert.ok(file);
         return [{ size: file.bytes, metadata: { sha256: options.badHash ? "wrong" : file.sha256 } }];
       },
@@ -313,4 +315,110 @@ test("unpaid webhook never delivers, including async checkout completion", async
 
 test("request size limit also applies when content-length is omitted", async () => {
   await assert.rejects(readLimitedText(new Request("https://monosyth.com", { method: "POST", body: "x".repeat(2049) }), 2048), (e: unknown) => e instanceof ShopError && e.status === 413);
+});
+
+function cartFixture() {
+  const session = fixture();
+  const products = shopProducts.slice(0, 2);
+  session.metadata = { shop: "monosyth-patterns-v1", order_id: orderId, price_cents: "1390", cart_items: JSON.stringify(products.map(product => [releaseId(product), product.priceCents])) };
+  session.amount_subtotal = 1390;
+  session.amount_total = 1536;
+  return session;
+}
+
+test("cart rejects empty, duplicate, oversized and unknown selections before checkout", async () => {
+  const requests = mockNetwork();
+  for (const selection of [[], [product.slug, product.slug], Array(11).fill(product.slug), ["unknown"], [1], {}, null]) {
+    assert.throws(() => cartProducts(selection), ShopError);
+    const result = await checkoutRoute(new Request("https://monosyth.com/api/shop/checkout", { method: "POST", headers: { Origin: "https://monosyth.com" }, body: JSON.stringify({ slugs: selection, attemptId: orderId }) }));
+    assert.ok([400, 404].includes(result.status));
+  }
+  assert.equal(requests.length, 0);
+});
+
+test("multi-pattern checkout prices every line on the server and canonicalizes cart retries", async () => {
+  mockBucket(); const requests = mockNetwork(); process.env.SHOP_TAX_MODE = "automatic";
+  const slugs = shopProducts.slice(0, 2).map(product => product.slug);
+  await createFormCheckout(slugs, orderId);
+  await createFormCheckout([...slugs].reverse(), orderId);
+  const params = new URLSearchParams(requests[0].body);
+  assert.equal(params.get("metadata[price_cents]"), "1390");
+  assert.equal(params.get("metadata[sku]"), null);
+  const items = JSON.parse(params.get("metadata[cart_items]")!);
+  assert.deepEqual(items, cartProducts(slugs).map(product => [releaseId(product), product.priceCents]));
+  for (const index of [0, 1]) {
+    assert.equal(params.get(`line_items[${index}][quantity]`), "1");
+    assert.equal(params.get(`line_items[${index}][price_data][unit_amount]`), "695");
+  }
+  assert.equal(params.get("automatic_tax[enabled]"), "true");
+  assert.equal(requests[0].headers.get("idempotency-key"), requests[1].headers.get("idempotency-key"));
+  await createFormCheckout([product.slug], orderId);
+  assert.notEqual(requests[0].headers.get("idempotency-key"), requests[2].headers.get("idempotency-key"));
+});
+
+test("a full collection uses ten distinct live prices and fits Stripe metadata limits", async () => {
+  mockBucket(); const requests = mockNetwork(); process.env.STRIPE_SECRET_KEY = "rk_live_offline"; process.env.STRIPE_PUBLISHABLE_KEY = "pk_live_offline";
+  await createFormCheckout(shopProducts.map(product => product.slug), orderId);
+  const params = new URLSearchParams(requests[0].body);
+  assert.equal(params.get("metadata[price_cents]"), "6950");
+  assert.ok(params.get("metadata[cart_items]")!.length <= 500);
+  const prices = Array.from({ length: 10 }, (_, index) => params.get(`line_items[${index}][price]`));
+  assert.equal(new Set(prices).size, 10); assert.ok(prices.every(price => price?.startsWith("price_")));
+});
+
+test("cart purchase grants all purchased editions and retains historical paid prices", () => {
+  const session = cartFixture();
+  assert.deepEqual(paidReleases(session, false).map(product => product.slug), shopProducts.slice(0, 2).map(product => product.slug));
+  session.metadata!.cart_items = JSON.stringify(shopProducts.slice(0, 2).map(product => [releaseId(product), 895]));
+  session.metadata!.price_cents = "1790"; session.amount_subtotal = 1790; session.amount_total = 1978;
+  assert.equal(paidReleases(session, false).length, 2);
+  assert.equal(paidReleases(fixture(), false).length, 1);
+});
+
+test("cart entitlements reject malformed, duplicated, unknown or underpaid manifests", () => {
+  for (const items of ["{", "[]", '{}', '[["unknown@1",695]]', JSON.stringify([[releaseId(product), 695], [releaseId(product), 695]]), JSON.stringify([[releaseId(product), "695"]]), JSON.stringify([[releaseId(product), 0]]), JSON.stringify([[releaseId(product), 695]])]) {
+    const session = cartFixture(); session.metadata!.cart_items = items;
+    assert.throws(() => paidReleases(session, false), ShopError);
+  }
+  for (const change of ["sku", "refund", "dispute", "unpaid"]) {
+    const session = cartFixture();
+    if (change === "sku") session.metadata!.sku = releaseId(product);
+    if (change === "unpaid") session.amount_subtotal = 695;
+    if (change === "refund") ((session.payment_intent as Stripe.PaymentIntent).latest_charge as Stripe.Charge).refunded = true;
+    if (change === "dispute") ((session.payment_intent as Stripe.PaymentIntent).latest_charge as Stripe.Charge).disputed = true;
+    assert.throws(() => paidReleases(session, false), ShopError);
+  }
+});
+
+test("cart order response groups files by edition and rejects unpurchased or ambiguous downloads", async () => {
+  mockNetwork(cartFixture());
+  const query = new URLSearchParams({ session_id: sessionId, key: orderKey(orderId, secret) });
+  const order = await (await orderRoute(new Request(`https://monosyth.com/api/shop/order?${query}`))).json();
+  assert.equal(order.products.length, 2);
+  assert.equal(order.products[0].sku, releaseId(product));
+  assert.equal(order.products[1].sku, releaseId(shopProducts[1]));
+  assert.equal(order.products[0].files[0].id, order.products[1].files[0].id);
+  assert.equal(order.orderId, orderId);
+  assert.equal(order.files, undefined);
+  for (const extra of ["", `&sku=${encodeURIComponent(releaseId(shopProducts[2]))}`, "&sku=../unknown"]) {
+    assert.equal((await downloadRoute(new Request(`https://monosyth.com/api/shop/download?${query}&file=file-1${extra}`))).status, 404);
+  }
+});
+
+test("cart fulfillment delivers one branded email with every purchased pattern", async () => {
+  const requests = mockNetwork(cartFixture()); await fulfillOrder(sessionId); await fulfillOrder(sessionId);
+  const emails = requests.filter(request => request.url.includes("resend.com")); assert.equal(emails.length, 1);
+  const email = JSON.parse(emails[0].body);
+  assert.match(email.subject, /2 Monosyth patterns/);
+  for (const product of shopProducts.slice(0, 2)) { assert.ok(email.html.includes(product.name)); assert.ok(email.text.includes(product.name)); }
+  assert.ok(email.html.includes("Download your patterns"));
+  assert.ok(email.html.includes("$15.36"));
+  assert.ok(email.html.includes("&amp;key="));
+  assert.ok(!email.html.includes("gs://"));
+});
+
+test("branded order email escapes display data and provides a plain-text alternative", () => {
+  const email = orderEmail([{ ...product, name: '<img src=x onerror="bad">' }], "https://monosyth.com/shop/order?session_id=test&key=test", "support@example.invalid", 695);
+  assert.ok(email.html.includes("&lt;img")); assert.ok(!email.html.includes("<img src=x"));
+  assert.ok(email.text.includes("https://monosyth.com/shop/order?session_id=test&key=test"));
 });

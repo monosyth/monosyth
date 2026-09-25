@@ -3,6 +3,7 @@
 import Script from "next/script";
 import { useEffect, useRef, useState } from "react";
 import styles from "@/app/shop/shop.module.css";
+import { rememberCheckout } from "./cart-provider";
 
 // The owner's Checkout builder uses Stripe's Embedded form preview SDK.
 type StripeForm = {
@@ -27,28 +28,31 @@ declare global {
 
 const appearance = {
   theme: "stripe", inputs: "spaced", labels: "auto",
-  variables: { borderRadius: "4px", colorBackground: "#ffffff", colorDanger: "#df1b41", colorPrimary: "#0570de", colorSuccess: "#00c853", colorText: "#30313d", fontFamily: "default", fontSizeBase: "16px", spacingUnit: "4px" },
+  variables: { borderRadius: "8px", colorBackground: "#ffffff", colorDanger: "#a43e2e", colorPrimary: "#233d34", colorSuccess: "#39724c", colorText: "#233d34", fontFamily: 'Arial, "Helvetica Neue", Helvetica, sans-serif', fontSizeBase: "16px", spacingUnit: "5px" },
 };
 
-export function CheckoutForm({ slug }: { slug: string }) {
+export function CheckoutForm({ slugs }: { slugs: string[] }) {
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
-  const attempt = useRef<string | null>(null);
+  const attempt = useRef<{ selection: string; id: string } | null>(null);
   const target = useRef<HTMLDivElement>(null);
+  const selection = [...slugs].sort().join(",");
 
   useEffect(() => {
     if (!ready) return;
     let cancelled = false;
     let form: StripeForm | undefined;
     const controller = new AbortController();
-    attempt.current ??= crypto.randomUUID();
+    if (attempt.current?.selection !== selection) attempt.current = { selection, id: crypto.randomUUID() };
+    const attemptId = attempt.current.id;
+    rememberCheckout(attemptId, selection.split(","));
     async function start() {
       try {
         const response = await fetch("/api/shop/checkout", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug, attemptId: attempt.current, uiMode: "form" }), signal: controller.signal,
+          body: JSON.stringify({ slugs: selection.split(","), attemptId, uiMode: "form" }), signal: controller.signal,
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || "Checkout is unavailable. Please try again.");
@@ -81,7 +85,7 @@ export function CheckoutForm({ slug }: { slug: string }) {
     }
     void start();
     return () => { cancelled = true; controller.abort(); form?.destroy(); };
-  }, [ready, retry, slug]);
+  }, [ready, retry, selection]);
 
   return <>
     <Script src="https://js.stripe.com/dahlia/stripe.js" onReady={() => setReady(true)} onError={() => { setLoading(false); setError("Secure checkout could not load. Please refresh the page."); }} />

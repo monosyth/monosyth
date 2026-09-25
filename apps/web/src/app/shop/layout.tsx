@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import styles from "./shop.module.css";
+import { CartProvider, CartLink } from "@/components/shop/cart-provider";
+import { shopProducts } from "@/lib/shop/catalog";
 
 export const metadata: Metadata = {
   title: { default: "Quilt patterns | Monosyth", template: "%s | Monosyth Patterns" },
@@ -8,11 +10,11 @@ export const metadata: Metadata = {
 };
 
 export default function ShopLayout({ children }: { children: React.ReactNode }) {
-  return <div className={styles.shop}>
+  return <CartProvider products={shopProducts.map(({ slug, name, priceCents, image, version }) => ({ slug, name, priceCents, image, version }))}><div className={styles.shop}>
     <a href="#shop-main" className={styles.skip}>Skip to patterns</a>
     <header className={styles.header}>
       <Link href="/shop" className={styles.brand} aria-label="Monosyth pattern shop"><span className={styles.brandMark} aria-hidden="true">✳</span>monosyth<span className={styles.brandSuffix}>Patterns</span></Link>
-      <nav aria-label="Pattern shop"><Link href="/shop#patterns">The collection</Link><Link href="/shop#how-it-works">How it works</Link><Link href="/">Monosyth Labs ↗</Link></nav>
+      <nav aria-label="Pattern shop"><Link href="/shop#patterns">The collection</Link><Link href="/shop#how-it-works">How it works</Link><Link href="/">Monosyth Labs ↗</Link><CartLink /></nav>
     </header>
     <main id="shop-main">{children}</main>
     <footer className={styles.footer}>
@@ -20,5 +22,5 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
       <p>© {new Date().getFullYear()} Monosyth Labs, LLC<br />Digital patterns for things made by hand</p>
       <Link href="/">Back to Monosyth Labs ↗</Link>
     </footer>
-  </div>;
+  </div></CartProvider>;
 }

@@ -3,11 +3,13 @@ import { createHash } from "node:crypto";
 import Stripe from "stripe";
 import { getStorage } from "firebase-admin/storage";
 import { getFirebaseAdminApp } from "@/lib/firebase/admin";
-import { findProduct, releaseId, storagePath, type ShopProduct, type ShopFile } from "./catalog";
+import { releaseId, storagePath, type ShopProduct, type ShopFile } from "./catalog";
+import { cartProducts } from "./cart";
 import { checkoutEnabled, formPublishableKey, shopConfig, shopOrigin } from "./config";
-import { paidRelease } from "./orders";
+import { paidReleases } from "./orders";
 import { orderKey, verifyOrderKey, validateSessionId, ShopError } from "./security";
 import { checkoutLineItem } from "./stripe-prices";
+import { orderEmail } from "./email";
 
 export function stripeClient() {
   return new Stripe(shopConfig().stripeKey, { maxNetworkRetries: 2, timeout: 15000, httpClient: Stripe.createFetchHttpClient() });
@@ -32,49 +34,52 @@ export async function verifyPrivateFiles(product: ShopProduct) {
   }));
 }
 
-async function createCheckoutSession(slug: string, attemptId: string, form = false) {
+async function createCheckoutSession(selection: string | string[], attemptId: string, form = false) {
   if (!checkoutEnabled()) throw new ShopError(503, "The pattern shop is getting ready. Please check back soon.");
-  const product = findProduct(slug);
-  if (!product) throw new ShopError(404, "That pattern isn’t available.");
+  const products = cartProducts(selection);
   if (!/^[0-9a-f-]{36}$/.test(attemptId)) throw new ShopError(400, "Please refresh the page and try again.");
-  await verifyPrivateFiles(product);
+  await Promise.all(products.map(verifyPrivateFiles));
   const config = shopConfig();
   const origin = shopOrigin();
   // Deterministic for a browser attempt: retries create the same Checkout Session.
   const orderId = attemptId;
   const key = orderKey(orderId, config.downloadSecret);
-  const metadata = { shop: "monosyth-patterns-v1", sku: releaseId(product), order_id: orderId, price_cents: String(product.priceCents) };
+  const items = products.map(product => [releaseId(product), product.priceCents]);
+  const metadata: Record<string, string> = { shop: "monosyth-patterns-v1", order_id: orderId, price_cents: String(products.reduce((sum, product) => sum + product.priceCents, 0)),
+    ...(products.length === 1 ? { sku: releaseId(products[0]) } : { cart_items: JSON.stringify(items) }),
+  };
+  const cartId = products.length === 1 ? products[0].slug : createHash("sha256").update(JSON.stringify(items)).digest("hex");
   const returnUrl = `${origin}/shop/order?session_id={CHECKOUT_SESSION_ID}&key=${key}`;
   const session = await stripeClient().checkout.sessions.create({
     mode: "payment",
     ...(form ? { ui_mode: "form", integration_identifier: "custom_embedded_web_0001", return_url: returnUrl } : {
       success_url: returnUrl,
-      cancel_url: `${origin}/shop/${product.slug}?checkout=cancelled`,
+      cancel_url: products.length === 1 ? `${origin}/shop/${products[0].slug}?checkout=cancelled` : `${origin}/shop/cart?checkout=cancelled`,
     }),
     payment_method_types: ["card"],
     adaptive_pricing: { enabled: false },
     billing_address_collection: "required",
     automatic_tax: { enabled: config.taxMode === "automatic" },
-    line_items: [checkoutLineItem(product, config.stripeKey)],
+    line_items: products.map(product => checkoutLineItem(product, config.stripeKey)),
     metadata,
     payment_intent_data: { metadata },
     ...(!form ? { custom_text: { submit: { message: "Digital files only. Your PDF and EQ8 download link will be emailed after payment. EQ8 software is required only for the editable project." } } } : {}),
   }, {
-    idempotencyKey: `shop-checkout${form ? "-form" : ""}:${product.slug}:${attemptId}`,
+    idempotencyKey: `shop-checkout${form ? "-form" : ""}:${cartId}:${attemptId}`,
     ...(form ? { apiVersion: "2026-08-26.dahlia; custom_checkout_payment_form_preview=v1" } : {}),
   });
   return { session, returnUrl: returnUrl.replace("{CHECKOUT_SESSION_ID}", session.id) };
 }
 
-export async function createCheckout(slug: string, attemptId: string) {
-  const { session } = await createCheckoutSession(slug, attemptId);
+export async function createCheckout(selection: string | string[], attemptId: string) {
+  const { session } = await createCheckoutSession(selection, attemptId);
   if (!session.url) throw new Error("Checkout URL missing");
   return session.url;
 }
 
-export async function createFormCheckout(slug: string, attemptId: string) {
+export async function createFormCheckout(selection: string | string[], attemptId: string) {
   const publishableKey = formPublishableKey();
-  const { session, returnUrl } = await createCheckoutSession(slug, attemptId, true);
+  const { session, returnUrl } = await createCheckoutSession(selection, attemptId, true);
   if (!session.client_secret) throw new Error("Checkout client secret missing");
   return { clientSecret: session.client_secret, publishableKey, returnUrl };
 }
@@ -93,12 +98,12 @@ export async function retrieveOrder(sessionId: string, key?: string) {
   if (key !== undefined && !verifyOrderKey(session.metadata?.order_id || "", key, config.downloadSecret)) {
     throw new ShopError(403, "This download link isn’t valid. Open the full link from your order email.");
   }
-  const product = paidRelease(session, config.stripeKey.startsWith("sk_live_") || config.stripeKey.startsWith("rk_live_"));
-  return { session, product };
+  const products = paidReleases(session, config.stripeKey.startsWith("sk_live_") || config.stripeKey.startsWith("rk_live_"));
+  return { session, products };
 }
 
 export async function fulfillOrder(sessionId: string) {
-  const { session, product } = await retrieveOrder(sessionId);
+  const { session, products } = await retrieveOrder(sessionId);
   if (session.metadata?.delivery_email_id) return;
   const config = shopConfig();
   const orderId = session.metadata?.order_id || "";
@@ -113,8 +118,7 @@ export async function fulfillOrder(sessionId: string) {
     headers: { Authorization: `Bearer ${config.emailKey}`, "Content-Type": "application/json", "Idempotency-Key": `pattern-order/${session.id}` },
     body: JSON.stringify({
       from: config.from, to: [email], reply_to: config.support,
-      subject: `Your ${product.name} pattern`,
-      text: `Thank you for your order from Monosyth.\n\nDownload ${product.name}:\n${url}\n\nYour files:\n${product.files.map((file) => `• ${file.label}`).join("\n")}\n\nThe PDF opens in a regular PDF reader. The editable EQ8 project requires Electric Quilt 8. Keep this private link to return to your downloads.\n\nNeed help? Reply to this email.\n\nMonosyth Labs, LLC`,
+      ...orderEmail(products, url, config.support, session.amount_total!),
     }),
     signal: AbortSignal.timeout(15000),
   });

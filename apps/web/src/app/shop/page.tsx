@@ -3,6 +3,7 @@ import Link from "next/link";
 import { shopProducts, formatPrice } from "@/lib/shop/catalog";
 import { checkoutEnabled } from "@/lib/shop/config";
 import styles from "./shop.module.css";
+import { QuickAdd } from "@/components/shop/cart-provider";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,7 @@ export default function ShopPage() {
           <div className={styles.productMeta}><span>{product.theme}</span><span>{formatPrice(product.priceCents)}</span></div>
           <h3><Link href={`/shop/${product.slug}`}>{product.name}<span aria-hidden="true">↗</span></Link></h3>
           <p>{product.size} finished · PDF + EQ8</p>
+          <QuickAdd slug={product.slug} name={product.name} available={available} />
         </article>)}
       </div>
     </section>
