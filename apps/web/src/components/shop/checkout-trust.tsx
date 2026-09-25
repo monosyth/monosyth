@@ -1,3 +1,4 @@
+import { DiagonalArrow } from "@/components/shop/brand-icons";
 import styles from "@/app/shop/shop.module.css";
 
 export function LockIcon() {
@@ -9,6 +10,6 @@ export function CheckoutTrust({ children }: { children: React.ReactNode }) {
     <p className={styles.paymentIntro}>Enter your details below to complete your one-time purchase.</p>
     {children}
     <div className={styles.paymentSecurity}><LockIcon /><p>Your card details are encrypted and handled directly by Stripe. Monosyth never sees your full card number.</p></div>
-    <div className={styles.paymentFooter}><span>Monosyth Labs, LLC</span><a href="mailto:scott@monosyth.com">Questions? Contact us ↗</a></div>
+    <div className={styles.paymentFooter}><span>Monosyth Labs, LLC</span><a href="mailto:scott@monosyth.com">Questions? Contact us <DiagonalArrow /></a></div>
   </section>;
 }

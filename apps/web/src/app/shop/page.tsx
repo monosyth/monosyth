@@ -1,3 +1,4 @@
+import { ShopStar, DiagonalArrow } from "@/components/shop/brand-icons";
 import Image from "next/image";
 import Link from "next/link";
 import { shopProducts, formatPrice } from "@/lib/shop/catalog";
@@ -17,16 +18,16 @@ export default function ShopPage() {
         <h1>A little fabric<br />A lot of <em>possibility</em></h1>
         <p className={styles.intro}>Quilt patterns with a playful spirit. Find your favorite, choose your colors, and make something that feels like you.</p>
         <Link className={styles.primaryButton} href="#patterns">Find your next quilt <span aria-hidden="true">↓</span></Link>
-        <p className={styles.heroMeta}>Illustrated PDF patterns <span>✳</span> EQ8 projects included</p>
+        <p className={styles.heroMeta}>Illustrated PDF patterns <ShopStar /> EQ8 projects included</p>
       </div>
       <Link href={`/shop/${featured.slug}`} className={styles.heroVisual} aria-label={`Explore ${featured.name}`}>
         <div className={styles.heroImage}><Image src={featured.image} alt={featured.imageAlt} fill sizes="(max-width: 760px) 100vw, 55vw" priority /></div>
         <span className={styles.imageCaption}>{featured.imageNote}</span>
-        <div className={styles.featuredLabel}><div><span>Meet your next autumn project</span><strong>{featured.name}</strong></div><span aria-hidden="true">↗</span></div>
+        <div className={styles.featuredLabel}><div><span>Meet your next autumn project</span><strong>{featured.name}</strong></div><span aria-hidden="true"><DiagonalArrow /></span></div>
       </Link>
     </section>
 
-    <div className={styles.ribbon}><span>Designed by Monosyth</span><span>Made with your favorite fabrics</span><span>Ready for your own color story</span></div>
+    <div className={styles.ribbon}><span><ShopStar />Designed by Monosyth</span><span><ShopStar />Made with your favorite fabrics</span><span><ShopStar />Ready for your own color story</span></div>
 
     <section className={styles.collection} id="patterns" aria-labelledby="collection-title">
       <div className={styles.sectionHeading}><div><p className={styles.eyebrow}>The Trellis collection</p><h2 id="collection-title">Which one feels like you?</h2></div><p>{shopProducts.length} patterns · {formatPrice(featured.priceCents)} each<br />PDF + editable EQ8 project</p></div>
@@ -39,7 +40,7 @@ export default function ShopPage() {
             <span className={styles.imageCaption}>{product.imageNote}</span>
           </Link>
           <div className={styles.productMeta}><span>{product.theme}</span><span>{formatPrice(product.priceCents)}</span></div>
-          <h3><Link href={`/shop/${product.slug}`}>{product.name}<span aria-hidden="true">↗</span></Link></h3>
+          <h3><Link href={`/shop/${product.slug}`}>{product.name}<span aria-hidden="true"><DiagonalArrow /></span></Link></h3>
           <p>{product.size} finished · PDF + EQ8</p>
           <QuickAdd slug={product.slug} name={product.name} available={available} />
         </article>)}

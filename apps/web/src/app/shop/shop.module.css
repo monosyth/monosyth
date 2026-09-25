@@ -8,7 +8,7 @@
 .skip:focus { top: 15px; }
 .header { max-width: 1440px; padding: 28px 5%; margin: auto; display: flex; justify-content: space-between; align-items: center; gap: 30px; border-bottom: 1px solid var(--line); }
 .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 27px; letter-spacing: -.055em; }
-.brandMark { font-size: 37px; font-weight: 400; color: #90742f; line-height: 1; }
+.brandMark { width: 28px; height: 28px; flex-shrink: 0; color: #90742f; }
 .brandSuffix { font: 400 11px/1.2 var(--font-ibm-plex-mono), monospace; letter-spacing: .08em; text-transform: uppercase; border-left: 1px solid var(--line); padding-left: 12px; margin-left: 8px; }
 .header nav { display: flex; gap: 28px; font-size: 12px; }
 .header nav a:hover, .footer a:hover, .backLink:hover { text-decoration: underline; text-underline-offset: 4px; }
@@ -22,7 +22,7 @@
 .primaryButton:hover:not(:disabled) { background: #345c4c; }
 .primaryButton:disabled { background: #e1e3d7; border-color: #d1d6c5; color: #4b584c !important; }
 .heroMeta { font-size: 10px; color: var(--muted); margin-top: 20px; display: flex; align-items: center; gap: 10px; }
-.heroMeta > span { color: #8a7040; font-size: 14px; }
+.heroMeta > svg { color: #8a7040; width: 14px; height: 14px; flex-shrink: 0; }
 .heroVisual { position: relative; display: block; border-radius: 5px; padding: 10px; background: #ebe7db; }
 .heroImage { position: relative; aspect-ratio: 1.15; overflow: hidden; border-radius: 2px; }
 .heroImage img { object-fit: cover; }
@@ -34,7 +34,8 @@
 .featuredLabel strong { font-size: 17px; font-weight: 500; }
 .featuredLabel > span { font-size: 22px; }
 .ribbon { display: flex; justify-content: center; gap: 8%; flex-wrap: wrap; padding: 18px 5%; border-block: 1px solid #d0d8bb; background: var(--moss); font-size: 11px; }
-.ribbon span::before { content: '✳'; margin-right: 12px; color: #6c753f; }
+.ribbon > span { display: inline-flex; align-items: center; gap: 12px; }
+.ribbon svg { width: 12px; height: 12px; color: #6c753f; flex-shrink: 0; }
 .collection { padding: 74px 5% 78px; max-width: 1440px; margin: auto; scroll-margin-top: 25px; }
 .sectionHeading { display: flex; align-items: end; justify-content: space-between; gap: 25px; margin-bottom: 26px; }
 .shop h2 { font-size: clamp(27px, 3vw, 38px); font-weight: 400; letter-spacing: -.045em; line-height: 1.2; margin: 10px 0 0; }
@@ -110,7 +111,7 @@
 @media (min-width: 1440px) { .hero h1 { font-size: 66px; } }
 @media (max-width: 1000px) { .hero { gap: 4%; } .header nav { gap: 16px; } .productGrid { grid-template-columns: repeat(2,minmax(0,1fr)); } .hero h1 { font-size: 46px; } .heroMeta { flex-wrap: wrap; } }
 @media (max-width: 760px) { .header { flex-wrap: wrap; padding: 22px 6%; gap: 18px; } .header nav { width: 100%; justify-content: space-between; font-size: 11px; } .hero { grid-template-columns: 1fr; padding: 38px 6%; gap: 35px; } .hero h1 { font-size: clamp(39px,8vw,57px); } .intro { max-width: 460px; } .heroImage { aspect-ratio: 4/3; } .ribbon { gap: 10px 25px; font-size: 10px; } .ribbon span:last-child { display: none; } .collection { padding: 45px 6%; } .sectionHeading { align-items: start; flex-direction: column; gap: 10px; } .sectionHeading > p { text-align: left; margin: 0; } .howItWorks, .faq { grid-template-columns: 1fr; padding: 45px 6%; gap: 30px; } .footer { flex-wrap: wrap; padding: 28px 6%; } .productDetail { grid-template-columns: 1fr; gap: 30px; } .detailPage { padding: 26px 6% 45px; } .detailCopy h1 { font-size: 42px; } .related > div { gap: 14px; } .related a > span { font-size: 12px; } .orderCard { padding: 25px 20px; } .orderPage { padding: 35px 6%; } }
-@media (max-width: 540px) { .productGrid { grid-template-columns: 1fr; gap: 30px; } .productImage { aspect-ratio: 4/3; } .brand { font-size: 25px; } .brandSuffix { font-size: 10px; } .ribbon { justify-content: space-between; gap: 12px; font-size: 9px; } .ribbon span::before { margin-right: 6px; } .related > div { grid-template-columns: 1fr; } .related a { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 18px; } .related a > span { font-size: 15px; } .downloads button { align-items: start; flex-direction: column; gap: 12px; } .specs { gap: 12px; } }
+@media (max-width: 540px) { .productGrid { grid-template-columns: 1fr; gap: 30px; } .productImage { aspect-ratio: 4/3; } .brand { font-size: 25px; } .brandSuffix { font-size: 10px; } .ribbon { justify-content: space-between; gap: 12px; font-size: 9px; } .ribbon > span { gap: 6px; } .related > div { grid-template-columns: 1fr; } .related a { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 18px; } .related a > span { font-size: 15px; } .downloads button { align-items: start; flex-direction: column; gap: 12px; } .specs { gap: 12px; } }
 @media (prefers-reduced-motion: reduce) { .productImage img { transition: none; } }
 @media (max-width: 760px) {
   .detailGallery { display: contents; }

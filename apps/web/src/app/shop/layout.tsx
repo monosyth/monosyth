@@ -1,3 +1,4 @@
+import { ShopStar, DiagonalArrow } from "@/components/shop/brand-icons";
 import type { Metadata } from "next";
 import Link from "next/link";
 import styles from "./shop.module.css";
@@ -13,14 +14,14 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
   return <CartProvider products={shopProducts.map(({ slug, name, priceCents, image, version }) => ({ slug, name, priceCents, image, version }))}><div className={styles.shop}>
     <a href="#shop-main" className={styles.skip}>Skip to patterns</a>
     <header className={styles.header}>
-      <Link href="/shop" className={styles.brand} aria-label="Monosyth pattern shop"><span className={styles.brandMark} aria-hidden="true">✳</span>monosyth<span className={styles.brandSuffix}>Patterns</span></Link>
-      <nav aria-label="Pattern shop"><Link href="/shop#patterns">The collection</Link><Link href="/shop#how-it-works">How it works</Link><Link href="/">Monosyth Labs ↗</Link><CartLink /></nav>
+      <Link href="/shop" className={styles.brand} aria-label="Monosyth pattern shop"><ShopStar className={styles.brandMark} />monosyth<span className={styles.brandSuffix}>Patterns</span></Link>
+      <nav aria-label="Pattern shop"><Link href="/shop#patterns">The collection</Link><Link href="/shop#how-it-works">How it works</Link><Link href="/">Monosyth Labs <DiagonalArrow /></Link><CartLink /></nav>
     </header>
     <main id="shop-main">{children}</main>
     <footer className={styles.footer}>
       <div><Link className={styles.footerBrand} href="/shop">monosyth</Link><p>Small pieces, wonderful possibilities</p></div>
       <p>© {new Date().getFullYear()} Monosyth Labs, LLC<br />Digital patterns for things made by hand</p>
-      <Link href="/">Back to Monosyth Labs ↗</Link>
+      <Link href="/">Back to Monosyth Labs <DiagonalArrow /></Link>
     </footer>
   </div></CartProvider>;
 }

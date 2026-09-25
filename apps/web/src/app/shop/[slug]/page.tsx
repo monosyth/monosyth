@@ -1,3 +1,4 @@
+import { DiagonalArrow } from "@/components/shop/brand-icons";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -37,6 +38,6 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
         <p className={styles.small}>This is a digital quilt pattern. Fabric, a finished quilt, and a printed booklet are not included.</p>
       </div>
     </section>
-    <section className={styles.related}><p className={styles.eyebrow}>More from the collection</p><div>{shopProducts.filter((p) => p.slug !== product.slug).slice(0, 3).map((p) => <Link href={`/shop/${p.slug}`} key={p.slug}><Image src={p.image} alt={p.imageAlt} width={500} height={375} /><span>{p.name} ↗</span></Link>)}</div></section>
+    <section className={styles.related}><p className={styles.eyebrow}>More from the collection</p><div>{shopProducts.filter((p) => p.slug !== product.slug).slice(0, 3).map((p) => <Link href={`/shop/${p.slug}`} key={p.slug}><Image src={p.image} alt={p.imageAlt} width={500} height={375} /><span>{p.name} <DiagonalArrow /></span></Link>)}</div></section>
   </div>;
 }
