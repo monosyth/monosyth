@@ -39,8 +39,8 @@ export default function WeddingGallery() {
   const opener = useRef<HTMLButtonElement | null>(null);
   const filtered = chapter === "all" ? orderedPhotos : photos.filter(p => p.chapter === chapter);
   const current = active === null ? null : filtered[active];
-  const hero = photos.find(p => p.id === 118)!;
-  const neon = photos.find(p => p.id === 258)!;
+  const hero = photos.find(p => p.id === 258)!;
+  const cake = photos.find(p => p.id === 159)!;
   const isOpen = active !== null;
 
   useEffect(() => {
@@ -89,8 +89,8 @@ export default function WeddingGallery() {
         <div className={styles.heroFoot}><span>{photos.length} photographs</span><span aria-hidden="true">✧</span><span>One unforgettable night</span></div>
       </div>
       <div className={styles.heroPhotos}>
-        <div className={styles.heroMain}><img src={hero.view} srcSet={`${hero.thumb} 720w, ${hero.view} 2200w`} sizes="(max-width: 700px) 70vw, 40vw" width={hero.width} height={hero.height} alt="Dallas and Scott kissing beneath the golden lights of the carousel bar" fetchPriority="high" /></div>
-        <div className={styles.heroSide}><img src={neon.view} srcSet={`${neon.thumb} 720w, ${neon.view} 2200w`} sizes="(max-width: 700px) 40vw, 22vw" width={neon.width} height={neon.height} alt="Dallas and Scott beneath the glowing red California Hotel neon sign" /><span>Lucky in love</span></div>
+        <div className={styles.heroMain}><img src={hero.view} srcSet={`${hero.thumb} 720w, ${hero.view} 2200w`} sizes="(max-width: 700px) 70vw, 40vw" width={hero.width} height={hero.height} alt="Dallas and Scott beneath the glowing red California Hotel neon sign" fetchPriority="high" /></div>
+        <div className={styles.heroSide}><img src={cake.view} srcSet={`${cake.thumb} 720w, ${cake.view} 2200w`} sizes="(max-width: 700px) 40vw, 22vw" width={cake.width} height={cake.height} alt="White wedding cake with red icing, surrounded by playing cards and poker chips" /><span>Lucky in love</span></div>
         <span className={styles.photoNote}>Just married · Las Vegas</span>
       </div>
     </section>
