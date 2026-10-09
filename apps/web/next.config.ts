@@ -1,6 +1,36 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [{
+      source: "/:path*",
+      has: [{ type: "host", value: "www\\.vtmultifamily\\.com" }],
+      destination: "https://vtmultifamily.com/:path*",
+      permanent: true,
+    }];
+  },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        // Keep Vermont requests out of Monosyth's app/API routes. Already
+        // namespaced assets pass through without receiving a second prefix.
+        {
+          source: "/:path((?!vtmultifamily(?:/|$)).+)",
+          has: [{ type: "host", value: "vtmultifamily\\.com" }],
+          destination: "/vtmultifamily/:path",
+        },
+        {
+          source: "/",
+          has: [{ type: "host", value: "vtmultifamily\\.com" }],
+          destination: "/vtmultifamily/index.html",
+        },
+        {
+          source: "/vtmultifamily",
+          destination: "/vtmultifamily/index.html",
+        },
+      ],
+    };
+  },
   async headers() {
     return [{
       source: "/dallas-and-scott/:path*",
