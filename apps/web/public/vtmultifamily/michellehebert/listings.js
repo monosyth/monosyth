@@ -194,11 +194,11 @@ const properties = [
       }
     ],
     "photos": [
-      "/vtmultifamily/assets/listings/brooklyn-01.jpg",
-      "/vtmultifamily/assets/listings/brooklyn-02.jpg",
-      "/vtmultifamily/assets/listings/brooklyn-03.jpg",
-      "/vtmultifamily/assets/listings/brooklyn-04.jpg",
-      "/vtmultifamily/assets/listings/brooklyn-05.jpg"
+      "/vtmultifamily/michellehebert/assets/listings/brooklyn-01.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/brooklyn-02.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/brooklyn-03.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/brooklyn-04.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/brooklyn-05.jpg"
     ],
     "price": "$209,000",
     "units": 2,
@@ -412,20 +412,20 @@ const properties = [
       }
     ],
     "photos": [
-      "/vtmultifamily/assets/listings/foss-01.jpg",
-      "/vtmultifamily/assets/listings/foss-02.jpg",
-      "/vtmultifamily/assets/listings/foss-03.jpg",
-      "/vtmultifamily/assets/listings/foss-04.jpg",
-      "/vtmultifamily/assets/listings/foss-05.jpg",
-      "/vtmultifamily/assets/listings/foss-06.jpg",
-      "/vtmultifamily/assets/listings/foss-07.jpg",
-      "/vtmultifamily/assets/listings/foss-08.jpg",
-      "/vtmultifamily/assets/listings/foss-09.jpg",
-      "/vtmultifamily/assets/listings/foss-10.jpg",
-      "/vtmultifamily/assets/listings/foss-11.jpg",
-      "/vtmultifamily/assets/listings/foss-12.jpg",
-      "/vtmultifamily/assets/listings/foss-13.jpg",
-      "/vtmultifamily/assets/listings/foss-14.jpg"
+      "/vtmultifamily/michellehebert/assets/listings/foss-01.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/foss-02.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/foss-03.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/foss-04.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/foss-05.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/foss-06.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/foss-07.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/foss-08.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/foss-09.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/foss-10.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/foss-11.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/foss-12.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/foss-13.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/foss-14.jpg"
     ],
     "price": "$245,000",
     "units": 2,
@@ -639,9 +639,9 @@ const properties = [
       }
     ],
     "photos": [
-      "/vtmultifamily/assets/listings/graniteville850-01.jpg",
-      "/vtmultifamily/assets/listings/graniteville850-02.jpg",
-      "/vtmultifamily/assets/listings/graniteville850-03.jpg"
+      "/vtmultifamily/michellehebert/assets/listings/graniteville850-01.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/graniteville850-02.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/graniteville850-03.jpg"
     ],
     "price": "$375,000",
     "units": 5,
@@ -855,11 +855,11 @@ const properties = [
       }
     ],
     "photos": [
-      "/vtmultifamily/assets/listings/graniteville852-01.jpg",
-      "/vtmultifamily/assets/listings/graniteville852-02.jpg",
-      "/vtmultifamily/assets/listings/graniteville852-03.jpg",
-      "/vtmultifamily/assets/listings/graniteville852-04.jpg",
-      "/vtmultifamily/assets/listings/graniteville852-05.jpg"
+      "/vtmultifamily/michellehebert/assets/listings/graniteville852-01.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/graniteville852-02.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/graniteville852-03.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/graniteville852-04.jpg",
+      "/vtmultifamily/michellehebert/assets/listings/graniteville852-05.jpg"
     ],
     "price": "$325,000",
     "units": 4,

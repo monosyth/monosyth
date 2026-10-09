@@ -28,6 +28,10 @@ const nextConfig: NextConfig = {
           source: "/vtmultifamily",
           destination: "/vtmultifamily/index.html",
         },
+        {
+          source: "/vtmultifamily/michellehebert",
+          destination: "/vtmultifamily/michellehebert/index.html",
+        },
       ],
     };
   },
