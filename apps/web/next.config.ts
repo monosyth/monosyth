@@ -1,29 +1,38 @@
 import type { NextConfig } from "next";
 
+// App Hosting forwards the visitor's domain in X-Forwarded-Host; direct
+// local requests use Host. Match either so the same routes work in both places.
+function domainMatches(domain: string) {
+  return [
+    { type: "host" as const, value: domain },
+    { type: "header" as const, key: "x-forwarded-host", value: domain },
+  ];
+}
+
 const nextConfig: NextConfig = {
   async redirects() {
-    return [{
+    return domainMatches("www\\.vtmultifamily\\.com").map(match => ({
       source: "/:path*",
-      has: [{ type: "host", value: "www\\.vtmultifamily\\.com" }],
+      has: [match],
       destination: "https://vtmultifamily.com/:path*",
       permanent: true,
-    }];
+    }));
   },
   async rewrites() {
     return {
       beforeFiles: [
         // Keep Vermont requests out of Monosyth's app/API routes. Already
         // namespaced assets pass through without receiving a second prefix.
-        {
+        ...domainMatches("vtmultifamily\\.com").map(match => ({
           source: "/:path((?!vtmultifamily(?:/|$)).+)",
-          has: [{ type: "host", value: "vtmultifamily\\.com" }],
+          has: [match],
           destination: "/vtmultifamily/:path",
-        },
-        {
+        })),
+        ...domainMatches("vtmultifamily\\.com").map(match => ({
           source: "/",
-          has: [{ type: "host", value: "vtmultifamily\\.com" }],
+          has: [match],
           destination: "/vtmultifamily/index.html",
-        },
+        })),
         {
           source: "/vtmultifamily",
           destination: "/vtmultifamily/index.html",

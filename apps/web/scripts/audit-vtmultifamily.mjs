@@ -7,9 +7,9 @@ import vm from 'node:vm';
 // Exercise the running Next server rather than duplicating routing logic.
 const server = new URL(process.argv[2] ?? 'http://127.0.0.1:3017');
 let checked = 0;
-function get(path, host = 'vtmultifamily.com') {
+function get(path, host = 'vtmultifamily.com', forwardedHost) {
   return new Promise((done, reject) => {
-    const req = request(new URL(path, server), { headers: { Host: host } }, res => {
+    const req = request(new URL(path, server), { headers: { Host: host, ...(forwardedHost ? {'X-Forwarded-Host': forwardedHost} : {}) } }, res => {
       const chunks = [];
       res.on('data', chunk => chunks.push(chunk));
       res.on('end', () => done({status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks)}));
@@ -18,8 +18,8 @@ function get(path, host = 'vtmultifamily.com') {
     req.end();
   });
 }
-async function check(path, host, status = 200) {
-  const result = await get(path, host);
+async function check(path, host, status = 200, forwardedHost) {
+  const result = await get(path, host, forwardedHost);
   assert.equal(result.status, status, `${host}${path}: expected ${status}, got ${result.status}`);
   checked++;
   return result;
@@ -62,6 +62,20 @@ for (const path of [agentFolder, '/michellehebert']) {
 await check(agentFolder + '/', 'monosyth.com', 308);
 const agentRedirect = await check('/michellehebert?source=share', 'www.vtmultifamily.com', 308);
 assert.equal(new URL(agentRedirect.headers.location).href, 'https://vtmultifamily.com/michellehebert?source=share');
+// Firebase's proxy uses a Cloud Run Host and preserves the visitor's domain
+// in X-Forwarded-Host. Verify that production shape as well as direct requests.
+const proxyHost = 'monosyth-143451727719.us-east4.run.app';
+const proxySplash = await check('/', proxyHost, 200, 'vtmultifamily.com');
+assert.equal(proxySplash.body.toString(), html);
+const proxyAgent = await check('/michellehebert', proxyHost, 200, 'vtmultifamily.com');
+assert.equal(proxyAgent.body.toString(), agentHtml);
+for (const path of ['/shop', '/weather', '/app', '/api/shop/order', '/does-not-exist']) {
+  await check(path, proxyHost, 404, 'vtmultifamily.com');
+}
+const proxyRedirect = await check('/michellehebert?source=proxy', proxyHost, 308, 'www.vtmultifamily.com');
+assert.equal(new URL(proxyRedirect.headers.location).href, 'https://vtmultifamily.com/michellehebert?source=proxy');
+const proxyMain = await check('/', proxyHost, 200, 'monosyth.com');
+assert.ok(!proxyMain.body.toString().includes('<title>VT Multifamily'));
 const js = await check(agentFolder + '/listings.js', 'vtmultifamily.com');
 const properties = vm.runInNewContext(`${js.body.toString()}\nproperties`);
 assert.deepEqual(Array.from(properties, p => p.id), ['brooklyn', 'foss', 'graniteville850', 'graniteville852']);
