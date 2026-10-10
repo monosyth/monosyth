@@ -50,3 +50,15 @@ h1 em { font-weight: 400; }
   .site-footer > span { display: block; margin-bottom: 5px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+.featured-realtor { display:flex; align-items:center; justify-content:space-between; gap:40px; padding:62px 6%; border-bottom:1px solid #d8dcd2; }
+.featured-realtor .eyebrow { margin-bottom:17px; color:#647268; }
+.featured-realtor h2 { margin:0; font-family:Georgia,'Times New Roman',serif; font-weight:400; font-size:40px; line-height:1.15; letter-spacing:-.025em; }
+.realtor-brokerage { margin:13px 0 0; font-size:12px; color:#647268; }
+.realtor-brokerage span { margin:0 7px; }
+.realtor-intro { max-width:450px; margin:19px 0 0; font-size:15px; line-height:1.8; }
+.realtor-link { flex-shrink:0; display:inline-flex; align-items:center; justify-content:space-between; gap:38px; min-height:54px; padding:17px 23px; background:var(--ink); color:var(--paper); font-size:13px; font-weight:600; text-decoration:none; }
+.realtor-link:hover { background:#315340; }
+.realtor-link span { font-size:18px; font-weight:400; }
+@media (min-width:1700px) { .featured-realtor { padding-left:max(6%,calc((100vw - 1500px)/2)); padding-right:max(6%,calc((100vw - 1500px)/2)); } }
+@media (max-width:650px) { .featured-realtor { align-items:flex-start; flex-direction:column; gap:28px; padding:43px 7%; } .featured-realtor h2 { font-size:34px; } .realtor-intro { font-size:14px; } }

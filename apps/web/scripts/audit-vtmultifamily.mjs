@@ -28,7 +28,8 @@ async function check(path, host, status = 200, forwardedHost) {
 const home = await check('/', 'vtmultifamily.com');
 const html = home.body.toString();
 assert.match(html, /<title>VT Multifamily \| Rooted in Vermont<\/title>/);
-assert.doesNotMatch(html.replace(/<[^>]*>/g, ''), /Michelle|Hebert|Keller|KW Vermont/i);
+assert.match(html, /FEATURED REALTOR/);
+assert.match(html, /id="featured-realtor-title">Michelle Hebert/);
 assert.match(html, /href="\/vtmultifamily\/michellehebert#properties"/);
 assert.match(html, /canonical" href="https:\/\/vtmultifamily.com\/"/);
 assert.match(html, /noindex,nofollow/);
