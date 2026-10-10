@@ -21,6 +21,20 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return {
       beforeFiles: [
+        // VT pages now publish independently to Firebase Hosting. These
+        // external rewrites keep the Monosyth folder URLs stable.
+        {
+          source: "/vtmultifamily",
+          destination: "https://vtmultifamily-monosyth.firebaseapp.com/",
+        },
+        {
+          source: "/vtmultifamily/michellehebert",
+          destination: "https://vtmultifamily-monosyth.firebaseapp.com/michellehebert",
+        },
+        {
+          source: "/vtmultifamily/:path*",
+          destination: "https://vtmultifamily-monosyth.firebaseapp.com/vtmultifamily/:path*",
+        },
         // Keep Vermont requests out of Monosyth's app/API routes. Already
         // namespaced assets pass through without receiving a second prefix.
         ...domainMatches("vtmultifamily\\.com").map(match => ({

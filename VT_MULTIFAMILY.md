@@ -15,11 +15,17 @@ Later that day he requested a generic splash page and a separate Michelle site.
   Its featured-realtor section introduces Michelle Hebert of KW Vermont and
   links to the top of her page, added at Scott’s request on October 9.
   Explore properties also opens her page without a section jump.
-- Routing: apps/web/next.config.ts, host-specific beforeFiles rewrites.
-- Deploy through the existing main-branch Firebase App Hosting flow.
+- Routing: apps/web/next.config.ts. The Monosyth folder paths proxy the
+  dedicated Firebase Hosting site through external beforeFiles rewrites.
+- Routine VT page edits publish from
+  /Users/scottwaite/Desktop/Vermont Properties/marketing-2026/firebase-hosting/
+  with `firebase deploy --only hosting --project monosyth`; the Monosyth
+  App Hosting release is only needed when its routing configuration changes.
 - GoDaddy is the registrar. Both domains are already configured on this backend.
   Do not configure GoDaddy forwarding or masking for the primary domain.
-- The original ChatGPT preview is preserved; production edits belong here.
+- The original ChatGPT preview is preserved. The files under this repository's
+  public/vtmultifamily folder are retained as a historical fallback; edit the
+  independent Hosting source for routine public page changes.
 
 Michelle's page preserves the KW Vermont design, four multifamily properties,
 27 MLS listing photos and 147 public MLS fields. Property links use hashes,
@@ -67,3 +73,22 @@ the Monosyth folder URL.
 Scott removed the top WEBSITE CONCEPT / Listing snapshot banner from Michelle’s
 page. Dated listing-source notes and search-indexing settings were not changed
 by that presentation request.
+
+## Independent Hosting target — October 9, 2026
+
+Scott requested a separate publishing target so text, image, and link edits can
+publish without a Monosyth rebuild. The site `vtmultifamily-monosyth` was
+created inside Firebase project `monosyth` and populated from the latest
+public VT files. Its Hosting origin is
+https://vtmultifamily-monosyth.firebaseapp.com. The main and Michelle pages
+were verified there before this one-time routing change. The existing
+`vtmultifamily.com` and `www.vtmultifamily.com` custom domains still require
+migration from App Hosting to this site; see the Vermont website handoff for
+current domain state. Do not claim independent publishing for the custom
+domain until that migration and live URL checks succeed.
+
+The Monosyth folder now proxies to the Hosting origin. The route audit checks
+65 HTTP cases, including page equality, 37 linked assets against that origin,
+all four properties, 27 photos, and 147 MLS fields. The old public copy is
+kept for rollback and dated history, and the original ChatGPT preview is
+unchanged.

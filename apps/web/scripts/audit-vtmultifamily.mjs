@@ -1,11 +1,10 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import { request } from 'node:http';
-import { resolve } from 'node:path';
 import vm from 'node:vm';
 
 // Exercise the running Next server rather than duplicating routing logic.
 const server = new URL(process.argv[2] ?? 'http://127.0.0.1:3017');
+const hostingOrigin = new URL('https://vtmultifamily-monosyth.firebaseapp.com');
 let checked = 0;
 function get(path, host = 'vtmultifamily.com', forwardedHost) {
   return new Promise((done, reject) => {
@@ -90,8 +89,10 @@ const assets = new Set([
 for (const path of assets) {
   assert.ok(path.startsWith('/vtmultifamily/'), `Asset must stay within the public folder: ${path}`);
   const result = await check(path, 'vtmultifamily.com');
-  const local = await readFile(resolve('public', path.slice(1)));
-  assert.ok(result.body.equals(local), `${path}: served bytes differ from source`);
+  const upstream = await fetch(new URL(path, hostingOrigin));
+  assert.equal(upstream.status, 200, `${path}: Hosting origin returned ${upstream.status}`);
+  const source = Buffer.from(await upstream.arrayBuffer());
+  assert.ok(result.body.equals(source), `${path}: served bytes differ from Hosting origin`);
 }
 const cssAlias = await check('/styles.css', 'vtmultifamily.com');
 assert.match(cssAlias.headers['content-type'], /text\/css/);
