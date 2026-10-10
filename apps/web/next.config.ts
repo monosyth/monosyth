@@ -35,17 +35,22 @@ const nextConfig: NextConfig = {
           source: "/vtmultifamily/:path*",
           destination: "https://vtmultifamily-monosyth.firebaseapp.com/vtmultifamily/:path*",
         },
-        // Keep Vermont requests out of Monosyth's app/API routes. Already
-        // namespaced assets pass through without receiving a second prefix.
+        // Until the custom domain moves directly to Hosting, proxy its
+        // existing App Hosting entry point to the same independent site.
+        ...domainMatches("vtmultifamily\\.com").map(match => ({
+          source: "/michellehebert",
+          has: [match],
+          destination: "https://vtmultifamily-monosyth.firebaseapp.com/michellehebert",
+        })),
         ...domainMatches("vtmultifamily\\.com").map(match => ({
           source: "/:path((?!vtmultifamily(?:/|$)).+)",
           has: [match],
-          destination: "/vtmultifamily/:path",
+          destination: "https://vtmultifamily-monosyth.firebaseapp.com/vtmultifamily/:path",
         })),
         ...domainMatches("vtmultifamily\\.com").map(match => ({
           source: "/",
           has: [match],
-          destination: "/vtmultifamily/index.html",
+          destination: "https://vtmultifamily-monosyth.firebaseapp.com/",
         })),
         {
           source: "/vtmultifamily",

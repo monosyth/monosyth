@@ -5,8 +5,8 @@ October 9, 2026, while keeping vtmultifamily.com in the visitor's address bar.
 Later that day he requested a generic splash page and a separate Michelle site.
 
 - Account: monosyth@gmail.com; Firebase project/backend: monosyth, us-east4.
-- Generic splash: apps/web/public/vtmultifamily/index.html and styles.css.
-- Michelle's complete site: apps/web/public/vtmultifamily/michellehebert/.
+- Current editable splash and Michelle source: /Users/scottwaite/Desktop/Vermont Properties/marketing-2026/firebase-hosting/source/vtmultifamily/.
+- Historical fallback: apps/web/public/vtmultifamily/.
 - Share Michelle's site: https://monosyth.com/vtmultifamily/michellehebert.
 - Splash: https://monosyth.com/vtmultifamily, and https://vtmultifamily.com
   when its domain certificate finishes activating. www redirects to the apex.
@@ -15,8 +15,9 @@ Later that day he requested a generic splash page and a separate Michelle site.
   Its featured-realtor section introduces Michelle Hebert of KW Vermont and
   links to the top of her page, added at Scott’s request on October 9.
   Explore properties also opens her page without a section jump.
-- Routing: apps/web/next.config.ts. The Monosyth folder paths proxy the
-  dedicated Firebase Hosting site through external beforeFiles rewrites.
+- Routing: apps/web/next.config.ts. The Monosyth folder and custom-domain
+  paths proxy the dedicated Firebase Hosting site through external beforeFiles
+  rewrites until the custom domain points there directly.
 - Routine VT page edits publish from
   /Users/scottwaite/Desktop/Vermont Properties/marketing-2026/firebase-hosting/
   with `firebase deploy --only hosting --project monosyth`; the Monosyth
@@ -83,11 +84,15 @@ public VT files. Its Hosting origin is
 https://vtmultifamily-monosyth.firebaseapp.com. The main and Michelle pages
 were verified there before this one-time routing change. The existing
 `vtmultifamily.com` and `www.vtmultifamily.com` custom domains still require
-migration from App Hosting to this site; see the Vermont website handoff for
-current domain state. Do not claim independent publishing for the custom
-domain until that migration and live URL checks succeed.
+DNS migration from App Hosting to this site; see the Vermont website handoff
+for current domain state. The one-time proxy release allows independent page
+publishing through those addresses in the meantime; verify it live before
+relying on that route.
 
-The Monosyth folder now proxies to the Hosting origin. The route audit checks
+The Monosyth folder and the current App Hosting entry point for the custom
+domain proxy to the Hosting origin. Once this routing commit is live, routine
+page edits publish independently at both addresses even while the direct DNS
+migration waits for Firebase's certificate. The route audit checks
 65 HTTP cases, including page equality, 37 linked assets against that origin,
 all four properties, 27 photos, and 147 MLS fields. The old public copy is
 kept for rollback and dated history, and the original ChatGPT preview is
