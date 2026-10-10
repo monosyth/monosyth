@@ -46,7 +46,8 @@ saved DNS alone does not prove successful HTTPS activation.
 Scott supplied the updated logo at
 `/Users/scottwaite/monosyth/vtmultifamily/vtmultifamily.svg`. The splash header
 uses an exact copy at `apps/web/public/vtmultifamily/assets/vtmultifamily-logo.svg`.
-Preserve its native 1409.31 × 508 proportions, outlined type, forest/clay colors
-and light house details; this owner-supplied SVG supersedes earlier logo concepts
+Scott then supplied a transparent revision; that is now the website copy.
+Preserve its native 1409.3 × 508 proportions, outlined type, forest/clay colors
+and transparent cutouts; this owner-supplied SVG supersedes earlier logo concepts
 for website use. The responsive ivory header displays it at up to 360px wide on
 desktop and 288px on mobile. Michelle’s separate page retains its own branding.
