@@ -50,4 +50,8 @@ Scott then supplied a transparent revision; that is now the website copy.
 Preserve its native 1409.3 × 508 proportions, outlined type, forest/clay colors
 and transparent cutouts; this owner-supplied SVG supersedes earlier logo concepts
 for website use. The responsive ivory header displays it at up to 360px wide on
-desktop and 288px on mobile. Michelle’s separate page retains its own branding.
+desktop and 288px on mobile. Michelle’s page now keeps this same logo at the left of its header, with her
+name and a smaller KW logo grouped beside it. The KW image is sized to match
+her name’s text height (28px desktop; 20px mobile), with navigation below.
+
+Both page footers include © 2026 VT Multifamily at Scott’s request.
