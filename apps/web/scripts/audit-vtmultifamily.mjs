@@ -30,7 +30,7 @@ const html = home.body.toString();
 assert.match(html, /<title>VT Multifamily \| Rooted in Vermont<\/title>/);
 assert.match(html, /FEATURED REALTOR/);
 assert.match(html, /id="featured-realtor-title">Michelle Hebert/);
-assert.match(html, /href="\/vtmultifamily\/michellehebert#properties"/);
+assert.match(html, /href="https:\/\/vtmultifamily\.com\/michellehebert"/);
 assert.match(html, /canonical" href="https:\/\/vtmultifamily.com\/"/);
 assert.match(html, /noindex,nofollow/);
 assert.ok(!html.includes('<iframe'), 'The domain must serve the site directly');

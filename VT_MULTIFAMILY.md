@@ -13,8 +13,8 @@ Later that day he requested a generic splash page and a separate Michelle site.
 - The custom-domain path /michellehebert also serves the agent website.
 - The splash uses Vermont Multifamily branding and the Vermont lake design.
   Its featured-realtor section introduces Michelle Hebert of KW Vermont and
-  links directly to her listings, added at Scott’s request on October 9.
-  Explore properties also opens the separate agent site’s collection.
+  links to the top of her page, added at Scott’s request on October 9.
+  Explore properties also opens her page without a section jump.
 - Routing: apps/web/next.config.ts, host-specific beforeFiles rewrites.
 - Deploy through the existing main-branch Firebase App Hosting flow.
 - GoDaddy is the registrar. Both domains are already configured on this backend.
@@ -59,7 +59,10 @@ her name’s text height (28px desktop; 20px mobile), with navigation below.
 Both page footers include © 2026 VT Multifamily at Scott’s request.
 
 The main splash includes Michelle Hebert as the featured realtor below the
-landscape, with a direct link to `/vtmultifamily/michellehebert#properties`.
+landscape. Both its button and Explore properties link to
+`https://vtmultifamily.com/michellehebert`, without a hash. Both Vermont logo
+links return to `https://vtmultifamily.com/`, including when viewed through
+the Monosyth folder URL.
 
 Scott removed the top WEBSITE CONCEPT / Listing snapshot banner from Michelle’s
 page. Dated listing-source notes and search-indexing settings were not changed
