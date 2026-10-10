@@ -83,7 +83,7 @@ assert.equal(properties.reduce((n, p) => n + p.photos.length, 0), 27);
 assert.equal(properties.reduce((n, p) => n + p.sections.reduce((m, s) => m + s.fields.length, 0), 0), 147);
 
 const assets = new Set([
-  ...Array.from((html + agentHtml).matchAll(/(?:src|href)="(\/vtmultifamily\/[^"#]+\.(?:js|css|jpg|png))"/g), m => m[1]),
+  ...Array.from((html + agentHtml).matchAll(/(?:src|href)="(\/vtmultifamily\/[^"#]+\.(?:js|css|jpg|png|svg))"/g), m => m[1]),
   ...properties.flatMap(p => p.photos),
 ]);
 for (const path of assets) {

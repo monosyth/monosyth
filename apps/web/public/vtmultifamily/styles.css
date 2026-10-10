@@ -1,17 +1,17 @@
 * { box-sizing: border-box; }
-:root { color-scheme: light; --paper: #f5f3ed; --ink: #203b32; }
+:root { color-scheme: light; --paper: #f5f3ed; --ink: #1b3b2b; }
 html { background: var(--paper); }
 body { margin: 0; color: var(--ink); font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased; }
 a { color: inherit; }
 .skip { position: absolute; left: 20px; top: -70px; z-index: 5; padding: 12px 18px; background: var(--paper); }
 .skip:focus { top: 12px; }
 a:focus-visible { outline: 2px solid currentColor; outline-offset: 6px; }
-.site-header { min-height: 112px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 26px 6%; }
-.wordmark { text-decoration: none; font-family: Georgia, 'Times New Roman', serif; font-size: 34px; letter-spacing: -.035em; white-space: nowrap; }
-.wordmark span { font-weight: normal; }
+.site-header { min-height: 182px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 26px 6%; }
+.wordmark { display: block; flex: 0 1 360px; max-width: 100%; text-decoration: none; }
+.brand-logo { display: block; width: 100%; height: auto; }
 .header-note, .eyebrow, .season { font-size: 11px; font-weight: 500; letter-spacing: .23em; text-transform: uppercase; }
 .header-note { color: #53685d; }
-.landscape { min-height: 680px; min-height: max(680px, calc(100svh - 190px)); position: relative; isolation: isolate; display: flex; flex-direction: column; justify-content: center; overflow: hidden; color: #fcfaf4; }
+.landscape { min-height: 680px; min-height: max(680px, calc(100svh - 260px)); position: relative; isolation: isolate; display: flex; flex-direction: column; justify-content: center; overflow: hidden; color: #fcfaf4; }
 .landscape-photo, .landscape-shade { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; }
 .landscape-photo { object-fit: cover; object-position: center 56%; }
 .landscape-shade { background: linear-gradient(90deg, rgba(9, 35, 27, .78) 0%, rgba(9, 35, 27, .46) 47%, rgba(9, 35, 27, .06) 100%), linear-gradient(0deg, rgba(9, 35, 27, .66), transparent 32%); }
@@ -33,10 +33,10 @@ h1 em { font-weight: 400; }
 .site-footer a { text-underline-offset: 3px; }
 @media (min-width: 1700px) { .hero-content, .site-header, .site-footer { padding-left: max(6%, calc((100vw - 1500px)/2)); padding-right: max(6%, calc((100vw - 1500px)/2)); } }
 @media (max-width: 650px) {
-  .site-header { min-height: 88px; padding: 23px 7%; }
-  .wordmark { font-size: 29px; }
+  .site-header { min-height: 148px; padding: 22px 7%; }
+  .wordmark { flex-basis: 288px; }
   .header-note { display: none; }
-  .landscape { min-height: max(650px, calc(100svh - 88px)); }
+  .landscape { min-height: max(650px, calc(100svh - 148px)); }
   .landscape-photo { object-position: 57% center; }
   .landscape-shade { background: linear-gradient(90deg, rgba(9,35,27,.76), rgba(9,35,27,.32)), linear-gradient(0deg, rgba(9,35,27,.7), transparent 40%); }
   .hero-content { padding: 65px 7% 158px; }
