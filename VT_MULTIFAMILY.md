@@ -60,3 +60,7 @@ Both page footers include © 2026 VT Multifamily at Scott’s request.
 
 The main splash includes Michelle Hebert as the featured realtor below the
 landscape, with a direct link to `/vtmultifamily/michellehebert#properties`.
+
+Scott removed the top WEBSITE CONCEPT / Listing snapshot banner from Michelle’s
+page. Dated listing-source notes and search-indexing settings were not changed
+by that presentation request.
