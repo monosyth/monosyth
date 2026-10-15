@@ -244,6 +244,24 @@ export default function Home() {
 
           <article className={styles.upcomingProduct}>
             <div>
+              <p className={styles.upcomingLabel}>From the studio / Home goods</p>
+              <h3>Fog, Salt &amp; Pine</h3>
+              <p>Thoughtfully crafted home goods inspired by the forests and
+                coastlines of the Pacific Northwest.</p>
+            </div>
+            <a
+              className={styles.productLink}
+              href="https://fogsaltpine.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Visit Fog, Salt & Pine (opens in a new tab)"
+            >
+              <span>Visit Fog, Salt &amp; Pine</span><span aria-hidden="true">↗</span>
+            </a>
+          </article>
+
+          <article className={styles.upcomingProduct}>
+            <div>
               <p className={styles.upcomingLabel}>From the sewing studio / Quilt patterns</p>
               <h3>Monosyth Patterns</h3>
               <p>Original quilts with a playful spirit. Explore the Trellis collection,
