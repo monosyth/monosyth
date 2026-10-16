@@ -5,11 +5,12 @@ import type { ReactNode } from "react";
 import { getTimes } from "suncalc";
 
 import { WeatherCameraGrid } from "@/components/weather/camera-grid";
-import { WeatherHomeLink } from "@/components/weather/home-link";
+import { WeatherObservatory } from "@/components/weather/observatory";
+import { buildObservatory } from "@/lib/weather/observatory";
+import { getHourlyForecast } from "@/lib/weather/nws";
 import { WeatherPageTabs } from "@/components/weather/page-tabs";
 import { RadarEmbed } from "@/components/weather/radar-embed";
 import { StationCameraArchive } from "@/components/weather/station-camera-archive";
-import { StationCameraPreview } from "@/components/weather/station-camera-preview";
 import { TrafficMapEmbed } from "@/components/weather/traffic-map-embed";
 import styles from "@/app/weather/weather.module.css";
 import {
@@ -207,12 +208,6 @@ const documentTabs = [
 
 const trafficMapUrl = "https://web.seattle.gov/travelers/";
 const SUMMARY_ARCHIVE_CACHE_TTL_MS = 5 * 60 * 1000;
-const skylineWebcamHeaderCard = {
-  href: "/weather?tab=cameras",
-  imageUrl: "/api/weather/station-camera?variant=thumbnail",
-  title: "Station Camera",
-  note: "Latest uploaded frame from the live weather cam",
-};
 const summaryArchiveCache = new Map<
   string,
   {
@@ -265,13 +260,15 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   }
 
   const { data } = result;
-  const mastheadRows = buildMastheadRows(data, activeView);
   const coordinates = resolveDisplayCoordinates(data);
   const almanac = buildWeatherAlmanac({
     date: new Date(data.fetchedAt),
     latitude: coordinates.latitude,
     longitude: coordinates.longitude,
   });
+  const observatoryForecastPromise = isDashboardTab && activeView === "current"
+    ? withDeadline(getHourlyForecast(coordinates.latitude, coordinates.longitude).catch(() => []), 6500, [] as WeatherForecastPeriod[])
+    : Promise.resolve([] as WeatherForecastPeriod[]);
   const mapUrl = buildMapUrl(coordinates.latitude, coordinates.longitude);
   const radarUrl = buildRadarEmbedUrl(coordinates.latitude, coordinates.longitude);
   const viewMeta = getViewMeta(activeView);
@@ -351,11 +348,13 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
     summaryHistoryRollups,
     summaryArchive,
     dayDetailObservations,
+    observatoryForecast,
   ] = await Promise.all([
     comparisonPanelsPromise,
     summaryHistoryRollupsPromise,
     summaryArchivePromise,
     dayDetailPromise,
+    observatoryForecastPromise,
   ]);
 
   // Build the active week/month view. Current slot merges live observations
@@ -418,85 +417,23 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
     ? comparisonPanels.filter((panel) => panel.title !== featuredComparisonPanel.title)
     : comparisonPanels;
   const visibleNotice = shouldDisplayWeatherNotice(result.notice) ? result.notice : undefined;
-  const currentTemperatureLabel =
-    createLatestValueRow(data.observations, "Temperature", ["tempf"], 1, "F")?.value ?? null;
+  const observatory = isDashboardTab && isCurrentView
+    ? buildObservatory({ ...data, forecast: observatoryForecast }, coordinates.latitude, coordinates.longitude)
+    : null;
 
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <div className={styles.headerInner}>
-          <div className={styles.heroGrid}>
-            <div className={styles.heroMain}>
-              <p className={styles.heroEyebrow}>
-                Monosyth Personal Weather
-              </p>
-              <h1 className={styles.heroTitle}>
-                <WeatherHomeLink className={styles.heroTitleLink}>
-                  {data.station.name}
-                </WeatherHomeLink>
-              </h1>
-              <p className={styles.heroMeta}>
-                {buildHeaderMeta(data, coordinates)}
-                {" "}
-                <a
-                  className={styles.mapLink}
-                  href={mapUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Show on map
-                </a>
-              </p>
-
-              <div className={styles.heroSummaryRow}>
-                <div className={styles.heroPageCopy}>
-                  <div className={styles.heroHeadingRow}>
-                    <h2 className={styles.heroSectionTitle}>
-                      {pageMeta.heading}
-                    </h2>
-                    {currentTemperatureLabel ? (
-                      <p className={styles.heroCurrentTemp}>{currentTemperatureLabel}</p>
-                    ) : null}
-                  </div>
-                  <p className={styles.heroTimestamp}>
-                    {pageMeta.timestampLabel}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className={styles.heroSidebar}>
-              <div className={styles.heroSidebarGrid}>
-                <a
-                  href={skylineWebcamHeaderCard.href}
-                  className={styles.webcamCard}
-                >
-                  <div className={styles.webcamFrame}>
-                    <StationCameraPreview src={skylineWebcamHeaderCard.imageUrl} />
-                  </div>
-                  <div className={styles.webcamCardBody}>
-                    <p className={styles.webcamCardEyebrow}>
-                      {skylineWebcamHeaderCard.title}
-                    </p>
-                    <p className={styles.webcamCardNote}>{skylineWebcamHeaderCard.note}</p>
-                  </div>
-                </a>
-
-                <table className={styles.mastheadTable}>
-                  <tbody>
-                    {mastheadRows.map((row) => (
-                      <tr key={row.label} className={styles.mastheadRow}>
-                        <th className={styles.mastheadHeaderCell}>
-                          {row.label}:
-                        </th>
-                        <td className={styles.mastheadValueCell}>{row.value}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+        <div className={styles.observatoryMasthead}>
+          <Link href="/" className={styles.observatoryBrand} aria-label="Monosyth home">
+            <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true"><circle cx="16" cy="16" r="11"/><ellipse cx="16" cy="16" rx="5" ry="11"/><path d="M5 16h22M8 9h16M8 23h16"/></svg>
+            <span>MONOSYTH <b>WEATHER OBSERVATORY</b></span>
+          </Link>
+          <a className={styles.observatoryMapLink} href={mapUrl} target="_blank" rel="noreferrer">{coordinates.latitude.toFixed(4)}° N &nbsp; {Math.abs(coordinates.longitude).toFixed(4)}° W ↗</a>
+        </div>
+        <div className={styles.observatoryTitleRow}>
+          <div><p className={styles.observatoryEyebrow}>A little closer to the outside</p><h1>Shoreline<span>, Washington</span></h1></div>
+          <p className={styles.observatoryStationName}>{data.station.name}<span>{pageMeta.timestampLabel}</span></p>
         </div>
         <WeatherPageTabs
           summaryTabs={summaryTabs}
@@ -528,6 +465,11 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
             monthStory={monthStory}
           />
         ) : isDashboardTab ? (
+          <>
+            {observatory ? <WeatherObservatory data={observatory} /> : null}
+            <details className={styles.instrumentDetails} open={!isCurrentView}>
+              <summary><span>{isCurrentView ? "All station readings & almanac" : viewMeta.periodTitle}</span><span>Detailed data +</span></summary>
+              <div className={styles.instrumentDetailsBody}>
           <SummariesTabContent
             almanac={almanac}
             currentRows={currentRows}
@@ -540,6 +482,9 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
             summaryCards={summaryCards}
             viewMeta={viewMeta}
           />
+              </div>
+            </details>
+          </>
         ) : isRadarTab ? (
           <RadarTabContent
             almanac={almanac}
@@ -1928,7 +1873,7 @@ function TablePanel({
   return (
     <section
       id={id}
-      className={`overflow-hidden border border-stone-200 bg-white ${className}`.trim()}
+      className={`${styles.dataPanel} overflow-hidden border border-stone-200 bg-white ${className}`.trim()}
     >
       <div className={`border-b border-stone-200 ${compact ? "px-4 py-3" : "px-5 py-4"}`}>
         <h2 className={`${compact ? "text-[1.65rem]" : "text-[2rem]"} font-light tracking-[-0.03em] text-stone-700`}>

@@ -1,0 +1,116 @@
+.observatory { --ink:#1e3933; --muted:#6a7b71; --line:#dce3db; color:var(--ink); }
+.sectionLine {display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 18px;font-size:12px;}
+.sectionLine>p {display:flex;align-items:center;gap:8px;}
+.reportTime {color:var(--muted);margin-left:8px;font-variant-numeric:tabular-nums;}
+.liveDot,.staleDot {width:6px;height:6px;border-radius:50%;background:#59886a;box-shadow:0 0 0 4px #59886a12;display:inline-block;}
+.staleDot {background:#bd8d43;box-shadow:0 0 0 4px #bd8d4312;}
+.controls {display:flex;gap:8px;}
+.controls button {border:1px solid var(--line);padding:7px 10px;border-radius:6px;color:#52685b;font-size:11px;cursor:pointer;transition:background .2s;background:transparent;}
+.controls button:hover {background:#e6ece3;}
+.controls button:disabled {opacity:.6;cursor:default;}
+.controls button:focus-visible,.sceneInfo summary:focus-visible {outline:2px solid #6f966e;outline-offset:3px;}
+.heroGrid {display:grid;grid-template-columns:minmax(0,1.7fr) minmax(290px,1fr);gap:20px;}
+.skyCard {position:relative;min-height:454px;border-radius:14px;overflow:hidden;background:#243f48;color:#f4f7ee;isolation:isolate;}
+.atmosphere {position:absolute;inset:0;background:linear-gradient(#315969,#9daea8 65%,#1a3a36);z-index:-2;}
+.atmosphere[data-night="true"] {background:linear-gradient(#090f25,#303e51 65%,#102b29);}
+.atmosphere canvas {display:block;width:100%;height:100%;}
+.skyShade {position:absolute;inset:0;background:linear-gradient(90deg,#0a252a70,transparent 80%),linear-gradient(0deg,#0a232bb3,transparent 35%);z-index:-1;}
+.skyCopy {padding:34px 38px;}
+.eyebrow {font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:500;}
+.skyCopy>.eyebrow {color:#e2ecdfbf;}
+.temperature {font-size:clamp(72px,7.2vw,106px);line-height:1.15;font-weight:300;letter-spacing:-.065em;margin:21px 0 2px;font-variant-numeric:tabular-nums;}
+.temperature>span {font-size:30px;vertical-align:top;display:inline-block;margin-top:18px;margin-left:8px;letter-spacing:-.05em;color:#dce9dc;}
+.skyCopy h2 {font-size:24px;line-height:1.25;letter-spacing:-.025em;font-weight:400;max-width:90%;}
+.conditionSource {font-size:10px;margin-top:7px;color:#e4eee0c4;}
+.range {display:flex;gap:25px;font-size:11px;margin-top:28px;color:#e4eddfbd;}
+.range b {font-size:14px;font-weight:400;margin-left:6px;color:#f1f4e7;}
+.skyBottom {position:absolute;bottom:22px;left:38px;right:28px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:10px;color:#dae8df;}
+.skyBottom>span {display:flex;align-items:center;gap:8px;}
+.smallSun {width:9px;height:9px;border:1px solid #d5dfbd;border-radius:50%;display:inline-block;}
+.sceneInfo summary {cursor:pointer;list-style:none;color:#d2e3dc;}
+.sceneInfo p {position:absolute;bottom:30px;right:0;max-width:320px;width:min(320px,75vw);padding:16px;border:1px solid #6b847d;background:#16312ff5;border-radius:8px;font-size:12px;line-height:1.6;color:#e2e9db;box-shadow:0 8px 35px #0c1d2066;z-index:2;}
+.sideStack {display:grid;grid-template-rows:1fr 175px;gap:16px;min-width:0;}
+.cameraCard {border-radius:12px;border:1px solid var(--line);overflow:hidden;background:#fafdF8;}
+.cardHeading {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 21px;}
+.cardHeading h2 {font-size:14px;font-weight:500;letter-spacing:-.02em;display:flex;align-items:center;gap:8px;}
+.cardHeading h2 svg {width:17px;height:17px;color:#748879;}
+.cardHeading a,.cardHeading>span {font-size:10px;color:#607865;white-space:nowrap;}
+.cardHeading a:hover {text-decoration:underline;text-underline-offset:3px;}
+.cardHeading>svg {height:21px;width:21px;color:#aa8c4e;}
+.cameraView {position:relative;display:block;height:157px;background:#e8ede6;overflow:hidden;}
+.cameraView:focus-visible {outline:3px solid #a7c490;outline-offset:-3px;}
+.cameraCaption {display:flex;justify-content:space-between;gap:8px;font-size:9px;color:#708072;padding:12px 19px;}
+.windCard {border-radius:12px;background:#233f37;color:#e9f0df;display:flex;align-items:center;justify-content:space-between;padding:16px 24px;overflow:hidden;}
+.windCard .eyebrow {color:#b4c8b9;font-size:9px;}
+.windValue {font-size:38px;font-weight:300;letter-spacing:-.045em;margin-top:9px;line-height:1.2;}
+.windValue>span {font-size:13px;letter-spacing:0;margin-left:8px;color:#b6c7ba;}
+.windDetail {font-size:11px;margin-top:8px;color:#dae7d7;}
+.windDetail>span {display:block;font-size:10px;color:#a8bfb0;margin-top:5px;}
+.compass {width:130px;height:130px;position:relative;flex-shrink:0;}
+.compass svg {width:100%;height:100%;overflow:visible;}
+.compass text {font-size:9px;fill:#b9cec0;text-anchor:middle;font-family:var(--font-ibm-plex-mono),monospace;}
+.compassCircle,.compassInner {fill:none;stroke:#698577;stroke-width:.7;}
+.compassInner {stroke:#637d6f;stroke-dasharray:1 5;}
+.compassTick {stroke:#96ac96;stroke-width:.75;}
+.needle {transform-origin:80px 80px;transform:rotate(var(--wind-angle));transition:transform 1.5s ease;}
+.compass>span {position:absolute;bottom:22%;left:0;width:100%;text-align:center;font-size:8px;color:#aac4af;}
+.metricGrid {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:20px 0;}
+.metric {padding:19px 22px;background:#fafcf8;border:1px solid var(--line);border-radius:10px;}
+.metricTop {display:flex;align-items:center;justify-content:space-between;font-size:11px;color:#64796b;}
+.metricTop svg {height:20px;width:20px;color:#79917c;}
+.metricValue {font-size:32px;letter-spacing:-.055em;font-weight:400;margin:12px 0 6px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.metricValue>span {font-size:11px;letter-spacing:0;color:#6f8174;margin-left:7px;}
+.metricDetail {font-size:10px;color:#6a7a70;line-height:1.5;}
+.exploreGrid {display:grid;grid-template-columns:minmax(0,1.7fr) minmax(290px,1fr);gap:20px;}
+.traceCard,.daylightCard,.forecastCard {border-radius:12px;border:1px solid var(--line);background:#fafcf8;overflow:hidden;min-width:0;}
+.traceReadout {padding:0 23px;display:flex;align-items:center;gap:18px;}
+.traceReadout>strong {font-size:36px;font-weight:300;letter-spacing:-.045em;}
+.traceReadout small {font-size:16px;color:#718574;margin-left:4px;}
+.traceReadout>span {font-size:11px;color:#425e4d;}
+.traceReadout>span>span {display:block;font-size:9px;color:#869386;margin-top:4px;}
+.trace {display:block;width:calc(100% - 40px);margin:10px 20px 5px;touch-action:pan-y;}
+.trace text {font-size:10px;fill:#869182;font-family:var(--font-ibm-plex-mono),monospace;}
+.chartGrid {fill:none;stroke:#dde6db;stroke-width:.75;stroke-dasharray:3 5;}
+.scrubber {display:flex;gap:15px;align-items:center;padding:5px 24px 16px;font-size:9px;color:#7a897a;}
+.scrubber span {white-space:nowrap;}
+.scrubber input {width:100%;height:3px;accent-color:#658a68;cursor:ew-resize;}
+.daylightTitle {padding:0 23px;}
+.daylightTitle strong {font-size:31px;font-weight:300;letter-spacing:-.04em;}
+.daylightTitle small {font-size:17px;margin-left:2px;color:#728269;}
+.daylightTitle p {font-size:10px;color:#7e886f;margin-top:4px;}
+.sunArc {display:block;width:calc(100% - 40px);height:112px;margin:0 20px;}
+.sunTimes {display:flex;justify-content:space-between;font-size:9px;color:#7c8b76;padding:0 24px;}
+.sunTimes>span:last-child {text-align:right;}
+.sunTimes strong {display:block;font-size:12px;font-weight:400;color:#516747;margin-top:3px;}
+.moonNote {margin:14px 24px 0;padding:12px 0 15px;border-top:1px solid var(--line);font-size:10px;color:#73836e;}
+.moonNote strong {float:right;font-weight:400;color:#425e42;}
+.forecastCard {margin-top:20px;}
+.forecastStrip {display:grid;grid-auto-flow:column;grid-auto-columns:minmax(90px,1fr);overflow-x:auto;scrollbar-width:thin;padding:0 10px 18px;}
+.forecastHour {text-align:center;padding:5px 8px;border-right:1px solid #e4e9df;font-size:10px;}
+.forecastHour:last-child {border-right:0;}
+.forecastHour>span:first-child {color:#7a8979;}
+.forecastGlyph {display:block;width:24px;height:24px;margin:17px auto 10px;color:#829575;}
+.forecastGlyph svg {width:100%;height:100%;}
+.forecastHour strong {font-size:18px;font-weight:400;letter-spacing:-.04em;}
+.forecastHour p {color:#637660;font-size:9px;line-height:1.5;min-height:28px;margin:8px 0 4px;}
+.forecastHour small {font-size:8px;color:#869383;}
+.sourceNote {display:flex;gap:22px;flex-wrap:wrap;margin:18px 3px 28px;font-size:9px;color:#879382;}
+.empty {font-size:12px;line-height:1.7;color:#788576;padding:25px;}
+@media(min-width:1500px){.skyCard{min-height:485px}.cameraView{height:188px}.skyCopy{padding:40px 42px}.temperature{font-size:112px}}
+@media(max-width:1000px){.heroGrid,.exploreGrid{grid-template-columns:minmax(0,1.45fr) minmax(270px,1fr);gap:14px}.skyCopy{padding:28px}.skyBottom{left:28px;right:22px}.metric{padding:17px}.metricValue{font-size:27px}.windCard{padding:16px}.compass{width:115px;height:115px}.metricGrid{gap:12px}.temperature{font-size:82px}.sideStack{gap:14px}.cardHeading{padding:17px}.sourceNote{gap:12px}}
+@media(max-width:740px){.heroGrid,.exploreGrid{grid-template-columns:1fr}.skyCard{min-height:408px}.temperature{font-size:88px}.sideStack{grid-template-columns:1.2fr 1fr;grid-template-rows:auto;gap:12px}.cameraView{height:140px}.cameraCaption{flex-direction:column;gap:5px;padding:10px 15px}.windCard{flex-direction:column;align-items:flex-start;justify-content:space-between;padding:20px}.compass{width:115px;height:115px;position:absolute;right:12px;bottom:15px;opacity:.7}.windCard{position:relative}.windValue{font-size:36px}.windDetail{margin-bottom:7px}.windDetail>span{max-width:85px}.metricGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0}.metricValue{font-size:30px}.exploreGrid{gap:14px}.sunArc{height:130px}.sectionLine{align-items:flex-start;font-size:10px;gap:8px}.sectionLine>p{flex-wrap:wrap;max-width:170px}.reportTime{display:block;width:100%;margin-left:14px}.controls{gap:5px}.controls button{padding:6px 8px;font-size:10px}.sourceNote{line-height:1.6}.forecastCard{margin-top:14px}.forecastStrip{grid-auto-columns:95px}.skyBottom{font-size:9px;left:28px;right:22px}.cardHeading h2{font-size:12px}.cardHeading a{font-size:9px}.cameraCard .cardHeading{padding:15px 12px;gap:5px}.cameraCard .cardHeading h2 svg{display:none}}
+@media(max-width:400px){.sideStack{grid-template-columns:1fr}.windCard{min-height:170px}.compass{width:130px;height:130px;right:24px}.cameraView{height:180px}.cameraCaption{flex-direction:row}.skyCopy{padding:26px}.skyCopy h2{font-size:22px}.sectionLine{flex-wrap:wrap}.controls{margin-left:auto}.metric{padding:15px}.metricValue{font-size:27px}}
+@media(prefers-reduced-motion:reduce){.needle{transition:none}.controls button{transition:none}}
+
+/* Keep small instrument labels legible on handheld screens. */
+.windFlow { fill:none; stroke:#a8d0a1; stroke-width:.7; stroke-dasharray:5 14; opacity:.32; animation:windFlow var(--flow-duration) linear infinite; }
+@keyframes windFlow { to { stroke-dashoffset:-57; } }
+.observatory[data-paused="true"] .windFlow { animation-play-state:paused; }
+.traceHost { width:calc(100% - 40px); margin:10px 20px 5px; }
+.trace { width:100%; margin:0; }
+.metricDetail,.metricTop,.reportTime,.controls button,.cardHeading a,.cardHeading>span,.sourceNote,.scrubber,.sunTimes,.moonNote,.daylightTitle p,.forecastHour>span:first-child,.forecastHour p,.forecastHour small { color:#61715e; }
+.trace text { fill:#63755d; }
+.sourceNote { font-size:10px; }
+.forecastHour p,.forecastHour small { font-size:10px; }
+@media(max-width:740px){.cardHeading h2{font-size:14px}.cardHeading a,.cardHeading>span{font-size:10px}.metricTop{font-size:12px}.metricDetail{font-size:11px}.sunTimes,.moonNote,.daylightTitle p{font-size:11px}.traceReadout>span>span{font-size:10px}.trace text{font-size:10px}.scrubber{font-size:10px}.cameraCaption{font-size:10px}.windDetail{font-size:12px}.windDetail>span{font-size:11px}.skyBottom{font-size:10px}.forecastHour>span:first-child{font-size:11px}}
+@media(prefers-reduced-motion:reduce){.windFlow{animation:none}}

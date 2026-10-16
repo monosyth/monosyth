@@ -92,3 +92,42 @@ lazy-loads immutable WebP thumbnails. Full JPEG frames are fetched only when a
 photo is opened. The capture must continue to run on a machine that can reach
 the camera's LAN RTSP address; Firebase App Hosting cannot reach that private
 stream directly.
+
+
+## Weather observatory
+
+The current weather dashboard combines a procedural Three.js sky, station
+instruments, an interactive 24-hour temperature trace, a calculated daylight
+arc, and the existing NWS hourly forecast. Sky terrain is illustrative; cloud
+coverage is estimated from NWS descriptions. Rain streaks mean the station
+reported rainfall in the past hour, not a real-time rain detector. Missing
+measurements remain unavailable, and readings older than 20 minutes are
+marked as delayed. Historical pages, graphs, radar, and the camera archive
+remain available through the existing navigation.
+
+Motion can be paused and respects the system reduced-motion preference. The
+sky renderer stops drawing when off-screen, hidden, or paused; a CSS sky
+remains available when WebGL is unavailable. Visible dashboards refresh every
+five minutes. Camera previews retry automatically and show the actual capture
+time instead of presenting a saved image as live video.
+
+Run `npm run audit:weather` for data provenance, freshness, time-window,
+missing-reading, forecast, compass, and daylight checks.
+
+### Repairing the local camera schedule
+
+Run `npm run camera:install` from this app after moving the repository. It
+registers the existing five-minute LaunchAgent using the current folder and
+backs up any previous configuration. `npm run camera:capture` performs one
+daylight capture. Capture attempts time out after 45 seconds; camera
+credentials are redacted from error messages. Node 22 is required.
+
+The Mac must be awake, signed in, and able to reach the Tapo camera on the home
+network. If the camera receives a new address, update `STATION_CAMERA_HOST`
+(or the host in `STATION_CAMERA_RTSP_URL`) in the local environment. The
+camera's configured Camera Account must allow RTSP. The application does not
+open the camera's private video port to the internet.
+
+If local Storage uploads report an invalid user project, set
+`GOOGLE_CLOUD_QUOTA_PROJECT=monosyth` in `.env.local`. This scopes the quota
+override to this app without changing shared Google Cloud credentials.

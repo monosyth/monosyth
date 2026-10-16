@@ -1941,3 +1941,69 @@
     animation: none;
   }
 }
+
+
+/* Weather observatory — shared shell for live readings and the archive. */
+.page { background:#f2f5f0; color:#203a32; }
+.header { background:#f2f5f0; color:#203a32; }
+.observatoryMasthead { max-width:1360px; margin:auto; padding:24px 32px 18px; display:flex; align-items:center; justify-content:space-between; gap:20px; border-bottom:1px solid #dce4da; }
+.observatoryBrand { display:flex; align-items:center; gap:11px; font-size:14px; letter-spacing:.1em; font-weight:500; }
+.observatoryBrand svg { width:32px; height:32px; color:#4f7355; }
+.observatoryBrand b { display:block; font-size:8px; font-weight:400; letter-spacing:.2em; color:#7b8e78; margin-top:3px; }
+.observatoryMapLink { font:10px var(--font-ibm-plex-mono),monospace; color:#7b8c77; }
+.observatoryMapLink:hover { color:#2a523b; }
+.observatoryTitleRow { max-width:1360px; margin:auto; padding:31px 32px 29px; display:flex; justify-content:space-between; align-items:flex-end; gap:20px; }
+.observatoryEyebrow { font-size:10px; letter-spacing:.05em; color:#81917b; margin-bottom:8px; }
+.observatoryTitleRow h1 { font-size:36px; line-height:1.2; letter-spacing:-.055em; font-weight:400; }
+.observatoryTitleRow h1>span { font-weight:300; color:#81917c; }
+.observatoryStationName { font-size:10px; color:#6a7c64; text-align:right; }
+.observatoryStationName>span { display:block; margin-top:6px; color:#8a9784; font-size:9px; }
+.tabShell { background:transparent; border-top:0; border-bottom:1px solid #dce4da; }
+.tabInner { max-width:1360px; padding:0 32px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px 24px; }
+.secondaryTabs { order:0; padding:0; gap:25px; }
+.primaryTabs { order:1; border:0; padding:0; gap:4px; align-items:center; }
+.secondaryTab { font-size:11px; text-transform:none; letter-spacing:0; font-weight:400; padding:16px 0 14px; min-height:48px; border-bottom-width:2px; }
+.secondaryTabActive { color:#24432f; border-bottom-color:#64854c; }
+.secondaryTabInactive { color:#7e8b78; }
+.secondaryTabInactive:hover { color:#294832; }
+.primaryTab { min-height:28px; padding:7px 12px; font-size:10px; font-weight:400; border:0; border-radius:5px; text-align:center; }
+.primaryTabActive { background:#e0e8da; color:#3c5936; }
+.primaryTabInactive { color:#84907b; }
+.primaryTabInactive:hover { color:#294832; background:#e7ece2; }
+.tabStatusRow { order:2; width:100%; color:#3b5d3c; }
+.tabStatusBadge { color:#405b3b; }
+.contentShell { max-width:1360px; padding:24px 32px 60px; }
+.instrumentDetails { border-top:1px solid #d4dfcf; }
+.instrumentDetails>summary { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:22px 0; cursor:pointer; list-style:none; color:#465f40; font-size:13px; }
+.instrumentDetails>summary::-webkit-details-marker { display:none; }
+.instrumentDetails>summary>span:last-child { font-size:10px; color:#809177; }
+.instrumentDetails>summary:focus-visible { outline:2px solid #728f5d; outline-offset:3px; }
+.instrumentDetailsBody { padding-bottom:24px; }
+.dataPanel { border-radius:12px; border-color:#dbe3d6; background:#fafcf8; }
+.cameraPreview { height:100%; width:100%; position:relative; }
+.cameraTimestamp { position:absolute; bottom:0; left:0; right:0; background:linear-gradient(transparent,#102f32cc); padding:22px 12px 9px; color:#f6f8ee; font-size:9px; }
+.cameraDisconnected { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:14px; color:#7e8f7d; text-align:center; background:repeating-linear-gradient(0deg,transparent,transparent 29px,#b7c7b214 30px),repeating-linear-gradient(90deg,transparent,transparent 29px,#b7c7b214 30px),#e9eee5; }
+.cameraDisconnected svg { width:35px; height:35px; margin-bottom:6px; color:#93a68a; }
+.cameraDisconnected strong { font-size:11px; font-weight:500; color:#61775b; }
+.cameraDisconnected span { font-size:9px; margin-top:5px; }
+.cameraDisconnected small { font-size:8px; margin-top:8px; color:#8f9f87; }
+@media(max-width:900px){.tabInner{gap:5px}.secondaryTabs{gap:20px}.primaryTab{padding:6px 9px}.observatoryTitleRow h1{font-size:32px}}
+@media(max-width:740px){.observatoryMasthead{padding:20px 18px 15px}.observatoryMapLink{font-size:8px;max-width:105px;line-height:1.7;text-align:right}.observatoryBrand{font-size:12px}.observatoryBrand b{font-size:7px}.observatoryTitleRow{padding:25px 18px 22px;display:block}.observatoryTitleRow h1{font-size:31px}.observatoryStationName{display:none}.tabInner{padding:0 18px;display:flex;gap:4px;flex-direction:column;align-items:stretch}.secondaryTabs{gap:23px;overflow-x:auto}.secondaryTab{font-size:11px;padding:12px 0;min-height:42px}.primaryTabs{padding:7px 0 10px;gap:7px}.primaryTab{padding:6px 14px}.contentShell{padding:19px 18px 45px}.instrumentDetails>summary{font-size:12px}.instrumentDetails>summary>span:last-child{font-size:9px}}
+
+.primaryTabs,.secondaryTabs { min-width:0; max-width:100%; }
+.observatoryEyebrow,.observatoryMapLink,.observatoryStationName,.observatoryStationName>span,.secondaryTabInactive,.primaryTabInactive { color:#61765d; }
+.cameraDisconnected strong { font-size:12px; }
+.cameraDisconnected span { color:#61715c; font-size:10px; }
+.cameraDisconnected small { color:#6e7e66; font-size:9px; }
+@media(max-width:740px){.primaryTabs,.secondaryTabs{width:100%}.cameraDisconnected small{font-size:10px}}
+
+.loadingSky { min-height:390px; border-radius:14px; background:linear-gradient(145deg,#244b53,#66837c); display:flex; flex-direction:column; align-items:center; justify-content:center; color:#e8efdf; text-align:center; padding:25px; }
+.loadingSky p { font-size:16px; margin-top:22px; }
+.loadingSky small { font-size:11px; opacity:.75; margin-top:7px; }
+.loadingOrbit { width:38px; height:38px; border-radius:50%; border:1px solid #dceaca40; border-top-color:#dceaca; animation:weatherRadarSweep 2s linear infinite; }
+.loadingInstruments { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-top:20px; }
+.loadingInstruments>div { border:1px solid #dbe3d5; border-radius:10px; padding:22px; }
+.loadingInstruments span,.loadingInstruments b { display:block; width:60%; height:8px; border-radius:5px; background:#dce5d5; }
+.loadingInstruments b { height:28px; width:70%; margin:18px 0; }
+@media(max-width:740px){.loadingInstruments{grid-template-columns:repeat(2,1fr)}}
+@media(prefers-reduced-motion:reduce){.loadingOrbit{animation:none}}

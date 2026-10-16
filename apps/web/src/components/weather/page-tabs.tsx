@@ -126,38 +126,6 @@ export function WeatherPageTabs({
         className={styles.tabInner}
         aria-busy={isLoading}
       >
-        <nav ref={primaryTabsRef} className={styles.primaryTabs} aria-label="Weather period">
-          {summaryTabs.map((tab) => {
-            const isActive = tab.view === optimisticView;
-            const isPendingTab = isLoading && isActive;
-
-            return (
-              <button
-                key={tab.view}
-                type="button"
-                aria-pressed={isActive}
-                className={`${styles.primaryTab} ${
-                  isActive ? styles.primaryTabActive : styles.primaryTabInactive
-                } ${isPendingTab ? styles.tabPending : ""}`}
-                onPointerDown={() => {
-                  setOptimisticView(tab.view);
-                }}
-                onPointerEnter={() => {
-                  prefetch(tab.view, optimisticDocumentTab);
-                }}
-                onFocus={() => {
-                  prefetch(tab.view, optimisticDocumentTab);
-                }}
-                onClick={() => {
-                  navigate(tab.view, optimisticDocumentTab);
-                }}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </nav>
-
         <nav ref={secondaryTabsRef} className={styles.secondaryTabs} aria-label="Weather section">
           {documentTabs.map((tab) => {
             const isActive = tab.tab === optimisticDocumentTab;
@@ -191,6 +159,40 @@ export function WeatherPageTabs({
             );
           })}
         </nav>
+
+
+        <nav ref={primaryTabsRef} className={styles.primaryTabs} aria-label="Weather period">
+          {summaryTabs.map((tab) => {
+            const isActive = tab.view === optimisticView;
+            const isPendingTab = isLoading && isActive;
+
+            return (
+              <button
+                key={tab.view}
+                type="button"
+                aria-pressed={isActive}
+                className={`${styles.primaryTab} ${
+                  isActive ? styles.primaryTabActive : styles.primaryTabInactive
+                } ${isPendingTab ? styles.tabPending : ""}`}
+                onPointerDown={() => {
+                  setOptimisticView(tab.view);
+                }}
+                onPointerEnter={() => {
+                  prefetch(tab.view, optimisticDocumentTab);
+                }}
+                onFocus={() => {
+                  prefetch(tab.view, optimisticDocumentTab);
+                }}
+                onClick={() => {
+                  navigate(tab.view, optimisticDocumentTab);
+                }}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
+
 
         {isLoading ? (
           <div

@@ -8,7 +8,9 @@ import nextEnv from "@next/env";
 import ffmpegPath from "ffmpeg-static";
 import { applicationDefault, getApp, getApps, initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
-import { getTimes } from "suncalc";
+import SunCalc from "suncalc";
+
+const { getTimes } = SunCalc;
 
 const { loadEnvConfig } = nextEnv;
 loadEnvConfig(process.cwd());
@@ -202,13 +204,21 @@ function captureFrames(rtspUrl, outputPath, thumbnailPath) {
   return new Promise((resolve, reject) => {
     const child = spawn(ffmpegPath, args, { stdio: ["ignore", "pipe", "pipe"] });
     let stderr = "";
+    const timeout = setTimeout(() => {
+      child.kill("SIGKILL");
+      reject(new Error("Station camera capture timed out after 45 seconds."));
+    }, 45_000);
 
     child.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
     });
 
-    child.on("error", reject);
+    child.on("error", (error) => {
+      clearTimeout(timeout);
+      reject(error);
+    });
     child.on("close", (code) => {
+      clearTimeout(timeout);
       if (code === 0) {
         resolve();
         return;

@@ -16,7 +16,9 @@
     "audit:bag-preview": "tsx scripts/audit-bag-preview-3d.ts",
     "audit:quilting": "tsx scripts/audit-quilt-geometry.ts",
     "camera:capture": "node scripts/capture-station-camera.mjs",
-    "audit:move": "node --import tsx --test scripts/audit-movemorrow.ts scripts/audit-move-cities.ts"
+    "audit:move": "node --import tsx --test scripts/audit-movemorrow.ts scripts/audit-move-cities.ts",
+    "camera:install": "node scripts/install-station-camera-agent.mjs",
+    "audit:weather": "node --import tsx --test scripts/audit-weather-observatory.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",
