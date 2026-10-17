@@ -131,3 +131,62 @@ open the camera's private video port to the internet.
 If local Storage uploads report an invalid user project, set
 `GOOGLE_CLOUD_QUOTA_PROJECT=monosyth` in `.env.local`. This scopes the quota
 override to this app without changing shared Google Cloud credentials.
+
+## Birds heard here
+
+The weather dashboard reads a small, public bird-history feed from Firebase Storage.
+BirdNET-Go runs locally on Scott's Mac and analyses the WeatherCam RTSP audio. The
+website never connects to the camera or receives the camera account, raw audio,
+or local clip paths. It publishes suggested species, timestamps, model confidence,
+and listener health. An empty day is not evidence that no birds were present.
+
+The initial setup uses BirdNET-Go 20261014 and BirdNET v2.4 with Shoreline coordinates,
+a fixed 0.80 confidence threshold, and repeat-detection filter level 2. The camera
+currently supplies 8 kHz mono audio, so high-frequency calls may be missed. The
+model and supporting software are provided by the BirdNET contributors; this is
+a personal, noncommercial bird-listening trial. See https://github.com/tphakala/birdnet-go
+and https://www.birds.cornell.edu/ccb/birdnet/ for attribution and license terms.
+
+Local installation (not committed): `~/monosyth/weather-birdnet/` contains the verified
+Mac binary/libraries, a private `config.yaml`, `trial.json`, English model labels,
+SQLite history, and detection clips. `BIRDNET_ROOT` can override that path. The
+original release SHA-256 is recorded alongside the downloaded archive. The listener
+has its web server disabled and exposes health metrics only at `127.0.0.1:8092`.
+Its two local CPU threads process camera audio; it does not use the Mac microphone.
+
+After preparing the official binary and private configuration:
+
+```sh
+npm run birds:install
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.monosyth.birdnet-listener.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.monosyth.birdnet-sync.plist
+```
+
+`birds:install` writes the listener runner and LaunchAgents using the current Node
+executable (use Node 22) and checkout path. Use `-- --replace` only when replacing
+reviewed existing agents. The listener restarts automatically after an exit; the
+publisher runs every 60 seconds. `npm run birds:sync` performs a manual publish.
+Both require the Mac to be awake and signed in. The camera must have a unique LAN
+address; the temporary ARP workaround described in Scott's local camera repair
+notes is not a permanent router address reservation.
+
+Detection history remains in `data/birdnet.db`. Private detection clips use the
+seven-day age retention policy and the human-voice filter; filtering is not a
+privacy guarantee, so clips are not published. Firebase receives
+`weather/birds/latest.json` and daily records at `weather/birds/days/YYYY-MM-DD.json`.
+The API `/api/weather/birds?date=YYYY-MM-DD` validates dates, filters public fields,
+and excludes weak, future, duplicate, and out-of-day records. The publisher also
+excludes non-birds and records marked false positive. The UI labels stale analysis
+or sync updates as delayed rather than claiming to be listening.
+
+To stop the local services:
+
+```sh
+launchctl bootout gui/$(id -u)/com.monosyth.birdnet-sync
+launchctl bootout gui/$(id -u)/com.monosyth.birdnet-listener
+```
+
+Validation: `npm run audit:birds` covers local-date boundaries, invalid archive
+paths, confidence filtering, duplicate records, public-field filtering, stale
+listener status, and empty versus unavailable data. Fixture birds are used only in
+tests; never seed them into the live database or cloud feed.

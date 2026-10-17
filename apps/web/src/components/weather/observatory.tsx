@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState, useTransition, type CSSProperties }
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Atmosphere } from "./atmosphere";
+import { BirdsHeard } from "./birds-heard";
 import { StationCameraPreview } from "./station-camera-preview";
 import { compassPoint, type ObservatoryData } from "@/lib/weather/observatory";
 import styles from "./observatory.module.css";
@@ -100,6 +101,7 @@ export function WeatherObservatory({ data }: { data: ObservatoryData }) {
       <TemperatureTrace points={data.temperatures} now={data.now} />
       <Daylight data={data} />
     </div>
+    <BirdsHeard />
     <section className={styles.forecastCard}>
       <div className={styles.cardHeading}><h2>The hours ahead</h2><span>NWS hourly forecast</span></div>
       {data.forecast.length ? <div className={styles.forecastStrip}>{data.forecast.map((period,index) => <div key={period.startTime} className={styles.forecastHour} title={period.detailedForecast || period.shortForecast}>

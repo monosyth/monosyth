@@ -18,7 +18,10 @@
     "camera:capture": "node scripts/capture-station-camera.mjs",
     "audit:move": "node --import tsx --test scripts/audit-movemorrow.ts scripts/audit-move-cities.ts",
     "camera:install": "node scripts/install-station-camera-agent.mjs",
-    "audit:weather": "node --import tsx --test scripts/audit-weather-observatory.ts"
+    "audit:weather": "node --import tsx --test scripts/audit-weather-observatory.ts",
+    "birds:sync": "node --import tsx scripts/sync-birdnet.ts",
+    "birds:install": "node scripts/install-birdnet-agents.mjs",
+    "audit:birds": "node --import tsx --test scripts/audit-birds.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",
