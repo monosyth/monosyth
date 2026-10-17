@@ -50,7 +50,18 @@ export function WeatherObservatory({ data }: { data: ObservatoryData }) {
           <div className={styles.temperature}>{format(data.temperature,1)}<span>°F</span></div>
           <h2>{data.condition}</h2>
           <p className={styles.conditionSource}>{data.forecastCondition ? "Sky outlook · National Weather Service" : "Measured at the weather station"}</p>
-          <div className={styles.range}><span>24h high <b>{format(data.high,1)}°</b></span><span>Low <b>{format(data.low,1)}°</b></span></div>
+          <div className={styles.skyReadings}>
+            <span className={styles.range}>24h high <b>{format(data.high,1)}°</b></span>
+            <span className={styles.range}>Low <b>{format(data.low,1)}°</b></span>
+            <div className={styles.skySunTime}>
+              <SunEventIcon />
+              <span>Sunrise<time dateTime={new Date(data.sunrise).toISOString()}>{clock(data.sunrise)}</time></span>
+            </div>
+            <div className={styles.skySunTime}>
+              <SunEventIcon setting />
+              <span>Sunset<time dateTime={new Date(data.sunset).toISOString()}>{clock(data.sunset)}</time></span>
+            </div>
+          </div>
         </div>
         <div className={styles.skyBottom}>
           <span><i className={styles.smallSun} />{data.sunAltitude > 0 ? "Daylight in Shoreline" : "Night in Shoreline"}</span>
@@ -165,6 +176,13 @@ function Daylight({data}: {data:ObservatoryData}) {
     <div className={styles.sunTimes}><span>Sunrise<strong>{clock(data.sunrise)}</strong></span><span>Sunset<strong>{clock(data.sunset)}</strong></span></div>
     <p className={styles.moonNote}>◐ Moon illumination <strong>{Math.round(data.moonIllumination*100)}%</strong></p>
   </section>;
+}
+
+function SunEventIcon({ setting = false }: { setting?: boolean }) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M2 19h20M6 16a6 6 0 0 1 12 0M2 15h1m18 0h1M4.2 8.2l1.4 1.4m12.8 0 1.4-1.4" />
+    <path d={setting ? "M12 2v6m-3-3 3 3 3-3" : "M12 8V2m-3 3 3-3 3 3"} />
+  </svg>;
 }
 
 function CameraIcon(){return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="3" y="6" width="14" height="12" rx="2"/><path d="m17 10 4-3v10l-4-3"/></svg>;}
