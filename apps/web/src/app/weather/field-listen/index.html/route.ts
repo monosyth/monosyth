@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 function signInRedirect(request: NextRequest) {
-  const response = NextResponse.redirect(new URL("/weather/listen", request.url), 307);
+  const origin = process.env.NODE_ENV === "production" ? "https://monosyth.com" : request.nextUrl.origin;
+  const response = NextResponse.redirect(new URL("/weather/listen", origin), 307);
   response.headers.set("Cache-Control", "private, no-store");
   return response;
 }
