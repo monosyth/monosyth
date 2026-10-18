@@ -82,7 +82,7 @@ index da7a30b..f1f52c8 100644
 +.field-clip-controls a { color: #2d704d; font-size: .8rem; white-space: nowrap; }
 +@media (max-width: 620px) { .field-clip-button { margin-left: 0; } .field-clip-controls { justify-content: flex-start; flex-wrap: wrap; } }
 diff --git a/public/js/app.js b/public/js/app.js
-index 35f2218..9ff423a 100644
+index 35f2218..914e028 100644
 --- a/public/js/app.js
 +++ b/public/js/app.js
 @@ -12,6 +12,8 @@
@@ -106,7 +106,7 @@ index 35f2218..9ff423a 100644
  
  // Spectrogram State
  let spectroCanvas, spectroCtx;
-@@ -91,6 +98,297 @@ const store = {
+@@ -91,6 +98,312 @@ const store = {
    set: (k, v) => localStorage.setItem(k, v)
  };
  
@@ -324,12 +324,21 @@ index 35f2218..9ff423a 100644
 +  if (saveAudio && !entry.audioAvailable && !entry.audioPending) void captureAudioForEntry(entry);
 +}
 +
++function visibleBirds(birds) {
++  if (!Array.isArray(birds)) return [];
++  const inArea = geoEnabled && geolocation
++    ? birds.filter(bird => typeof bird.geoscore === "number" && bird.geoscore >= 0.05)
++    : birds;
++  return inArea
++    .filter(bird => Number.isFinite(bird.confidence) && bird.confidence >= detectionThreshold)
++    .sort((a, b) => b.confidence - a.confidence)
++    .slice(0, 20);
++}
++
 +function considerAutoSave(birds) {
 +  if (!isListening || !autoSave || !Array.isArray(birds)) return;
 +  const now = Date.now();
-+  for (const bird of birds) {
-+    if (!Number.isFinite(bird.confidence) || bird.confidence < saveThreshold) continue;
-+    if (geoEnabled && geolocation && !(typeof bird.geoscore === "number" && bird.geoscore >= 0.05)) continue;
++  for (const bird of visibleBirds(birds)) {
 +    const key = bird.scientificName || String(bird.index);
 +    const evidence = recentBirdHits.get(key);
 +    const newOccurrence = !evidence || now - evidence.lastAt > 90_000;
@@ -368,19 +377,25 @@ index 35f2218..9ff423a 100644
 +  renderJournal();
 +  const auto = document.getElementById("autoSaveToggle");
 +  const audio = document.getElementById("saveAudioToggle");
-+  const saveRange = document.getElementById("saveThresholdRange");
-+  const saveValue = document.getElementById("saveThresholdValue");
 +  auto.checked = autoSave;
 +  auto.addEventListener("change", () => { autoSave = auto.checked; store.set("bn_field_auto_save", autoSave); });
++  document.getElementById("quietYardPreset").addEventListener("click", () => {
++    for (const [id, value] of [
++      ["thresholdRange", 10],
++      ["sensitivityRange", 1],
++      ["inputGainRange", 1],
++      ["rumbleFilterRange", 200],
++      ["inferenceIntervalRange", 500]
++    ]) {
++      const input = document.getElementById(id);
++      input.value = value;
++      input.dispatchEvent(new Event("input", { bubbles: true }));
++    }
++    auto.checked = true;
++    auto.dispatchEvent(new Event("change", { bubbles: true }));
++  });
 +  audio.checked = saveAudio;
 +  audio.addEventListener("change", () => { saveAudio = audio.checked; store.set("bn_field_save_audio", saveAudio); });
-+  saveRange.value = String(Math.round(saveThreshold * 100));
-+  saveValue.textContent = `${Math.round(saveThreshold * 100)}%`;
-+  saveRange.addEventListener("input", () => {
-+    saveThreshold = Number(saveRange.value) / 100;
-+    saveValue.textContent = `${Math.round(saveThreshold * 100)}%`;
-+    store.set("bn_field_save_threshold", saveThreshold);
-+  });
 +  detectionsList().addEventListener("click", event => {
 +    const button = event.target.closest(".save-sighting");
 +    if (!button) return;
@@ -404,23 +419,22 @@ index 35f2218..9ff423a 100644
  /**
   * Maps browser locale string (e.g., "en-US") to BirdNET label code (e.g., "en_us").
   */
-@@ -222,9 +520,14 @@ let colormapFn = d3.interpolateViridis; // Updated in init
+@@ -222,9 +535,12 @@ let colormapFn = d3.interpolateViridis; // Updated in init
  
  // Model & Detection
  let currentLabelLang = store.get("bn_lang", mapBrowserLangToLabelLang(navigator.language));
 -let geoEnabled = store.getBool("bn_geo_enabled", true);
 +let geoEnabled = store.getBool("bn_geo_enabled", false);
  let detectionThreshold = store.getFloat("bn_threshold", 0.15);
- if (detectionThreshold > 1.0) detectionThreshold = 0.15; // Sanity check
+-if (detectionThreshold > 1.0) detectionThreshold = 0.15; // Sanity check
++if (!Number.isFinite(detectionThreshold) || detectionThreshold < 0.05 || detectionThreshold > 0.95) detectionThreshold = 0.15;
 +let autoSave = store.getBool("bn_field_auto_save", true);
 +let saveAudio = store.getBool("bn_field_save_audio", false);
-+let saveThreshold = store.getFloat("bn_field_save_threshold", 0.15);
-+if (!Number.isFinite(saveThreshold) || saveThreshold < 0.15 || saveThreshold > 0.8) saveThreshold = 0.15;
 +let journalEntries = loadJournal();
  let inputGain = store.getFloat("bn_input_gain", 1.0);
  let sensitivity = store.getFloat("bn_sensitivity", 1.0); // New: Sensitivity
  let inferenceInterval = store.getFloat("bn_inference_interval", 500);
-@@ -271,6 +574,7 @@ document.addEventListener("DOMContentLoaded", () => {
+@@ -271,6 +587,7 @@ document.addEventListener("DOMContentLoaded", () => {
    if (isLive) {
      setupRecordButton();
      initSpectrogramCanvas(); // Initialize canvas size immediately to prevent layout shift
@@ -428,7 +442,7 @@ index 35f2218..9ff423a 100644
    }
  
    // Handle Geolocation Initialization
-@@ -361,6 +665,7 @@ function initWorker(langOverride) {
+@@ -361,6 +678,7 @@ function initWorker(langOverride) {
            ? computeTemporalPooledDetections(recentInferenceSets)
            : data.pooled;
          renderDetections(toRender);
@@ -436,7 +450,7 @@ index 35f2218..9ff423a 100644
          
          if (isListening && lastInferenceStart) {
            lastInferenceMs = Math.round(performance.now() - lastInferenceStart);
-@@ -454,6 +759,8 @@ async function startListening() {
+@@ -454,6 +772,8 @@ async function startListening() {
  
  function stopListening() {
    isListening = false;
@@ -445,7 +459,7 @@ index 35f2218..9ff423a 100644
    releaseWakeLock();
    
    // UI Updates
-@@ -525,7 +832,7 @@ async function setupAudioGraphFromStream(stream) {
+@@ -525,7 +845,7 @@ async function setupAudioGraphFromStream(stream) {
    startSpectrogram(highPassFilterNode);
  
    // Setup circular buffer for inference
@@ -454,7 +468,7 @@ index 35f2218..9ff423a 100644
    circularWriteIndex = 0;
  
    if (!audioContext.audioWorklet) {
-@@ -596,10 +903,15 @@ function startInferenceLoop() {
+@@ -596,10 +916,15 @@ function startInferenceLoop() {
   * Extracts the most recent 3 seconds of audio from the circular buffer.
   */
  function getCurrentWindow() {
@@ -473,7 +487,23 @@ index 35f2218..9ff423a 100644
      // Gain is already applied by GainNode, just clamp to prevent clipping artifacts in model
      result[i] = Math.max(-1, Math.min(1, circularBuffer[idx]));
      idx = (idx + 1) % circularBuffer.length;
-@@ -1156,6 +1468,7 @@ function renderDetections(pooled) {
+@@ -1071,14 +1396,7 @@ function renderDetections(pooled) {
+   if (!container) return;
+   
+   const useGeoFilter = geoEnabled && !!geolocation;
+-  const all = latestDetections || [];
+-
+-  // Filter by Geo (if enabled) and Confidence
+-  const afterGeo = useGeoFilter
+-    ? all.filter(p => typeof p.geoscore === "number" && p.geoscore >= 0.05)
+-    : all;
+-  const afterAudio = afterGeo.filter(p => p.confidence >= detectionThreshold);
+-  const top = afterAudio.sort((a, b) => b.confidence - a.confidence).slice(0, 20);
++  const top = visibleBirds(latestDetections);
+ 
+   // Empty State
+   if (!top.length) {
+@@ -1156,6 +1474,7 @@ function renderDetections(pooled) {
                <div class="small text-muted border-top pt-2 mt-1 geo-info">
                  ${geoInfo ? `<i class="bi bi-geo-alt me-1"></i>${geoInfo}` : ""}
                </div>
@@ -598,7 +628,7 @@ index df8714a..906ac06 100644
    </div>
  </header>
 diff --git a/src/index.njk b/src/index.njk
-index fbb673b..47deaab 100644
+index fbb673b..4587a9b 100644
 --- a/src/index.njk
 +++ b/src/index.njk
 @@ -1,9 +1,17 @@
@@ -635,7 +665,7 @@ index fbb673b..47deaab 100644
  
 +  <div class="field-help mb-4">
 +    <strong>What the controls mean</strong>
-+    <p><b>Show suggestions</b> changes which live bird cards appear. <b>Save to journal</b> records each new bird and its time as soon as BirdNET identifies it. Open Settings to adjust either one.</p>
++    <p><b>Show and save birds above</b> sets the minimum BirdNET score for both live cards and saved entries. <b>Save each bird identification automatically</b> keeps each new bird and its time. Open Settings to adjust them.</p>
 +  </div>
 +
 +  <div class="field-section-heading"><h2>Birds showing now</h2><span>Live suggestions change as the sound changes</span></div>
@@ -659,7 +689,7 @@ index fbb673b..47deaab 100644
  </div>
  
  <!-- Settings Drawer -->
-@@ -48,12 +72,28 @@ permalink: "/"
+@@ -48,12 +72,36 @@ permalink: "/"
    
    <div class="settings-drawer-body">
      
@@ -668,18 +698,26 @@ index fbb673b..47deaab 100644
 +    <div class="field-settings-summary">
 +      <h6>Save bird suggestions</h6>
 +      <p>The live cards come and go. The journal keeps useful sightings on this phone.</p>
++      <button type="button" id="quietYardPreset" class="btn btn-outline-success btn-sm mb-2">Use quiet-yard starting setup</button>
++      <div class="form-text mb-3">Sets show/save to 10%, automatic saving on, sensitivity to 1.0, sound boost to 1.0×, rumble reduction to 200 Hz, and checks to 500 ms. Your location and sound-clip choices stay as they are.</div>
 +      <div class="form-check form-switch mb-3">
 +        <input class="form-check-input" type="checkbox" id="autoSaveToggle" checked>
 +        <label class="form-check-label fw-semibold" for="autoSaveToggle">Save each bird identification automatically</label>
++      </div>
++      <div class="mb-3">
++        <div class="d-flex justify-content-between">
++          <label for="thresholdRange" class="form-label">Show and save birds above</label>
++          <span class="small text-muted">≥ <span class="form-range-value" id="thresholdValue">15%</span></span>
++        </div>
++        <input type="range" class="form-range" id="thresholdRange" min="5" max="95" step="5">
++        <div class="form-text">This uses the bird-card percentage, not the Geo score. Lower it to 10% to include a 12.2% suggestion, but expect more possible mistakes.</div>
 +      </div>
 +      <div class="form-check form-switch mb-3">
 +        <input class="form-check-input" type="checkbox" id="saveAudioToggle">
 +        <label class="form-check-label fw-semibold" for="saveAudioToggle">Save a short sound clip too</label>
 +        <div class="form-text">Optional: keep about 6 seconds of sound around each new bird entry. Clips use storage on this phone and are never uploaded.</div>
 +      </div>
-+      <label for="saveThresholdRange" class="form-label d-flex justify-content-between"><span>Save when confidence reaches</span><strong id="saveThresholdValue">15%</strong></label>
-+      <input type="range" class="form-range" id="saveThresholdRange" min="15" max="80" step="5" value="15">
-+      <p class="form-text">The starting level matches the live cards, so each bird shown is saved with its time. Repeated appearances of the same bird within 90 seconds add ticks to one entry. Raise this level to save fewer suggestions with higher model confidence. You can also tap Save on any live card.</p>
++      <p class="form-text">With automatic saving on, each bird shown is saved with its time. Repeated appearances of the same bird within 90 seconds add ticks to one entry. You can also tap Save on any live card.</p>
 +    </div>
 +
 +    <h6 class="text-uppercase text-muted fw-bold mb-3">What BirdNET shows</h6>
@@ -691,19 +729,20 @@ index fbb673b..47deaab 100644
          <label class="form-check-label fw-semibold" for="geoToggle" data-i18n="lbl_use_geo">Use geolocation</label>
        </div>
        <div class="geo-status mt-1" id="geoStatusText" data-i18n="status_geo_waiting">Awaiting geolocation…</div>
-@@ -86,52 +126,52 @@ permalink: "/"
-       <!-- Threshold -->
-       <div class="col-12">
-         <div class="d-flex justify-content-between">
--          <label for="thresholdRange" class="form-label" data-i18n="lbl_threshold">Threshold</label>
-+        <label for="thresholdRange" class="form-label">Show suggestions above</label>
-           <span class="small text-muted">≥ <span class="form-range-value" id="thresholdValue">15%</span></span>
-         </div>
-         <input type="range" class="form-range" id="thresholdRange" min="5" max="95" step="5">
--        <div class="form-text small" data-i18n="msg_threshold_hint">Minimum confidence score required to show a detection.</div>
-+        <div class="form-text small">This only hides or shows live cards. It does not change what the microphone hears or the journal's save level.</div>
+@@ -83,55 +131,45 @@ permalink: "/"
+         <select id="labelLangSelect" class="form-select"></select>
        </div>
- 
+       
+-      <!-- Threshold -->
+-      <div class="col-12">
+-        <div class="d-flex justify-content-between">
+-          <label for="thresholdRange" class="form-label" data-i18n="lbl_threshold">Threshold</label>
+-          <span class="small text-muted">≥ <span class="form-range-value" id="thresholdValue">15%</span></span>
+-        </div>
+-        <input type="range" class="form-range" id="thresholdRange" min="5" max="95" step="5">
+-        <div class="form-text small" data-i18n="msg_threshold_hint">Minimum confidence score required to show a detection.</div>
+-      </div>
+-
        <!-- Sensitivity -->
        <div class="col-12">
          <div class="d-flex justify-content-between">
@@ -754,7 +793,15 @@ index fbb673b..47deaab 100644
        </div>
      </div>
  
-@@ -232,6 +272,6 @@ permalink: "/"
+@@ -139,6 +177,7 @@ permalink: "/"
+ 
+     <!-- Section: Spectrogram -->
+     <h6 class="text-uppercase text-muted fw-bold mb-3" data-i18n="sec_spectrogram">Spectrogram</h6>
++    <p class="form-text small">These controls change the moving sound picture only. They do not change which birds BirdNET hears or saves.</p>
+ 
+     <div class="row g-3">
+       <!-- Duration -->
+@@ -232,6 +271,6 @@ permalink: "/"
    <span class="record-icon"></span>
    <span class="record-label d-inline-flex align-items-center gap-2">
      <i class="bi bi-mic-fill"></i>

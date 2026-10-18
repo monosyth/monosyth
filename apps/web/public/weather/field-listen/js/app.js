@@ -312,12 +312,21 @@ function saveBirdSuggestion(bird, method = "manual", countCheck = false) {
   if (saveAudio && !entry.audioAvailable && !entry.audioPending) void captureAudioForEntry(entry);
 }
 
+function visibleBirds(birds) {
+  if (!Array.isArray(birds)) return [];
+  const inArea = geoEnabled && geolocation
+    ? birds.filter(bird => typeof bird.geoscore === "number" && bird.geoscore >= 0.05)
+    : birds;
+  return inArea
+    .filter(bird => Number.isFinite(bird.confidence) && bird.confidence >= detectionThreshold)
+    .sort((a, b) => b.confidence - a.confidence)
+    .slice(0, 20);
+}
+
 function considerAutoSave(birds) {
   if (!isListening || !autoSave || !Array.isArray(birds)) return;
   const now = Date.now();
-  for (const bird of birds) {
-    if (!Number.isFinite(bird.confidence) || bird.confidence < saveThreshold) continue;
-    if (geoEnabled && geolocation && !(typeof bird.geoscore === "number" && bird.geoscore >= 0.05)) continue;
+  for (const bird of visibleBirds(birds)) {
     const key = bird.scientificName || String(bird.index);
     const evidence = recentBirdHits.get(key);
     const newOccurrence = !evidence || now - evidence.lastAt > 90_000;
@@ -356,19 +365,25 @@ function setupFieldJournal() {
   renderJournal();
   const auto = document.getElementById("autoSaveToggle");
   const audio = document.getElementById("saveAudioToggle");
-  const saveRange = document.getElementById("saveThresholdRange");
-  const saveValue = document.getElementById("saveThresholdValue");
   auto.checked = autoSave;
   auto.addEventListener("change", () => { autoSave = auto.checked; store.set("bn_field_auto_save", autoSave); });
+  document.getElementById("quietYardPreset").addEventListener("click", () => {
+    for (const [id, value] of [
+      ["thresholdRange", 10],
+      ["sensitivityRange", 1],
+      ["inputGainRange", 1],
+      ["rumbleFilterRange", 200],
+      ["inferenceIntervalRange", 500]
+    ]) {
+      const input = document.getElementById(id);
+      input.value = value;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    auto.checked = true;
+    auto.dispatchEvent(new Event("change", { bubbles: true }));
+  });
   audio.checked = saveAudio;
   audio.addEventListener("change", () => { saveAudio = audio.checked; store.set("bn_field_save_audio", saveAudio); });
-  saveRange.value = String(Math.round(saveThreshold * 100));
-  saveValue.textContent = `${Math.round(saveThreshold * 100)}%`;
-  saveRange.addEventListener("input", () => {
-    saveThreshold = Number(saveRange.value) / 100;
-    saveValue.textContent = `${Math.round(saveThreshold * 100)}%`;
-    store.set("bn_field_save_threshold", saveThreshold);
-  });
   detectionsList().addEventListener("click", event => {
     const button = event.target.closest(".save-sighting");
     if (!button) return;
@@ -522,11 +537,9 @@ let colormapFn = d3.interpolateViridis; // Updated in init
 let currentLabelLang = store.get("bn_lang", mapBrowserLangToLabelLang(navigator.language));
 let geoEnabled = store.getBool("bn_geo_enabled", false);
 let detectionThreshold = store.getFloat("bn_threshold", 0.15);
-if (detectionThreshold > 1.0) detectionThreshold = 0.15; // Sanity check
+if (!Number.isFinite(detectionThreshold) || detectionThreshold < 0.05 || detectionThreshold > 0.95) detectionThreshold = 0.15;
 let autoSave = store.getBool("bn_field_auto_save", true);
 let saveAudio = store.getBool("bn_field_save_audio", false);
-let saveThreshold = store.getFloat("bn_field_save_threshold", 0.15);
-if (!Number.isFinite(saveThreshold) || saveThreshold < 0.15 || saveThreshold > 0.8) saveThreshold = 0.15;
 let journalEntries = loadJournal();
 let inputGain = store.getFloat("bn_input_gain", 1.0);
 let sensitivity = store.getFloat("bn_sensitivity", 1.0); // New: Sensitivity
@@ -1383,14 +1396,7 @@ function renderDetections(pooled) {
   if (!container) return;
   
   const useGeoFilter = geoEnabled && !!geolocation;
-  const all = latestDetections || [];
-
-  // Filter by Geo (if enabled) and Confidence
-  const afterGeo = useGeoFilter
-    ? all.filter(p => typeof p.geoscore === "number" && p.geoscore >= 0.05)
-    : all;
-  const afterAudio = afterGeo.filter(p => p.confidence >= detectionThreshold);
-  const top = afterAudio.sort((a, b) => b.confidence - a.confidence).slice(0, 20);
+  const top = visibleBirds(latestDetections);
 
   // Empty State
   if (!top.length) {

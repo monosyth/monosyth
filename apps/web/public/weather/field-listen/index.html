@@ -70,7 +70,7 @@
 
   <div class="field-help mb-4">
     <strong>What the controls mean</strong>
-    <p><b>Show suggestions</b> changes which live bird cards appear. <b>Save to journal</b> records each new bird and its time as soon as BirdNET identifies it. Open Settings to adjust either one.</p>
+    <p><b>Show and save birds above</b> sets the minimum BirdNET score for both live cards and saved entries. <b>Save each bird identification automatically</b> keeps each new bird and its time. Open Settings to adjust them.</p>
   </div>
 
   <div class="field-section-heading"><h2>Birds showing now</h2><span>Live suggestions change as the sound changes</span></div>
@@ -106,18 +106,26 @@
     <div class="field-settings-summary">
       <h6>Save bird suggestions</h6>
       <p>The live cards come and go. The journal keeps useful sightings on this phone.</p>
+      <button type="button" id="quietYardPreset" class="btn btn-outline-success btn-sm mb-2">Use quiet-yard starting setup</button>
+      <div class="form-text mb-3">Sets show/save to 10%, automatic saving on, sensitivity to 1.0, sound boost to 1.0×, rumble reduction to 200 Hz, and checks to 500 ms. Your location and sound-clip choices stay as they are.</div>
       <div class="form-check form-switch mb-3">
         <input class="form-check-input" type="checkbox" id="autoSaveToggle" checked>
         <label class="form-check-label fw-semibold" for="autoSaveToggle">Save each bird identification automatically</label>
+      </div>
+      <div class="mb-3">
+        <div class="d-flex justify-content-between">
+          <label for="thresholdRange" class="form-label">Show and save birds above</label>
+          <span class="small text-muted">≥ <span class="form-range-value" id="thresholdValue">15%</span></span>
+        </div>
+        <input type="range" class="form-range" id="thresholdRange" min="5" max="95" step="5">
+        <div class="form-text">This uses the bird-card percentage, not the Geo score. Lower it to 10% to include a 12.2% suggestion, but expect more possible mistakes.</div>
       </div>
       <div class="form-check form-switch mb-3">
         <input class="form-check-input" type="checkbox" id="saveAudioToggle">
         <label class="form-check-label fw-semibold" for="saveAudioToggle">Save a short sound clip too</label>
         <div class="form-text">Optional: keep about 6 seconds of sound around each new bird entry. Clips use storage on this phone and are never uploaded.</div>
       </div>
-      <label for="saveThresholdRange" class="form-label d-flex justify-content-between"><span>Save when confidence reaches</span><strong id="saveThresholdValue">15%</strong></label>
-      <input type="range" class="form-range" id="saveThresholdRange" min="15" max="80" step="5" value="15">
-      <p class="form-text">The starting level matches the live cards, so each bird shown is saved with its time. Repeated appearances of the same bird within 90 seconds add ticks to one entry. Raise this level to save fewer suggestions with higher model confidence. You can also tap Save on any live card.</p>
+      <p class="form-text">With automatic saving on, each bird shown is saved with its time. Repeated appearances of the same bird within 90 seconds add ticks to one entry. You can also tap Save on any live card.</p>
     </div>
 
     <h6 class="text-uppercase text-muted fw-bold mb-3">What BirdNET shows</h6>
@@ -154,16 +162,6 @@
         <select id="labelLangSelect" class="form-select"></select>
       </div>
       
-      <!-- Threshold -->
-      <div class="col-12">
-        <div class="d-flex justify-content-between">
-        <label for="thresholdRange" class="form-label">Show suggestions above</label>
-          <span class="small text-muted">≥ <span class="form-range-value" id="thresholdValue">15%</span></span>
-        </div>
-        <input type="range" class="form-range" id="thresholdRange" min="5" max="95" step="5">
-        <div class="form-text small">This only hides or shows live cards. It does not change what the microphone hears or the journal's save level.</div>
-      </div>
-
       <!-- Sensitivity -->
       <div class="col-12">
         <div class="d-flex justify-content-between">
@@ -210,6 +208,7 @@
 
     <!-- Section: Spectrogram -->
     <h6 class="text-uppercase text-muted fw-bold mb-3" data-i18n="sec_spectrogram">Spectrogram</h6>
+    <p class="form-text small">These controls change the moving sound picture only. They do not change which birds BirdNET hears or saves.</p>
 
     <div class="row g-3">
       <!-- Duration -->
