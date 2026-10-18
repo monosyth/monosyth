@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/components/auth/auth-provider";
 import { BIRD_TIME_ZONE, birdDate, birdListenerIsFresh, parseBirdSnapshot, type BirdSnapshot } from "@/lib/weather/birds";
 import styles from "./birds-heard.module.css";
 
@@ -8,6 +9,7 @@ const clock = (value: string) => new Intl.DateTimeFormat("en-US", { timeZone: BI
 const dateLabel = (value: string) => new Intl.DateTimeFormat("en-US", { timeZone: BIRD_TIME_ZONE, month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value));
 
 export function BirdsHeard() {
+  const { status: authStatus } = useAuth();
   const [data, setData] = useState<BirdSnapshot | null>(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -60,8 +62,8 @@ export function BirdsHeard() {
           <div><strong>{dayMatches ? records.length : "—"}</strong><span>Detections</span></div>
           <div><strong>{last ? clock(last.timestamp) : "—"}</strong><span>Last heard · PT</span></div>
         </div>
-        <a className={styles.fieldLink} href="/weather/listen"><span>Try listening with your phone</span><span aria-hidden="true">↗</span></a>
-        <p className={styles.fieldHint}>Take your phone outside to see its live sound picture and BirdNET suggestions. This test stays separate from the camera history.</p>
+        {authStatus === "signed_in" && <><a className={styles.fieldLink} href="/weather/listen"><span>Listen with your phone</span><span aria-hidden="true">↗</span></a>
+        <p className={styles.fieldHint}>Private field test. Phone suggestions stay separate from the camera report.</p></>}
         <p className={styles.quality}>Testing the existing camera microphone. Its limited audio detail can miss bird calls. Suggestions need review; detection counts are not counts of individual birds.</p>
         {data && <p className={styles.updated}>Listener checked <time dateTime={data.updatedAt}>{dateLabel(data.updatedAt)} PT</time></p>}
       </div>

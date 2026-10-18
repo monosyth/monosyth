@@ -10,6 +10,9 @@ function domainMatches(domain: string) {
 }
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: {
+    "/weather/field-listen/index.html": ["./src/private/weather/field-listen/index.html"],
+  },
   async redirects() {
     return domainMatches("www\\.vtmultifamily\\.com").map(match => ({
       source: "/:path*",

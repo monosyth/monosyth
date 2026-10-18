@@ -218,6 +218,13 @@ export function AuthProvider({
     setError(null);
 
     try {
+      const listenResponse = await fetch("/api/weather/listen/session", {
+        method: "DELETE",
+        cache: "no-store",
+      });
+      if (!listenResponse.ok) {
+        throw new Error("Could not close the private bird-listening session. Please try signing out again.");
+      }
       await firebaseSignOut(auth);
     } catch (nextError) {
       const message =
