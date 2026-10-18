@@ -39,7 +39,7 @@
   <div class="field-note">
     <span class="field-note-kicker">Monosyth weather · field test</span>
     <h1>Listen with this phone</h1>
-    <p>Step outside and tap Start listening. BirdNET will suggest birds as they call and save repeated suggestions in a field journal on this phone. If you want the actual sound too, turn on short clips in Settings. The camera's separate history stays unchanged. The first visit downloads the bird model, so Wi-Fi is best. <a href="/weather/field-listen/legal/index.html">How this test works and privacy</a></p>
+    <p>Step outside and tap Start listening. BirdNET will suggest birds as they call and save each new identification with its time in a field journal on this phone. Repeated appearances of the same bird within 90 seconds stay together. If you want the actual sound too, turn on short clips in Settings. The camera's separate history stays unchanged. The first visit downloads the bird model, so Wi-Fi is best. <a href="/weather/field-listen/legal/index.html">How this test works and privacy</a></p>
   </div>
 </div>
 
@@ -70,7 +70,7 @@
 
   <div class="field-help mb-4">
     <strong>What the controls mean</strong>
-    <p><b>Show suggestions</b> changes which live bird cards appear. <b>Save to journal</b> keeps a suggestion after BirdNET hears it more than once. Open Settings to adjust either one.</p>
+    <p><b>Show suggestions</b> changes which live bird cards appear. <b>Save to journal</b> records each new bird and its time as soon as BirdNET identifies it. Open Settings to adjust either one.</p>
   </div>
 
   <div class="field-section-heading"><h2>Birds showing now</h2><span>Live suggestions change as the sound changes</span></div>
@@ -87,9 +87,9 @@
       <div><span class="field-note-kicker">This browser only</span><h2 id="fieldJournalTitle">Saved on this phone <span id="journalCount" class="field-count">0</span></h2></div>
       <div class="field-journal-actions"><button type="button" id="exportJournal" class="btn btn-outline-success btn-sm">Export list</button><button type="button" id="clearJournal" class="btn btn-link btn-sm text-secondary">Clear</button></div>
     </div>
-    <p class="field-journal-explain">These are BirdNET suggestions, not confirmed identifications. They stay in this phone's browser until you clear its site data or clear the list here. Export a copy if you want to keep them. Saved audio clips can be played or downloaded one at a time.</p>
+    <p class="field-journal-explain">Each bird is saved with the time it first appeared. The ticks fill as BirdNET hears it in later listening windows, at least three seconds apart. The peak BirdNET score is shown separately; ticks do not raise that score. These are suggestions, not confirmed identifications. They stay in this phone's browser until you clear its site data or clear the list here. Export a copy if you want to keep them. Saved audio clips can be played or downloaded one at a time.</p>
     <p id="journalNotice" class="field-journal-notice" role="status" aria-live="polite"></p>
-    <div id="journalList" class="field-journal-list"><p class="field-journal-empty">Nothing saved yet. Start listening outside; repeated bird suggestions will appear here.</p></div>
+    <div id="journalList" class="field-journal-list"><p class="field-journal-empty">Nothing saved yet. Start listening outside; each new bird identification will appear here with its time.</p></div>
   </section>
 </div>
 
@@ -108,7 +108,7 @@
       <p>The live cards come and go. The journal keeps useful sightings on this phone.</p>
       <div class="form-check form-switch mb-3">
         <input class="form-check-input" type="checkbox" id="autoSaveToggle" checked>
-        <label class="form-check-label fw-semibold" for="autoSaveToggle">Save repeated birds automatically</label>
+        <label class="form-check-label fw-semibold" for="autoSaveToggle">Save each bird identification automatically</label>
       </div>
       <div class="form-check form-switch mb-3">
         <input class="form-check-input" type="checkbox" id="saveAudioToggle">
@@ -117,7 +117,7 @@
       </div>
       <label for="saveThresholdRange" class="form-label d-flex justify-content-between"><span>Save when confidence reaches</span><strong id="saveThresholdValue">15%</strong></label>
       <input type="range" class="form-range" id="saveThresholdRange" min="15" max="80" step="5" value="15">
-      <p class="form-text">A bird must appear in two nearby listening checks. The starting level matches the live cards, so repeated birds you see should be saved. Raise it to save fewer suggestions with higher model confidence. You can also tap Save on any live card.</p>
+      <p class="form-text">The starting level matches the live cards, so each bird shown is saved with its time. Repeated appearances of the same bird within 90 seconds add ticks to one entry. Raise this level to save fewer suggestions with higher model confidence. You can also tap Save on any live card.</p>
     </div>
 
     <h6 class="text-uppercase text-muted fw-bold mb-3">What BirdNET shows</h6>

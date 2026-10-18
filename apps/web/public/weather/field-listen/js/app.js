@@ -209,7 +209,7 @@ function renderJournal() {
   if (!journalEntries.length) {
     const empty = document.createElement("p");
     empty.className = "field-journal-empty";
-    empty.textContent = "Nothing saved yet. Start listening outside; repeated bird suggestions will appear here.";
+    empty.textContent = "Nothing saved yet. Start listening outside; each new bird identification will appear here with its time.";
     list.appendChild(empty);
     return;
   }
@@ -224,7 +224,23 @@ function renderJournal() {
     names.append(bird, scientific);
     const details = document.createElement("div");
     details.className = "field-journal-detail";
-    details.textContent = `${journalTime(entry.firstHeardAt)} · up to ${Math.round(entry.peakConfidence * 100)}% · ${entry.method === "manual" ? "saved by you" : "saved automatically"}`;
+    const savedAt = document.createElement("div");
+    savedAt.textContent = `${journalTime(entry.firstHeardAt)} · ${entry.method === "manual" ? "saved by you" : "saved automatically"}`;
+    const evidence = document.createElement("div");
+    evidence.className = "field-journal-evidence";
+    const checks = Math.max(1, Number(entry.checkCount) || 1);
+    const ticks = document.createElement("span");
+    ticks.className = "field-check-ticks";
+    ticks.setAttribute("aria-hidden", "true");
+    for (let i = 0; i < 5; i++) {
+      const tick = document.createElement("span");
+      tick.className = `field-check-tick${i < checks ? " is-filled" : ""}${i === Math.min(checks, 5) - 1 ? " is-newest" : ""}`;
+      ticks.appendChild(tick);
+    }
+    const checkLabel = document.createElement("span");
+    checkLabel.textContent = `${checks} ${checks === 1 ? "check" : "checks"} · peak BirdNET score ${Math.round(entry.peakConfidence * 100)}%`;
+    evidence.append(ticks, checkLabel);
+    details.append(savedAt, evidence);
     if (entry.audioAvailable) {
       const load = document.createElement("button");
       load.type = "button";
@@ -266,7 +282,7 @@ function renderJournal() {
   }
 }
 
-function saveBirdSuggestion(bird, method = "manual") {
+function saveBirdSuggestion(bird, method = "manual", countCheck = false) {
   if (!bird || !Number.isFinite(bird.confidence)) return;
   const now = Date.now();
   const scientificName = String(bird.scientificName || "");
@@ -277,17 +293,18 @@ function saveBirdSuggestion(bird, method = "manual") {
   if (previous) {
     previous.lastHeardAt = new Date(now).toISOString();
     previous.peakConfidence = Math.max(previous.peakConfidence, bird.confidence);
+    if (countCheck) previous.checkCount = Math.min(999, (Number(previous.checkCount) || 1) + 1);
     if (method === "manual") previous.method = "manual";
     entry = previous;
   } else {
-    entry = { id: crypto.randomUUID ? crypto.randomUUID() : `${now}-${Math.random()}`, speciesKey, commonName, scientificName, firstHeardAt: new Date(now).toISOString(), lastHeardAt: new Date(now).toISOString(), peakConfidence: bird.confidence, method, audioAvailable: false };
+    entry = { id: crypto.randomUUID ? crypto.randomUUID() : `${now}-${Math.random()}`, speciesKey, commonName, scientificName, firstHeardAt: new Date(now).toISOString(), lastHeardAt: new Date(now).toISOString(), peakConfidence: bird.confidence, checkCount: 1, method, audioAvailable: false };
     journalEntries.unshift(entry);
     journalEntries = journalEntries.slice(0, JOURNAL_LIMIT);
   }
   const notice = document.getElementById("journalNotice");
   try {
     localStorage.setItem(JOURNAL_KEY, JSON.stringify(journalEntries));
-    if (notice) notice.textContent = `Saved ${commonName} on this phone.`;
+    if (notice && (!previous || method === "manual")) notice.textContent = `Saved ${commonName} on this phone.`;
   } catch (_) {
     if (notice) notice.textContent = "This browser could not save the journal. Try exporting your list or freeing device storage.";
   }
@@ -302,14 +319,16 @@ function considerAutoSave(birds) {
     if (!Number.isFinite(bird.confidence) || bird.confidence < saveThreshold) continue;
     if (geoEnabled && geolocation && !(typeof bird.geoscore === "number" && bird.geoscore >= 0.05)) continue;
     const key = bird.scientificName || String(bird.index);
-    const evidence = recentBirdHits.get(key) || { count: 0, lastAt: 0, lastSavedAt: 0 };
-    evidence.count = now - evidence.lastAt > 8_000 ? 1 : evidence.count + 1;
-    evidence.lastAt = now;
-    if (evidence.count >= 2 && now - evidence.lastSavedAt > 90_000) {
-      saveBirdSuggestion(bird, "auto");
-      evidence.lastSavedAt = now;
-    }
-    recentBirdHits.set(key, evidence);
+    const evidence = recentBirdHits.get(key);
+    const newOccurrence = !evidence || now - evidence.lastAt > 90_000;
+    const countCheck = newOccurrence || now - evidence.lastCountedAt >= 3_000;
+    const higherPeak = bird.confidence > (evidence?.peakConfidence || 0) + 0.01;
+    if (countCheck || higherPeak) saveBirdSuggestion(bird, "auto", countCheck);
+    recentBirdHits.set(key, {
+      lastAt: now,
+      lastCountedAt: countCheck ? now : evidence.lastCountedAt,
+      peakConfidence: Math.max(evidence?.peakConfidence || 0, bird.confidence)
+    });
   }
   for (const [key, evidence] of recentBirdHits) {
     if (now - evidence.lastAt > 120_000) recentBirdHits.delete(key);
@@ -321,7 +340,7 @@ function exportJournal() {
     const safe = String(value ?? "").replace(/^[=+@-]/, match => `'${match}`);
     return `"${safe.replaceAll('"', '""')}"`;
   };
-  const rows = [["First heard", "Last heard", "Bird", "Scientific name", "Peak confidence", "Saved how"], ...journalEntries.map(entry => [entry.firstHeardAt, entry.lastHeardAt, entry.commonName, entry.scientificName, Math.round(entry.peakConfidence * 100) + "%", entry.method])];
+  const rows = [["First heard", "Last heard", "Bird", "Scientific name", "Listening checks", "Peak BirdNET score", "Saved how"], ...journalEntries.map(entry => [entry.firstHeardAt, entry.lastHeardAt, entry.commonName, entry.scientificName, Math.max(1, Number(entry.checkCount) || 1), Math.round(entry.peakConfidence * 100) + "%", entry.method])];
   const file = new Blob([rows.map(row => row.map(cell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(file);
   const link = document.createElement("a");

@@ -12,7 +12,7 @@ index 1524d7c..e663134 100644
      markdownTemplateEngine: "njk",
      htmlTemplateEngine: "njk",
 diff --git a/public/css/main.css b/public/css/main.css
-index da7a30b..19b23bf 100644
+index da7a30b..f1f52c8 100644
 --- a/public/css/main.css
 +++ b/public/css/main.css
 @@ -1,7 +1,20 @@
@@ -36,7 +36,7 @@ index da7a30b..19b23bf 100644
  /* Optional wider container */
  @media (min-width: 1200px) {
    .container { max-width: 1500px; }
-@@ -181,3 +194,37 @@ body.drawer-open .record-btn {
+@@ -181,3 +194,44 @@ body.drawer-open .record-btn {
    pointer-events: none;
    transition: opacity 0.2s;
  }
@@ -61,12 +61,19 @@ index da7a30b..19b23bf 100644
 +.field-journal-row strong { display: block; font-weight: 600; }
 +.field-journal-row small { display: block; color: #718071; font-style: italic; }
 +.field-journal-detail { color: #526c57; text-align: right; font-size: .8rem; white-space: nowrap; }
++.field-journal-evidence { display: flex; align-items: center; justify-content: flex-end; gap: .45rem; margin-top: .25rem; font-variant-numeric: tabular-nums; }
++.field-check-ticks { display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; }
++.field-check-tick { display: block; width: .38rem; height: .82rem; border-radius: 2px; background: #dce8d9; }
++.field-check-tick.is-filled { background: #4c9b5d; }
++.field-check-tick.is-newest { animation: field-tick-in .35s ease-out both; }
++@keyframes field-tick-in { from { transform: scaleY(.35); opacity: .45; } to { transform: scaleY(1); opacity: 1; } }
 +.field-journal-empty { color: #6b7e6d; font-size: .88rem; padding: .65rem 0; margin: 0; }
 +.field-settings-summary { background: #eef5ea; border: 1px solid #dbe9d8; border-radius: .8rem; padding: 1rem; margin-bottom: 1.5rem; }
 +.field-settings-summary h6 { font-weight: 700; margin-bottom: .35rem; }
 +.field-settings-summary > p { color: #4d6752; font-size: .88rem; line-height: 1.45; }
 +.field-settings-summary .form-text { color: #536b57; }
-+@media (max-width: 620px) { .field-section-heading { display: block; } .field-journal-row { display: block; } .field-journal-detail { text-align: left; margin-top: .3rem; white-space: normal; } }
++@media (max-width: 620px) { .field-section-heading { display: block; } .field-journal-row { display: block; } .field-journal-detail { text-align: left; margin-top: .3rem; white-space: normal; } .field-journal-evidence { justify-content: flex-start; } }
++@media (prefers-reduced-motion: reduce) { .field-check-tick.is-newest { animation: none; } }
 +.field-journal-row { flex-wrap: wrap; }
 +.field-clip-button { display: block; border: 0; background: transparent; color: #2d704d; padding: .35rem 0 0; margin-left: auto; font: inherit; font-size: .8rem; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 +.field-clip-button:disabled { color: #708576; cursor: default; }
@@ -75,7 +82,7 @@ index da7a30b..19b23bf 100644
 +.field-clip-controls a { color: #2d704d; font-size: .8rem; white-space: nowrap; }
 +@media (max-width: 620px) { .field-clip-button { margin-left: 0; } .field-clip-controls { justify-content: flex-start; flex-wrap: wrap; } }
 diff --git a/public/js/app.js b/public/js/app.js
-index 35f2218..9837aba 100644
+index 35f2218..9ff423a 100644
 --- a/public/js/app.js
 +++ b/public/js/app.js
 @@ -12,6 +12,8 @@
@@ -99,7 +106,7 @@ index 35f2218..9837aba 100644
  
  // Spectrogram State
  let spectroCanvas, spectroCtx;
-@@ -91,6 +98,278 @@ const store = {
+@@ -91,6 +98,297 @@ const store = {
    set: (k, v) => localStorage.setItem(k, v)
  };
  
@@ -214,7 +221,7 @@ index 35f2218..9837aba 100644
 +  if (!journalEntries.length) {
 +    const empty = document.createElement("p");
 +    empty.className = "field-journal-empty";
-+    empty.textContent = "Nothing saved yet. Start listening outside; repeated bird suggestions will appear here.";
++    empty.textContent = "Nothing saved yet. Start listening outside; each new bird identification will appear here with its time.";
 +    list.appendChild(empty);
 +    return;
 +  }
@@ -229,7 +236,23 @@ index 35f2218..9837aba 100644
 +    names.append(bird, scientific);
 +    const details = document.createElement("div");
 +    details.className = "field-journal-detail";
-+    details.textContent = `${journalTime(entry.firstHeardAt)} · up to ${Math.round(entry.peakConfidence * 100)}% · ${entry.method === "manual" ? "saved by you" : "saved automatically"}`;
++    const savedAt = document.createElement("div");
++    savedAt.textContent = `${journalTime(entry.firstHeardAt)} · ${entry.method === "manual" ? "saved by you" : "saved automatically"}`;
++    const evidence = document.createElement("div");
++    evidence.className = "field-journal-evidence";
++    const checks = Math.max(1, Number(entry.checkCount) || 1);
++    const ticks = document.createElement("span");
++    ticks.className = "field-check-ticks";
++    ticks.setAttribute("aria-hidden", "true");
++    for (let i = 0; i < 5; i++) {
++      const tick = document.createElement("span");
++      tick.className = `field-check-tick${i < checks ? " is-filled" : ""}${i === Math.min(checks, 5) - 1 ? " is-newest" : ""}`;
++      ticks.appendChild(tick);
++    }
++    const checkLabel = document.createElement("span");
++    checkLabel.textContent = `${checks} ${checks === 1 ? "check" : "checks"} · peak BirdNET score ${Math.round(entry.peakConfidence * 100)}%`;
++    evidence.append(ticks, checkLabel);
++    details.append(savedAt, evidence);
 +    if (entry.audioAvailable) {
 +      const load = document.createElement("button");
 +      load.type = "button";
@@ -271,7 +294,7 @@ index 35f2218..9837aba 100644
 +  }
 +}
 +
-+function saveBirdSuggestion(bird, method = "manual") {
++function saveBirdSuggestion(bird, method = "manual", countCheck = false) {
 +  if (!bird || !Number.isFinite(bird.confidence)) return;
 +  const now = Date.now();
 +  const scientificName = String(bird.scientificName || "");
@@ -282,17 +305,18 @@ index 35f2218..9837aba 100644
 +  if (previous) {
 +    previous.lastHeardAt = new Date(now).toISOString();
 +    previous.peakConfidence = Math.max(previous.peakConfidence, bird.confidence);
++    if (countCheck) previous.checkCount = Math.min(999, (Number(previous.checkCount) || 1) + 1);
 +    if (method === "manual") previous.method = "manual";
 +    entry = previous;
 +  } else {
-+    entry = { id: crypto.randomUUID ? crypto.randomUUID() : `${now}-${Math.random()}`, speciesKey, commonName, scientificName, firstHeardAt: new Date(now).toISOString(), lastHeardAt: new Date(now).toISOString(), peakConfidence: bird.confidence, method, audioAvailable: false };
++    entry = { id: crypto.randomUUID ? crypto.randomUUID() : `${now}-${Math.random()}`, speciesKey, commonName, scientificName, firstHeardAt: new Date(now).toISOString(), lastHeardAt: new Date(now).toISOString(), peakConfidence: bird.confidence, checkCount: 1, method, audioAvailable: false };
 +    journalEntries.unshift(entry);
 +    journalEntries = journalEntries.slice(0, JOURNAL_LIMIT);
 +  }
 +  const notice = document.getElementById("journalNotice");
 +  try {
 +    localStorage.setItem(JOURNAL_KEY, JSON.stringify(journalEntries));
-+    if (notice) notice.textContent = `Saved ${commonName} on this phone.`;
++    if (notice && (!previous || method === "manual")) notice.textContent = `Saved ${commonName} on this phone.`;
 +  } catch (_) {
 +    if (notice) notice.textContent = "This browser could not save the journal. Try exporting your list or freeing device storage.";
 +  }
@@ -307,14 +331,16 @@ index 35f2218..9837aba 100644
 +    if (!Number.isFinite(bird.confidence) || bird.confidence < saveThreshold) continue;
 +    if (geoEnabled && geolocation && !(typeof bird.geoscore === "number" && bird.geoscore >= 0.05)) continue;
 +    const key = bird.scientificName || String(bird.index);
-+    const evidence = recentBirdHits.get(key) || { count: 0, lastAt: 0, lastSavedAt: 0 };
-+    evidence.count = now - evidence.lastAt > 8_000 ? 1 : evidence.count + 1;
-+    evidence.lastAt = now;
-+    if (evidence.count >= 2 && now - evidence.lastSavedAt > 90_000) {
-+      saveBirdSuggestion(bird, "auto");
-+      evidence.lastSavedAt = now;
-+    }
-+    recentBirdHits.set(key, evidence);
++    const evidence = recentBirdHits.get(key);
++    const newOccurrence = !evidence || now - evidence.lastAt > 90_000;
++    const countCheck = newOccurrence || now - evidence.lastCountedAt >= 3_000;
++    const higherPeak = bird.confidence > (evidence?.peakConfidence || 0) + 0.01;
++    if (countCheck || higherPeak) saveBirdSuggestion(bird, "auto", countCheck);
++    recentBirdHits.set(key, {
++      lastAt: now,
++      lastCountedAt: countCheck ? now : evidence.lastCountedAt,
++      peakConfidence: Math.max(evidence?.peakConfidence || 0, bird.confidence)
++    });
 +  }
 +  for (const [key, evidence] of recentBirdHits) {
 +    if (now - evidence.lastAt > 120_000) recentBirdHits.delete(key);
@@ -326,7 +352,7 @@ index 35f2218..9837aba 100644
 +    const safe = String(value ?? "").replace(/^[=+@-]/, match => `'${match}`);
 +    return `"${safe.replaceAll('"', '""')}"`;
 +  };
-+  const rows = [["First heard", "Last heard", "Bird", "Scientific name", "Peak confidence", "Saved how"], ...journalEntries.map(entry => [entry.firstHeardAt, entry.lastHeardAt, entry.commonName, entry.scientificName, Math.round(entry.peakConfidence * 100) + "%", entry.method])];
++  const rows = [["First heard", "Last heard", "Bird", "Scientific name", "Listening checks", "Peak BirdNET score", "Saved how"], ...journalEntries.map(entry => [entry.firstHeardAt, entry.lastHeardAt, entry.commonName, entry.scientificName, Math.max(1, Number(entry.checkCount) || 1), Math.round(entry.peakConfidence * 100) + "%", entry.method])];
 +  const file = new Blob([rows.map(row => row.map(cell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
 +  const url = URL.createObjectURL(file);
 +  const link = document.createElement("a");
@@ -378,7 +404,7 @@ index 35f2218..9837aba 100644
  /**
   * Maps browser locale string (e.g., "en-US") to BirdNET label code (e.g., "en_us").
   */
-@@ -222,9 +501,14 @@ let colormapFn = d3.interpolateViridis; // Updated in init
+@@ -222,9 +520,14 @@ let colormapFn = d3.interpolateViridis; // Updated in init
  
  // Model & Detection
  let currentLabelLang = store.get("bn_lang", mapBrowserLangToLabelLang(navigator.language));
@@ -394,7 +420,7 @@ index 35f2218..9837aba 100644
  let inputGain = store.getFloat("bn_input_gain", 1.0);
  let sensitivity = store.getFloat("bn_sensitivity", 1.0); // New: Sensitivity
  let inferenceInterval = store.getFloat("bn_inference_interval", 500);
-@@ -271,6 +555,7 @@ document.addEventListener("DOMContentLoaded", () => {
+@@ -271,6 +574,7 @@ document.addEventListener("DOMContentLoaded", () => {
    if (isLive) {
      setupRecordButton();
      initSpectrogramCanvas(); // Initialize canvas size immediately to prevent layout shift
@@ -402,7 +428,7 @@ index 35f2218..9837aba 100644
    }
  
    // Handle Geolocation Initialization
-@@ -361,6 +646,7 @@ function initWorker(langOverride) {
+@@ -361,6 +665,7 @@ function initWorker(langOverride) {
            ? computeTemporalPooledDetections(recentInferenceSets)
            : data.pooled;
          renderDetections(toRender);
@@ -410,7 +436,7 @@ index 35f2218..9837aba 100644
          
          if (isListening && lastInferenceStart) {
            lastInferenceMs = Math.round(performance.now() - lastInferenceStart);
-@@ -454,6 +740,8 @@ async function startListening() {
+@@ -454,6 +759,8 @@ async function startListening() {
  
  function stopListening() {
    isListening = false;
@@ -419,7 +445,7 @@ index 35f2218..9837aba 100644
    releaseWakeLock();
    
    // UI Updates
-@@ -525,7 +813,7 @@ async function setupAudioGraphFromStream(stream) {
+@@ -525,7 +832,7 @@ async function setupAudioGraphFromStream(stream) {
    startSpectrogram(highPassFilterNode);
  
    // Setup circular buffer for inference
@@ -428,7 +454,7 @@ index 35f2218..9837aba 100644
    circularWriteIndex = 0;
  
    if (!audioContext.audioWorklet) {
-@@ -596,10 +884,15 @@ function startInferenceLoop() {
+@@ -596,10 +903,15 @@ function startInferenceLoop() {
   * Extracts the most recent 3 seconds of audio from the circular buffer.
   */
  function getCurrentWindow() {
@@ -447,7 +473,7 @@ index 35f2218..9837aba 100644
      // Gain is already applied by GainNode, just clamp to prevent clipping artifacts in model
      result[i] = Math.max(-1, Math.min(1, circularBuffer[idx]));
      idx = (idx + 1) % circularBuffer.length;
-@@ -1156,6 +1449,7 @@ function renderDetections(pooled) {
+@@ -1156,6 +1468,7 @@ function renderDetections(pooled) {
                <div class="small text-muted border-top pt-2 mt-1 geo-info">
                  ${geoInfo ? `<i class="bi bi-geo-alt me-1"></i>${geoInfo}` : ""}
                </div>
@@ -572,7 +598,7 @@ index df8714a..906ac06 100644
    </div>
  </header>
 diff --git a/src/index.njk b/src/index.njk
-index fbb673b..2a789b1 100644
+index fbb673b..47deaab 100644
 --- a/src/index.njk
 +++ b/src/index.njk
 @@ -1,9 +1,17 @@
@@ -587,7 +613,7 @@ index fbb673b..2a789b1 100644
 +  <div class="field-note">
 +    <span class="field-note-kicker">Monosyth weather · field test</span>
 +    <h1>Listen with this phone</h1>
-+    <p>Step outside and tap Start listening. BirdNET will suggest birds as they call and save repeated suggestions in a field journal on this phone. If you want the actual sound too, turn on short clips in Settings. The camera's separate history stays unchanged. The first visit downloads the bird model, so Wi-Fi is best. <a href="{{ '/legal/index.html' | url }}">How this test works and privacy</a></p>
++    <p>Step outside and tap Start listening. BirdNET will suggest birds as they call and save each new identification with its time in a field journal on this phone. Repeated appearances of the same bird within 90 seconds stay together. If you want the actual sound too, turn on short clips in Settings. The camera's separate history stays unchanged. The first visit downloads the bird model, so Wi-Fi is best. <a href="{{ '/legal/index.html' | url }}">How this test works and privacy</a></p>
 +  </div>
 +</div>
 +
@@ -609,7 +635,7 @@ index fbb673b..2a789b1 100644
  
 +  <div class="field-help mb-4">
 +    <strong>What the controls mean</strong>
-+    <p><b>Show suggestions</b> changes which live bird cards appear. <b>Save to journal</b> keeps a suggestion after BirdNET hears it more than once. Open Settings to adjust either one.</p>
++    <p><b>Show suggestions</b> changes which live bird cards appear. <b>Save to journal</b> records each new bird and its time as soon as BirdNET identifies it. Open Settings to adjust either one.</p>
 +  </div>
 +
 +  <div class="field-section-heading"><h2>Birds showing now</h2><span>Live suggestions change as the sound changes</span></div>
@@ -626,9 +652,9 @@ index fbb673b..2a789b1 100644
 +      <div><span class="field-note-kicker">This browser only</span><h2 id="fieldJournalTitle">Saved on this phone <span id="journalCount" class="field-count">0</span></h2></div>
 +      <div class="field-journal-actions"><button type="button" id="exportJournal" class="btn btn-outline-success btn-sm">Export list</button><button type="button" id="clearJournal" class="btn btn-link btn-sm text-secondary">Clear</button></div>
 +    </div>
-+    <p class="field-journal-explain">These are BirdNET suggestions, not confirmed identifications. They stay in this phone's browser until you clear its site data or clear the list here. Export a copy if you want to keep them. Saved audio clips can be played or downloaded one at a time.</p>
++    <p class="field-journal-explain">Each bird is saved with the time it first appeared. The ticks fill as BirdNET hears it in later listening windows, at least three seconds apart. The peak BirdNET score is shown separately; ticks do not raise that score. These are suggestions, not confirmed identifications. They stay in this phone's browser until you clear its site data or clear the list here. Export a copy if you want to keep them. Saved audio clips can be played or downloaded one at a time.</p>
 +    <p id="journalNotice" class="field-journal-notice" role="status" aria-live="polite"></p>
-+    <div id="journalList" class="field-journal-list"><p class="field-journal-empty">Nothing saved yet. Start listening outside; repeated bird suggestions will appear here.</p></div>
++    <div id="journalList" class="field-journal-list"><p class="field-journal-empty">Nothing saved yet. Start listening outside; each new bird identification will appear here with its time.</p></div>
 +  </section>
  </div>
  
@@ -644,7 +670,7 @@ index fbb673b..2a789b1 100644
 +      <p>The live cards come and go. The journal keeps useful sightings on this phone.</p>
 +      <div class="form-check form-switch mb-3">
 +        <input class="form-check-input" type="checkbox" id="autoSaveToggle" checked>
-+        <label class="form-check-label fw-semibold" for="autoSaveToggle">Save repeated birds automatically</label>
++        <label class="form-check-label fw-semibold" for="autoSaveToggle">Save each bird identification automatically</label>
 +      </div>
 +      <div class="form-check form-switch mb-3">
 +        <input class="form-check-input" type="checkbox" id="saveAudioToggle">
@@ -653,7 +679,7 @@ index fbb673b..2a789b1 100644
 +      </div>
 +      <label for="saveThresholdRange" class="form-label d-flex justify-content-between"><span>Save when confidence reaches</span><strong id="saveThresholdValue">15%</strong></label>
 +      <input type="range" class="form-range" id="saveThresholdRange" min="15" max="80" step="5" value="15">
-+      <p class="form-text">A bird must appear in two nearby listening checks. The starting level matches the live cards, so repeated birds you see should be saved. Raise it to save fewer suggestions with higher model confidence. You can also tap Save on any live card.</p>
++      <p class="form-text">The starting level matches the live cards, so each bird shown is saved with its time. Repeated appearances of the same bird within 90 seconds add ticks to one entry. Raise this level to save fewer suggestions with higher model confidence. You can also tap Save on any live card.</p>
 +    </div>
 +
 +    <h6 class="text-uppercase text-muted fw-bold mb-3">What BirdNET shows</h6>
