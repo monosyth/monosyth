@@ -12,7 +12,7 @@ index 1524d7c..e663134 100644
      markdownTemplateEngine: "njk",
      htmlTemplateEngine: "njk",
 diff --git a/public/css/main.css b/public/css/main.css
-index da7a30b..eac6f54 100644
+index da7a30b..19b23bf 100644
 --- a/public/css/main.css
 +++ b/public/css/main.css
 @@ -1,7 +1,20 @@
@@ -36,16 +36,349 @@ index da7a30b..eac6f54 100644
  /* Optional wider container */
  @media (min-width: 1200px) {
    .container { max-width: 1500px; }
-@@ -181,3 +194,4 @@ body.drawer-open .record-btn {
+@@ -181,3 +194,37 @@ body.drawer-open .record-btn {
    pointer-events: none;
    transition: opacity 0.2s;
  }
 +@media (max-width: 740px) { .spectrogram-full .live-spectrogram-canvas { height: 26vh; min-height: 170px; } }
++
++/* Monosyth field journal and listening guidance */
++.field-help { border-left: 3px solid #74a27a; background: #edf4e9; color: #315540; padding: .9rem 1rem; border-radius: .35rem .8rem .8rem .35rem; }
++.field-help strong { display: block; margin-bottom: .3rem; }
++.field-help p { margin: 0; font-size: .88rem; line-height: 1.5; }
++.field-section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; margin-bottom: 1rem; }
++.field-section-heading h2, .field-journal h2 { font-size: 1.25rem; font-weight: 600; letter-spacing: -.025em; margin: 0; }
++.field-section-heading span { font-size: .8rem; color: #657a6b; }
++.field-journal { border: 1px solid #dce6d8; border-radius: 1rem; padding: clamp(1rem, 3vw, 1.5rem); background: #fff; }
++.field-journal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
++.field-journal-actions { display: flex; align-items: center; gap: .4rem; }
++.field-journal-explain { margin: .8rem 0 1rem; color: #5b7060; font-size: .86rem; line-height: 1.5; max-width: 70ch; }
++.field-journal-notice { color: #275f3e; font-size: .84rem; margin: 0 0 .5rem; }
++.field-journal-notice:empty { display: none; }
++.field-count { display: inline-flex; align-items: center; justify-content: center; min-width: 1.65rem; height: 1.65rem; margin-left: .25rem; border-radius: 999px; background: #e2efe1; color: #2f6a45; font-size: .78rem; vertical-align: middle; }
++.field-journal-list { max-height: 22rem; overflow-y: auto; }
++.field-journal-row { display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid #e9eee7; padding: .8rem 0; }
++.field-journal-row strong { display: block; font-weight: 600; }
++.field-journal-row small { display: block; color: #718071; font-style: italic; }
++.field-journal-detail { color: #526c57; text-align: right; font-size: .8rem; white-space: nowrap; }
++.field-journal-empty { color: #6b7e6d; font-size: .88rem; padding: .65rem 0; margin: 0; }
++.field-settings-summary { background: #eef5ea; border: 1px solid #dbe9d8; border-radius: .8rem; padding: 1rem; margin-bottom: 1.5rem; }
++.field-settings-summary h6 { font-weight: 700; margin-bottom: .35rem; }
++.field-settings-summary > p { color: #4d6752; font-size: .88rem; line-height: 1.45; }
++.field-settings-summary .form-text { color: #536b57; }
++@media (max-width: 620px) { .field-section-heading { display: block; } .field-journal-row { display: block; } .field-journal-detail { text-align: left; margin-top: .3rem; white-space: normal; } }
++.field-journal-row { flex-wrap: wrap; }
++.field-clip-button { display: block; border: 0; background: transparent; color: #2d704d; padding: .35rem 0 0; margin-left: auto; font: inherit; font-size: .8rem; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
++.field-clip-button:disabled { color: #708576; cursor: default; }
++.field-clip-controls { display: flex; align-items: center; justify-content: flex-end; gap: .75rem; flex-basis: 100%; }
++.field-clip-controls audio { max-width: min(100%, 280px); height: 36px; }
++.field-clip-controls a { color: #2d704d; font-size: .8rem; white-space: nowrap; }
++@media (max-width: 620px) { .field-clip-button { margin-left: 0; } .field-clip-controls { justify-content: flex-start; flex-wrap: wrap; } }
 diff --git a/public/js/app.js b/public/js/app.js
-index 35f2218..b2e3ed5 100644
+index 35f2218..9837aba 100644
 --- a/public/js/app.js
 +++ b/public/js/app.js
-@@ -222,7 +222,7 @@ let colormapFn = d3.interpolateViridis; // Updated in init
+@@ -12,6 +12,8 @@
+ const SAMPLE_RATE = 48000;
+ const WINDOW_SECONDS = 3;
+ const WINDOW_SAMPLES = SAMPLE_RATE * WINDOW_SECONDS;
++const AUDIO_BUFFER_SECONDS = 8;
++const CLIP_SECONDS = 6;
+ 
+ // Inference settings
+ const TEMPORAL_POOL_WINDOW = 5;    // Number of recent predictions to pool
+@@ -62,6 +64,11 @@ let lastInferenceStart = 0;
+ let lastInferenceMs = null;
+ let recentInferenceSets = []; // Buffer for temporal pooling
+ let latestDetections = [];
++const JOURNAL_KEY = "bn_field_journal_v1";
++const JOURNAL_LIMIT = 500;
++const recentBirdHits = new Map();
++let clipsDbPromise;
++const activeClipUrls = [];
+ 
+ // Spectrogram State
+ let spectroCanvas, spectroCtx;
+@@ -91,6 +98,278 @@ const store = {
+   set: (k, v) => localStorage.setItem(k, v)
+ };
+ 
++function loadJournal() {
++  try {
++    const entries = JSON.parse(localStorage.getItem(JOURNAL_KEY) || "[]");
++    return Array.isArray(entries) ? entries.filter(entry => entry && typeof entry.commonName === "string" && typeof entry.firstHeardAt === "string").slice(0, JOURNAL_LIMIT) : [];
++  } catch (_) {
++    return [];
++  }
++}
++
++function openClipsDb() {
++  if (clipsDbPromise) return clipsDbPromise;
++  clipsDbPromise = new Promise((resolve, reject) => {
++    if (!window.indexedDB) { reject(new Error("Audio storage unavailable")); return; }
++    const request = indexedDB.open("bn_field_clips_v1", 1);
++    request.onupgradeneeded = () => request.result.createObjectStore("clips", { keyPath: "id" });
++    request.onsuccess = () => resolve(request.result);
++    request.onerror = () => reject(request.error);
++  }).catch(error => { clipsDbPromise = undefined; throw error; });
++  return clipsDbPromise;
++}
++
++async function putClip(id, blob) {
++  const db = await openClipsDb();
++  return new Promise((resolve, reject) => {
++    const tx = db.transaction("clips", "readwrite");
++    tx.objectStore("clips").put({ id, blob });
++    tx.oncomplete = resolve;
++    tx.onerror = () => reject(tx.error);
++  });
++}
++
++async function getClip(id) {
++  const db = await openClipsDb();
++  return new Promise((resolve, reject) => {
++    const tx = db.transaction("clips", "readonly");
++    const request = tx.objectStore("clips").get(id);
++    request.onsuccess = () => resolve(request.result?.blob || null);
++    request.onerror = () => reject(request.error);
++  });
++}
++
++async function clearClips() {
++  const db = await openClipsDb();
++  return new Promise((resolve, reject) => {
++    const tx = db.transaction("clips", "readwrite");
++    tx.objectStore("clips").clear();
++    tx.oncomplete = resolve;
++    tx.onerror = () => reject(tx.error);
++  });
++}
++
++function wavBlob(samples) {
++  const bytes = new ArrayBuffer(44 + samples.length * 2);
++  const view = new DataView(bytes);
++  const write = (offset, value) => { for (let i = 0; i < value.length; i++) view.setUint8(offset + i, value.charCodeAt(i)); };
++  write(0, "RIFF");
++  view.setUint32(4, bytes.byteLength - 8, true);
++  write(8, "WAVE");
++  write(12, "fmt ");
++  view.setUint32(16, 16, true);
++  view.setUint16(20, 1, true);
++  view.setUint16(22, 1, true);
++  view.setUint32(24, SAMPLE_RATE, true);
++  view.setUint32(28, SAMPLE_RATE * 2, true);
++  view.setUint16(32, 2, true);
++  view.setUint16(34, 16, true);
++  write(36, "data");
++  view.setUint32(40, samples.length * 2, true);
++  for (let i = 0; i < samples.length; i++) {
++    const sample = Math.max(-1, Math.min(1, samples[i]));
++    view.setInt16(44 + i * 2, sample < 0 ? sample * 32768 : sample * 32767, true);
++  }
++  return new Blob([bytes], { type: "audio/wav" });
++}
++
++async function captureAudioForEntry(entry) {
++  const windowed = getRecentAudio(CLIP_SECONDS);
++  if (!windowed) return;
++  entry.audioPending = true;
++  try {
++    await putClip(entry.id, wavBlob(windowed));
++    entry.audioAvailable = true;
++    entry.audioPending = false;
++    localStorage.setItem(JOURNAL_KEY, JSON.stringify(journalEntries));
++    const notice = document.getElementById("journalNotice");
++    if (notice) notice.textContent = `Saved ${entry.commonName} with a sound clip on this phone.`;
++    renderJournal();
++  } catch (_) {
++    const notice = document.getElementById("journalNotice");
++    if (notice) notice.textContent = `Saved ${entry.commonName}, but this browser could not keep the sound clip. Check device storage.`;
++  } finally {
++    entry.audioPending = false;
++  }
++}
++
++function journalTime(iso) {
++  const date = new Date(iso);
++  return Number.isNaN(date.getTime()) ? "Unknown time" : new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(date);
++}
++
++function renderJournal() {
++  const list = document.getElementById("journalList");
++  if (!list) return;
++  for (const url of activeClipUrls.splice(0)) URL.revokeObjectURL(url);
++  document.getElementById("journalCount").textContent = String(journalEntries.length);
++  document.getElementById("exportJournal").disabled = journalEntries.length === 0;
++  document.getElementById("clearJournal").disabled = journalEntries.length === 0;
++  list.replaceChildren();
++  if (!journalEntries.length) {
++    const empty = document.createElement("p");
++    empty.className = "field-journal-empty";
++    empty.textContent = "Nothing saved yet. Start listening outside; repeated bird suggestions will appear here.";
++    list.appendChild(empty);
++    return;
++  }
++  for (const entry of journalEntries.slice(0, 30)) {
++    const row = document.createElement("div");
++    row.className = "field-journal-row";
++    const names = document.createElement("div");
++    const bird = document.createElement("strong");
++    bird.textContent = entry.commonName;
++    const scientific = document.createElement("small");
++    scientific.textContent = entry.scientificName || "BirdNET suggestion";
++    names.append(bird, scientific);
++    const details = document.createElement("div");
++    details.className = "field-journal-detail";
++    details.textContent = `${journalTime(entry.firstHeardAt)} · up to ${Math.round(entry.peakConfidence * 100)}% · ${entry.method === "manual" ? "saved by you" : "saved automatically"}`;
++    if (entry.audioAvailable) {
++      const load = document.createElement("button");
++      load.type = "button";
++      load.className = "field-clip-button";
++      load.textContent = "Play sound clip";
++      load.addEventListener("click", async () => {
++        load.disabled = true;
++        try {
++          const clip = await getClip(entry.id);
++          if (!clip) throw new Error("Missing clip");
++          const url = URL.createObjectURL(clip);
++          activeClipUrls.push(url);
++          const controls = document.createElement("div");
++          controls.className = "field-clip-controls";
++          const audio = document.createElement("audio");
++          audio.controls = true;
++          audio.src = url;
++          const download = document.createElement("a");
++          download.href = url;
++          download.download = `birdnet-${entry.firstHeardAt.slice(0, 19).replaceAll(":", "-")}.wav`;
++          download.textContent = "Download clip";
++          controls.append(audio, download);
++          row.appendChild(controls);
++          load.remove();
++        } catch (_) {
++          load.textContent = "Clip unavailable";
++        }
++      });
++      details.appendChild(load);
++    }
++    row.append(names, details);
++    list.appendChild(row);
++  }
++  if (journalEntries.length > 30) {
++    const more = document.createElement("p");
++    more.className = "field-journal-empty";
++    more.textContent = `${journalEntries.length - 30} older entries are in the exported list.`;
++    list.appendChild(more);
++  }
++}
++
++function saveBirdSuggestion(bird, method = "manual") {
++  if (!bird || !Number.isFinite(bird.confidence)) return;
++  const now = Date.now();
++  const scientificName = String(bird.scientificName || "");
++  const commonName = String(bird.commonNameI18n || bird.commonName || scientificName || "Unknown bird");
++  const speciesKey = scientificName || String(bird.index);
++  const previous = journalEntries.find(entry => entry.speciesKey === speciesKey && now - Date.parse(entry.lastHeardAt) < 90_000);
++  let entry;
++  if (previous) {
++    previous.lastHeardAt = new Date(now).toISOString();
++    previous.peakConfidence = Math.max(previous.peakConfidence, bird.confidence);
++    if (method === "manual") previous.method = "manual";
++    entry = previous;
++  } else {
++    entry = { id: crypto.randomUUID ? crypto.randomUUID() : `${now}-${Math.random()}`, speciesKey, commonName, scientificName, firstHeardAt: new Date(now).toISOString(), lastHeardAt: new Date(now).toISOString(), peakConfidence: bird.confidence, method, audioAvailable: false };
++    journalEntries.unshift(entry);
++    journalEntries = journalEntries.slice(0, JOURNAL_LIMIT);
++  }
++  const notice = document.getElementById("journalNotice");
++  try {
++    localStorage.setItem(JOURNAL_KEY, JSON.stringify(journalEntries));
++    if (notice) notice.textContent = `Saved ${commonName} on this phone.`;
++  } catch (_) {
++    if (notice) notice.textContent = "This browser could not save the journal. Try exporting your list or freeing device storage.";
++  }
++  renderJournal();
++  if (saveAudio && !entry.audioAvailable && !entry.audioPending) void captureAudioForEntry(entry);
++}
++
++function considerAutoSave(birds) {
++  if (!isListening || !autoSave || !Array.isArray(birds)) return;
++  const now = Date.now();
++  for (const bird of birds) {
++    if (!Number.isFinite(bird.confidence) || bird.confidence < saveThreshold) continue;
++    if (geoEnabled && geolocation && !(typeof bird.geoscore === "number" && bird.geoscore >= 0.05)) continue;
++    const key = bird.scientificName || String(bird.index);
++    const evidence = recentBirdHits.get(key) || { count: 0, lastAt: 0, lastSavedAt: 0 };
++    evidence.count = now - evidence.lastAt > 8_000 ? 1 : evidence.count + 1;
++    evidence.lastAt = now;
++    if (evidence.count >= 2 && now - evidence.lastSavedAt > 90_000) {
++      saveBirdSuggestion(bird, "auto");
++      evidence.lastSavedAt = now;
++    }
++    recentBirdHits.set(key, evidence);
++  }
++  for (const [key, evidence] of recentBirdHits) {
++    if (now - evidence.lastAt > 120_000) recentBirdHits.delete(key);
++  }
++}
++
++function exportJournal() {
++  const cell = value => {
++    const safe = String(value ?? "").replace(/^[=+@-]/, match => `'${match}`);
++    return `"${safe.replaceAll('"', '""')}"`;
++  };
++  const rows = [["First heard", "Last heard", "Bird", "Scientific name", "Peak confidence", "Saved how"], ...journalEntries.map(entry => [entry.firstHeardAt, entry.lastHeardAt, entry.commonName, entry.scientificName, Math.round(entry.peakConfidence * 100) + "%", entry.method])];
++  const file = new Blob([rows.map(row => row.map(cell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
++  const url = URL.createObjectURL(file);
++  const link = document.createElement("a");
++  link.href = url;
++  link.download = `birdnet-field-journal-${new Date().toISOString().slice(0, 10)}.csv`;
++  document.body.appendChild(link);
++  link.click();
++  link.remove();
++  setTimeout(() => URL.revokeObjectURL(url), 60_000);
++}
++
++function setupFieldJournal() {
++  renderJournal();
++  const auto = document.getElementById("autoSaveToggle");
++  const audio = document.getElementById("saveAudioToggle");
++  const saveRange = document.getElementById("saveThresholdRange");
++  const saveValue = document.getElementById("saveThresholdValue");
++  auto.checked = autoSave;
++  auto.addEventListener("change", () => { autoSave = auto.checked; store.set("bn_field_auto_save", autoSave); });
++  audio.checked = saveAudio;
++  audio.addEventListener("change", () => { saveAudio = audio.checked; store.set("bn_field_save_audio", saveAudio); });
++  saveRange.value = String(Math.round(saveThreshold * 100));
++  saveValue.textContent = `${Math.round(saveThreshold * 100)}%`;
++  saveRange.addEventListener("input", () => {
++    saveThreshold = Number(saveRange.value) / 100;
++    saveValue.textContent = `${Math.round(saveThreshold * 100)}%`;
++    store.set("bn_field_save_threshold", saveThreshold);
++  });
++  detectionsList().addEventListener("click", event => {
++    const button = event.target.closest(".save-sighting");
++    if (!button) return;
++    const key = button.closest("[data-species]")?.dataset.species;
++    const bird = latestDetections.find(item => (item.scientificName || `idx-${item.index}`) === key);
++    if (bird) saveBirdSuggestion(bird);
++  });
++  document.getElementById("exportJournal").addEventListener("click", exportJournal);
++  document.getElementById("clearJournal").addEventListener("click", async () => {
++    if (!window.confirm("Clear the saved bird suggestions from this phone? Export a copy first if you want to keep them.")) return;
++    journalEntries = [];
++    recentBirdHits.clear();
++    localStorage.removeItem(JOURNAL_KEY);
++    let clipsCleared = true;
++    try { await clearClips(); } catch (_) { clipsCleared = false; }
++    document.getElementById("journalNotice").textContent = clipsCleared ? "Saved bird suggestions and clips cleared." : "Bird names cleared, but clips may remain. Clear this site's browser data to remove them.";
++    renderJournal();
++  });
++}
++
+ /**
+  * Maps browser locale string (e.g., "en-US") to BirdNET label code (e.g., "en_us").
+  */
+@@ -222,9 +501,14 @@ let colormapFn = d3.interpolateViridis; // Updated in init
  
  // Model & Detection
  let currentLabelLang = store.get("bn_lang", mapBrowserLangToLabelLang(navigator.language));
@@ -53,7 +386,113 @@ index 35f2218..b2e3ed5 100644
 +let geoEnabled = store.getBool("bn_geo_enabled", false);
  let detectionThreshold = store.getFloat("bn_threshold", 0.15);
  if (detectionThreshold > 1.0) detectionThreshold = 0.15; // Sanity check
++let autoSave = store.getBool("bn_field_auto_save", true);
++let saveAudio = store.getBool("bn_field_save_audio", false);
++let saveThreshold = store.getFloat("bn_field_save_threshold", 0.15);
++if (!Number.isFinite(saveThreshold) || saveThreshold < 0.15 || saveThreshold > 0.8) saveThreshold = 0.15;
++let journalEntries = loadJournal();
  let inputGain = store.getFloat("bn_input_gain", 1.0);
+ let sensitivity = store.getFloat("bn_sensitivity", 1.0); // New: Sensitivity
+ let inferenceInterval = store.getFloat("bn_inference_interval", 500);
+@@ -271,6 +555,7 @@ document.addEventListener("DOMContentLoaded", () => {
+   if (isLive) {
+     setupRecordButton();
+     initSpectrogramCanvas(); // Initialize canvas size immediately to prevent layout shift
++    setupFieldJournal();
+   }
+ 
+   // Handle Geolocation Initialization
+@@ -361,6 +646,7 @@ function initWorker(langOverride) {
+           ? computeTemporalPooledDetections(recentInferenceSets)
+           : data.pooled;
+         renderDetections(toRender);
++        considerAutoSave(toRender);
+         
+         if (isListening && lastInferenceStart) {
+           lastInferenceMs = Math.round(performance.now() - lastInferenceStart);
+@@ -454,6 +740,8 @@ async function startListening() {
+ 
+ function stopListening() {
+   isListening = false;
++  recentBirdHits.clear();
++  recentInferenceSets = [];
+   releaseWakeLock();
+   
+   // UI Updates
+@@ -525,7 +813,7 @@ async function setupAudioGraphFromStream(stream) {
+   startSpectrogram(highPassFilterNode);
+ 
+   // Setup circular buffer for inference
+-  circularBuffer = new Float32Array(WINDOW_SAMPLES);
++  circularBuffer = new Float32Array(SAMPLE_RATE * AUDIO_BUFFER_SECONDS);
+   circularWriteIndex = 0;
+ 
+   if (!audioContext.audioWorklet) {
+@@ -596,10 +884,15 @@ function startInferenceLoop() {
+  * Extracts the most recent 3 seconds of audio from the circular buffer.
+  */
+ function getCurrentWindow() {
++  return getRecentAudio(WINDOW_SECONDS);
++}
++
++function getRecentAudio(seconds) {
+   if (!circularBuffer) return null;
+-  const result = new Float32Array(WINDOW_SAMPLES);
+-  let idx = circularWriteIndex; 
+-  for (let i = 0; i < WINDOW_SAMPLES; i++) {
++  const sampleCount = Math.min(circularBuffer.length, Math.round(SAMPLE_RATE * seconds));
++  const result = new Float32Array(sampleCount);
++  let idx = (circularWriteIndex - sampleCount + circularBuffer.length) % circularBuffer.length;
++  for (let i = 0; i < sampleCount; i++) {
+     // Gain is already applied by GainNode, just clamp to prevent clipping artifacts in model
+     result[i] = Math.max(-1, Math.min(1, circularBuffer[idx]));
+     idx = (idx + 1) % circularBuffer.length;
+@@ -1156,6 +1449,7 @@ function renderDetections(pooled) {
+               <div class="small text-muted border-top pt-2 mt-1 geo-info">
+                 ${geoInfo ? `<i class="bi bi-geo-alt me-1"></i>${geoInfo}` : ""}
+               </div>
++              <button type="button" class="save-sighting btn btn-sm btn-outline-success mt-2">Save this bird</button>
+             </div>
+           </div>
+         </div>
+diff --git a/public/locales/en.json b/public/locales/en.json
+index a461315..55679ec 100644
+--- a/public/locales/en.json
++++ b/public/locales/en.json
+@@ -4,21 +4,21 @@
+   "nav_explore": "Explore",
+   "nav_about": "About",
+   "nav_share": "Share",
+-  "status_init": "Tap 'Start' to record",
++  "status_init": "Tap Start listening when you are outside.",
+   "status_loading": "Loading BirdNET…",
+   "status_loading_percent": "Loading BirdNET… {0}%",
+   "status_listening_inference": "Listening… (Inference took {0} ms)",
+   "status_worker_error": "BirdNET worker error. Refresh page.",
+-  "status_ready": "Model ready. Tap 'Start' to record.",
++  "status_ready": "Model ready. Tap Start listening.",
+   "status_requesting_mic": "Requesting microphone access…",
+   "status_listening": "Listening…",
+   "status_mic_failed": "Microphone access failed.",
+-  "status_stopped": "Stopped. Tap 'Start' to resume.",
++  "status_stopped": "Stopped. Tap Start listening to resume.",
+   "status_browser_old": "Browser too old. Please update.",
+   "status_audio_failed": "Audio setup failed. Please refresh.",
+   "status_reloading_model": "Reloading model for language…",
+-  "btn_start": "Start",
+-  "btn_stop": "Stop",
++  "btn_start": "Start listening",
++  "btn_stop": "Stop listening",
+   "settings_title": "Settings",
+   "sec_detection": "Detection & Model",
+   "lbl_use_geo": "Use geolocation",
+@@ -97,4 +97,4 @@
+   "share_desc": "Scan this code to open the app on another device.",
+   "share_btn_link": "Share Link",
+   "share_msg_text": "Check out this real-time bird ID app!"
+-}
+\ No newline at end of file
++}
 diff --git a/public/manifest.webmanifest b/public/manifest.webmanifest
 index f4f42ed..4368471 100644
 --- a/public/manifest.webmanifest
@@ -133,7 +572,7 @@ index df8714a..906ac06 100644
    </div>
  </header>
 diff --git a/src/index.njk b/src/index.njk
-index fbb673b..28bb1f6 100644
+index fbb673b..2a789b1 100644
 --- a/src/index.njk
 +++ b/src/index.njk
 @@ -1,9 +1,17 @@
@@ -148,14 +587,76 @@ index fbb673b..28bb1f6 100644
 +  <div class="field-note">
 +    <span class="field-note-kicker">Monosyth weather · field test</span>
 +    <h1>Listen with this phone</h1>
-+    <p>Step outside, tap Start, and let your phone listen for birds. The moving sound picture and BirdNET suggestions appear below. Audio is analysed on this phone and is not added to the station’s bird history. The first visit downloads the bird model, so Wi-Fi is best. <a href="{{ '/legal/index.html' | url }}">How this test works and privacy</a></p>
++    <p>Step outside and tap Start listening. BirdNET will suggest birds as they call and save repeated suggestions in a field journal on this phone. If you want the actual sound too, turn on short clips in Settings. The camera's separate history stays unchanged. The first visit downloads the bird model, so Wi-Fi is best. <a href="{{ '/legal/index.html' | url }}">How this test works and privacy</a></p>
 +  </div>
 +</div>
 +
  <section class="py-0">
    <div class="spectrogram-full">
      <canvas id="liveSpectrogram" class="live-spectrogram-canvas"></canvas>
-@@ -53,7 +61,7 @@ permalink: "/"
+@@ -15,7 +23,7 @@ permalink: "/"
+   <div class="d-flex justify-content-between align-items-center mb-4">
+     <div class="d-flex align-items-center gap-2">
+       <div id="listeningIndicator" class="spinner-grow text-danger spinner-grow-sm d-none" role="status"></div>
+-      <span class="small text-muted" id="statusText" data-i18n="status_init">Tap 'Start' to record</span>
++      <span class="small text-muted" id="statusText" data-i18n="status_init">Tap Start listening when you are outside.</span>
+     </div>
+     <button
+       id="settingsToggle"
+@@ -29,6 +37,12 @@ permalink: "/"
+     </button>
+   </div>
+ 
++  <div class="field-help mb-4">
++    <strong>What the controls mean</strong>
++    <p><b>Show suggestions</b> changes which live bird cards appear. <b>Save to journal</b> keeps a suggestion after BirdNET hears it more than once. Open Settings to adjust either one.</p>
++  </div>
++
++  <div class="field-section-heading"><h2>Birds showing now</h2><span>Live suggestions change as the sound changes</span></div>
+   <!-- Detections Grid -->
+   <div id="detectionsList" class="row g-3">
+     <div class="col-12 text-center text-muted py-5">
+@@ -36,6 +50,16 @@ permalink: "/"
+       <p data-i18n="msg_detections_placeholder">Detections will appear here.</p>
+     </div>
+   </div>
++
++  <section class="field-journal mt-5" aria-labelledby="fieldJournalTitle">
++    <div class="field-journal-header">
++      <div><span class="field-note-kicker">This browser only</span><h2 id="fieldJournalTitle">Saved on this phone <span id="journalCount" class="field-count">0</span></h2></div>
++      <div class="field-journal-actions"><button type="button" id="exportJournal" class="btn btn-outline-success btn-sm">Export list</button><button type="button" id="clearJournal" class="btn btn-link btn-sm text-secondary">Clear</button></div>
++    </div>
++    <p class="field-journal-explain">These are BirdNET suggestions, not confirmed identifications. They stay in this phone's browser until you clear its site data or clear the list here. Export a copy if you want to keep them. Saved audio clips can be played or downloaded one at a time.</p>
++    <p id="journalNotice" class="field-journal-notice" role="status" aria-live="polite"></p>
++    <div id="journalList" class="field-journal-list"><p class="field-journal-empty">Nothing saved yet. Start listening outside; repeated bird suggestions will appear here.</p></div>
++  </section>
+ </div>
+ 
+ <!-- Settings Drawer -->
+@@ -48,12 +72,28 @@ permalink: "/"
+   
+   <div class="settings-drawer-body">
+     
+-    <!-- Section: Detection -->
+-    <h6 class="text-uppercase text-muted fw-bold mb-3" data-i18n="sec_detection">Detection & Model</h6>
++    <div class="field-settings-summary">
++      <h6>Save bird suggestions</h6>
++      <p>The live cards come and go. The journal keeps useful sightings on this phone.</p>
++      <div class="form-check form-switch mb-3">
++        <input class="form-check-input" type="checkbox" id="autoSaveToggle" checked>
++        <label class="form-check-label fw-semibold" for="autoSaveToggle">Save repeated birds automatically</label>
++      </div>
++      <div class="form-check form-switch mb-3">
++        <input class="form-check-input" type="checkbox" id="saveAudioToggle">
++        <label class="form-check-label fw-semibold" for="saveAudioToggle">Save a short sound clip too</label>
++        <div class="form-text">Optional: keep about 6 seconds of sound around each new bird entry. Clips use storage on this phone and are never uploaded.</div>
++      </div>
++      <label for="saveThresholdRange" class="form-label d-flex justify-content-between"><span>Save when confidence reaches</span><strong id="saveThresholdValue">15%</strong></label>
++      <input type="range" class="form-range" id="saveThresholdRange" min="15" max="80" step="5" value="15">
++      <p class="form-text">A bird must appear in two nearby listening checks. The starting level matches the live cards, so repeated birds you see should be saved. Raise it to save fewer suggestions with higher model confidence. You can also tap Save on any live card.</p>
++    </div>
++
++    <h6 class="text-uppercase text-muted fw-bold mb-3">What BirdNET shows</h6>
      
      <div class="mb-3 p-3 bg-light rounded-3">
        <div class="form-check form-switch">
@@ -164,11 +665,82 @@ index fbb673b..28bb1f6 100644
          <label class="form-check-label fw-semibold" for="geoToggle" data-i18n="lbl_use_geo">Use geolocation</label>
        </div>
        <div class="geo-status mt-1" id="geoStatusText" data-i18n="status_geo_waiting">Awaiting geolocation…</div>
+@@ -86,52 +126,52 @@ permalink: "/"
+       <!-- Threshold -->
+       <div class="col-12">
+         <div class="d-flex justify-content-between">
+-          <label for="thresholdRange" class="form-label" data-i18n="lbl_threshold">Threshold</label>
++        <label for="thresholdRange" class="form-label">Show suggestions above</label>
+           <span class="small text-muted">≥ <span class="form-range-value" id="thresholdValue">15%</span></span>
+         </div>
+         <input type="range" class="form-range" id="thresholdRange" min="5" max="95" step="5">
+-        <div class="form-text small" data-i18n="msg_threshold_hint">Minimum confidence score required to show a detection.</div>
++        <div class="form-text small">This only hides or shows live cards. It does not change what the microphone hears or the journal's save level.</div>
+       </div>
+ 
+       <!-- Sensitivity -->
+       <div class="col-12">
+         <div class="d-flex justify-content-between">
+-          <label for="sensitivityRange" class="form-label" data-i18n="lbl_sensitivity">Sensitivity</label>
++        <label for="sensitivityRange" class="form-label">BirdNET sensitivity</label>
+           <span class="small text-muted"><span class="form-range-value" id="sensitivityValue">1.0</span></span>
+         </div>
+         <input type="range" class="form-range" id="sensitivityRange" min="0.5" max="1.5" step="0.1">
+-        <div class="form-text small" data-i18n="msg_sensitivity_hint">Higher sensitivity detects more birds but may increase false positives.</div>
++        <div class="form-text small">Start at 1.0. Raise a little if obvious calls are missed; more sensitivity can also invent birds in noise.</div>
+       </div>
+ 
+       <!-- Inference Interval -->
+       <div class="col-12">
+         <div class="d-flex justify-content-between">
+-          <label for="inferenceIntervalRange" class="form-label" data-i18n="lbl_inference_interval">Inference Interval</label>
++        <label for="inferenceIntervalRange" class="form-label">How often to check the sound</label>
+           <span class="small text-muted"><span class="form-range-value" id="inferenceIntervalValue">500 ms</span></span>
+         </div>
+         <input type="range" class="form-range" id="inferenceIntervalRange" min="100" max="3000" step="100">
+-        <div class="form-text small" data-i18n="msg_inference_interval_hint">How often the model analyzes audio. Lower values are more responsive but use more battery.</div>
++        <div class="form-text small">500 ms is a good starting point. Checking faster drains the battery; it does not improve microphone quality.</div>
+       </div>
+ 
+       <!-- Mic Gain -->
+       <div class="col-12">
+         <div class="d-flex justify-content-between">
+-          <label for="inputGainRange" class="form-label" data-i18n="lbl_mic_gain">Mic Gain</label>
++        <label for="inputGainRange" class="form-label">Boost quiet sound</label>
+           <span class="small text-muted"><span class="form-range-value" id="inputGainValue">1.0×</span></span>
+         </div>
+         <!-- Increased max to 10.0 for distant birds, step 0.5 for easier sliding -->
+         <input type="range" class="form-range" id="inputGainRange" min="0.5" max="10.0" step="0.5">
+-        <div class="form-text small" data-i18n="msg_mic_gain_hint">Digital volume boost. Use if your microphone is too quiet.</div>
++        <div class="form-text small">Start at 1.0×. Increase only if the sound picture barely moves; this boosts wind and traffic too.</div>
+       </div>
+ 
+       <!-- Rumble Filter -->
+       <div class="col-12">
+         <div class="d-flex justify-content-between">
+-          <label for="rumbleFilterRange" class="form-label" data-i18n="lbl_rumble_filter">Rumble Filter (High-Pass)</label>
++        <label for="rumbleFilterRange" class="form-label">Reduce low wind and traffic rumble</label>
+           <span class="small text-muted"><span class="form-range-value" id="rumbleFilterValue">200 Hz</span></span>
+         </div>
+         <input type="range" class="form-range" id="rumbleFilterRange" min="0" max="1000" step="50">
+-        <div class="form-text small" data-i18n="msg_rumble_hint">Removes wind and traffic noise below this frequency.</div>
++        <div class="form-text small">Keep near 200 Hz for birds. Raising it too far can remove low bird calls too.</div>
+       </div>
+     </div>
+ 
+@@ -232,6 +272,6 @@ permalink: "/"
+   <span class="record-icon"></span>
+   <span class="record-label d-inline-flex align-items-center gap-2">
+     <i class="bi bi-mic-fill"></i>
+-    <span class="record-label-text">Start</span>
++    <span class="record-label-text">Start listening</span>
+   </span>
+ </button>
 diff --git a/src/legal.njk b/src/legal.njk
-index 739db22..ccc7472 100644
+index 739db22..7a05d6d 100644
 --- a/src/legal.njk
 +++ b/src/legal.njk
-@@ -1,126 +1,14 @@
+@@ -1,126 +1,15 @@
  ---
 -title: Legal Notice
 +title: About this field test
@@ -237,7 +809,8 @@ index 739db22..ccc7472 100644
 -    </p>
 +  <div class="container" style="max-width: 760px">
 +    <h1 class="mb-4">About this field test</h1>
-+    <p>This page is a Monosyth-hosted version of the <a href="https://github.com/birdnet-team/real-time-pwa" rel="noopener" target="_blank">BirdNET Team real-time web app</a>. It uses your device microphone only after you tap Start and grant browser permission. Bird identification runs on your device. Audio is not uploaded to Monosyth or added to the weather station's bird history.</p>
++    <p>This page is a Monosyth-hosted version of the <a href="https://github.com/birdnet-team/real-time-pwa" rel="noopener" target="_blank">BirdNET Team real-time web app</a>. It uses your device microphone only after you tap Start listening and grant browser permission. Bird identification runs on your device. Audio is not uploaded to Monosyth or added to the weather station's bird history.</p>
++    <p>Bird names, times, and confidence scores that you save to the field journal stay in this browser's local storage. If you turn on Save a short sound clip too, approximately six seconds of processed microphone audio is stored in this browser's device storage with each new entry. Neither the journal nor clips are sent to Monosyth or shared with the camera's bird history. Clearing this site's browser data removes them. Export list saves the names and times; download any sound clips separately if you want to keep them.</p>
 +    <p>Bird images can load from Cornell's BirdNET service. Standard website access information may be handled by the hosting provider. Location access is off by default; you can enable it in Settings to filter likely species around you.</p>
 +    <p>BirdNET suggestions can be mistaken. The software is available under the MIT License and the BirdNET model is distributed under CC BY-SA 4.0. See the <a href="{{ '/THIRD_PARTY_LICENSE.txt' | url }}">included license notice</a> and <a href="https://github.com/birdnet-team/real-time-pwa" rel="noopener" target="_blank">source project</a>.</p>
    </div>
@@ -301,6 +874,9 @@ index 739db22..ccc7472 100644
 -  </div>
 -</section>
 -
+diff --git a/public/THIRD_PARTY_LICENSE.txt b/public/THIRD_PARTY_LICENSE.txt
+new file mode 100644
+index 0000000..93e7bd2
 --- /dev/null
 +++ b/public/THIRD_PARTY_LICENSE.txt
 @@ -0,0 +1,98 @@

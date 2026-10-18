@@ -39,7 +39,7 @@
   <div class="field-note">
     <span class="field-note-kicker">Monosyth weather · field test</span>
     <h1>Listen with this phone</h1>
-    <p>Step outside, tap Start, and let your phone listen for birds. The moving sound picture and BirdNET suggestions appear below. Audio is analysed on this phone and is not added to the station’s bird history. The first visit downloads the bird model, so Wi-Fi is best. <a href="/weather/field-listen/legal/index.html">How this test works and privacy</a></p>
+    <p>Step outside and tap Start listening. BirdNET will suggest birds as they call and save repeated suggestions in a field journal on this phone. If you want the actual sound too, turn on short clips in Settings. The camera's separate history stays unchanged. The first visit downloads the bird model, so Wi-Fi is best. <a href="/weather/field-listen/legal/index.html">How this test works and privacy</a></p>
   </div>
 </div>
 
@@ -54,7 +54,7 @@
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div class="d-flex align-items-center gap-2">
       <div id="listeningIndicator" class="spinner-grow text-danger spinner-grow-sm d-none" role="status"></div>
-      <span class="small text-muted" id="statusText" data-i18n="status_init">Tap 'Start' to record</span>
+      <span class="small text-muted" id="statusText" data-i18n="status_init">Tap Start listening when you are outside.</span>
     </div>
     <button
       id="settingsToggle"
@@ -68,6 +68,12 @@
     </button>
   </div>
 
+  <div class="field-help mb-4">
+    <strong>What the controls mean</strong>
+    <p><b>Show suggestions</b> changes which live bird cards appear. <b>Save to journal</b> keeps a suggestion after BirdNET hears it more than once. Open Settings to adjust either one.</p>
+  </div>
+
+  <div class="field-section-heading"><h2>Birds showing now</h2><span>Live suggestions change as the sound changes</span></div>
   <!-- Detections Grid -->
   <div id="detectionsList" class="row g-3">
     <div class="col-12 text-center text-muted py-5">
@@ -75,6 +81,16 @@
       <p data-i18n="msg_detections_placeholder">Detections will appear here.</p>
     </div>
   </div>
+
+  <section class="field-journal mt-5" aria-labelledby="fieldJournalTitle">
+    <div class="field-journal-header">
+      <div><span class="field-note-kicker">This browser only</span><h2 id="fieldJournalTitle">Saved on this phone <span id="journalCount" class="field-count">0</span></h2></div>
+      <div class="field-journal-actions"><button type="button" id="exportJournal" class="btn btn-outline-success btn-sm">Export list</button><button type="button" id="clearJournal" class="btn btn-link btn-sm text-secondary">Clear</button></div>
+    </div>
+    <p class="field-journal-explain">These are BirdNET suggestions, not confirmed identifications. They stay in this phone's browser until you clear its site data or clear the list here. Export a copy if you want to keep them. Saved audio clips can be played or downloaded one at a time.</p>
+    <p id="journalNotice" class="field-journal-notice" role="status" aria-live="polite"></p>
+    <div id="journalList" class="field-journal-list"><p class="field-journal-empty">Nothing saved yet. Start listening outside; repeated bird suggestions will appear here.</p></div>
+  </section>
 </div>
 
 <!-- Settings Drawer -->
@@ -87,8 +103,24 @@
   
   <div class="settings-drawer-body">
     
-    <!-- Section: Detection -->
-    <h6 class="text-uppercase text-muted fw-bold mb-3" data-i18n="sec_detection">Detection & Model</h6>
+    <div class="field-settings-summary">
+      <h6>Save bird suggestions</h6>
+      <p>The live cards come and go. The journal keeps useful sightings on this phone.</p>
+      <div class="form-check form-switch mb-3">
+        <input class="form-check-input" type="checkbox" id="autoSaveToggle" checked>
+        <label class="form-check-label fw-semibold" for="autoSaveToggle">Save repeated birds automatically</label>
+      </div>
+      <div class="form-check form-switch mb-3">
+        <input class="form-check-input" type="checkbox" id="saveAudioToggle">
+        <label class="form-check-label fw-semibold" for="saveAudioToggle">Save a short sound clip too</label>
+        <div class="form-text">Optional: keep about 6 seconds of sound around each new bird entry. Clips use storage on this phone and are never uploaded.</div>
+      </div>
+      <label for="saveThresholdRange" class="form-label d-flex justify-content-between"><span>Save when confidence reaches</span><strong id="saveThresholdValue">15%</strong></label>
+      <input type="range" class="form-range" id="saveThresholdRange" min="15" max="80" step="5" value="15">
+      <p class="form-text">A bird must appear in two nearby listening checks. The starting level matches the live cards, so repeated birds you see should be saved. Raise it to save fewer suggestions with higher model confidence. You can also tap Save on any live card.</p>
+    </div>
+
+    <h6 class="text-uppercase text-muted fw-bold mb-3">What BirdNET shows</h6>
     
     <div class="mb-3 p-3 bg-light rounded-3">
       <div class="form-check form-switch">
@@ -125,52 +157,52 @@
       <!-- Threshold -->
       <div class="col-12">
         <div class="d-flex justify-content-between">
-          <label for="thresholdRange" class="form-label" data-i18n="lbl_threshold">Threshold</label>
+        <label for="thresholdRange" class="form-label">Show suggestions above</label>
           <span class="small text-muted">≥ <span class="form-range-value" id="thresholdValue">15%</span></span>
         </div>
         <input type="range" class="form-range" id="thresholdRange" min="5" max="95" step="5">
-        <div class="form-text small" data-i18n="msg_threshold_hint">Minimum confidence score required to show a detection.</div>
+        <div class="form-text small">This only hides or shows live cards. It does not change what the microphone hears or the journal's save level.</div>
       </div>
 
       <!-- Sensitivity -->
       <div class="col-12">
         <div class="d-flex justify-content-between">
-          <label for="sensitivityRange" class="form-label" data-i18n="lbl_sensitivity">Sensitivity</label>
+        <label for="sensitivityRange" class="form-label">BirdNET sensitivity</label>
           <span class="small text-muted"><span class="form-range-value" id="sensitivityValue">1.0</span></span>
         </div>
         <input type="range" class="form-range" id="sensitivityRange" min="0.5" max="1.5" step="0.1">
-        <div class="form-text small" data-i18n="msg_sensitivity_hint">Higher sensitivity detects more birds but may increase false positives.</div>
+        <div class="form-text small">Start at 1.0. Raise a little if obvious calls are missed; more sensitivity can also invent birds in noise.</div>
       </div>
 
       <!-- Inference Interval -->
       <div class="col-12">
         <div class="d-flex justify-content-between">
-          <label for="inferenceIntervalRange" class="form-label" data-i18n="lbl_inference_interval">Inference Interval</label>
+        <label for="inferenceIntervalRange" class="form-label">How often to check the sound</label>
           <span class="small text-muted"><span class="form-range-value" id="inferenceIntervalValue">500 ms</span></span>
         </div>
         <input type="range" class="form-range" id="inferenceIntervalRange" min="100" max="3000" step="100">
-        <div class="form-text small" data-i18n="msg_inference_interval_hint">How often the model analyzes audio. Lower values are more responsive but use more battery.</div>
+        <div class="form-text small">500 ms is a good starting point. Checking faster drains the battery; it does not improve microphone quality.</div>
       </div>
 
       <!-- Mic Gain -->
       <div class="col-12">
         <div class="d-flex justify-content-between">
-          <label for="inputGainRange" class="form-label" data-i18n="lbl_mic_gain">Mic Gain</label>
+        <label for="inputGainRange" class="form-label">Boost quiet sound</label>
           <span class="small text-muted"><span class="form-range-value" id="inputGainValue">1.0×</span></span>
         </div>
         <!-- Increased max to 10.0 for distant birds, step 0.5 for easier sliding -->
         <input type="range" class="form-range" id="inputGainRange" min="0.5" max="10.0" step="0.5">
-        <div class="form-text small" data-i18n="msg_mic_gain_hint">Digital volume boost. Use if your microphone is too quiet.</div>
+        <div class="form-text small">Start at 1.0×. Increase only if the sound picture barely moves; this boosts wind and traffic too.</div>
       </div>
 
       <!-- Rumble Filter -->
       <div class="col-12">
         <div class="d-flex justify-content-between">
-          <label for="rumbleFilterRange" class="form-label" data-i18n="lbl_rumble_filter">Rumble Filter (High-Pass)</label>
+        <label for="rumbleFilterRange" class="form-label">Reduce low wind and traffic rumble</label>
           <span class="small text-muted"><span class="form-range-value" id="rumbleFilterValue">200 Hz</span></span>
         </div>
         <input type="range" class="form-range" id="rumbleFilterRange" min="0" max="1000" step="50">
-        <div class="form-text small" data-i18n="msg_rumble_hint">Removes wind and traffic noise below this frequency.</div>
+        <div class="form-text small">Keep near 200 Hz for birds. Raising it too far can remove low bird calls too.</div>
       </div>
     </div>
 
@@ -271,7 +303,7 @@
   <span class="record-icon"></span>
   <span class="record-label d-inline-flex align-items-center gap-2">
     <i class="bi bi-mic-fill"></i>
-    <span class="record-label-text">Start</span>
+    <span class="record-label-text">Start listening</span>
   </span>
 </button>
 

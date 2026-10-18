@@ -12,6 +12,8 @@
 const SAMPLE_RATE = 48000;
 const WINDOW_SECONDS = 3;
 const WINDOW_SAMPLES = SAMPLE_RATE * WINDOW_SECONDS;
+const AUDIO_BUFFER_SECONDS = 8;
+const CLIP_SECONDS = 6;
 
 // Inference settings
 const TEMPORAL_POOL_WINDOW = 5;    // Number of recent predictions to pool
@@ -62,6 +64,11 @@ let lastInferenceStart = 0;
 let lastInferenceMs = null;
 let recentInferenceSets = []; // Buffer for temporal pooling
 let latestDetections = [];
+const JOURNAL_KEY = "bn_field_journal_v1";
+const JOURNAL_LIMIT = 500;
+const recentBirdHits = new Map();
+let clipsDbPromise;
+const activeClipUrls = [];
 
 // Spectrogram State
 let spectroCanvas, spectroCtx;
@@ -90,6 +97,278 @@ const store = {
   getBool: (k, def) => { const v = localStorage.getItem(k); return v === null ? def : v === "true"; },
   set: (k, v) => localStorage.setItem(k, v)
 };
+
+function loadJournal() {
+  try {
+    const entries = JSON.parse(localStorage.getItem(JOURNAL_KEY) || "[]");
+    return Array.isArray(entries) ? entries.filter(entry => entry && typeof entry.commonName === "string" && typeof entry.firstHeardAt === "string").slice(0, JOURNAL_LIMIT) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function openClipsDb() {
+  if (clipsDbPromise) return clipsDbPromise;
+  clipsDbPromise = new Promise((resolve, reject) => {
+    if (!window.indexedDB) { reject(new Error("Audio storage unavailable")); return; }
+    const request = indexedDB.open("bn_field_clips_v1", 1);
+    request.onupgradeneeded = () => request.result.createObjectStore("clips", { keyPath: "id" });
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  }).catch(error => { clipsDbPromise = undefined; throw error; });
+  return clipsDbPromise;
+}
+
+async function putClip(id, blob) {
+  const db = await openClipsDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("clips", "readwrite");
+    tx.objectStore("clips").put({ id, blob });
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function getClip(id) {
+  const db = await openClipsDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("clips", "readonly");
+    const request = tx.objectStore("clips").get(id);
+    request.onsuccess = () => resolve(request.result?.blob || null);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function clearClips() {
+  const db = await openClipsDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("clips", "readwrite");
+    tx.objectStore("clips").clear();
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+function wavBlob(samples) {
+  const bytes = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(bytes);
+  const write = (offset, value) => { for (let i = 0; i < value.length; i++) view.setUint8(offset + i, value.charCodeAt(i)); };
+  write(0, "RIFF");
+  view.setUint32(4, bytes.byteLength - 8, true);
+  write(8, "WAVE");
+  write(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, SAMPLE_RATE, true);
+  view.setUint32(28, SAMPLE_RATE * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  write(36, "data");
+  view.setUint32(40, samples.length * 2, true);
+  for (let i = 0; i < samples.length; i++) {
+    const sample = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(44 + i * 2, sample < 0 ? sample * 32768 : sample * 32767, true);
+  }
+  return new Blob([bytes], { type: "audio/wav" });
+}
+
+async function captureAudioForEntry(entry) {
+  const windowed = getRecentAudio(CLIP_SECONDS);
+  if (!windowed) return;
+  entry.audioPending = true;
+  try {
+    await putClip(entry.id, wavBlob(windowed));
+    entry.audioAvailable = true;
+    entry.audioPending = false;
+    localStorage.setItem(JOURNAL_KEY, JSON.stringify(journalEntries));
+    const notice = document.getElementById("journalNotice");
+    if (notice) notice.textContent = `Saved ${entry.commonName} with a sound clip on this phone.`;
+    renderJournal();
+  } catch (_) {
+    const notice = document.getElementById("journalNotice");
+    if (notice) notice.textContent = `Saved ${entry.commonName}, but this browser could not keep the sound clip. Check device storage.`;
+  } finally {
+    entry.audioPending = false;
+  }
+}
+
+function journalTime(iso) {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? "Unknown time" : new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(date);
+}
+
+function renderJournal() {
+  const list = document.getElementById("journalList");
+  if (!list) return;
+  for (const url of activeClipUrls.splice(0)) URL.revokeObjectURL(url);
+  document.getElementById("journalCount").textContent = String(journalEntries.length);
+  document.getElementById("exportJournal").disabled = journalEntries.length === 0;
+  document.getElementById("clearJournal").disabled = journalEntries.length === 0;
+  list.replaceChildren();
+  if (!journalEntries.length) {
+    const empty = document.createElement("p");
+    empty.className = "field-journal-empty";
+    empty.textContent = "Nothing saved yet. Start listening outside; repeated bird suggestions will appear here.";
+    list.appendChild(empty);
+    return;
+  }
+  for (const entry of journalEntries.slice(0, 30)) {
+    const row = document.createElement("div");
+    row.className = "field-journal-row";
+    const names = document.createElement("div");
+    const bird = document.createElement("strong");
+    bird.textContent = entry.commonName;
+    const scientific = document.createElement("small");
+    scientific.textContent = entry.scientificName || "BirdNET suggestion";
+    names.append(bird, scientific);
+    const details = document.createElement("div");
+    details.className = "field-journal-detail";
+    details.textContent = `${journalTime(entry.firstHeardAt)} · up to ${Math.round(entry.peakConfidence * 100)}% · ${entry.method === "manual" ? "saved by you" : "saved automatically"}`;
+    if (entry.audioAvailable) {
+      const load = document.createElement("button");
+      load.type = "button";
+      load.className = "field-clip-button";
+      load.textContent = "Play sound clip";
+      load.addEventListener("click", async () => {
+        load.disabled = true;
+        try {
+          const clip = await getClip(entry.id);
+          if (!clip) throw new Error("Missing clip");
+          const url = URL.createObjectURL(clip);
+          activeClipUrls.push(url);
+          const controls = document.createElement("div");
+          controls.className = "field-clip-controls";
+          const audio = document.createElement("audio");
+          audio.controls = true;
+          audio.src = url;
+          const download = document.createElement("a");
+          download.href = url;
+          download.download = `birdnet-${entry.firstHeardAt.slice(0, 19).replaceAll(":", "-")}.wav`;
+          download.textContent = "Download clip";
+          controls.append(audio, download);
+          row.appendChild(controls);
+          load.remove();
+        } catch (_) {
+          load.textContent = "Clip unavailable";
+        }
+      });
+      details.appendChild(load);
+    }
+    row.append(names, details);
+    list.appendChild(row);
+  }
+  if (journalEntries.length > 30) {
+    const more = document.createElement("p");
+    more.className = "field-journal-empty";
+    more.textContent = `${journalEntries.length - 30} older entries are in the exported list.`;
+    list.appendChild(more);
+  }
+}
+
+function saveBirdSuggestion(bird, method = "manual") {
+  if (!bird || !Number.isFinite(bird.confidence)) return;
+  const now = Date.now();
+  const scientificName = String(bird.scientificName || "");
+  const commonName = String(bird.commonNameI18n || bird.commonName || scientificName || "Unknown bird");
+  const speciesKey = scientificName || String(bird.index);
+  const previous = journalEntries.find(entry => entry.speciesKey === speciesKey && now - Date.parse(entry.lastHeardAt) < 90_000);
+  let entry;
+  if (previous) {
+    previous.lastHeardAt = new Date(now).toISOString();
+    previous.peakConfidence = Math.max(previous.peakConfidence, bird.confidence);
+    if (method === "manual") previous.method = "manual";
+    entry = previous;
+  } else {
+    entry = { id: crypto.randomUUID ? crypto.randomUUID() : `${now}-${Math.random()}`, speciesKey, commonName, scientificName, firstHeardAt: new Date(now).toISOString(), lastHeardAt: new Date(now).toISOString(), peakConfidence: bird.confidence, method, audioAvailable: false };
+    journalEntries.unshift(entry);
+    journalEntries = journalEntries.slice(0, JOURNAL_LIMIT);
+  }
+  const notice = document.getElementById("journalNotice");
+  try {
+    localStorage.setItem(JOURNAL_KEY, JSON.stringify(journalEntries));
+    if (notice) notice.textContent = `Saved ${commonName} on this phone.`;
+  } catch (_) {
+    if (notice) notice.textContent = "This browser could not save the journal. Try exporting your list or freeing device storage.";
+  }
+  renderJournal();
+  if (saveAudio && !entry.audioAvailable && !entry.audioPending) void captureAudioForEntry(entry);
+}
+
+function considerAutoSave(birds) {
+  if (!isListening || !autoSave || !Array.isArray(birds)) return;
+  const now = Date.now();
+  for (const bird of birds) {
+    if (!Number.isFinite(bird.confidence) || bird.confidence < saveThreshold) continue;
+    if (geoEnabled && geolocation && !(typeof bird.geoscore === "number" && bird.geoscore >= 0.05)) continue;
+    const key = bird.scientificName || String(bird.index);
+    const evidence = recentBirdHits.get(key) || { count: 0, lastAt: 0, lastSavedAt: 0 };
+    evidence.count = now - evidence.lastAt > 8_000 ? 1 : evidence.count + 1;
+    evidence.lastAt = now;
+    if (evidence.count >= 2 && now - evidence.lastSavedAt > 90_000) {
+      saveBirdSuggestion(bird, "auto");
+      evidence.lastSavedAt = now;
+    }
+    recentBirdHits.set(key, evidence);
+  }
+  for (const [key, evidence] of recentBirdHits) {
+    if (now - evidence.lastAt > 120_000) recentBirdHits.delete(key);
+  }
+}
+
+function exportJournal() {
+  const cell = value => {
+    const safe = String(value ?? "").replace(/^[=+@-]/, match => `'${match}`);
+    return `"${safe.replaceAll('"', '""')}"`;
+  };
+  const rows = [["First heard", "Last heard", "Bird", "Scientific name", "Peak confidence", "Saved how"], ...journalEntries.map(entry => [entry.firstHeardAt, entry.lastHeardAt, entry.commonName, entry.scientificName, Math.round(entry.peakConfidence * 100) + "%", entry.method])];
+  const file = new Blob([rows.map(row => row.map(cell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(file);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `birdnet-field-journal-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+function setupFieldJournal() {
+  renderJournal();
+  const auto = document.getElementById("autoSaveToggle");
+  const audio = document.getElementById("saveAudioToggle");
+  const saveRange = document.getElementById("saveThresholdRange");
+  const saveValue = document.getElementById("saveThresholdValue");
+  auto.checked = autoSave;
+  auto.addEventListener("change", () => { autoSave = auto.checked; store.set("bn_field_auto_save", autoSave); });
+  audio.checked = saveAudio;
+  audio.addEventListener("change", () => { saveAudio = audio.checked; store.set("bn_field_save_audio", saveAudio); });
+  saveRange.value = String(Math.round(saveThreshold * 100));
+  saveValue.textContent = `${Math.round(saveThreshold * 100)}%`;
+  saveRange.addEventListener("input", () => {
+    saveThreshold = Number(saveRange.value) / 100;
+    saveValue.textContent = `${Math.round(saveThreshold * 100)}%`;
+    store.set("bn_field_save_threshold", saveThreshold);
+  });
+  detectionsList().addEventListener("click", event => {
+    const button = event.target.closest(".save-sighting");
+    if (!button) return;
+    const key = button.closest("[data-species]")?.dataset.species;
+    const bird = latestDetections.find(item => (item.scientificName || `idx-${item.index}`) === key);
+    if (bird) saveBirdSuggestion(bird);
+  });
+  document.getElementById("exportJournal").addEventListener("click", exportJournal);
+  document.getElementById("clearJournal").addEventListener("click", async () => {
+    if (!window.confirm("Clear the saved bird suggestions from this phone? Export a copy first if you want to keep them.")) return;
+    journalEntries = [];
+    recentBirdHits.clear();
+    localStorage.removeItem(JOURNAL_KEY);
+    let clipsCleared = true;
+    try { await clearClips(); } catch (_) { clipsCleared = false; }
+    document.getElementById("journalNotice").textContent = clipsCleared ? "Saved bird suggestions and clips cleared." : "Bird names cleared, but clips may remain. Clear this site's browser data to remove them.";
+    renderJournal();
+  });
+}
 
 /**
  * Maps browser locale string (e.g., "en-US") to BirdNET label code (e.g., "en_us").
@@ -225,6 +504,11 @@ let currentLabelLang = store.get("bn_lang", mapBrowserLangToLabelLang(navigator.
 let geoEnabled = store.getBool("bn_geo_enabled", false);
 let detectionThreshold = store.getFloat("bn_threshold", 0.15);
 if (detectionThreshold > 1.0) detectionThreshold = 0.15; // Sanity check
+let autoSave = store.getBool("bn_field_auto_save", true);
+let saveAudio = store.getBool("bn_field_save_audio", false);
+let saveThreshold = store.getFloat("bn_field_save_threshold", 0.15);
+if (!Number.isFinite(saveThreshold) || saveThreshold < 0.15 || saveThreshold > 0.8) saveThreshold = 0.15;
+let journalEntries = loadJournal();
 let inputGain = store.getFloat("bn_input_gain", 1.0);
 let sensitivity = store.getFloat("bn_sensitivity", 1.0); // New: Sensitivity
 let inferenceInterval = store.getFloat("bn_inference_interval", 500);
@@ -271,6 +555,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (isLive) {
     setupRecordButton();
     initSpectrogramCanvas(); // Initialize canvas size immediately to prevent layout shift
+    setupFieldJournal();
   }
 
   // Handle Geolocation Initialization
@@ -361,6 +646,7 @@ function initWorker(langOverride) {
           ? computeTemporalPooledDetections(recentInferenceSets)
           : data.pooled;
         renderDetections(toRender);
+        considerAutoSave(toRender);
         
         if (isListening && lastInferenceStart) {
           lastInferenceMs = Math.round(performance.now() - lastInferenceStart);
@@ -454,6 +740,8 @@ async function startListening() {
 
 function stopListening() {
   isListening = false;
+  recentBirdHits.clear();
+  recentInferenceSets = [];
   releaseWakeLock();
   
   // UI Updates
@@ -525,7 +813,7 @@ async function setupAudioGraphFromStream(stream) {
   startSpectrogram(highPassFilterNode);
 
   // Setup circular buffer for inference
-  circularBuffer = new Float32Array(WINDOW_SAMPLES);
+  circularBuffer = new Float32Array(SAMPLE_RATE * AUDIO_BUFFER_SECONDS);
   circularWriteIndex = 0;
 
   if (!audioContext.audioWorklet) {
@@ -596,10 +884,15 @@ function startInferenceLoop() {
  * Extracts the most recent 3 seconds of audio from the circular buffer.
  */
 function getCurrentWindow() {
+  return getRecentAudio(WINDOW_SECONDS);
+}
+
+function getRecentAudio(seconds) {
   if (!circularBuffer) return null;
-  const result = new Float32Array(WINDOW_SAMPLES);
-  let idx = circularWriteIndex; 
-  for (let i = 0; i < WINDOW_SAMPLES; i++) {
+  const sampleCount = Math.min(circularBuffer.length, Math.round(SAMPLE_RATE * seconds));
+  const result = new Float32Array(sampleCount);
+  let idx = (circularWriteIndex - sampleCount + circularBuffer.length) % circularBuffer.length;
+  for (let i = 0; i < sampleCount; i++) {
     // Gain is already applied by GainNode, just clamp to prevent clipping artifacts in model
     result[i] = Math.max(-1, Math.min(1, circularBuffer[idx]));
     idx = (idx + 1) % circularBuffer.length;
@@ -1156,6 +1449,7 @@ function renderDetections(pooled) {
               <div class="small text-muted border-top pt-2 mt-1 geo-info">
                 ${geoInfo ? `<i class="bi bi-geo-alt me-1"></i>${geoInfo}` : ""}
               </div>
+              <button type="button" class="save-sighting btn btn-sm btn-outline-success mt-2">Save this bird</button>
             </div>
           </div>
         </div>

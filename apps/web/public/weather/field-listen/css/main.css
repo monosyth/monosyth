@@ -5,15 +5,15 @@ body {
 }
 
 .navbar.bg-dark { background: #173a31 !important; }
-.weather-return { color: #dcebcf; font-size: 0.875rem; text-decoration: none; white-space: nowrap; margin-left: auto; }
+.weather-return { color: #dcebcf; font-size: .78rem; text-decoration: none; white-space: nowrap; margin-left: auto; }
 .weather-return:hover, .weather-return:focus-visible { color: #fff; text-decoration: underline; }
 .field-note { padding: clamp(1.2rem, 4vw, 2rem); border: 1px solid #dce6d8; border-radius: 1.2rem; background: linear-gradient(130deg, #eaf1df, #fbfdf8); }
-.field-note-kicker { display: block; color: #587459; font-size: 0.875rem; text-transform: uppercase; letter-spacing: .15em; font-weight: 700; margin-bottom: .55rem; }
+.field-note-kicker { display: block; color: #587459; font-size: .68rem; text-transform: uppercase; letter-spacing: .15em; font-weight: 700; margin-bottom: .55rem; }
 .field-note h1 { font-size: clamp(1.75rem, 6vw, 2.75rem); font-weight: 500; letter-spacing: -.045em; margin-bottom: .65rem; }
 .field-note p { max-width: 64ch; margin: 0; color: #476452; line-height: 1.6; }
 .record-btn.btn-primary { background: #2e6b4d; border-color: #2e6b4d; }
 .record-btn.btn-primary:hover, .record-btn.btn-primary:focus-visible { background: #215d40; border-color: #215d40; }
-@media (max-width: 420px) { .navbar-logo { height: 25px; } .navbar-brand { font-size: .95rem; } .weather-return { font-size: 0.875rem; } }
+@media (max-width: 420px) { .navbar-logo { height: 25px; } .navbar-brand { font-size: .95rem; } .weather-return { font-size: .7rem; } }
 
 /* Optional wider container */
 @media (min-width: 1200px) {
@@ -29,7 +29,7 @@ body {
   border-bottom: 1px solid #1e2226;
 }
 .status-bar #statusText {
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   line-height: 1.2;
 }
 .status-bar .btn-link {
@@ -196,10 +196,35 @@ body.drawer-open .record-btn {
 }
 @media (max-width: 740px) { .spectrogram-full .live-spectrogram-canvas { height: 26vh; min-height: 170px; } }
 
-/* Match the weather observatory across the field listening pages. */
-body {font-size:1rem;line-height:1.6;background:#f2f5f0;color:#203a32;}
-.status-bar {background:#e5ebde;color:#334d36;border-color:#dce3db;}
-.status-bar a,.settings-toggle-btn:focus {color:#2e6b4d;}
-.btn-primary,.record-btn.btn-primary {background-color:#2e6b4d;border-color:#2e6b4d;}
-.weather-return,.field-note-kicker {font-size:.875rem;}
-input,select,textarea {font-size:1rem;}
+/* Monosyth field journal and listening guidance */
+.field-help { border-left: 3px solid #74a27a; background: #edf4e9; color: #315540; padding: .9rem 1rem; border-radius: .35rem .8rem .8rem .35rem; }
+.field-help strong { display: block; margin-bottom: .3rem; }
+.field-help p { margin: 0; font-size: .88rem; line-height: 1.5; }
+.field-section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; margin-bottom: 1rem; }
+.field-section-heading h2, .field-journal h2 { font-size: 1.25rem; font-weight: 600; letter-spacing: -.025em; margin: 0; }
+.field-section-heading span { font-size: .8rem; color: #657a6b; }
+.field-journal { border: 1px solid #dce6d8; border-radius: 1rem; padding: clamp(1rem, 3vw, 1.5rem); background: #fff; }
+.field-journal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.field-journal-actions { display: flex; align-items: center; gap: .4rem; }
+.field-journal-explain { margin: .8rem 0 1rem; color: #5b7060; font-size: .86rem; line-height: 1.5; max-width: 70ch; }
+.field-journal-notice { color: #275f3e; font-size: .84rem; margin: 0 0 .5rem; }
+.field-journal-notice:empty { display: none; }
+.field-count { display: inline-flex; align-items: center; justify-content: center; min-width: 1.65rem; height: 1.65rem; margin-left: .25rem; border-radius: 999px; background: #e2efe1; color: #2f6a45; font-size: .78rem; vertical-align: middle; }
+.field-journal-list { max-height: 22rem; overflow-y: auto; }
+.field-journal-row { display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid #e9eee7; padding: .8rem 0; }
+.field-journal-row strong { display: block; font-weight: 600; }
+.field-journal-row small { display: block; color: #718071; font-style: italic; }
+.field-journal-detail { color: #526c57; text-align: right; font-size: .8rem; white-space: nowrap; }
+.field-journal-empty { color: #6b7e6d; font-size: .88rem; padding: .65rem 0; margin: 0; }
+.field-settings-summary { background: #eef5ea; border: 1px solid #dbe9d8; border-radius: .8rem; padding: 1rem; margin-bottom: 1.5rem; }
+.field-settings-summary h6 { font-weight: 700; margin-bottom: .35rem; }
+.field-settings-summary > p { color: #4d6752; font-size: .88rem; line-height: 1.45; }
+.field-settings-summary .form-text { color: #536b57; }
+@media (max-width: 620px) { .field-section-heading { display: block; } .field-journal-row { display: block; } .field-journal-detail { text-align: left; margin-top: .3rem; white-space: normal; } }
+.field-journal-row { flex-wrap: wrap; }
+.field-clip-button { display: block; border: 0; background: transparent; color: #2d704d; padding: .35rem 0 0; margin-left: auto; font: inherit; font-size: .8rem; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.field-clip-button:disabled { color: #708576; cursor: default; }
+.field-clip-controls { display: flex; align-items: center; justify-content: flex-end; gap: .75rem; flex-basis: 100%; }
+.field-clip-controls audio { max-width: min(100%, 280px); height: 36px; }
+.field-clip-controls a { color: #2d704d; font-size: .8rem; white-space: nowrap; }
+@media (max-width: 620px) { .field-clip-button { margin-left: 0; } .field-clip-controls { justify-content: flex-start; flex-wrap: wrap; } }
