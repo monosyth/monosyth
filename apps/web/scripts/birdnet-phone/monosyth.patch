@@ -1,0 +1,404 @@
+diff --git a/.eleventy.js b/.eleventy.js
+index 1524d7c..e663134 100644
+--- a/.eleventy.js
++++ b/.eleventy.js
+@@ -26,7 +26,7 @@ module.exports = function (eleventyConfig) {
+   });
+ 
+   return {
+-    pathPrefix: "/real-time-pwa/",
++    pathPrefix: "/weather/field-listen/",
+     dir: { input: "src", includes: "_includes", output: "_site" },
+     markdownTemplateEngine: "njk",
+     htmlTemplateEngine: "njk",
+diff --git a/public/css/main.css b/public/css/main.css
+index da7a30b..eac6f54 100644
+--- a/public/css/main.css
++++ b/public/css/main.css
+@@ -1,7 +1,20 @@
+ body {
+   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
++  background: #f5f8f3;
++  color: #1e3933;
+ }
+ 
++.navbar.bg-dark { background: #173a31 !important; }
++.weather-return { color: #dcebcf; font-size: .78rem; text-decoration: none; white-space: nowrap; margin-left: auto; }
++.weather-return:hover, .weather-return:focus-visible { color: #fff; text-decoration: underline; }
++.field-note { padding: clamp(1.2rem, 4vw, 2rem); border: 1px solid #dce6d8; border-radius: 1.2rem; background: linear-gradient(130deg, #eaf1df, #fbfdf8); }
++.field-note-kicker { display: block; color: #587459; font-size: .68rem; text-transform: uppercase; letter-spacing: .15em; font-weight: 700; margin-bottom: .55rem; }
++.field-note h1 { font-size: clamp(1.75rem, 6vw, 2.75rem); font-weight: 500; letter-spacing: -.045em; margin-bottom: .65rem; }
++.field-note p { max-width: 64ch; margin: 0; color: #476452; line-height: 1.6; }
++.record-btn.btn-primary { background: #2e6b4d; border-color: #2e6b4d; }
++.record-btn.btn-primary:hover, .record-btn.btn-primary:focus-visible { background: #215d40; border-color: #215d40; }
++@media (max-width: 420px) { .navbar-logo { height: 25px; } .navbar-brand { font-size: .95rem; } .weather-return { font-size: .7rem; } }
++
+ /* Optional wider container */
+ @media (min-width: 1200px) {
+   .container { max-width: 1500px; }
+@@ -181,3 +194,4 @@ body.drawer-open .record-btn {
+   pointer-events: none;
+   transition: opacity 0.2s;
+ }
++@media (max-width: 740px) { .spectrogram-full .live-spectrogram-canvas { height: 26vh; min-height: 170px; } }
+diff --git a/public/js/app.js b/public/js/app.js
+index 35f2218..b2e3ed5 100644
+--- a/public/js/app.js
++++ b/public/js/app.js
+@@ -222,7 +222,7 @@ let colormapFn = d3.interpolateViridis; // Updated in init
+ 
+ // Model & Detection
+ let currentLabelLang = store.get("bn_lang", mapBrowserLangToLabelLang(navigator.language));
+-let geoEnabled = store.getBool("bn_geo_enabled", true);
++let geoEnabled = store.getBool("bn_geo_enabled", false);
+ let detectionThreshold = store.getFloat("bn_threshold", 0.15);
+ if (detectionThreshold > 1.0) detectionThreshold = 0.15; // Sanity check
+ let inputGain = store.getFloat("bn_input_gain", 1.0);
+diff --git a/public/manifest.webmanifest b/public/manifest.webmanifest
+index f4f42ed..4368471 100644
+--- a/public/manifest.webmanifest
++++ b/public/manifest.webmanifest
+@@ -1,7 +1,7 @@
+ {
+-  "name": "BirdNET Live",
+-  "short_name": "BirdNET Live",
+-  "start_url": "/real-time-pwa/",
++  "name": "Monosyth BirdNET field listen",
++  "short_name": "Bird listener",
++  "start_url": "/weather/field-listen/index.html",
+   "display": "standalone",
+   "background_color": "#0b1728",
+   "theme_color": "#0b1728",
+diff --git a/src/_includes/layouts/base.njk b/src/_includes/layouts/base.njk
+index 9f876d4..23cfe1e 100644
+--- a/src/_includes/layouts/base.njk
++++ b/src/_includes/layouts/base.njk
+@@ -5,6 +5,7 @@
+   <title>{{ title or "BirdNET Live" }}</title>
+   <meta name="viewport" content="width=device-width, initial-scale=1">
+   <meta name="theme-color" content="#0b1728">
++  <meta name="robots" content="noindex,nofollow">
+ 
+   <link rel="manifest" href="{{ '/manifest.webmanifest' | url }}">
+   <link rel="icon" type="image/png" href="{{ '/favicon.png' | url }}">
+@@ -28,12 +29,5 @@
+ 
+   <script src="{{ '/vendor/bootstrap/bootstrap.bundle.min.js' | url }}"></script>
+   <script src="{{ '/js/app.js' | url }}"></script>
+-  <script>
+-    if ('serviceWorker' in navigator) {
+-      window.addEventListener('load', () => {
+-        navigator.serviceWorker.register("{{ '/sw.js' | url }}").catch(console.error);
+-      });
+-    }
+-  </script>
+ </body>
+ </html>
+diff --git a/src/_includes/partials/header.njk b/src/_includes/partials/header.njk
+index df8714a..906ac06 100644
+--- a/src/_includes/partials/header.njk
++++ b/src/_includes/partials/header.njk
+@@ -1,31 +1,10 @@
+ <header class="navbar navbar-expand-lg navbar-dark bg-dark">
+   <div class="container">
+-    <a class="navbar-brand fw-semibold d-flex align-items-center gap-2" href="{{ '/' | url }}">
++    <a class="navbar-brand fw-semibold d-flex align-items-center gap-2" href="{{ '/index.html' | url }}">
+       <img src="{{ '/img/birdnet-logo-circle.png' | url }}" alt="BirdNET logo" class="navbar-logo">
+       <span data-i18n="app_title">BirdNET Live</span>
+     </a>
++    <a class="weather-return" href="/weather">← Weather observatory</a>
+ 
+-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+-            data-bs-target="#mainNav" aria-controls="mainNav"
+-            aria-expanded="false" aria-label="Toggle navigation">
+-      <span class="navbar-toggler-icon"></span>
+-    </button>
+-
+-    <nav class="collapse navbar-collapse" id="mainNav">
+-      <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+-        <li class="nav-item">
+-          <a class="nav-link{% if page.url == '/' %} active{% endif %}" href="{{ '/' | url }}" data-i18n="nav_live">Live</a>
+-        </li>
+-        <li class="nav-item">
+-          <a class="nav-link{% if page.url == '/explore/' %} active{% endif %}" href="{{ '/explore/' | url }}" data-i18n="nav_explore">Explore</a>
+-        </li>        
+-        <li class="nav-item">
+-          <a class="nav-link{% if page.url == '/about/' %} active{% endif %}" href="{{ '/about/' | url }}" data-i18n="nav_about">About</a>
+-        </li>
+-        <li class="nav-item">
+-          <a class="nav-link{% if page.url == '/share/' %} active{% endif %}" href="{{ '/share/' | url }}" data-i18n="nav_share">Share</a>
+-        </li>
+-      </ul>
+-    </nav>
+   </div>
+ </header>
+diff --git a/src/index.njk b/src/index.njk
+index fbb673b..28bb1f6 100644
+--- a/src/index.njk
++++ b/src/index.njk
+@@ -1,9 +1,17 @@
+ ---
+-title: BirdNET Live – Real-time Bird Sound ID
++title: Listen with this phone | Monosyth weather
+ layout: layouts/base.njk
+ permalink: "/"
+ ---
+ 
++<div class="container py-4">
++  <div class="field-note">
++    <span class="field-note-kicker">Monosyth weather · field test</span>
++    <h1>Listen with this phone</h1>
++    <p>Step outside, tap Start, and let your phone listen for birds. The moving sound picture and BirdNET suggestions appear below. Audio is analysed on this phone and is not added to the station’s bird history. The first visit downloads the bird model, so Wi-Fi is best. <a href="{{ '/legal/index.html' | url }}">How this test works and privacy</a></p>
++  </div>
++</div>
++
+ <section class="py-0">
+   <div class="spectrogram-full">
+     <canvas id="liveSpectrogram" class="live-spectrogram-canvas"></canvas>
+@@ -53,7 +61,7 @@ permalink: "/"
+     
+     <div class="mb-3 p-3 bg-light rounded-3">
+       <div class="form-check form-switch">
+-        <input class="form-check-input" type="checkbox" id="geoToggle" checked>
++        <input class="form-check-input" type="checkbox" id="geoToggle">
+         <label class="form-check-label fw-semibold" for="geoToggle" data-i18n="lbl_use_geo">Use geolocation</label>
+       </div>
+       <div class="geo-status mt-1" id="geoStatusText" data-i18n="status_geo_waiting">Awaiting geolocation…</div>
+diff --git a/src/legal.njk b/src/legal.njk
+index 739db22..ccc7472 100644
+--- a/src/legal.njk
++++ b/src/legal.njk
+@@ -1,126 +1,14 @@
+ ---
+-title: Legal Notice
++title: About this field test
+ layout: layouts/base.njk
+ permalink: "/legal/"
+ ---
+ 
+-<section class="page-header">
+-  <div class="container">
+-    <h1 class="page-title mt-4">Privacy & Legal notice</h1>
+-    <p class="lead text-muted mb-0"></p>
+-  </div>
+-</section>
+-
+ <section class="py-5">
+-  <div class="container">
+-    <h1 class="section-title h4 mb-4">Privacy Notice</h1>
+-    <h2 class="section-title h5">Controller</h2>
+-    <p class="text-muted mb-1">Responsible for this website including corresponding subpages/subdomains is:</p>
+-    <address class="text-muted">
+-      Chemnitz University of Technology<br>
+-      represented by the Rector<br><br>
+-      Prof. Dr. Gerd Strohmeier<br>
+-      Straße der Nationen 62<br>
+-      09111 Chemnitz, Germany<br>
+-      Email: <a href="mailto:rektor@tu-chemnitz.de">rektor@tu-chemnitz.de</a><br>
+-      Phone: +49 371 531-10000<br>
+-      Web: <a href="https://www.tu-chemnitz.de/" rel="noopener">https://www.tu-chemnitz.de/</a>
+-    </address>
+-
+-    <h2 class="section-title h5 mt-4">Data Protection Officer</h2>
+-    <address class="text-muted">
+-      Ines Maria Tacke<br>
+-      Thüringer Weg 7<br>
+-      09126 Chemnitz<br>
+-      Email: <a href="mailto:datenschutzbeauftragter@tu-chemnitz.de">datenschutzbeauftragter@tu-chemnitz.de</a><br>
+-      Phone: +49 371 531-12030<br>
+-      Web: <a href="https://www.tu-chemnitz.de/rektorat/dsb/" rel="noopener">https://www.tu-chemnitz.de/rektorat/dsb/</a>
+-    </address>
+-
+-    <h2 class="section-title h5 mt-4">Visiting the website</h2>
+-    <p class="text-muted">
+-      When visiting this website, the following data is automatically collected and stored for a maximum of 15 days:
+-    </p>
+-    <ul class="text-muted">
+-      <li>IP address</li>
+-      <li>User-Agent string (identifies browser and possibly operating system)</li>
+-      <li>Referrer URL (the web address that refers to our site)</li>
+-      <li>Date and time</li>
+-    </ul>
+-    <p class="text-muted">
+-      These data have a personal reference due to the combination of time and IP address, but are necessary to identify
+-      potential disruptors and thus ensure trouble-free operation. After anonymization by omitting the IP address, we
+-      gain insights into the use of the website, e.g., how many users visit the website, which pages are popular, and
+-      from which websites visitors come here. This information primarily serves the technical and editorial further
+-      development.
+-    </p>
+-
+-    <h2 class="section-title h5 mt-4">Information, blocking, and deletion</h2>
+-    <p class="text-muted mb-0">
+-      Upon written or text-form request, we will inform you at any time about which personal data we have stored about you.
+-      You also have the right to request the correction, blocking, or deletion of this data. You can always contact the
+-      supervisory authority responsible for you with a complaint. Your responsible supervisory authority depends on the
+-      federal state of your residence, your work, or the alleged violation. A list of supervisory authorities with
+-      addresses can be found on the website of the Federal Commissioner for Data Protection and Freedom of Information.
+-    </p>
++  <div class="container" style="max-width: 760px">
++    <h1 class="mb-4">About this field test</h1>
++    <p>This page is a Monosyth-hosted version of the <a href="https://github.com/birdnet-team/real-time-pwa" rel="noopener" target="_blank">BirdNET Team real-time web app</a>. It uses your device microphone only after you tap Start and grant browser permission. Bird identification runs on your device. Audio is not uploaded to Monosyth or added to the weather station's bird history.</p>
++    <p>Bird images can load from Cornell's BirdNET service. Standard website access information may be handled by the hosting provider. Location access is off by default; you can enable it in Settings to filter likely species around you.</p>
++    <p>BirdNET suggestions can be mistaken. The software is available under the MIT License and the BirdNET model is distributed under CC BY-SA 4.0. See the <a href="{{ '/THIRD_PARTY_LICENSE.txt' | url }}">included license notice</a> and <a href="https://github.com/birdnet-team/real-time-pwa" rel="noopener" target="_blank">source project</a>.</p>
+   </div>
+ </section>
+-
+-<section class="py-1">
+-  <div class="container">
+-    <h1 class="section-title h4 mb-4">Legal Notice (Impressum)</h1>
+-    <h2 class="section-title h5">Chair Media Informatics</h2>
+-    <address class="text-muted">
+-      Chemnitz University of Technology<br>
+-      Straße der Nationen 62<br>
+-      09111 Chemnitz<br>
+-      Phone: +49 371 531-25780<br>
+-      Email: <a href="mailto:mi@informatik.tu-chemnitz.de">mi@informatik.tu-chemnitz.de</a>
+-    </address>
+-
+-    <h2 class="section-title h5 mt-4">Technical implementation and responsible person (§ 18 Abs. 2 MStV)</h2>
+-    <address class="text-muted">
+-      Dr. Stefan Kahl<br>
+-      Chair Media Informatics<br>
+-      Chemnitz University of Technology<br>
+-      Straße der Nationen 62<br>
+-      09111 Chemnitz<br>
+-      Phone: +49 371 531-32219<br>
+-      Email: <a href="mailto:stefan.kahl@informatik.tu-chemnitz.de">stefan.kahl@informatik.tu-chemnitz.de</a>
+-    </address>
+-
+-    <h2 class="section-title h5 mt-4">Chemnitz University of Technology</h2>
+-    <p class="text-muted mb-1">represented by the Rector</p>
+-    <address class="text-muted">
+-      Prof. Dr. Gerd Strohmeier<br>
+-      Straße der Nationen 62<br>
+-      09111 Chemnitz<br>
+-      Phone: +49 371 531-0 (switchboard)<br>
+-      Email: <a href="mailto:rektor@tu-chemnitz.de">rektor@tu-chemnitz.de</a><br>
+-      Web: <a href="https://www.tu-chemnitz.de/" rel="noopener">www.tu-chemnitz.de</a>
+-    </address>
+-    <p class="text-muted">Chemnitz University of Technology is a public corporation.</p>
+-
+-    <h2 class="section-title h5 mt-4">Responsible Supervisory Authority</h2>
+-    <address class="text-muted">
+-      Saxon State Ministry for Science, Culture and Tourism<br>
+-      Wigardstraße 17<br>
+-      01097 Dresden<br><br>
+-      Postal address:<br>
+-      Postfach 100 920<br>
+-      01079 Dresden
+-    </address>
+-
+-    <h2 class="section-title h5 mt-4">VAT Identification Number</h2>
+-    <p class="text-muted mb-0">VAT ID No. DE 140857609</p>
+-
+-    <h2 class="section-title h5 mt-4">Bank Details</h2>
+-    <address class="text-muted">
+-      Main Treasury of the Free State of Saxony<br>
+-      Deutsche Bundesbank<br>
+-      IBAN: DE22 8600 0000 0086 0015 22<br>
+-      BIC: MARK DEF1 860
+-    </address>
+-  </div>
+-</section>
+-
+--- /dev/null
++++ b/public/THIRD_PARTY_LICENSE.txt
+@@ -0,0 +1,98 @@
++BirdNET phone field test
++
++The browser application is adapted from BirdNET-Team/real-time-pwa
++https://github.com/birdnet-team/real-time-pwa
++Upstream source revision: 6ab67ac09fa64d98858b90f14318229aca9bb7dc
++
++The application source is available under the MIT License. The license text follows.
++
++MIT License
++
++Copyright (c) 2025 BirdNET-Team
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in all
++copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++SOFTWARE.
++
++BirdNET v2.4 model files: Creative Commons Attribution-ShareAlike 4.0 International.
++https://creativecommons.org/licenses/by-sa/4.0/
++BirdNET Team: https://birdnet.cornell.edu/
++
++TensorFlow.js (bundled browser runtime): Copyright 2024 Google LLC.
++Licensed under Apache License 2.0.
++https://www.apache.org/licenses/LICENSE-2.0
++
++Bootstrap:
++The MIT License (MIT)
++
++Copyright (c) 2011-2025 The Bootstrap Authors
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in
++all copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++THE SOFTWARE.
++
++Bootstrap Icons:
++The MIT License (MIT)
++
++Copyright (c) 2019-2024 The Bootstrap Authors
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in
++all copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++THE SOFTWARE.
++
++D3:
++Copyright 2010-2023 Mike Bostock
++
++Permission to use, copy, modify, and/or distribute this software for any purpose
++with or without fee is hereby granted, provided that the above copyright notice
++and this permission notice appear in all copies.
++
++THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
++REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
++FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
++INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
++OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
++TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
++THIS SOFTWARE.

@@ -60,6 +60,8 @@ export function BirdsHeard() {
           <div><strong>{dayMatches ? records.length : "—"}</strong><span>Detections</span></div>
           <div><strong>{last ? clock(last.timestamp) : "—"}</strong><span>Last heard · PT</span></div>
         </div>
+        <a className={styles.fieldLink} href="/weather/listen"><span>Try listening with your phone</span><span aria-hidden="true">↗</span></a>
+        <p className={styles.fieldHint}>Take your phone outside to see its live sound picture and BirdNET suggestions. This test stays separate from the camera history.</p>
         <p className={styles.quality}>Testing the existing camera microphone. Its limited audio detail can miss bird calls. Suggestions need review; detection counts are not counts of individual birds.</p>
         {data && <p className={styles.updated}>Listener checked <time dateTime={data.updatedAt}>{dateLabel(data.updatedAt)} PT</time></p>}
       </div>

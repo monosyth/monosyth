@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>About this field test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1728">
+  <meta name="robots" content="noindex,nofollow">
+
+  <link rel="manifest" href="/weather/field-listen/manifest.webmanifest">
+  <link rel="icon" type="image/png" href="/weather/field-listen/favicon.png">
+
+  <link rel="stylesheet" href="/weather/field-listen/vendor/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="/weather/field-listen/vendor/bootstrap-icons/bootstrap-icons.css">
+  <link rel="stylesheet" href="/weather/field-listen/css/main.css">
+
+  <script>
+    window.PATH_PREFIX = "/weather/field-listen/";
+  </script>
+  <script src="/weather/field-listen/vendor/d3/d3.min.js"></script>
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+  <header class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container">
+    <a class="navbar-brand fw-semibold d-flex align-items-center gap-2" href="/weather/field-listen/index.html">
+      <img src="/weather/field-listen/img/birdnet-logo-circle.png" alt="BirdNET logo" class="navbar-logo">
+      <span data-i18n="app_title">BirdNET Live</span>
+    </a>
+    <a class="weather-return" href="/weather">← Weather observatory</a>
+
+  </div>
+</header>
+
+
+  <main class="flex-fill">
+    
+<section class="py-5">
+  <div class="container" style="max-width: 760px">
+    <h1 class="mb-4">About this field test</h1>
+    <p>This page is a Monosyth-hosted version of the <a href="https://github.com/birdnet-team/real-time-pwa" rel="noopener" target="_blank">BirdNET Team real-time web app</a>. It uses your device microphone only after you tap Start and grant browser permission. Bird identification runs on your device. Audio is not uploaded to Monosyth or added to the weather station's bird history.</p>
+    <p>Bird images can load from Cornell's BirdNET service. Standard website access information may be handled by the hosting provider. Location access is off by default; you can enable it in Settings to filter likely species around you.</p>
+    <p>BirdNET suggestions can be mistaken. The software is available under the MIT License and the BirdNET model is distributed under CC BY-SA 4.0. See the <a href="/weather/field-listen/THIRD_PARTY_LICENSE.txt">included license notice</a> and <a href="https://github.com/birdnet-team/real-time-pwa" rel="noopener" target="_blank">source project</a>.</p>
+  </div>
+</section>
+
+  </main>
+
+  <script src="/weather/field-listen/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+  <script src="/weather/field-listen/js/app.js"></script>
+</body>
+</html>

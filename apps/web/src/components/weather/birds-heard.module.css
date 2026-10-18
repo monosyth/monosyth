@@ -15,6 +15,10 @@
 .stats strong {display:block;font-size:28px;line-height:1.2;font-weight:300;letter-spacing:-.04em;font-variant-numeric:tabular-nums;}
 .stats>div:last-child strong {font-size:20px;}
 .stats span {display:block;color:#65765e;font-size:10px;margin-top:5px;}
+.fieldLink {display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin:4px 0 8px;padding:12px 14px;border-radius:9px;background:#2e6b4d;color:#fff;text-decoration:none;font-size: 14px;font-weight:500;transition:background .2s,transform .2s;}
+.fieldLink:hover {background:#215d40;transform:translateY(-1px);}
+.fieldLink:focus-visible {outline:2px solid #214e3d;outline-offset:3px;}
+.fieldHint {font-size: 14px;line-height:1.55;color:#526c57;margin-bottom:14px;}
 .quality,.updated {font-size:10px;line-height:1.65;color:#64735f;}
 .updated {margin-top:12px;}
 .history {padding:22px 24px;min-width:0;}
