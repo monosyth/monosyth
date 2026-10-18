@@ -22,6 +22,11 @@ test("rejects weak, future, invalid and duplicate detections", () => {
 test("public records discard camera URLs, audio paths, and arbitrary private fields", () => {
   assert.deepEqual(normalizeBirdRecords([{ ...record, source: "rtsp://secret@example", clipName: "/private/audio.wav", password: "private" }], now), [record]);
 });
+test("public feed keeps only approved source labels and live source flags", () => {
+  assert.deepEqual(normalizeBirdRecords([{ ...record, source: "Yard microphone" }], now), [{ ...record, source: "Yard microphone" }]);
+  const parsed = parseBirdSnapshot({ ...snapshot, listener: { ...snapshot.listener, sources: { yardMicrophone: true, camera: false, privateAddress: "192.168.88.200" } } }, now);
+  assert.deepEqual(parsed.listener.sources, { yardMicrophone: true, camera: false });
+});
 test("daily archives cannot mix adjacent local dates", () => {
   assert.equal(parseBirdDay({ date: "2026-10-17", records: [record] }, now).records.length, 0);
 });

@@ -8,6 +8,7 @@ export type BirdRecord = {
   scientificName: string;
   confidence: number;
   verified: boolean;
+  source?: "Yard microphone" | "WeatherCam";
 };
 export type BirdDay = { date: string; records: BirdRecord[] };
 export type BirdListener = {
@@ -17,6 +18,7 @@ export type BirdListener = {
   sourceSampleRate: number;
   threshold: number;
   signalDb: number | null;
+  sources: { yardMicrophone: boolean; camera: boolean };
 };
 export type BirdSnapshot = {
   version: 1;
@@ -62,8 +64,9 @@ export function normalizeBirdRecords(input: unknown, now = Date.now()): BirdReco
         typeof row.scientificName !== "string" || !row.scientificName.trim() || row.scientificName.length > 120 ||
         !finite(row.confidence) || row.confidence < BIRD_CONFIDENCE_THRESHOLD || row.confidence > 1) return [];
     seen.add(row.id);
+    const source = row.source === "Yard microphone" || row.source === "WeatherCam" ? row.source : undefined;
     return [{ id: row.id, timestamp, commonName: row.commonName, scientificName: row.scientificName,
-      confidence: row.confidence, verified: row.verified === true }];
+      confidence: row.confidence, verified: row.verified === true, ...(source ? { source } : {}) }];
   }).sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
 }
 
@@ -85,6 +88,7 @@ export function parseBirdSnapshot(input: unknown, now = Date.now()): BirdSnapsho
     sourceSampleRate: finite(listener.sourceSampleRate) ? listener.sourceSampleRate : 8000,
     threshold: finite(listener.threshold) ? Math.max(BIRD_CONFIDENCE_THRESHOLD, Math.min(1, listener.threshold)) : BIRD_CONFIDENCE_THRESHOLD,
     signalDb: finite(listener.signalDb) ? listener.signalDb : null,
+    sources: { yardMicrophone: object(listener.sources).yardMicrophone === true, camera: object(listener.sources).camera === true },
   } };
 }
 

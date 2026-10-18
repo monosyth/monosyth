@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuth } from "@/components/auth/auth-provider";
 import { BIRD_TIME_ZONE, birdDate, birdListenerIsFresh, parseBirdSnapshot, type BirdSnapshot } from "@/lib/weather/birds";
 import styles from "./birds-heard.module.css";
 
@@ -9,7 +8,6 @@ const clock = (value: string) => new Intl.DateTimeFormat("en-US", { timeZone: BI
 const dateLabel = (value: string) => new Intl.DateTimeFormat("en-US", { timeZone: BIRD_TIME_ZONE, month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value));
 
 export function BirdsHeard() {
-  const { status: authStatus } = useAuth();
   const [data, setData] = useState<BirdSnapshot | null>(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -40,17 +38,21 @@ export function BirdsHeard() {
   }, [selectedDate]);
 
   const fresh = data && now !== null && !error && birdListenerIsFresh(data, now);
-  const quiet = fresh && data.listener.signalDb !== null && data.listener.signalDb < -60;
+  const yardMicrophone = Boolean(fresh && data.listener.sources.yardMicrophone);
+  const camera = Boolean(fresh && data.listener.sources.camera);
+  const quietCamera = camera && !yardMicrophone && data !== null && data.listener.signalDb !== null && data.listener.signalDb < -60;
   const dayMatches = data && (!selectedDate || selectedDate === data.day.date);
   const records = dayMatches ? data.day.records : [];
   const species = new Set(records.map(record => record.scientificName));
   const last = records[0];
-  const status = !data ? "Connecting to the listener" : !fresh ? "Listener update delayed" : quiet ? "Listening · quiet microphone" : "Listening at the station";
+  const status = !data ? "Connecting to the listener" : !fresh ? "Listener update delayed" : yardMicrophone && camera ? "Listening · yard mic + camera" : yardMicrophone ? "Listening · yard microphone" : quietCamera ? "Listening · quiet camera microphone" : camera ? "Listening · WeatherCam" : "Listener update delayed";
+  const sourceLabel = yardMicrophone && camera ? "Yard mic + camera" : yardMicrophone ? "Yard microphone" : camera ? "WeatherCam" : "Station listening";
+  const quality = yardMicrophone ? `BirdNET is listening through the yard microphone${camera ? " and WeatherCam" : ""}. We are still testing the new mic’s placement. Bird identifications need review; detections are sound events, not counts of individual birds.` : camera ? "WeatherCam is listening while the yard microphone is unavailable. Its quiet audio can miss calls. Bird identifications need review; detections are sound events, not counts of individual birds." : "Bird identifications need review; detections are sound events, not counts of individual birds.";
 
   return <section className={styles.card} aria-labelledby="birds-heard-title">
     <div className={styles.heading}>
       <div><p className={styles.eyebrow}>The sound of Shoreline</p><h2 id="birds-heard-title">Birds heard here</h2></div>
-      <span className={styles.trial}>Camera listening trial</span>
+      <span className={styles.trial}>{sourceLabel}</span>
     </div>
     <div className={styles.content}>
       <div className={styles.overview}>
@@ -62,9 +64,7 @@ export function BirdsHeard() {
           <div><strong>{dayMatches ? records.length : "—"}</strong><span>Detections</span></div>
           <div><strong>{last ? clock(last.timestamp) : "—"}</strong><span>Last heard · PT</span></div>
         </div>
-        {authStatus === "signed_in" && <><a className={styles.fieldLink} href="/weather/listen"><span>Listen with your phone</span><span aria-hidden="true">↗</span></a>
-        <p className={styles.fieldHint}>Private field test. Phone suggestions stay separate from the camera report.</p></>}
-        <p className={styles.quality}>Testing the existing camera microphone. Its limited audio detail can miss bird calls. Suggestions need review; detection counts are not counts of individual birds.</p>
+        <p className={styles.quality}>{quality}</p>
         {data && <p className={styles.updated}>Listener checked <time dateTime={data.updatedAt}>{dateLabel(data.updatedAt)} PT</time></p>}
       </div>
       <div className={styles.history}>
@@ -77,8 +77,8 @@ export function BirdsHeard() {
         </div>
         {error && <p className={styles.error} role="status">{error}{dayMatches ? " Showing the last saved records below." : ""}</p>}
         {!data && !error ? <p className={styles.empty}>Loading the station’s bird history…</p> : !dayMatches ? <p className={styles.empty}>{error ? "Choose another date to explore saved records." : "Loading this day’s records…"}</p> : records.length === 0 ?
-          <div className={styles.empty}><strong>No qualifying bird detections recorded</strong><p>{fresh && data.day.date === birdDate(now!) ? "The camera is being analysed. New detections will appear automatically when calls meet the confidence and repeat-detection checks." : "There are no saved detections for this date. A quiet record does not mean there were no birds nearby."}</p></div> :
-          <><div className={styles.tableWrap}><table><thead><tr><th scope="col">Bird</th><th scope="col">Heard · PT</th><th scope="col">Model confidence</th></tr></thead><tbody>{records.slice(0, limit).map(record => <tr key={record.id}><td><strong>{record.commonName}</strong><span>{record.scientificName}</span>{record.verified && <small>Reviewed</small>}</td><td><time dateTime={record.timestamp}>{clock(record.timestamp)}</time></td><td>{Math.round(record.confidence * 100)}%</td></tr>)}</tbody></table></div>{records.length > limit && <button className={styles.more} type="button" onClick={() => setLimit(limit + 24)}>Show more detections ({records.length - limit})</button>}</>}
+          <div className={styles.empty}><strong>No qualifying bird detections recorded</strong><p>{fresh && data.day.date === birdDate(now!) ? "The station is listening. New detections appear when calls meet the confidence and repeat-detection checks." : "There are no saved detections for this date. A quiet record does not mean there were no birds nearby."}</p></div> :
+          <><div className={styles.tableWrap}><table><thead><tr><th scope="col">Bird</th><th scope="col">Heard · PT</th><th scope="col">Model confidence</th></tr></thead><tbody>{records.slice(0, limit).map(record => <tr key={record.id}><td><strong>{record.commonName}</strong><span>{record.scientificName}</span>{record.source && <small>Heard by {record.source}</small>}{record.verified && <small>Reviewed</small>}</td><td><time dateTime={record.timestamp}>{clock(record.timestamp)}</time></td><td>{Math.round(record.confidence * 100)}%</td></tr>)}</tbody></table></div>{records.length > limit && <button className={styles.more} type="button" onClick={() => setLimit(limit + 24)}>Show more detections ({records.length - limit})</button>}</>}
       </div>
     </div>
     <footer className={styles.footer}><span>BirdNET v2.4 · {Math.round((data?.listener.threshold ?? .8) * 100)}% minimum confidence · Repeated detections required</span><a href="https://www.birds.cornell.edu/ccb/birdnet/" target="_blank" rel="noreferrer">About BirdNET ↗</a></footer>
