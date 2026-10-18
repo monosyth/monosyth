@@ -15,7 +15,7 @@
 .eyebrow,
 .latestLabel {
   margin: 0;
-  font-size: 0.68rem;
+  font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -25,14 +25,14 @@
 .title {
   margin: 0.2rem 0 0;
   font-size: 1.45rem;
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.025em;
   color: rgb(68 64 60);
 }
 
 .intro {
   margin: 0.25rem 0 0;
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   line-height: 1.45;
   color: rgb(120 113 108);
 }
@@ -55,7 +55,7 @@
 
 .dateButton {
   cursor: pointer;
-  font-size: 0.68rem;
+  font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -77,7 +77,7 @@
 .dateLabel {
   display: grid;
   gap: 0.2rem;
-  font-size: 0.62rem;
+  font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -113,7 +113,7 @@
   justify-content: center;
   padding: 1rem;
   text-align: center;
-  font-size: 0.7rem;
+  font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -134,7 +134,7 @@
 .freshNote,
 .staleNote {
   margin: 0.4rem 0 0;
-  font-size: 0.78rem;
+  font-size: 0.875rem;
   line-height: 1.45;
 }
 
@@ -169,7 +169,7 @@
 }
 
 .archiveCount {
-  font-size: 0.7rem;
+  font-size: 0.875rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: rgb(120 113 108);
@@ -219,7 +219,7 @@
 .frameTime {
   display: block;
   padding: 0.55rem 0.65rem;
-  font-size: 0.72rem;
+  font-size: 0.875rem;
   color: rgb(87 83 78);
 }
 
@@ -228,7 +228,7 @@
   border: 1px dashed rgb(214 211 209);
   background: #fff;
   padding: 0.9rem;
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   line-height: 1.5;
   color: rgb(120 113 108);
 }
@@ -274,3 +274,6 @@
     animation: none;
   }
 }
+
+.section {background:#fafcf8;border:1px solid #dce3db;border-radius:12px;color:#203a32;}
+.eyebrow,.intro,.latestLabel {color:#526951;letter-spacing:.06em;}

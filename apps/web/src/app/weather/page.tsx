@@ -1313,9 +1313,7 @@ function ConditionGlyph({
   }
 }
 
-// Map a temperature in °F to a vibrant fill color. Cool blues for cold,
-// saturated reds/oranges for hot. Each cell gets two of these — one for
-// the high (top half) and one for the low (bottom half).
+// Muted cool-to-warm temperature fills keep dark labels readable throughout the archive.
 function temperatureFill(value: number | null): string {
   if (value === null || !Number.isFinite(value)) {
     return "#e2e8f0";
@@ -1324,15 +1322,15 @@ function temperatureFill(value: number | null): string {
   // Pin known stops along the gradient. Linear interpolation between them
   // so transitions read smoothly.
   const stops: Array<{ at: number; rgb: [number, number, number] }> = [
-    { at: 0, rgb: [76, 0, 153] },        // deep purple — frigid
-    { at: 20, rgb: [37, 99, 235] },      // royal blue
-    { at: 35, rgb: [56, 189, 248] },     // sky
-    { at: 50, rgb: [110, 231, 183] },    // mint
-    { at: 60, rgb: [254, 240, 138] },    // butter yellow
-    { at: 70, rgb: [251, 146, 60] },     // tangerine
-    { at: 80, rgb: [239, 68, 68] },      // tomato
-    { at: 95, rgb: [190, 24, 93] },      // hot pink
-    { at: 110, rgb: [88, 28, 135] },     // scorched purple
+    { at: 0, rgb: [191, 200, 222] },
+    { at: 20, rgb: [193, 213, 228] },
+    { at: 35, rgb: [205, 226, 230] },
+    { at: 50, rgb: [219, 232, 214] },
+    { at: 60, rgb: [237, 232, 199] },
+    { at: 70, rgb: [239, 217, 185] },
+    { at: 80, rgb: [232, 197, 175] },
+    { at: 95, rgb: [222, 181, 173] },
+    { at: 110, rgb: [210, 175, 184] },
   ];
 
   const v = Math.max(stops[0].at, Math.min(stops[stops.length - 1].at, value));
@@ -1349,14 +1347,6 @@ function temperatureFill(value: number | null): string {
     }
   }
   return "#e2e8f0";
-}
-
-function calendarDayInkClass(value: number | null): string {
-  if (value === null) return styles.calendarDayInk;
-  // Light text reads better on the deepest cool blues and the hot reds.
-  return value <= 35 || value >= 80
-    ? styles.calendarDayInkInverse
-    : styles.calendarDayInk;
 }
 
 function CalendarDayCell({
@@ -1393,8 +1383,8 @@ function CalendarDayCell({
     isSelected ? styles.calendarDaySelected : "",
     isToday ? styles.calendarDayToday : "",
     dayHref ? styles.calendarDayClickable : "",
-    // High temperature drives readable ink contrast for the upper half.
-    !day.isFuture ? calendarDayInkClass(day.highValue) : styles.calendarDayInk,
+    // Dark ink stays readable across the muted temperature scale.
+    styles.calendarDayInk,
   ]
     .filter(Boolean)
     .join(" ");
@@ -1613,9 +1603,9 @@ function MonthlyReportAvailabilityTable({
                         padding: "0.15rem 0.55rem",
                         borderRadius: "999px",
                         background:
-                          "linear-gradient(135deg, #fde68a 0%, #fb923c 100%)",
-                        color: "#7c2d12",
-                        fontSize: "0.7rem",
+                          "#e5ebde",
+                        color: "#365b40",
+                        fontSize: "0.875rem",
                         fontWeight: 700,
                       }}
                     >
@@ -1699,12 +1689,12 @@ function DailyPeriodClimateTable({
                     {dayHref ? (
                       <Link href={dayHref} scroll={false} style={{ color: "inherit", textDecoration: "none" }}>
                         <span style={{ display: "block" }}>{column.label}</span>
-                        <span style={{ display: "block", fontSize: "0.6rem", opacity: 0.7 }}>{column.detail}</span>
+                        <span style={{ display: "block", fontSize: "0.875rem", opacity: 0.7 }}>{column.detail}</span>
                       </Link>
                     ) : (
                       <>
                         <span style={{ display: "block", opacity: 0.45 }}>{column.label}</span>
-                        <span style={{ display: "block", fontSize: "0.6rem", opacity: 0.4 }}>{column.detail}</span>
+                        <span style={{ display: "block", fontSize: "0.875rem", opacity: 0.4 }}>{column.detail}</span>
                       </>
                     )}
                   </th>
@@ -1736,10 +1726,7 @@ function DailyPeriodClimateTable({
                       : matrix.colorScale === "temperature"
                         ? {
                             background: temperatureFill(cell.numericValue),
-                            color:
-                              cell.numericValue <= 35 || cell.numericValue >= 80
-                                ? "#fff"
-                                : "#0f172a",
+                            color: "#203a32",
                           }
                         : {
                             background: rainfallFill(cell.numericValue, row.cells),
@@ -1850,7 +1837,7 @@ function TemperatureLegend() {
         ))}
       </div>
       <span className={styles.calendarLegendCaption}>Warm</span>
-      <span style={{ fontSize: "0.66rem", color: "#94a3b8" }}>10°F → 110°F</span>
+      <span style={{ fontSize: "0.875rem", color: "#94a3b8" }}>10°F → 110°F</span>
     </div>
   );
 }

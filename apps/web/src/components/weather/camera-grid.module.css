@@ -40,7 +40,7 @@
 }
 
 .fallbackEyebrow {
-  font-size: 0.68rem;
+  font-size: 0.875rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: rgb(120 113 108);
@@ -57,7 +57,7 @@
   border: 1px solid rgb(214 211 209);
   background: #fff;
   padding: 0.375rem 0.75rem;
-  font-size: 0.68rem;
+  font-size: 0.875rem;
   font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -76,7 +76,7 @@
 
 .note {
   margin-top: 0.25rem;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   line-height: 1.25rem;
   color: rgb(120 113 108);
 }
@@ -86,3 +86,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.section {background:#fafcf8;border:1px solid #dce3db;border-radius:12px;color:#203a32;}
+.eyebrow,.intro,.latestLabel {color:#526951;letter-spacing:.06em;}
