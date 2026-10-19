@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Atmosphere } from "./atmosphere";
 import { BirdsHeard } from "./birds-heard";
+import { RainSummary } from "./rain-summary";
 import { StationCameraPreview } from "./station-camera-preview";
 import { compassPoint, type ObservatoryData } from "@/lib/weather/observatory";
 import styles from "./observatory.module.css";
@@ -62,6 +63,15 @@ export function WeatherObservatory({ data }: { data: ObservatoryData }) {
               <SunEventIcon setting />
               <span>Sunset<time dateTime={new Date(data.sunset).toISOString()}>{clock(data.sunset)}</time></span>
             </div>
+            <div className={styles.skySunTime}>
+              <MetricIcon name="humidity" />
+              <span>Humidity<strong className={styles.skySmallReading}>{format(data.humidity)}{data.humidity !== null ? "%" : ""}</strong></span>
+            </div>
+            <a className={styles.skySunTime} href="https://www.airnow.gov/?city=Shoreline&state=WA&country=USA" target="_blank" rel="noreferrer"
+              title={data.airQuality ? `${data.airQuality.area} · ${data.airQuality.category} · reported ${datedClock(data.airQuality.timestamp)} PT · ${data.airQuality.agency} via AirNow` : "Regional air quality is temporarily unavailable. Open AirNow for details."}>
+              <AirQualityIcon />
+              <span>Area AQI<strong className={styles.skySmallReading}>{data.airQuality?.value ?? "—"}<small>{data.airQuality?.category ?? "Unavailable"}</small></strong></span>
+            </a>
           </div>
         </div>
         <div className={styles.skyBottom}>
@@ -97,6 +107,7 @@ export function WeatherObservatory({ data }: { data: ObservatoryData }) {
       <Metric label="Pressure" value={format(data.pressure,3)} unit="inHg" detail={data.pressureChange === null ? "Trend unavailable" : `${data.pressureChange > .005 ? "↗ Rising" : data.pressureChange < -.005 ? "↘ Falling" : "→ Steady"} · ${Math.abs(data.pressureChange).toFixed(3)} inHg / ~3h`} icon="pressure" />
       <Metric label="UV index" value={format(data.uv,1)} unit="" detail={data.uv === null ? "Reading unavailable" : data.uv < 3 ? "Low exposure" : data.uv < 6 ? "Moderate exposure" : data.uv < 8 ? "High exposure" : "Very high exposure"} icon="sun" />
     </div>
+    <RainSummary data={data.rainSummary} paused={motionOff} />
     <div className={styles.exploreGrid}>
       <TemperatureTrace points={data.temperatures} now={data.now} />
       <Daylight data={data} />
@@ -111,7 +122,7 @@ export function WeatherObservatory({ data }: { data: ObservatoryData }) {
         <p>{period.shortForecast}</p><small>{period.windSpeed} {period.windDirection}</small>
       </div>)}</div> : <p className={styles.empty}>The hourly forecast is temporarily unavailable. Station readings remain available above.</p>}
     </section>
-    <div className={styles.sourceNote}><span>Measured here · Ambient Weather</span><span>Forecast · National Weather Service</span><span>Sun & moon · calculated for Shoreline</span></div>
+    <div className={styles.sourceNote}><span>Measured here · Ambient Weather</span><span>Forecast · National Weather Service</span><span>Sun & moon · calculated for Shoreline</span><a href="https://www.airnow.gov/" target="_blank" rel="noreferrer">Regional AQI · AirNow / Puget Sound Clean Air Agency ↗</a></div>
   </div>;
 }
 
@@ -185,6 +196,10 @@ function SunEventIcon({ setting = false }: { setting?: boolean }) {
     <path d="M2 19h20M6 16a6 6 0 0 1 12 0M2 15h1m18 0h1M4.2 8.2l1.4 1.4m12.8 0 1.4-1.4" />
     <path d={setting ? "M12 2v6m-3-3 3 3 3-3" : "M12 8V2m-3 3 3-3 3 3"} />
   </svg>;
+}
+
+function AirQualityIcon() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 8h12a3 3 0 1 0-3-3M3 12h16M3 16h10a3 3 0 1 1-3 3"/></svg>;
 }
 
 function CameraIcon(){return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="3" y="6" width="14" height="12" rx="2"/><path d="m17 10 4-3v10l-4-3"/></svg>;}

@@ -1,4 +1,6 @@
 import SunCalc from "suncalc";
+import { buildRainSummary } from "./rain";
+import type { AirQuality } from "./air-quality";
 import type { WeatherOverview, WeatherObservation } from "./types";
 
 export function reading(row: WeatherObservation | undefined, ...keys: string[]): number | null {
@@ -25,7 +27,7 @@ export function compassPoint(degrees: number | null) {
   return degrees === null ? "—" : ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"][Math.round(((degrees % 360) + 360) % 360 / 22.5) % 16];
 }
 
-export function buildObservatory(data: WeatherOverview, latitude: number, longitude: number) {
+export function buildObservatory(data: WeatherOverview, latitude: number, longitude: number, airQuality: AirQuality | null = null) {
   const now = new Date(data.fetchedAt).getTime();
   const rows = [...data.observations].filter(row => typeof row.timestamp === "number" && row.timestamp <= now).sort((a,b) => a.timestamp! - b.timestamp!);
   const latest = rows.at(-1);
@@ -53,6 +55,8 @@ export function buildObservatory(data: WeatherOverview, latitude: number, longit
     humidity: reading(latest, "humidity"), dewpoint: reading(latest, "dewPoint", "dewpointf"),
     pressure, pressureChange: pressure !== null && priorPressure !== null ? pressure - priorPressure : null,
     rain: reading(latest, "dailyrainin"), rainRate,
+    rainSummary: buildRainSummary(rows, now),
+    airQuality,
     uv: reading(latest, "uv"), solar: reading(latest, "solarradiation"),
     high: temperatures.length ? Math.max(...temperatures.map(p => p.value)) : null,
     low: temperatures.length ? Math.min(...temperatures.map(p => p.value)) : null,

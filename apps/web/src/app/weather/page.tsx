@@ -8,6 +8,7 @@ import { WeatherCameraGrid } from "@/components/weather/camera-grid";
 import { WeatherObservatory } from "@/components/weather/observatory";
 import { buildObservatory } from "@/lib/weather/observatory";
 import { getHourlyForecast } from "@/lib/weather/nws";
+import { getSeattleAirQuality } from "@/lib/weather/air-quality";
 import { WeatherPageTabs } from "@/components/weather/page-tabs";
 import { RadarEmbed } from "@/components/weather/radar-embed";
 import { StationCameraArchive } from "@/components/weather/station-camera-archive";
@@ -269,6 +270,8 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
   const observatoryForecastPromise = isDashboardTab && activeView === "current"
     ? withDeadline(getHourlyForecast(coordinates.latitude, coordinates.longitude).catch(() => []), 6500, [] as WeatherForecastPeriod[])
     : Promise.resolve([] as WeatherForecastPeriod[]);
+  const observatoryAirQualityPromise = isDashboardTab && activeView === "current"
+    ? getSeattleAirQuality() : Promise.resolve(null);
   const mapUrl = buildMapUrl(coordinates.latitude, coordinates.longitude);
   const radarUrl = buildRadarEmbedUrl(coordinates.latitude, coordinates.longitude);
   const viewMeta = getViewMeta(activeView);
@@ -349,12 +352,14 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
     summaryArchive,
     dayDetailObservations,
     observatoryForecast,
+    observatoryAirQuality,
   ] = await Promise.all([
     comparisonPanelsPromise,
     summaryHistoryRollupsPromise,
     summaryArchivePromise,
     dayDetailPromise,
     observatoryForecastPromise,
+    observatoryAirQualityPromise,
   ]);
 
   // Build the active week/month view. Current slot merges live observations
@@ -418,7 +423,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
     : comparisonPanels;
   const visibleNotice = shouldDisplayWeatherNotice(result.notice) ? result.notice : undefined;
   const observatory = isDashboardTab && isCurrentView
-    ? buildObservatory({ ...data, forecast: observatoryForecast }, coordinates.latitude, coordinates.longitude)
+    ? buildObservatory({ ...data, forecast: observatoryForecast }, coordinates.latitude, coordinates.longitude, observatoryAirQuality)
     : null;
 
   return (

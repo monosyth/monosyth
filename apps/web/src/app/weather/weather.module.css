@@ -1395,6 +1395,9 @@
   display: grid;
   grid-template-columns: repeat(7, minmax(8rem, 1fr));
   gap: 0.5rem;
+  /* Keep day outlines and hover movement inside the scrollable area. */
+  margin: -0.5rem;
+  padding: 0.5rem;
   overflow-x: auto;
   scrollbar-width: thin;
 }
@@ -2059,3 +2062,62 @@
 .calendarDaySelected,.calendarDayToday {outline-color:#55764f;border-color:#55764f;}
 .periodNavTodayBadge {background:#dce7d4;color:#365b40;}
 .calendarDayTemps {flex-wrap:wrap;gap:4px 8px;}
+
+/* Put the time range first, with a clear selected state on every screen size. */
+.tabInner {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+.periodControls {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 0 0 16px;
+}
+.periodControlLabel {
+  color: #526951;
+  font-size: .875rem;
+  font-weight: 500;
+}
+.primaryTabs {
+  order: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: min(100%, 25rem);
+  max-width: 100%;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #cddac8;
+  border-radius: 12px;
+  background: #e6ecdf;
+  overflow: visible;
+}
+.primaryTab {
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+}
+.primaryTabActive {
+  color: #fff;
+  background: #284f3d;
+  box-shadow: 0 1px 3px #203a3226;
+}
+.primaryTabInactive { color: #46613c; }
+.primaryTabInactive:hover { color: #203a32; background: #d9e3d1; }
+.primaryTab:focus-visible, .secondaryTab:focus-visible {
+  outline: 2px solid #55764f;
+  outline-offset: 3px;
+}
+.secondaryTabs {
+  order: 0;
+  width: 100%;
+  padding: 0;
+  border-top: 1px solid #dce4da;
+}
+@media (max-width: 740px) {
+  .periodControls { padding-top: 2px; }
+  .primaryTabs { width: 100%; }
+}

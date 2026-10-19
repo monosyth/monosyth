@@ -143,3 +143,16 @@
 @media(max-width:1000px){.metricGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:740px){.sideStack{grid-template-columns:1fr}.windCard{min-height:210px}.windDetail>span{max-width:55%}.cardHeading h2{font-size:1.125rem}.skyCard{min-height:510px}.skyBottom{flex-wrap:wrap;gap:12px}.skyReadings{gap:18px}.sectionLine>p{max-width:none;flex:1 1 100%}.reportTime{margin-left:14px}.metricValue{font-size:2rem}.skyCopy h2{font-size:1.75rem}.moonNote{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}.sourceNote{font-size:.875rem}}
 @media(max-width:360px){.metricGrid{grid-template-columns:1fr}.skyReadings{grid-template-columns:1fr}.skyCard{min-height:620px}}
+
+/* Match the small humidity and regional AQI readings to the sun-time columns. */
+.skyReadings {grid-template-columns:repeat(2,minmax(0,1fr));max-width:390px;}
+.skySunTime {min-width:0;align-items:flex-start;}
+.skySunTime>span {min-width:0;}
+.skySmallReading {display:block;margin-top:3px;color:#f1f4e7;font-size:1rem;font-weight:400;line-height:1.4;font-variant-numeric:tabular-nums;}
+.skySmallReading small {display:block;font-size:.75rem;color:#e4eee0;line-height:1.4;}
+a.skySunTime {border-radius:4px;text-decoration:none;}
+a.skySunTime:hover {color:#fff;}
+a.skySunTime:focus-visible {outline:2px solid #dfd8aa;outline-offset:4px;}
+.skyCard {min-height:600px;}
+@media(max-width:740px){.skyCard{min-height:640px}.skyReadings{gap:16px 18px}.skySmallReading small{font-size:.875rem}}
+@media(max-width:360px){.skyCard{min-height:680px}}
