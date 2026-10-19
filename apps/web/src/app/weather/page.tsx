@@ -2742,7 +2742,8 @@ function shouldDisplayWeatherNotice(notice?: string) {
   return !(
     notice.includes("recently cached station snapshot") ||
     notice.includes("rate-limited the live fetch") ||
-    notice.includes("persisted logger history from Firestore")
+    notice.includes("persisted logger history from Firestore") ||
+    notice.includes("history collected from the station logger")
   );
 }
 
