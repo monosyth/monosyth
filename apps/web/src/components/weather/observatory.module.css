@@ -157,3 +157,6 @@ a.skySunTime:focus-visible {outline:2px solid #dfd8aa;outline-offset:4px;}
 .skyCard {min-height:600px;}
 @media(max-width:740px){.skyCard{min-height:640px}.skyReadings{gap:16px 18px}.skySmallReading small{font-size:.875rem}}
 @media(max-width:360px){.skyCard{min-height:680px}}
+
+.reportTime {margin-left:0;}
+@media(max-width:740px){.reportTime{display:inline;width:auto;margin-left:0}}

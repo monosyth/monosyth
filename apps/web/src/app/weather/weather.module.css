@@ -2121,3 +2121,18 @@
 .birdsNavLinkActive:hover {background:#284f3d;}
 @media(max-width:740px){.periodNavigation{gap:8px}.periodNavigation .primaryTab{font-size:.875rem;padding:8px 5px}.birdsNavLink{min-height:44px;padding:8px 12px}}
 @media(max-width:380px){.periodNavigation{gap:6px}.periodNavigation .primaryTabs{gap:0;padding:3px}.periodNavigation .primaryTab{font-size:.8125rem;padding:8px 2px}.birdsNavLink{font-size:.875rem;padding:8px;gap:4px}.birdsNavLink svg{width:18px;height:18px}}
+
+/* Keep the location and navigation together, without repeating feed metadata. */
+.observatoryHeaderBody {max-width:1360px;margin:auto;padding:18px 32px 0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,560px);align-items:center;gap:28px;}
+.observatoryHeaderBody .observatoryTitleRow {margin:0;padding:0;display:block;}
+.observatoryHeaderBody .observatoryTitleRow h1 {font-size:32px;}
+.observatoryEyebrow {margin-bottom:4px;}
+.observatoryHeaderBody .tabInner {margin:0;padding:0;}
+.observatoryHeaderBody .tabShell {border-bottom:0;}
+.observatoryHeaderBody .periodControls {gap:0;padding:0 0 8px;justify-items:end;}
+.observatoryHeaderBody .periodNavigation {width:min(100%,30rem);}
+.observatoryHeaderBody .secondaryTabs {justify-content:flex-end;gap:22px;}
+.observatoryHeaderBody .secondaryTab {padding:10px 0 8px;min-height:44px;}
+.header {border-bottom:1px solid #dce4da;}
+@media(max-width:1099px){.observatoryHeaderBody{grid-template-columns:minmax(0,1fr);gap:14px;padding-top:18px}.observatoryHeaderBody .periodControls{justify-items:start}.observatoryHeaderBody .secondaryTabs{justify-content:flex-start}}
+@media(max-width:740px){.observatoryHeaderBody{padding:16px 18px 0;gap:14px}.observatoryHeaderBody .observatoryTitleRow h1{font-size:1.875rem}.observatoryHeaderBody .secondaryTabs{gap:22px}}

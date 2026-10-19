@@ -37,7 +37,7 @@ export function WeatherObservatory({ data }: { data: ObservatoryData }) {
   const motionOff = paused || reduced;
   return <div className={styles.observatory} data-paused={motionOff}>
     <div className={styles.sectionLine}>
-      <p><span className={stale ? styles.staleDot : styles.liveDot} />{stale ? "Last station report" : "Live from the station"}<span className={styles.reportTime}>{data.timestamp ? (stale ? datedClock(data.timestamp) : clock(data.timestamp)) + " PT" : "Awaiting readings"}</span></p>
+      <p><span className={stale ? styles.staleDot : styles.liveDot} /><span>{stale ? "Last report" : "Live"}{data.timestamp ? <> · <time className={styles.reportTime} dateTime={new Date(data.timestamp).toISOString()}>{datedClock(data.timestamp)} PT</time></> : " · Awaiting readings"}</span></p>
       <div className={styles.controls}>
         <button type="button" onClick={() => setPaused(!paused)} disabled={reduced} aria-pressed={motionOff}>{motionOff ? "▷ Motion paused" : "Ⅱ Pause motion"}</button>
         <button type="button" disabled={pending} onClick={() => startTransition(() => router.refresh())}>{pending ? "Updating…" : "↻ Refresh"}</button>

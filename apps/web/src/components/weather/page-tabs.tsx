@@ -130,7 +130,6 @@ export function WeatherPageTabs({
         aria-busy={isLoading}
       >
         <div className={styles.periodControls}>
-          <span className={styles.periodControlLabel}>Time range</span>
           <div className={styles.periodNavigation}><nav ref={primaryTabsRef} className={styles.primaryTabs} aria-label="Weather period">
             {summaryTabs.map((tab) => {
               const isActive = !birdsActive && tab.view === optimisticView;

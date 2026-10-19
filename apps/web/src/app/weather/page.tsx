@@ -407,13 +407,6 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           monthCalendar.navigation.isCurrent,
         )
       : null;
-  const pageMeta = getPageMeta(
-    activeView,
-    activeDocumentTab,
-    viewMeta,
-    summaryArchive,
-    data.station.lastObservationAt || formatWeatherLong(data.fetchedAt),
-  );
   const isCurrentView = activeView === "current";
   const featuredComparisonPanel = isCurrentView
     ? comparisonPanels.find((panel) => panel.title.startsWith("Last ")) ?? null
@@ -436,9 +429,9 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           </Link>
           <a className={styles.observatoryMapLink} href={mapUrl} target="_blank" rel="noreferrer">{coordinates.latitude.toFixed(4)}° N &nbsp; {Math.abs(coordinates.longitude).toFixed(4)}° W ↗</a>
         </div>
+        <div className={styles.observatoryHeaderBody}>
         <div className={styles.observatoryTitleRow}>
           <div><p className={styles.observatoryEyebrow}>A little closer to the outside</p><h1>Shoreline<span>, Washington</span></h1></div>
-          <p className={styles.observatoryStationName}>{data.station.name}<span>{pageMeta.timestampLabel}</span></p>
         </div>
         <WeatherPageTabs
           summaryTabs={summaryTabs}
@@ -446,6 +439,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
           activeView={activeView}
           activeDocumentTab={activeDocumentTab}
         />
+        </div>
       </header>
 
       <div className={styles.contentShell}>
@@ -3620,54 +3614,6 @@ function rebuildWeatherSummaryArchive(macAddress: string) {
 
   summaryArchiveRebuilds.set(cacheKey, rebuild);
   return rebuild;
-}
-
-function getPageMeta(
-  activeView: WeatherDashboardView,
-  activeDocumentTab: WeatherDocumentTab,
-  viewMeta: ReturnType<typeof getViewMeta>,
-  summaryArchive: WeatherSummaryArchive | null,
-  defaultTimestampLabel: string,
-) {
-  if (activeDocumentTab === "summaries") {
-    return {
-      heading: "Summaries and Records",
-      timestampLabel: summaryArchive?.lastUpdatedLabel ?? "Archive update unavailable",
-    };
-  }
-
-  if (activeDocumentTab === "radar") {
-    return {
-      heading: "Regional Radar",
-      timestampLabel: defaultTimestampLabel,
-    };
-  }
-
-  if (activeDocumentTab === "cameras") {
-    return {
-      heading: "Local Cameras",
-      timestampLabel: defaultTimestampLabel,
-    };
-  }
-
-  if (activeDocumentTab === "graphs") {
-    return {
-      heading: `${viewMeta.label === "Current" ? "Daily" : viewMeta.label} Weather Graphs`,
-      timestampLabel: defaultTimestampLabel,
-    };
-  }
-
-  if (activeDocumentTab === "about") {
-    return {
-      heading: "About This Station",
-      timestampLabel: defaultTimestampLabel,
-    };
-  }
-
-  return {
-    heading: viewMeta.heading,
-    timestampLabel: defaultTimestampLabel,
-  };
 }
 
 function filterObservationsForLatestDay(observations: WeatherObservation[]) {
