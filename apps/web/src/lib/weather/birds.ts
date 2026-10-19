@@ -11,7 +11,6 @@ export type BirdRecord = {
   confidence: number;
   verified: boolean;
   picture?: BirdPicture;
-  hasSpectrogram?: boolean;
   source?: "Yard microphone" | "WeatherCam";
 };
 export type BirdDay = { date: string; records: BirdRecord[] };
@@ -84,7 +83,7 @@ export function normalizeBirdRecords(input: unknown, now = Date.now()): BirdReco
     const picture = parseBirdPicture(row.picture);
     return [{ id: row.id, timestamp, commonName: row.commonName, scientificName: row.scientificName,
       confidence: row.confidence, verified: row.verified === true, ...(source ? { source } : {}),
-      ...(picture ? { picture } : {}), ...(row.hasSpectrogram === true ? { hasSpectrogram: true } : {}) }];
+      ...(picture ? { picture } : {}) }];
   }).sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
 }
 

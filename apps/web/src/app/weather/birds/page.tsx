@@ -4,7 +4,7 @@ import { WeatherPageTabs } from "@/components/weather/page-tabs";
 import { BirdActivity } from "@/components/weather/bird-activity";
 import styles from "../weather.module.css";
 
-export const metadata: Metadata = { title: "Birds heard here | Monosyth Weather", description: "Bird activity at the Shoreline weather station: species, daily listening history, and saved sound pictures from BirdNET." };
+export const metadata: Metadata = { title: "Birds heard here | Monosyth Weather", description: "Bird activity at the Shoreline weather station: species photos, daily listening history, and bird activity from BirdNET." };
 
 export default function BirdsPage() {
   return <main className={styles.page}>

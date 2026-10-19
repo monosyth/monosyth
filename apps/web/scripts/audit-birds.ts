@@ -51,8 +51,8 @@ test("bird pictures retain credit and license but reject untrusted URLs", () => 
   assert.equal(parseBirdPicture({...picture,licenseUrl:"https://private.example/license"}),undefined);
   assert.equal(parseBirdPicture({...picture,author:""}),undefined);
 });
-test("public records allow sanitized picture and availability without raw audio paths", () => {
-  assert.deepEqual(normalizeBirdRecords([{...record,picture,hasSpectrogram:true,audioUrl:"http://private/audio",clipName:"/private/audio.wav"}],now),[{...record,picture,hasSpectrogram:true}]);
+test("public records keep bird pictures and omit sound prints and recording fields", () => {
+  assert.deepEqual(normalizeBirdRecords([{...record,picture,hasSpectrogram:true,audioUrl:"http://private/audio",clipName:"/private/audio.wav"}],now),[{...record,picture}]);
   assert.equal(normalizeBirdRecords([{...record,picture:{...picture,url:"file:///secret"},hasSpectrogram:"yes"}],now)[0].picture,undefined);
 });
 test("activity counts calls by Pacific clock hour, not UTC or individual birds", () => {
@@ -70,4 +70,10 @@ test("a species filter recomputes hourly counts and empty days remain empty", ()
   assert.equal(buildBirdActivity(rows.filter(row=>row.scientificName==="Colaptes auratus")).hours[18].count,1);
   assert.equal(buildBirdActivity([]).species.length,0);
   assert.equal(buildBirdActivity([]).hours.reduce((sum,hour)=>sum+hour.count,0),0);
+});
+
+test("public reports cannot expose sound prints or playback flags",()=>{
+  const rows=normalizeBirdRecords([{...record,hasSpectrogram:true,hasAudio:true,audioUrl:"/private/recording.wav",spectrogramUrl:"/private/sound.png"}],now);
+  assert.deepEqual(rows,[record]);
+  assert.equal(parseBirdDay({date:"2026-10-16",records:[{...record,hasSpectrogram:true}]},now).records[0].hasOwnProperty("hasSpectrogram"),false);
 });
