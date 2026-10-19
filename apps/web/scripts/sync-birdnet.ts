@@ -74,7 +74,7 @@ async function main() {
     const records = normalizeBirdRecords(rows.map(row => ({ id: `bn-${row.id}`, timestamp: new Date(row.detected_at * 1000).toISOString(),
       commonName: names.get(row.scientific_name) || row.scientific_name, scientificName: row.scientific_name,
       confidence: row.confidence, verified: row.verified === "correct",
-      source: row.source_type === "audio_card" && row.source_name === "Yard USB Microphone" ? "Yard microphone" :
+      source: row.source_name === "Yard USB Microphone" ? "Yard microphone" :
         row.source_type === "rtsp" && row.source_name === "WeatherCam" ? "WeatherCam" : undefined })), now).filter(row => birdDate(Date.parse(row.timestamp)) === date);
     const day = { date, records }, serialized = JSON.stringify(day);
     if (dayHashes[date] !== serialized) {
