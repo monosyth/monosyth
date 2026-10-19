@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import styles from "@/app/weather/weather.module.css";
 import { WeatherPendingOverlay } from "@/components/weather/pending-overlay";
@@ -30,6 +31,7 @@ type WeatherPageTabsProps = {
   documentTabs: readonly DocumentTab[];
   activeView: WeatherDashboardView;
   activeDocumentTab: WeatherDocumentTab;
+  birdsActive?: boolean;
 };
 
 function buildWeatherHref(
@@ -55,6 +57,7 @@ export function WeatherPageTabs({
   documentTabs,
   activeView,
   activeDocumentTab,
+  birdsActive = false,
 }: WeatherPageTabsProps) {
   const router = useRouter();
   const primaryTabsRef = useRef<HTMLElement>(null);
@@ -100,7 +103,7 @@ export function WeatherPageTabs({
     setOptimisticDocumentTab(nextDocumentTab);
 
     if (
-      nextView === activeView &&
+      !birdsActive && nextView === activeView &&
       nextDocumentTab === activeDocumentTab
     ) {
       return;
@@ -128,9 +131,9 @@ export function WeatherPageTabs({
       >
         <div className={styles.periodControls}>
           <span className={styles.periodControlLabel}>Time range</span>
-          <nav ref={primaryTabsRef} className={styles.primaryTabs} aria-label="Weather period">
+          <div className={styles.periodNavigation}><nav ref={primaryTabsRef} className={styles.primaryTabs} aria-label="Weather period">
             {summaryTabs.map((tab) => {
-              const isActive = tab.view === optimisticView;
+              const isActive = !birdsActive && tab.view === optimisticView;
               const isPendingTab = isLoading && isActive;
 
               return (
@@ -159,11 +162,13 @@ export function WeatherPageTabs({
               );
             })}
           </nav>
+          <Link href="/weather/birds" aria-current={birdsActive ? "page" : undefined} className={`${styles.birdsNavLink} ${birdsActive ? styles.birdsNavLinkActive : ""}`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M3 19h18M5 17l3-4c-1-4 2-7 6-7 2-3 5-1 5 2l3 2-3 1c-1 5-4 7-8 7H5Z"/><path d="m11 18-1 3m5-4v4M8 13c4 1 6-1 7-3"/></svg>Birds</Link>
+          </div>
         </div>
 
         <nav ref={secondaryTabsRef} className={styles.secondaryTabs} aria-label="Weather section">
           {documentTabs.map((tab) => {
-            const isActive = tab.tab === optimisticDocumentTab;
+            const isActive = !birdsActive && tab.tab === optimisticDocumentTab;
             const isPendingTab = isLoading && isActive;
 
             return (

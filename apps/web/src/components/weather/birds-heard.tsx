@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { BIRD_TIME_ZONE, birdDate, birdListenerIsFresh, parseBirdSnapshot, type BirdSnapshot } from "@/lib/weather/birds";
 import styles from "./birds-heard.module.css";
 
@@ -46,13 +47,12 @@ export function BirdsHeard() {
   const species = new Set(records.map(record => record.scientificName));
   const last = records[0];
   const status = !data ? "Connecting to the listener" : !fresh ? "Listener update delayed" : yardMicrophone && camera ? "Listening · yard mic + camera" : yardMicrophone ? "Listening · yard microphone" : quietCamera ? "Listening · quiet camera microphone" : camera ? "Listening · WeatherCam" : "Listener update delayed";
-  const sourceLabel = yardMicrophone && camera ? "Yard mic + camera" : yardMicrophone ? "Yard microphone" : camera ? "WeatherCam" : "Station listening";
   const quality = yardMicrophone ? `BirdNET is listening through the yard microphone${camera ? " and WeatherCam" : ""}. We are still testing the new mic’s placement. Bird identifications need review; detections are sound events, not counts of individual birds.` : camera ? "WeatherCam is listening while the yard microphone is unavailable. Its quiet audio can miss calls. Bird identifications need review; detections are sound events, not counts of individual birds." : "Bird identifications need review; detections are sound events, not counts of individual birds.";
 
   return <section className={styles.card} aria-labelledby="birds-heard-title">
     <div className={styles.heading}>
       <div><p className={styles.eyebrow}>The sound of Shoreline</p><h2 id="birds-heard-title">Birds heard here</h2></div>
-      <span className={styles.trial}>{sourceLabel}</span>
+      <Link className={styles.trial} href="/weather/birds">Explore bird activity ↗</Link>
     </div>
     <div className={styles.content}>
       <div className={styles.overview}>

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { loadEnvConfig } from "@next/env";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -12,7 +13,7 @@ loadEnvConfig(process.cwd());
 const run = promisify(execFile);
 const root = process.env.BIRDNET_ROOT || path.join(os.homedir(), "monosyth/weather-birdnet");
 const statePath = path.join(root, "data/sync-state.json");
-type State = { predictions: number; analysisWindows: number; lastAnalysisAt: string | null; dayHashes: Record<string, string> };
+type State = { predictions: number; analysisWindows: number; lastAnalysisAt: string | null; dayHashes: Record<string, string>; graphs?: string[]; graphFailures?: Record<string, number> };
 
 function metric(text: string, name: string, label?: string): number | null {
   const lines = text.split("\n").filter(line => (line.startsWith(name + " ") || line.startsWith(name + "{")) && (!label || line.includes(label)));
@@ -37,6 +38,13 @@ async function main() {
   const advanced = predictions > 0 && predictions !== previous.predictions;
   const lastAnalysisAt = advanced ? updatedAt : previous.lastAnalysisAt;
   const analysisWindows = previous.analysisWindows + (advanced ? (predictions >= previous.predictions ? predictions - previous.predictions : predictions) : 0);
+  const yardRelayUrl = "http://127.0.0.1:18768";
+  const yardSourceId = "http_" + createHash("sha256").update(yardRelayUrl + "/audio.wav").digest("hex").slice(0, 8);
+  let yardRelayHealthy = false;
+  try {
+    const relay = await fetch(yardRelayUrl + "/status", { signal: AbortSignal.timeout(3000) });
+    if (relay.ok) yardRelayHealthy = (await relay.json()).healthy === true;
+  } catch { /* The microphone connection is unavailable. */ }
   let sources = { yardMicrophone: false, camera: false };
   try {
     const response = await fetch("http://127.0.0.1:8080/api/v2/health/audio", { signal: AbortSignal.timeout(5000) });
@@ -45,7 +53,7 @@ async function main() {
       const live = (source: { state?: string; last_dispatch?: string }) => source.state === "HEALTHY" &&
         typeof source.last_dispatch === "string" && now - Date.parse(source.last_dispatch) < 90_000;
       sources = {
-        yardMicrophone: health.sources?.some(source => source.source_id?.startsWith("audio_card_") && live(source)) ?? false,
+        yardMicrophone: health.sources?.some(source => source.source_id === yardSourceId && yardRelayHealthy && live(source)) ?? false,
         camera: health.sources?.some(source => source.source_id?.startsWith("rtsp_") && live(source)) ?? false,
       };
     }
@@ -56,6 +64,13 @@ async function main() {
   const app = getApps().length ? getApp() : initializeApp({ credential: applicationDefault(), projectId: "monosyth" });
   const bucket = getStorage(app).bucket(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET);
   const dayHashes = { ...previous.dayHashes };
+  const graphs = new Set(previous.graphs ?? []);
+  const graphFailures = { ...previous.graphFailures };
+  let graphBudget = 8;
+  const imageRows = await run("/usr/bin/sqlite3", ["-readonly", "-json", "-cmd", ".timeout 5000", path.join(root, "data/birdnet.db"),
+    "SELECT l.scientific_name,i.url,i.author_name,i.license_name,i.license_url FROM image_caches i JOIN labels l ON l.id=i.label_id ORDER BY i.updated_at;"], { maxBuffer: 5_000_000, timeout: 10_000 });
+  const pictures = new Map((JSON.parse(imageRows.stdout || "[]") as { scientific_name: string; url: string; author_name: string; license_name: string; license_url: string }[])
+    .map(row => [row.scientific_name, { url: row.url, author: row.author_name, license: row.license_name, licenseUrl: row.license_url }]));
   // Preserve every day's records in cloud storage. Revisit yesterday for midnight and delayed writes.
   const dates = [...new Set([birdDate(now), birdDate(now - 86_400_000)])].filter(date => date >= birdDate(Date.parse(trial.startedAt)));
   let currentDay: BirdDay = { date: birdDate(now), records: [] };
@@ -73,9 +88,25 @@ async function main() {
     const rows = JSON.parse(stdout || "[]") as { id: number; detected_at: number; confidence: number; scientific_name: string; verified: string; source_type: string; source_name: string }[];
     const records = normalizeBirdRecords(rows.map(row => ({ id: `bn-${row.id}`, timestamp: new Date(row.detected_at * 1000).toISOString(),
       commonName: names.get(row.scientific_name) || row.scientific_name, scientificName: row.scientific_name,
-      confidence: row.confidence, verified: row.verified === "correct",
+      confidence: row.confidence, verified: row.verified === "correct", picture: pictures.get(row.scientific_name),
       source: row.source_name === "Yard USB Microphone" ? "Yard microphone" :
         row.source_type === "rtsp" && row.source_name === "WeatherCam" ? "WeatherCam" : undefined })), now).filter(row => birdDate(Date.parse(row.timestamp)) === date);
+    // Export sound pictures only. Raw microphone recordings remain on the private listener.
+    for (const record of records) {
+      const key = `${date}/${record.id}`;
+      if (!graphs.has(key) && graphBudget > 0 && now - (graphFailures[key] ?? 0) > 3_600_000) {
+        graphBudget--;
+        try {
+          const response = await fetch(`http://127.0.0.1:8080/api/v2/spectrogram/${record.id.slice(3)}?size=lg&raw=true`, { signal: AbortSignal.timeout(8000) });
+          if (!response.ok || !response.headers.get("content-type")?.startsWith("image/png")) throw new Error("Sound graph unavailable");
+          const bytes = Buffer.from(await response.arrayBuffer());
+          if (bytes.length > 2_000_000 || bytes.subarray(0,8).toString("hex") !== "89504e470d0a1a0a") throw new Error("Invalid sound graph");
+          await bucket.file(`weather/birds/spectrograms/${key}.png`).save(bytes, { resumable: false, contentType: "image/png", metadata: { cacheControl: "public, max-age=300" } });
+          graphs.add(key); delete graphFailures[key];
+        } catch { graphFailures[key] = now; }
+      }
+      if (graphs.has(key)) record.hasSpectrogram = true;
+    }
     const day = { date, records }, serialized = JSON.stringify(day);
     if (dayHashes[date] !== serialized) {
       await bucket.file(`weather/birds/days/${date}.json`).save(serialized, { resumable: false, contentType: "application/json", metadata: { cacheControl: "public, max-age=30" } });
@@ -87,7 +118,7 @@ async function main() {
     listener: { state: healthy ? "listening" : "offline", lastAnalysisAt, analysisWindows,
       sourceSampleRate: sources.yardMicrophone ? 48000 : trial.sampleRate, threshold: trial.threshold, signalDb, sources }, day: currentDay };
   await bucket.file("weather/birds/latest.json").save(JSON.stringify(snapshot), { resumable: false, contentType: "application/json", metadata: { cacheControl: "public, max-age=30" } });
-  const state: State = { predictions, analysisWindows, lastAnalysisAt, dayHashes: Object.fromEntries(Object.entries(dayHashes).filter(([date]) => dates.includes(date))) };
+  const state: State = { predictions, analysisWindows, lastAnalysisAt, graphs: [...graphs].filter(key => dates.includes(key.split("/")[0])), graphFailures: Object.fromEntries(Object.entries(graphFailures).filter(([key]) => dates.includes(key.split("/")[0]))), dayHashes: Object.fromEntries(Object.entries(dayHashes).filter(([date]) => dates.includes(date))) };
   await writeFile(statePath + ".tmp", JSON.stringify(state), { mode: 0o600 });
   await rename(statePath + ".tmp", statePath);
   await writeFile(path.join(root, "data/latest-public.json"), JSON.stringify(snapshot, null, 2), { mode: 0o600 });

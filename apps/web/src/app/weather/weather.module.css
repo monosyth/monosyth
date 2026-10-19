@@ -2110,3 +2110,14 @@
   .periodControls { padding-top: 2px; }
   .primaryTabs { width: 100%; }
 }
+
+.periodNavigation {display:flex;align-items:center;gap:12px;width:min(100%,34rem);max-width:100%;}
+.periodNavigation .primaryTabs {flex:1;min-width:0;width:auto;}
+.birdsNavLink {flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:10px 20px;border:1px solid #cddac8;border-radius:12px;background:#fafcf8;color:#284f3d;font-weight:500;}
+.birdsNavLink svg {width:23px;height:23px;}
+.birdsNavLink:hover {background:#e6ecdf;}
+.birdsNavLink:focus-visible {outline:2px solid #55764f;outline-offset:3px;}
+.birdsNavLinkActive {background:#284f3d;color:#fff;border-color:#284f3d;}
+.birdsNavLinkActive:hover {background:#284f3d;}
+@media(max-width:740px){.periodNavigation{gap:8px}.periodNavigation .primaryTab{font-size:.875rem;padding:8px 5px}.birdsNavLink{min-height:44px;padding:8px 12px}}
+@media(max-width:380px){.periodNavigation{gap:6px}.periodNavigation .primaryTabs{gap:0;padding:3px}.periodNavigation .primaryTab{font-size:.8125rem;padding:8px 2px}.birdsNavLink{font-size:.875rem;padding:8px;gap:4px}.birdsNavLink svg{width:18px;height:18px}}
