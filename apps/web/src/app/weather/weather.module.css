@@ -2136,3 +2136,11 @@
 .header {border-bottom:1px solid #dce4da;}
 @media(max-width:1099px){.observatoryHeaderBody{grid-template-columns:minmax(0,1fr);gap:14px;padding-top:18px}.observatoryHeaderBody .periodControls{justify-items:start}.observatoryHeaderBody .secondaryTabs{justify-content:flex-start}}
 @media(max-width:740px){.observatoryHeaderBody{padding:16px 18px 0;gap:14px}.observatoryHeaderBody .observatoryTitleRow h1{font-size:1.875rem}.observatoryHeaderBody .secondaryTabs{gap:22px}}
+
+@media(min-width:1100px){
+  .observatoryHeaderBody {grid-template-columns:minmax(0,560px) minmax(0,1fr);}
+  .observatoryHeaderBody .tabShell {grid-column:1;grid-row:1;}
+  .observatoryHeaderBody .observatoryTitleRow {grid-column:2;grid-row:1;text-align:right;}
+  .observatoryHeaderBody .periodControls {justify-items:start;}
+  .observatoryHeaderBody .secondaryTabs {justify-content:flex-start;}
+}
