@@ -403,19 +403,12 @@
   max-height: 0;
   overflow: hidden;
   opacity: 0;
-  transform: translateY(-0.35rem);
-  transition:
-    max-height 180ms ease,
-    opacity 180ms ease,
-    transform 180ms ease,
-    padding-top 180ms ease;
 }
 
 .tabStatusRowVisible {
   max-height: 4rem;
   padding-top: 0.6rem;
   opacity: 1;
-  transform: translateY(0);
 }
 
 .tabStatusBadge {
@@ -1206,7 +1199,6 @@
   color: var(--vibe-ink);
   text-decoration: none;
   overflow: hidden;
-  transition: transform 160ms ease, box-shadow 160ms ease;
   isolation: isolate;
 }
 
@@ -1233,17 +1225,14 @@
 }
 
 .calendarDayClickable:hover {
-  transform: translateY(-2px);
   box-shadow:
     0 14px 28px -14px rgba(15, 23, 42, 0.45),
     0 0 0 2px rgba(255, 255, 255, 0.7) inset;
 }
 
 .calendarDayClickable:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 3px #fbbf24,
-    0 14px 28px -14px rgba(15, 23, 42, 0.45);
+  outline: 3px solid #526951;
+  outline-offset: 2px;
 }
 
 .calendarDaySelected {
@@ -1395,7 +1384,7 @@
   display: grid;
   grid-template-columns: repeat(7, minmax(8rem, 1fr));
   gap: 0.5rem;
-  /* Keep day outlines and hover movement inside the scrollable area. */
+  /* Keep day outlines inside the scrollable area. */
   margin: -0.5rem;
   padding: 0.5rem;
   overflow-x: auto;

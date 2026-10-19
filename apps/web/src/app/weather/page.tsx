@@ -430,7 +430,7 @@ export default async function WeatherPage({ searchParams }: WeatherPageProps) {
     <main className={styles.page}>
       <header className={styles.header}>
         <div className={styles.observatoryMasthead}>
-          <Link href="/" className={styles.observatoryBrand} aria-label="Monosyth home">
+          <Link href="/weather" className={styles.observatoryBrand} aria-label="Main weather dashboard">
             <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true"><circle cx="16" cy="16" r="11"/><ellipse cx="16" cy="16" rx="5" ry="11"/><path d="M5 16h22M8 9h16M8 23h16"/></svg>
             <span>MONOSYTH <b>WEATHER OBSERVATORY</b></span>
           </Link>

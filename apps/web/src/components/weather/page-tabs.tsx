@@ -201,11 +201,7 @@ export function WeatherPageTabs({
             aria-live="polite"
           >
             <div className={styles.tabStatusBadge}>
-              <span className={styles.tabStatusDot} aria-hidden="true" />
               <span>{loadingMessage}</span>
-            </div>
-            <div className={styles.tabStatusTrack} aria-hidden="true">
-              <span className={styles.tabStatusBar} />
             </div>
           </div>
         ) : null}
