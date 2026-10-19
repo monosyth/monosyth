@@ -64,3 +64,5 @@
 
 .hourControl {display:flex;align-items:center;gap:18px;font-size:.85rem;color:#617754;margin-top:12px;}
 .hourControl input {min-width:0;flex:1;min-height:44px;accent-color:#55764f;cursor:pointer;}
+
+.repeatCount {display:inline-block;margin-top:8px;padding:4px 8px;border-radius:6px;background:#e9efdf;color:#47613b;font-size:.72rem;line-height:1.5;}

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseBirdPicture, buildBirdActivity, birdDate, birdListenerIsFresh, normalizeBirdRecords, parseBirdDay, parseBirdSnapshot, validBirdDate } from "../src/lib/weather/birds";
+import { parseBirdPicture, groupBirdRecords, buildBirdActivity, birdDate, birdListenerIsFresh, normalizeBirdRecords, parseBirdDay, parseBirdSnapshot, validBirdDate } from "../src/lib/weather/birds";
 
 const now = Date.parse("2026-10-17T01:30:00Z");
 const record = { id: "bn-1", timestamp: "2026-10-17T01:20:00.000Z", commonName: "American Crow", scientificName: "Corvus brachyrhynchos", confidence: .92, verified: false };
@@ -76,4 +76,29 @@ test("public reports cannot expose sound prints or playback flags",()=>{
   const rows=normalizeBirdRecords([{...record,hasSpectrogram:true,hasAudio:true,audioUrl:"/private/recording.wav",spectrogramUrl:"/private/sound.png"}],now);
   assert.deepEqual(rows,[record]);
   assert.equal(parseBirdDay({date:"2026-10-16",records:[{...record,hasSpectrogram:true}]},now).records[0].hasOwnProperty("hasSpectrogram"),false);
+});
+
+
+test("display groups repeat species across sources within fifteen minutes",()=>{
+  const rows=[{...record,id:"bn-3",timestamp:"2026-10-16T18:15:01Z",source:"Yard microphone" as const},
+    {...record,id:"bn-2",timestamp:"2026-10-16T18:14:59Z",source:"WeatherCam" as const},
+    {...record,id:"bn-4",timestamp:"2026-10-16T18:14:58Z",scientificName:"Colaptes auratus",commonName:"Northern Flicker"}];
+  const before=JSON.stringify(rows);
+  const groups=groupBirdRecords(rows);
+  assert.equal(groups.length,2);assert.equal(groups[0].count,2);assert.equal(groups[0].record.id,"bn-3");
+  assert.equal(groups[1].count,1);assert.equal(JSON.stringify(rows),before);
+  assert.equal(groups.reduce((sum,group)=>sum+group.count,0),rows.length);
+  assert.equal(buildBirdActivity(rows).hours[11].count,3);
+});
+test("fifteen-minute boundaries start a new entry and continuous calls never chain all day",()=>{
+  const at=(id:string,time:string)=>({...record,id,timestamp:`2026-10-16T${time}:00Z`});
+  assert.deepEqual(groupBirdRecords([at("bn-1","18:30"),at("bn-2","18:15")]).map(group=>group.count),[1,1]);
+  assert.deepEqual(groupBirdRecords([at("bn-1","18:30"),at("bn-2","18:20"),at("bn-3","18:10"),at("bn-4","18:00")]).map(group=>group.count),[2,2]);
+  assert.deepEqual(groupBirdRecords([]),[]);
+});
+test("grouping preserves the latest call's actual time, confidence, and review status",()=>{
+  const newest={...record,id:"bn-2",timestamp:"2026-10-16T18:30:00Z",confidence:.82,verified:false};
+  const older={...record,timestamp:"2026-10-16T18:20:00Z",confidence:.99,verified:true};
+  const result=groupBirdRecords([older,newest]);
+  assert.deepEqual(result,[{record:newest,count:2}]);
 });

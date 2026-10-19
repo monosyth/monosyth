@@ -133,3 +133,25 @@ export function buildBirdActivity(records: BirdRecord[]) {
   }
   return { hours, species: [...groups.values()].sort((a,b) => b.count-a.count || a.name.localeCompare(b.name)) };
 }
+
+export type BirdRecordGroup = { record: BirdRecord; count: number };
+
+// Display-only grouping: anchor each window to its latest call, rather than
+// chaining nearby calls into one indefinitely long visit. Never alter saved data.
+export function groupBirdRecords(records: BirdRecord[]): BirdRecordGroup[] {
+  const groups: BirdRecordGroup[] = [];
+  const latestBySpecies = new Map<string, BirdRecordGroup>();
+  const sorted = [...records].sort((a,b)=>Date.parse(b.timestamp)-Date.parse(a.timestamp) || a.id.localeCompare(b.id));
+  for (const record of sorted) {
+    const key = record.scientificName.trim().toLowerCase();
+    const group = latestBySpecies.get(key);
+    if (group && Date.parse(group.record.timestamp)-Date.parse(record.timestamp) < 15*60_000) {
+      group.count++;
+    } else {
+      const next = {record,count:1};
+      groups.push(next);
+      latestBySpecies.set(key,next);
+    }
+  }
+  return groups;
+}

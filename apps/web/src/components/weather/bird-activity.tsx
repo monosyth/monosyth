@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BIRD_TIME_ZONE, birdDate, birdListenerIsFresh, buildBirdActivity, parseBirdSnapshot, type BirdPicture, type BirdRecord, type BirdSnapshot } from "@/lib/weather/birds";
+import { BIRD_TIME_ZONE, birdDate, birdListenerIsFresh, buildBirdActivity, groupBirdRecords, parseBirdSnapshot, type BirdPicture, type BirdRecord, type BirdSnapshot } from "@/lib/weather/birds";
 import styles from "./bird-activity.module.css";
 
 /* eslint-disable @next/next/no-img-element -- External credited reference thumbnails and existing PNG report assets. */
@@ -42,6 +42,7 @@ export function BirdActivity() {
   const activity = buildBirdActivity(records);
   const busiest = activity.hours.reduce((peak,hour)=>hour.count>peak.count ? hour : peak,activity.hours[0]);
   const filtered = species ? records.filter(record=>record.scientificName===species) : records;
+  const historyGroups = groupBirdRecords(filtered);
   const hours = buildBirdActivity(filtered).hours;
   const peak = Math.max(1,...hours.map(item=>item.count));
   const fresh = Boolean(data && now && !error && birdListenerIsFresh(data,now));
@@ -67,9 +68,9 @@ export function BirdActivity() {
       <section aria-labelledby="species-title"><div className={styles.sectionHeading}><div><p className={styles.kicker}>Meet the visitors</p><h2 id="species-title">Who was heard</h2></div>{species && <button className={styles.reset} onClick={()=>{setSpecies("");setHour(null);setLimit(12);}}>Show all species</button>}</div>
         {!records.length ? <p className={styles.message}>No qualifying bird calls were saved for this date. New detections appear after the station’s confidence and repeat checks.</p> : <div className={styles.speciesGrid}>{activity.species.map(item=><article key={item.scientificName} className={styles.speciesCard} data-selected={species===item.scientificName}><button aria-pressed={species===item.scientificName} onClick={()=>{setSpecies(species===item.scientificName ? "" : item.scientificName);setHour(null);setLimit(12);}}><BirdPhoto picture={item.picture} name={item.name}/><span><strong>{item.name}</strong><i>{item.scientificName}</i><small>{item.count} {item.count===1 ? "detection" : "detections"} · last {clock(item.latest)}</small></span></button><PhotoCredit picture={item.picture}/></article>)}</div>}
       </section>
-      <section aria-labelledby="recent-title"><div className={styles.sectionHeading}><div><p className={styles.kicker}>From the listening journal</p><h2 id="recent-title">{selectedSpecies ? selectedSpecies.name : "Recent detections"}</h2></div><span>{filtered.length} saved {filtered.length===1 ? "event" : "events"}</span></div><p className={styles.explainer}>A report of the bird calls identified here. Photos help put a face to each suggestion; recordings and sound prints stay private.</p>
-        <div className={styles.detectionGrid}>{filtered.slice(0,limit).map(record=><DetectionCard key={record.id} record={record}/>)}</div>
-        {filtered.length>limit && <button className={styles.more} onClick={()=>setLimit(limit+12)}>Show more detections ({filtered.length-limit})</button>}
+      <section aria-labelledby="recent-title"><div className={styles.sectionHeading}><div><p className={styles.kicker}>From the listening journal</p><h2 id="recent-title">{selectedSpecies ? selectedSpecies.name : "Recent detections"}</h2></div><span>{filtered.length} saved {filtered.length===1 ? "event" : "events"}</span></div><p className={styles.explainer}>A report of the bird calls identified here. Photos help put a face to each suggestion; recordings and sound prints stay private. Repeat calls of the same species within 15 minutes share one entry; totals include every detection.</p>
+        <div className={styles.detectionGrid}>{historyGroups.slice(0,limit).map(({record,count})=><DetectionCard key={record.id} record={record} count={count}/>)}</div>
+        {historyGroups.length>limit && <button className={styles.more} onClick={()=>setLimit(limit+12)}>Show more entries ({historyGroups.length-limit})</button>}
       </section>
     </>}
     <footer className={styles.footer}><p>BirdNET v2.4 · {Math.round((data?.listener.threshold ?? .8)*100)}% minimum confidence · Repeated detections required</p><p>Suggestions need review. Confidence describes the model’s match to the sound, rather than a confirmed sighting. Species pictures are reference photos, not pictures from the yard.</p><a href="https://www.birds.cornell.edu/ccb/birdnet/" target="_blank" rel="noreferrer">About BirdNET ↗</a></footer>
@@ -84,6 +85,6 @@ function BirdPhoto({picture,name}:{picture?:BirdPicture;name:string}) {
 function PhotoCredit({picture}:{picture?:BirdPicture}) {
   return picture ? <small className={styles.credit}>Photo: {picture.author} · <a href={picture.licenseUrl} target="_blank" rel="noreferrer">{picture.license}</a> · AviCommons / Wikimedia</small> : null;
 }
-function DetectionCard({record}:{record:BirdRecord}) {
-  return <article className={styles.detection}><header><BirdPhoto picture={record.picture} name={record.commonName}/><div><h3>{record.commonName}</h3><i>{record.scientificName}</i><p><time dateTime={record.timestamp}>{clock(record.timestamp)} PT</time> · {record.source ?? "Station microphone"}</p></div><span className={styles.confidence}>{Math.round(record.confidence*100)}%<small>{record.verified ? "Reviewed" : "Model match"}</small></span></header><PhotoCredit picture={record.picture}/></article>;
+function DetectionCard({record,count}:{record:BirdRecord;count:number}) {
+  return <article className={styles.detection}><header><BirdPhoto picture={record.picture} name={record.commonName}/><div><h3>{record.commonName}</h3><i>{record.scientificName}</i><p><time dateTime={record.timestamp}>{clock(record.timestamp)} PT</time> · {record.source ?? "Station microphone"}</p>{count>1 && <small className={styles.repeatCount}>Heard {count} times in 15 min</small>}</div><span className={styles.confidence}>{Math.round(record.confidence*100)}%<small>{record.verified ? "Reviewed" : "Model match"}</small></span></header><PhotoCredit picture={record.picture}/></article>;
 }

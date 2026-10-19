@@ -55,3 +55,5 @@
 .photoCredits p {margin-top:8px;}
 .photoCredits a {text-decoration:underline;text-underline-offset:3px;}
 @media(max-width:740px){.birdIdentity{gap:7px}.thumbnail{width:32px;height:32px;flex-basis:32px}.photoCredits{padding:12px 20px}.tableWrap td:first-child{min-width:145px}}
+
+.groupingNote {color:#64775d;font-size:.8rem;line-height:1.6;margin:0 0 16px;}

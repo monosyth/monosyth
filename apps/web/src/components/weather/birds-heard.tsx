@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BIRD_TIME_ZONE, birdDate, birdListenerIsFresh, parseBirdSnapshot, type BirdSnapshot, type BirdPicture } from "@/lib/weather/birds";
+import { BIRD_TIME_ZONE, birdDate, birdListenerIsFresh, groupBirdRecords, parseBirdSnapshot, type BirdSnapshot, type BirdPicture } from "@/lib/weather/birds";
 import styles from "./birds-heard.module.css";
 
 const clock = (value: string) => new Intl.DateTimeFormat("en-US", { timeZone: BIRD_TIME_ZONE, hour: "numeric", minute: "2-digit" }).format(new Date(value));
@@ -44,6 +44,7 @@ export function BirdsHeard() {
   const quietCamera = camera && !yardMicrophone && data !== null && data.listener.signalDb !== null && data.listener.signalDb < -60;
   const dayMatches = data && (!selectedDate || selectedDate === data.day.date);
   const records = dayMatches ? data.day.records : [];
+  const historyGroups = groupBirdRecords(records);
   const species = new Set(records.map(record => record.scientificName));
   const last = records[0];
   const photos = [...new Map(records.filter(record=>record.picture).map(record=>[record.picture!.url,{...record.picture!,name:record.commonName}])).values()];
@@ -76,10 +77,11 @@ export function BirdsHeard() {
             <button type="button" onClick={() => { setSelectedDate(""); setLimit(12); }}>Today</button>
           </div>
         </div>
+        <p className={styles.groupingNote}>Repeat calls of the same species within 15 minutes share one entry. Totals include every detection.</p>
         {error && <p className={styles.error} role="status">{error}{dayMatches ? " Showing the last saved records below." : ""}</p>}
         {!data && !error ? <p className={styles.empty}>Loading the station’s bird history…</p> : !dayMatches ? <p className={styles.empty}>{error ? "Choose another date to explore saved records." : "Loading this day’s records…"}</p> : records.length === 0 ?
           <div className={styles.empty}><strong>No qualifying bird detections recorded</strong><p>{fresh && data.day.date === birdDate(now!) ? "The station is listening. New detections appear when calls meet the confidence and repeat-detection checks." : "There are no saved detections for this date. A quiet record does not mean there were no birds nearby."}</p></div> :
-          <><div className={styles.tableWrap}><table><thead><tr><th scope="col">Bird</th><th scope="col">Heard · PT</th><th scope="col">Model confidence</th></tr></thead><tbody>{records.slice(0, limit).map(record => <tr key={record.id}><td><div className={styles.birdIdentity}><BirdThumbnail picture={record.picture} name={record.commonName}/><div className={styles.birdIdentityText}><strong>{record.commonName}</strong><span>{record.scientificName}</span>{record.source && <small>Heard by {record.source}</small>}{record.verified && <small>Reviewed</small>}</div></div></td><td><time dateTime={record.timestamp}>{clock(record.timestamp)}</time></td><td>{Math.round(record.confidence * 100)}%</td></tr>)}</tbody></table></div>{records.length > limit && <button className={styles.more} type="button" onClick={() => setLimit(limit + 24)}>Show more detections ({records.length - limit})</button>}</>}
+          <><div className={styles.tableWrap}><table><thead><tr><th scope="col">Bird</th><th scope="col">Heard · PT</th><th scope="col">Model confidence</th></tr></thead><tbody>{historyGroups.slice(0, limit).map(({record,count}) => <tr key={record.id}><td><div className={styles.birdIdentity}><BirdThumbnail picture={record.picture} name={record.commonName}/><div className={styles.birdIdentityText}><strong>{record.commonName}</strong><span>{record.scientificName}</span>{record.source && <small>Heard by {record.source}</small>}{count>1 && <small>Heard {count} times in 15 min</small>}{record.verified && <small>Reviewed</small>}</div></div></td><td><time dateTime={record.timestamp}>{clock(record.timestamp)}</time></td><td>{Math.round(record.confidence * 100)}%</td></tr>)}</tbody></table></div>{historyGroups.length > limit && <button className={styles.more} type="button" onClick={() => setLimit(limit + 24)}>Show more entries ({historyGroups.length - limit})</button>}</>}
       </div>
     </div>
     {photos.length>0 && <details className={styles.photoCredits}><summary>Bird photo credits</summary>{photos.map(photo=><p key={photo.url}>{photo.name}: {photo.author} · <a href={photo.licenseUrl} target="_blank" rel="noreferrer">{photo.license}</a> · AviCommons / Wikimedia</p>)}</details>}
