@@ -244,6 +244,40 @@ export default function Home() {
 
           <article className={styles.upcomingProduct}>
             <div>
+              <p className={styles.upcomingLabel}>Out in the world / Restaurant discovery</p>
+              <h3>MenuToEat</h3>
+              <p>Find your next meal with complete restaurant menus, prices, photos, and ratings. Browse by dish, cuisine, or neighborhood.</p>
+            </div>
+            <a
+              className={styles.productLink}
+              href="https://menutoeat.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Visit MenuToEat (opens in a new tab)"
+            >
+              <span>Visit MenuToEat</span><span aria-hidden="true">↗</span>
+            </a>
+          </article>
+
+          <article className={styles.upcomingProduct}>
+            <div>
+              <p className={styles.upcomingLabel}>From the journal / Slow living</p>
+              <h3>For a Quieter Life</h3>
+              <p>Quiet hobbies, small outings, and everyday rituals for a slower, more intentional life. A companion to Fog, Salt &amp; Pine.</p>
+            </div>
+            <a
+              className={styles.productLink}
+              href="https://foraquieterlife.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Visit For a Quieter Life (opens in a new tab)"
+            >
+              <span>Visit For a Quieter Life</span><span aria-hidden="true">↗</span>
+            </a>
+          </article>
+
+          <article className={styles.upcomingProduct}>
+            <div>
               <p className={styles.upcomingLabel}>From the studio / Home goods</p>
               <h3>Fog, Salt &amp; Pine</h3>
               <p>Thoughtfully crafted home goods inspired by the forests and
