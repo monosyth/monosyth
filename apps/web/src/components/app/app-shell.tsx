@@ -22,6 +22,15 @@ type StudioProject = {
 
 const studioProjects: readonly StudioProject[] = [
   {
+    name: "Project journal",
+    href: "/projects",
+    label: "Open journal",
+    details: "Progress, decisions, files + the next useful step",
+    meta: "Private studio / Project history",
+    accent: "cyan",
+    glyph: "sewing",
+  },
+  {
     name: "Pattern shop",
     href: "/shop",
     label: "Open shop",

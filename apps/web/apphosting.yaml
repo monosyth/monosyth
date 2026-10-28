@@ -6,6 +6,10 @@ runConfig:
   memoryMiB: 512
 
 env:
+  - variable: MONOSYTH_PROJECT_OWNER_EMAIL
+    secret: MONOSYTH_PROJECT_OWNER_EMAIL@1
+    availability:
+      - RUNTIME
   - variable: MONOSYTH_ADMIN_EMAILS
     secret: MONOSYTH_ADMIN_EMAILS@1
     availability:
