@@ -22,7 +22,7 @@ export function validateSessionId(value: string) {
 
 export function checkOrigin(request: Request, siteOrigin: string) {
   if (request.headers.get("origin") !== siteOrigin) {
-    throw new ShopError(403, "Please start checkout from the pattern shop.");
+    throw new ShopError(403, "Please start checkout from the shop.");
   }
 }
 

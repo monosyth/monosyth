@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import Stripe from "stripe";
 import { getStorage } from "firebase-admin/storage";
 import { getFirebaseAdminApp } from "../src/lib/firebase/admin";
-import { shopProducts, releaseId, storagePath } from "../src/lib/shop/catalog";
+import { shopProducts, fontProducts, shopReleases, releaseId, storagePath } from "../src/lib/shop/catalog";
 import { paidRelease, paidReleases } from "../src/lib/shop/orders";
 import { cartProducts } from "../src/lib/shop/cart";
 import { orderEmail } from "../src/lib/shop/email";
@@ -51,7 +51,7 @@ function mockBucket(options: { private?: boolean; badHash?: boolean; bytes?: Buf
     getMetadata: async () => [{ iamConfiguration: { publicAccessPrevention: options.private === false ? "inherited" : "enforced", uniformBucketLevelAccess: { enabled: true } } }],
     file: (path: string) => ({
       getMetadata: async () => {
-        const file = shopProducts.flatMap(product => product.files.filter(file => storagePath(product, file) === path)).at(0);
+        const file = shopReleases.flatMap(product => product.files.filter(file => storagePath(product, file) === path)).at(0);
         assert.ok(file);
         return [{ size: file.bytes, metadata: { sha256: options.badHash ? "wrong" : file.sha256 } }];
       },
@@ -147,7 +147,7 @@ test("checkout ignores a buyer-supplied price and uses stable retry idempotency"
 test("all live editions use distinct saved Stripe prices, while sandbox uses inline prices", () => {
   const prices = new Set<string>();
   const products = new Set<string>();
-  for (const p of shopProducts) {
+  for (const p of shopReleases) {
     const saved = liveCatalog.prices.find((entry) => entry.sku === releaseId(p));
     assert.ok(saved);
     assert.match(saved.productId, /^prod_[A-Za-z0-9]+$/);
@@ -164,8 +164,8 @@ test("all live editions use distinct saved Stripe prices, while sandbox uses inl
       assert.equal(item.price_data?.product_data?.metadata?.sku, releaseId(p));
     }
   }
-  assert.equal(prices.size, shopProducts.length);
-  assert.equal(products.size, shopProducts.length);
+  assert.equal(prices.size, shopReleases.length);
+  assert.equal(products.size, shopReleases.length);
 });
 
 test("live checkout refuses an unmapped edition or a changed catalog price or currency", () => {
@@ -421,4 +421,57 @@ test("branded order email escapes display data and provides a plain-text alterna
   const email = orderEmail([{ ...product, name: '<img src=x onerror="bad">' }], "https://monosyth.com/shop/order?session_id=test&key=test", "support@example.invalid", 695);
   assert.ok(email.html.includes("&lt;img")); assert.ok(!email.html.includes("<img src=x"));
   assert.ok(email.text.includes("https://monosyth.com/shop/order?session_id=test&key=test"));
+});
+
+
+test("font checkout uses the approved server prices, exact license SKU, software tax code and private namespace", async () => {
+  for (const [index, font] of fontProducts.entries()) {
+    mock.restoreAll(); mockBucket(); const requests = mockNetwork();
+    await createCheckout(font.slug, orderId);
+    const params = new URLSearchParams(requests[0].body);
+    assert.equal(params.get("line_items[0][price_data][unit_amount]"), String(index ? 1200 : 800));
+    assert.equal(params.get("line_items[0][price_data][product_data][tax_code]"), "txcd_10202003");
+    assert.equal(params.get("metadata[sku]"), releaseId(font));
+    assert.equal(params.get("payment_method_types[0]"), null);
+    assert.match(storagePath(font, font.files[0]), /^fonts\/everyday-carved-/);
+    assert.equal(font.files.length, 1);
+    assert.match(font.files[0].sha256, /^[0-9a-f]{64}$/);
+    assert.match(params.get("integration_identifier") || "", /^monosyth_hosted_[a-z]{8}$/);
+  }
+  assert.throws(() => cartProducts(fontProducts.map(product => product.slug)), /Choose one Everyday Carved edition/);
+});
+
+function fontFixture(index = 0) {
+  const font = fontProducts[index];
+  const session = fixture();
+  session.metadata!.sku = releaseId(font); session.metadata!.price_cents = String(font.priceCents);
+  session.amount_subtotal = font.priceCents; session.amount_total = font.priceCents;
+  return session;
+}
+
+test("a desktop font purchase cannot retrieve the web kit, and unpaid font orders cannot download", async () => {
+  mockNetwork(fontFixture());
+  const query = new URLSearchParams({ session_id: sessionId, key: orderKey(orderId, secret), sku: releaseId(fontProducts[1]), file: "font-kit" });
+  assert.equal((await downloadRoute(new Request(`https://monosyth.com/api/shop/download?${query}`))).status, 404);
+  const session = fontFixture(); session.payment_status = "unpaid"; mock.restoreAll(); mockNetwork(session);
+  query.set("sku", releaseId(fontProducts[0]));
+  assert.equal((await downloadRoute(new Request(`https://monosyth.com/api/shop/download?${query}`))).status, 409);
+});
+
+test("paid font webhook sends one font delivery email and duplicate notifications are safe", async () => {
+  const session = fontFixture(1); const requests = mockNetwork(session);
+  const body = JSON.stringify({ type: "checkout.session.completed", data: { object: session } });
+  const signature = stripe.webhooks.generateTestHeaderString({ payload: body, secret: "whsec_offline_test" });
+  for (let index = 0; index < 2; index++) {
+    assert.equal((await webhookRoute(new Request("https://monosyth.com/api/shop/webhook", { method: "POST", headers: { "stripe-signature": signature }, body }))).status, 200);
+  }
+  const emails = requests.filter(request => request.url.includes("resend.com"));
+  assert.equal(emails.length, 1);
+  const email = JSON.parse(emails[0].body);
+  assert.match(email.from, /^Monosyth Type </);
+  assert.match(email.subject, /Desktop \+ Web download is ready/);
+  assert.match(email.text, /WOFF2/);
+  assert.ok(!email.html.includes("EQ8"));
+  assert.ok(!email.html.includes("fabric"));
+  assert.ok(email.html.includes(orderKey(orderId, secret)));
 });

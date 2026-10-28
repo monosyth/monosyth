@@ -21,7 +21,7 @@ export function shopConfig() {
     taxMode: process.env.SHOP_TAX_MODE?.trim() || "",
   };
   if (Object.values(config).some((value) => !value) || config.downloadSecret.length < 32 || !["automatic", "manual"].includes(config.taxMode)) {
-    throw new ShopError(503, "The pattern shop is getting ready. Please check back soon.");
+    throw new ShopError(503, "The shop is getting ready. Please check back soon.");
   }
   return config;
 }
@@ -35,7 +35,7 @@ export function formPublishableKey() {
   const key = process.env.STRIPE_PUBLISHABLE_KEY?.trim() || "";
   const live = /^(sk|rk)_live_/.test(shopConfig().stripeKey);
   if (!key.startsWith(live ? "pk_live_" : "pk_test_")) {
-    throw new ShopError(503, "The pattern shop is getting ready. Please check back soon.");
+    throw new ShopError(503, "The shop is getting ready. Please check back soon.");
   }
   return key;
 }

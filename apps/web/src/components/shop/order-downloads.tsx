@@ -6,7 +6,7 @@ import styles from "@/app/shop/shop.module.css";
 import { finishCartCheckout } from "./cart-provider";
 
 type OrderFile = { id: string; name: string; label: string; bytes: number };
-type OrderProduct = { sku: string; slug: string; name: string; version: string; files: OrderFile[] };
+type OrderProduct = { sku: string; slug: string; name: string; version: string; kind?: "font" | "pattern"; files: OrderFile[] };
 type Order = { orderId: string; products: OrderProduct[]; emailSent: boolean };
 
 export function OrderDownloads({ sessionId, orderKey, support }: { sessionId: string; orderKey: string; support: string }) {
@@ -56,8 +56,8 @@ export function OrderDownloads({ sessionId, orderKey, support }: { sessionId: st
   }
 
   return <section className={styles.orderCard} aria-busy={busy}>
-    <p className={styles.eyebrow}>{order ? "Your pattern collection starts here" : "Your order"}</p>
-    <h1>{order ? "Time to make something" : busy ? "Checking your payment" : "Let’s find your pattern"}</h1>
+    <p className={styles.eyebrow}>{order ? "Your downloads are ready" : "Your order"}</p>
+    <h1>{order ? "Time to make something" : busy ? "Checking your payment" : "Let’s find your order"}</h1>
     {busy && <p role="status">Checking your order securely. This may take a moment.</p>}
     {error && <p className={styles.error} role="alert">{error}</p>}
     {!busy && !order && <button className={styles.primaryButton} onClick={() => void load()}>Check again</button>}
@@ -72,7 +72,8 @@ export function OrderDownloads({ sessionId, orderKey, support }: { sessionId: st
         </button>)}
       </div>
       </section>)}
-      <p className={styles.small}>Open the pattern in your PDF reader. The EQ8 ZIP contains an editable project and opening guide; Electric Quilt 8 is required for that file.</p>
+      {order.products.some(product => product.kind === "font") && <p className={styles.small}>Unzip your font kit and read Start Here. Install one desktop format, OTF or TTF. The Desktop + Web kit also includes WOFF2, example CSS, and its web license.</p>}
+      {order.products.some(product => product.kind !== "font") && <p className={styles.small}>Open your pattern PDF in a regular reader. Electric Quilt 8 is required only for the editable project in the EQ8 ZIP.</p>}
       <p className={styles.small}>{order.emailSent ? "Your download link has also been emailed to you. Check spam if you don’t see it." : "Your download email is being prepared. You can download now and bookmark this page."}</p>
     </>}
     <div className={styles.orderLinks}><Link href="/shop">← Back to the shop</Link>{support && <a href={`mailto:${support}`}>Get order help</a>}</div>

@@ -374,3 +374,12 @@ and the live unpaid-session preflight, production configuration was changed to
 public checkout verification must confirm the rollout before reporting sales live.
 Automatic filing remains off. The DOR first-return deadline remains November 2,
 2026, including a no-activity return when applicable.
+
+
+## Monosyth Type extension — October 27, 2026
+
+The shop also links to the font foundry at `/shop/type`. Font releases use the
+same verified payment/download pipeline and private bucket, with their own
+catalog, live prices, `fonts/` object namespace and font delivery email. The
+pattern collection, cart and historic download paths are retained. See
+[Monosyth Type setup](monosyth-type.md) for the $8/$12 catalog and verification.

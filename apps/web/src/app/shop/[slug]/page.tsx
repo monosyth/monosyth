@@ -2,7 +2,7 @@ import { DiagonalArrow } from "@/components/shop/brand-icons";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { findProduct, formatPrice, shopProducts } from "@/lib/shop/catalog";
 import { formCheckoutEnabled } from "@/lib/shop/config";
 import { BuyButton } from "@/components/shop/buy-button";
@@ -20,6 +20,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
   const product = findProduct((await params).slug);
   if (!product) notFound();
   const cancelled = (await searchParams).checkout === "cancelled";
+  if (product.kind === "font") redirect(`/shop/type${cancelled ? "?checkout=cancelled" : ""}#licenses`);
   return <div className={styles.detailPage}>
     <Link href="/shop#patterns" className={styles.backLink}>← All quilt patterns</Link>
     {cancelled && <p role="status" className={styles.notice}>Checkout was cancelled. Your pattern is here whenever you’re ready.</p>}

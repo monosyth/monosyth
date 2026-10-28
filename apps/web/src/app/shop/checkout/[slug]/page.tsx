@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { findProduct, formatPrice } from "@/lib/shop/catalog";
 import { formCheckoutEnabled } from "@/lib/shop/config";
 import { CheckoutForm } from "@/components/shop/checkout-form";
@@ -14,6 +14,7 @@ export const metadata: Metadata = { title: "Secure checkout", robots: { index: f
 export default async function CheckoutPage({ params }: { params: Promise<{ slug: string }> }) {
   const product = findProduct((await params).slug);
   if (!product) notFound();
+  if (product.kind === "font") redirect("/shop/type#licenses");
   return <div className={styles.checkoutPage}>
     <Link className={styles.backLink} href={`/shop/${product.slug}`}>← Back to {product.name}</Link>
     <h1>Make something beautiful</h1>

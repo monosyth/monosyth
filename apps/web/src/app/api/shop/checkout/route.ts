@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     try { body = JSON.parse(await readLimitedText(request, 2048)); }
     catch (error) { if (error instanceof ShopError) throw error; throw new ShopError(400, "Invalid checkout request."); }
     if (!body || typeof body !== "object" || !("attemptId" in body) || typeof body.attemptId !== "string" || ("slug" in body && "slugs" in body)) {
-      throw new ShopError(400, "Choose a pattern before starting checkout.");
+      throw new ShopError(400, "Choose a product before starting checkout.");
     }
     const selection = "slugs" in body ? body.slugs : "slug" in body ? body.slug : undefined;
     const slugs = cartProducts(selection).map(product => product.slug);

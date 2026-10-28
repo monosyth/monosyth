@@ -44,7 +44,7 @@ route. To finish wiring it:
 
 Use Firebase App Hosting with:
 
-- Firebase project: `monosyth-490705`
+- Firebase project: `monosyth`
 - GitHub repo: `monosyth/monosyth`
 - App root directory: `apps/web`
 

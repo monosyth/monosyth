@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const { products } = await retrieveOrder(params.get("session_id") || "", key);
     const sku = params.get("sku");
     const product = sku ? products.find(product => releaseId(product) === sku) : products.length === 1 ? products[0] : undefined;
-    if (!product) throw new ShopError(404, "That pattern isn’t part of this order.");
+    if (!product) throw new ShopError(404, "That product isn’t part of this order.");
     const file = product.files.find((candidate) => candidate.id === params.get("file"));
     if (!file) throw new ShopError(404, "That file isn’t part of this order.");
     const bytes = await downloadFile(product, file);

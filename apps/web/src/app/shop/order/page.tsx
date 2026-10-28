@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { OrderDownloads } from "@/components/shop/order-downloads";
 import styles from "../shop.module.css";
 
-export const metadata: Metadata = { title: "Your pattern downloads", robots: { index: false, follow: false }, referrer: "no-referrer" };
+export const metadata: Metadata = { title: "Your downloads", robots: { index: false, follow: false }, referrer: "no-referrer" };
 export const dynamic = "force-dynamic";
 
 export default async function OrderPage({ searchParams }: { searchParams: Promise<{ session_id?: string; key?: string }> }) {

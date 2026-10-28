@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     const key = params.get("key") || "";
     if (!/^[0-9a-f]{64}$/.test(key)) throw new ShopError(403, "Open the complete private link from your order email.");
     const { session, products } = await retrieveOrder(params.get("session_id") || "", key);
-    const items = products.map(product => ({ sku: releaseId(product), slug: product.slug, name: product.name, version: product.version,
+    const items = products.map(product => ({ sku: releaseId(product), slug: product.slug, name: product.name, version: product.version, kind: product.kind,
       files: product.files.map(file => ({ id: file.id, label: file.label, name: file.name, bytes: file.bytes })),
     }));
     return Response.json({

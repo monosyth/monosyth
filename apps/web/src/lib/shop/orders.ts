@@ -18,19 +18,19 @@ export function paidReleases(session: Stripe.Checkout.Session, live: boolean) {
     if (session.metadata.sku) items = null;
   }
   if (!Array.isArray(items) || items.length < 1 || items.length > MAX_CART_PATTERNS) {
-    throw new ShopError(409, "We couldn’t match this payment to your patterns. Please contact us with your receipt.");
+    throw new ShopError(409, "We couldn’t match this payment to your downloads. Please contact us with your receipt.");
   }
   const products = items.map((item: unknown) => {
     if (!Array.isArray(item) || item.length !== 2 || typeof item[0] !== "string" || !Number.isSafeInteger(item[1]) || item[1] < 50) {
       throw new ShopError(409, "This order needs a review. Please contact us with your receipt.");
     }
     const product = findRelease(item[0]);
-    if (!product) throw new ShopError(409, "This pattern edition needs a review. Please contact us with your receipt.");
+    if (!product) throw new ShopError(409, "This product edition needs a review. Please contact us with your receipt.");
     return { product, price: item[1] as number };
   });
   const expected = Number(session.metadata.price_cents);
   if (new Set(products.map(item => item.product.slug)).size !== products.length || products.reduce((sum, item) => sum + item.price, 0) !== expected || !Number.isSafeInteger(expected) || expected < 50 || session.currency !== "usd" || session.amount_subtotal !== expected || (session.amount_total ?? 0) < expected) {
-    throw new ShopError(409, "We couldn’t match this payment to a pattern. Please contact us with your receipt.");
+    throw new ShopError(409, "We couldn’t match this payment to your order. Please contact us with your receipt.");
   }
   const intent = session.payment_intent;
   if (!intent || typeof intent === "string" || intent.status !== "succeeded") {
@@ -46,6 +46,6 @@ export function paidReleases(session: Stripe.Checkout.Session, live: boolean) {
 // Retained for callers that explicitly require a legacy single-pattern order.
 export function paidRelease(session: Stripe.Checkout.Session, live: boolean) {
   const products = paidReleases(session, live);
-  if (products.length !== 1) throw new ShopError(409, "This order includes multiple patterns.");
+  if (products.length !== 1) throw new ShopError(409, "This order includes multiple products.");
   return products[0];
 }

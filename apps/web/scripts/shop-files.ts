@@ -3,26 +3,27 @@ import { resolve, relative, isAbsolute } from "node:path";
 import { createHash } from "node:crypto";
 import { applicationDefault, initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
-import { shopReleases, storagePath } from "../src/lib/shop/catalog";
+import { shopProducts, fontProducts, storagePath } from "../src/lib/shop/catalog";
 
 async function main() {
   // Never copy paid files into public/ or this repository. Default is read-only.
   const args = process.argv.slice(2);
+  const shopReleases = args.includes("--fonts") ? fontProducts : shopProducts;
   const sourceRoot = args.find((arg) => arg.startsWith("--source="))?.slice(9);
-  if (!sourceRoot) throw new Error("Pass --source=/absolute/path/to/SEWstudio. Add --upload only after configuring a private bucket.");
+  if (!sourceRoot) throw new Error("Pass --source=/absolute/path/to/SEWstudio (or the type project with --fonts). Add --upload only after configuring a private bucket.");
   const upload = args.includes("--upload");
   const prepared: { path: string; bytes: Buffer; name: string; sha256: string }[] = [];
   for (const product of shopReleases) {
     for (const file of product.files) {
       const source = resolve(sourceRoot, file.source);
       const inside = relative(resolve(sourceRoot), source);
-      if (inside.startsWith("..") || isAbsolute(inside)) throw new Error("Source must be inside SEWstudio");
+      if (inside.startsWith("..") || isAbsolute(inside)) throw new Error("Source must be inside the supplied source root");
       const bytes = await readFile(source);
       if (bytes.length !== file.bytes || createHash("sha256").update(bytes).digest("hex") !== file.sha256) throw new Error(`Source edition changed: ${file.name}`);
       prepared.push({ path: storagePath(product, file), bytes, name: file.name, sha256: file.sha256 });
     }
   }
-  console.log(`Verified ${prepared.length} exact customer files across ${shopReleases.length} pattern editions`);
+  console.log(`Verified ${prepared.length} exact customer files across ${shopReleases.length} digital editions`);
   if (upload) {
     const bucketName = process.env.SHOP_STORAGE_BUCKET?.trim();
     if (!bucketName) throw new Error("Set SHOP_STORAGE_BUCKET before uploading");

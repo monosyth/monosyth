@@ -35,7 +35,7 @@ export async function verifyPrivateFiles(product: ShopProduct) {
 }
 
 async function createCheckoutSession(selection: string | string[], attemptId: string, form = false) {
-  if (!checkoutEnabled()) throw new ShopError(503, "The pattern shop is getting ready. Please check back soon.");
+  if (!checkoutEnabled()) throw new ShopError(503, "The shop is getting ready. Please check back soon.");
   const products = cartProducts(selection);
   if (!/^[0-9a-f-]{36}$/.test(attemptId)) throw new ShopError(400, "Please refresh the page and try again.");
   await Promise.all(products.map(verifyPrivateFiles));
@@ -52,18 +52,18 @@ async function createCheckoutSession(selection: string | string[], attemptId: st
   const returnUrl = `${origin}/shop/order?session_id={CHECKOUT_SESSION_ID}&key=${key}`;
   const session = await stripeClient().checkout.sessions.create({
     mode: "payment",
+    ...(!form ? { integration_identifier: "monosyth_hosted_mqjftnrv" } : {}),
     ...(form ? { ui_mode: "form", integration_identifier: "custom_embedded_web_0001", return_url: returnUrl } : {
       success_url: returnUrl,
       cancel_url: products.length === 1 ? `${origin}/shop/${products[0].slug}?checkout=cancelled` : `${origin}/shop/cart?checkout=cancelled`,
     }),
-    payment_method_types: ["card"],
     adaptive_pricing: { enabled: false },
     billing_address_collection: "required",
     automatic_tax: { enabled: config.taxMode === "automatic" },
     line_items: products.map(product => checkoutLineItem(product, config.stripeKey)),
     metadata,
     payment_intent_data: { metadata },
-    ...(!form ? { custom_text: { submit: { message: "Digital files only. Your PDF and EQ8 download link will be emailed after payment. EQ8 software is required only for the editable project." } } } : {}),
+    ...(!form ? { custom_text: { submit: { message: products.some(product => product.kind === "font") ? "Digital files only. Your private download link will appear after payment and be emailed to you. Font licenses cover the edition selected in your order." : "Digital files only. Your PDF and EQ8 download link will be emailed after payment. EQ8 software is required only for the editable project." } } } : {}),
   }, {
     idempotencyKey: `shop-checkout${form ? "-form" : ""}:${cartId}:${attemptId}`,
     ...(form ? { apiVersion: "2026-08-26.dahlia; custom_checkout_payment_form_preview=v1" } : {}),
@@ -117,7 +117,7 @@ export async function fulfillOrder(sessionId: string) {
     method: "POST",
     headers: { Authorization: `Bearer ${config.emailKey}`, "Content-Type": "application/json", "Idempotency-Key": `pattern-order/${session.id}` },
     body: JSON.stringify({
-      from: config.from, to: [email], reply_to: config.support,
+      from: products.every(product => product.kind === "font") ? `Monosyth Type <${config.support}>` : config.from, to: [email], reply_to: config.support,
       ...orderEmail(products, url, config.support, session.amount_total!),
     }),
     signal: AbortSignal.timeout(15000),
