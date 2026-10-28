@@ -94,3 +94,11 @@ bag-studio code. The tracker and launcher pass targeted ESLint with zero warning
 the production build, type checking, public-email audit, and focused tracker
 tests pass. Do not claim repository-wide lint passes until those existing errors
 are resolved.
+
+## Appearance preference
+
+Scott prefers a white working background with grey-blue navigation and primary
+actions. Keep the journal in this light palette, including its sign-in page and
+edit dialogs. Use green for completion and successful verification, amber for
+items needing attention, red for errors and blockers, and restrained violet for
+review or decision cues. Preserve readable text contrast and visible focus states.
