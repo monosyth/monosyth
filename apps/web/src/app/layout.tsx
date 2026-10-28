@@ -6,6 +6,8 @@ import {
   Space_Grotesk,
 } from "next/font/google";
 
+import { PublicAnalytics } from "@/components/analytics/public-analytics";
+
 import { AuthProvider } from "@/components/auth/auth-provider";
 
 import "./globals.css";
@@ -67,6 +69,7 @@ export default function RootLayout({
     <html lang="en" className="h-full antialiased">
       <body className={bodyClassName}>
         <AuthProvider>{children}</AuthProvider>
+        <PublicAnalytics measurementId={process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID ?? ""} />
       </body>
     </html>
   );
