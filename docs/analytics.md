@@ -44,13 +44,35 @@ hostname: homepage, client navigation to shop, and return to homepage each sent
 one page_view with the correct title and G-LXCLTKYMTY, receiving HTTP 204.
 Synthetic query/fragment values were absent. Navigating to MoveMorrow paused
 collection and sent no private page location. Live deployment verification is
-recorded after rollout in the local evidence folder.
+recorded below and in the local evidence folder.
 
 Everyday Measure required no website tag change. Fresh live visits to its
 homepage and backing calculator sent G-E7Z6YX78QK page_view requests, both
 receiving HTTP 204; both page titles appeared in its dedicated Realtime report.
 Its source/setup records remain in /Users/scottwaite/claude/everydaymeasure.
 
-An unused extra Everyday Measure stream (16217745384 / G-QM8L1JNGN3) exists
-inside Monosyth. Neither live site uses it. Removing it is a separate permanent
-stream deletion; never replace Everyday Measure's working dedicated tag with it.
+The owner explicitly approved deletion of the unused extra Everyday Measure
+stream (16217745384 / G-QM8L1JNGN3) inside Monosyth. The deletion is complete;
+Monosyth now has only its own stream. Everyday Measure retains its dedicated
+property and working tag. Google preserves historical data from a deleted stream.
+
+## Production verification
+
+Firebase rollout rollout-2026-10-28-004 succeeded at 01:52 UTC on October 28
+(October 27 Pacific), serving commit d1e8aa234d20d1582e718e5c87848aaecf0ea6ba.
+An isolated browser then visited both live domains with no request interception.
+The Monosyth homepage, shop and return to the homepage sent exactly three
+page_view requests to G-LXCLTKYMTY, all with correct page titles and HTTP 204
+responses. Query/fragment markers were absent; moving to /move disabled
+collection and emitted no private page location. Everyday Measure's homepage
+and backing calculator sent only G-E7Z6YX78QK, each receiving HTTP 204.
+No JavaScript errors were observed. These are verification visits, not organic
+traffic or growth evidence.
+
+Local evidence: /Users/scottwaite/monosyth/analytics-repair-2026-10-27/, including
+live-network-verification.json and screenshots of the separate properties.
+
+Realtime verification confirmed the Monosyth homepage and shop titles in
+property 529069610. Everyday Measure's homepage and backing-calculator titles
+were confirmed separately in property 560880037; its stream also reports Data
+flowing. The visible counts include this session's verification traffic.
