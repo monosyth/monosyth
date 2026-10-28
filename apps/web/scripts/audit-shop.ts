@@ -147,7 +147,7 @@ test("checkout ignores a buyer-supplied price and uses stable retry idempotency"
 test("all live editions use distinct saved Stripe prices, while sandbox uses inline prices", () => {
   const prices = new Set<string>();
   const products = new Set<string>();
-  for (const p of shopReleases) {
+  for (const p of [...shopProducts, ...fontProducts]) {
     const saved = liveCatalog.prices.find((entry) => entry.sku === releaseId(p));
     assert.ok(saved);
     assert.match(saved.productId, /^prod_[A-Za-z0-9]+$/);
@@ -164,8 +164,8 @@ test("all live editions use distinct saved Stripe prices, while sandbox uses inl
       assert.equal(item.price_data?.product_data?.metadata?.sku, releaseId(p));
     }
   }
-  assert.equal(prices.size, shopReleases.length);
-  assert.equal(products.size, shopReleases.length);
+  assert.equal(prices.size, shopProducts.length + fontProducts.length);
+  assert.equal(products.size, shopProducts.length + fontProducts.length);
 });
 
 test("live checkout refuses an unmapped edition or a changed catalog price or currency", () => {
@@ -474,4 +474,15 @@ test("paid font webhook sends one font delivery email and duplicate notification
   assert.ok(!email.html.includes("EQ8"));
   assert.ok(!email.html.includes("fabric"));
   assert.ok(email.html.includes(orderKey(orderId, secret)));
+});
+
+
+test("updated font releases keep the earlier paid font kits resolvable", () => {
+  for (const font of fontProducts) {
+    assert.equal(font.version, "1.600");
+    const previous = shopReleases.find(product => product.slug === font.slug && product.version === "1.400");
+    assert.ok(previous);
+    assert.notEqual(previous.files[0].sha256, font.files[0].sha256);
+    assert.notEqual(storagePath(previous, previous.files[0]), storagePath(font, font.files[0]));
+  }
 });

@@ -12,8 +12,8 @@ account. Prices are one-time USD amounts, exclusive of applicable tax.
 
 | Edition | Price | Release SKU | Buyer kit |
 | --- | --- | --- | --- |
-| Desktop | $8 | everyday-carved-desktop@1.400 | OTF, TTF, guide, specimen, character inventory and desktop license |
-| Desktop + Web | $12 | everyday-carved-desktop-web@1.400 | Desktop kit plus WOFF2, CSS and web license |
+| Desktop | $8 | everyday-carved-desktop@1.600 | OTF, TTF, guide, specimen, character inventory and desktop license |
+| Desktop + Web | $12 | everyday-carved-desktop-web@1.600 | Desktop kit plus WOFF2, CSS and web license |
 
 Desktop is one named user's seat. Desktop + Web adds one website project,
 including staging, subdomains and translated domains, with no pageview cap or
@@ -67,13 +67,13 @@ public/. Buyer source and ZIP hashes are in the font catalog.
 ## Verification
 
 - Production build and TypeScript passed
-- 45 shop checks passed, including both font prices, live mappings, software tax
+- 46 shop checks passed, including both font prices, live mappings, software tax
   classification, unpaid/refunded/disputed access denial, web-kit entitlement
   isolation, signed webhooks and duplicate-email behavior
 - Desktop and phone layout, font loading, tester input/palette and license links
   checked in the browser
 - An isolated Stripe sandbox browser purchase of Desktop + Web completed at
-  $12; the private order page returned the correct ZIP, with its exact 859,254
+  $12; the private order page returned the correct v1.600 ZIP, with its exact 859,261
   bytes and SHA-256 matching the release. This sandbox used manual tax and did
   not send an email. Email template, signature and retry behavior were tested
   with mocked transport; existing live webhook and sender infrastructure reused
@@ -82,3 +82,25 @@ public/. Buyer source and ZIP hashes are in the font catalog.
 No live charge is required for release verification. Check live checkout's
 edition, amount, tax calculation and cancel return after rollout. Do not submit
 a live payment as part of a smoke test.
+
+
+## Latest source update before launch
+
+The owner flagged a newer Everyday Measure source while the initial storefront
+rollout was queued. Current sale files are commercial v1.600, frozen from the
+original project's v1.500 source (including its independent p/q drawings).
+Every outline, advance and feature table is preserved from that source; only
+commercial naming, license and style metadata change. Public previews and
+specimen URLs are versioned under `/shop/type/v1.600/` to avoid stale caches.
+The original Everyday Measure project was read without editing it.
+
+Both $8/$12 price IDs are retained for the same licensed products, with explicit
+current-release mappings. No price was disabled. The earlier v1.400 release is
+retained in a historical catalog solely for existing receipts; new selections
+resolve only to the current v1.600 kits. The first pending deployment preceded
+the owner's correction; publish the replacement only after verifying the new
+font packages and previews.
+
+The refreshed v1.600 sandbox purchase and browser download were repeated after
+all preview/kit changes. The ZIP hash and all three embedded font binaries
+match the verified current build exactly. No real payment was submitted.

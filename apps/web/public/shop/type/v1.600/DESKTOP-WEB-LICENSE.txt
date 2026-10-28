@@ -1,0 +1,27 @@
+EVERYDAY CARVED - DESKTOP + WEB LICENSE
+Monosyth Type | License version 1.0 | October 27, 2026
+
+This package includes the one-user Desktop License in DESKTOP-LICENSE.txt and
+the following web permission for the same named buyer.
+
+You may self-host the supplied WOFF2 font on one website project owned or
+operated by you, or on one named client's website project. The project's
+subdomains, translated domains, and development/staging copies are included.
+There is no pageview limit, annual renewal, or recurring font fee for this
+license. Each additional unrelated website project needs its own web license.
+
+You may serve the font to visitors as needed to display live text using CSS
+@font-face. The technical delivery of a webfont to a visitor's browser is
+permitted; visitors receive no right to extract it for other projects. Do not
+offer the font as a standalone download or host it as a public font service.
+
+A developer or hosting provider may handle the webfont solely to maintain the
+licensed website. When the website is for a client, record the client and site
+with your receipt and hand over the web files and this license solely for that
+project. A change of developer does not require a new license. Any person who
+installs the desktop font still needs a desktop seat.
+
+This web permission covers ordinary website text. Apps, games, shared design
+tools, editable template services, and visitor-facing generators that let users
+create their own products with the font are not covered. Seek separate written
+permission for these uses. The Desktop License's other terms still apply.

@@ -2,7 +2,7 @@
   {
     "slug": "everyday-carved-desktop",
     "name": "Everyday Carved \u2014 Desktop",
-    "version": "1.400",
+    "version": "1.600",
     "priceCents": 800,
     "currency": "usd",
     "family": "everyday-carved",
@@ -11,23 +11,23 @@
     "licenseSummary": "One named desktop user \u00b7 Personal, business and client work",
     "formats": "OTF + TTF",
     "taxCode": "txcd_10202003",
-    "image": "/shop/type/01-hero.png",
+    "image": "/shop/type/v1.600/01-hero.png",
     "imageAlt": "Everyday Carved Bold, the first typeface from Monosyth Type",
     "files": [
       {
         "id": "font-kit",
-        "name": "EverydayCarved-Desktop-v1.400.zip",
+        "name": "EverydayCarved-Desktop-v1.600.zip",
         "label": "Desktop font kit + guide, specimen and licenses",
-        "bytes": 722909,
-        "sha256": "db60c4f5ae2f1d031ee10c768972cd509947b4ff0b3e2c581c54a032d42da8ec",
-        "source": "fonts/everyday-carved/dist/EverydayCarved-Desktop-v1.400.zip"
+        "bytes": 722601,
+        "sha256": "56367d4ea6af1f84b27da2b6380d691a6cc95caa3231139c15c87b5f973f7292",
+        "source": "fonts/everyday-carved/dist/EverydayCarved-Desktop-v1.600.zip"
       }
     ]
   },
   {
     "slug": "everyday-carved-desktop-web",
     "name": "Everyday Carved \u2014 Desktop + Web",
-    "version": "1.400",
+    "version": "1.600",
     "priceCents": 1200,
     "currency": "usd",
     "family": "everyday-carved",
@@ -36,16 +36,16 @@
     "licenseSummary": "One named desktop user + one website project",
     "formats": "OTF + TTF + WOFF2 + CSS",
     "taxCode": "txcd_10202003",
-    "image": "/shop/type/01-hero.png",
+    "image": "/shop/type/v1.600/01-hero.png",
     "imageAlt": "Everyday Carved Bold, the first typeface from Monosyth Type",
     "files": [
       {
         "id": "font-kit",
-        "name": "EverydayCarved-Desktop-Web-v1.400.zip",
+        "name": "EverydayCarved-Desktop-Web-v1.600.zip",
         "label": "Desktop + Web font kit + guide, specimen and licenses",
-        "bytes": 859254,
-        "sha256": "325c4fcf91d268c0d55ee1e2e65c310f3157270e73e8e4a45f4b254f346ce79d",
-        "source": "fonts/everyday-carved/dist/EverydayCarved-Desktop-Web-v1.400.zip"
+        "bytes": 859261,
+        "sha256": "cd235b4b8fc234ece0e097bebd881e453916d53a6236aff0bb07ae600d77f097",
+        "source": "fonts/everyday-carved/dist/EverydayCarved-Desktop-Web-v1.600.zip"
       }
     ]
   }

@@ -86,6 +86,20 @@
       "priceId": "price_1UVLMs9FGEoNhiRQ7p5Uff2z",
       "unitAmount": 1200,
       "currency": "usd"
+    },
+    {
+      "sku": "everyday-carved-desktop@1.600",
+      "productId": "prod_MonosythEverydayCarvedDesktop1400",
+      "priceId": "price_1UVLMm9FGEoNhiRQIrtZMSuX",
+      "unitAmount": 800,
+      "currency": "usd"
+    },
+    {
+      "sku": "everyday-carved-desktop-web@1.600",
+      "productId": "prod_MonosythEverydayCarvedDesktopWeb1400",
+      "priceId": "price_1UVLMs9FGEoNhiRQ7p5Uff2z",
+      "unitAmount": 1200,
+      "currency": "usd"
     }
   ]
 }

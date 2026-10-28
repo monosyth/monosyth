@@ -5,7 +5,7 @@ from fontTools import subset
 from fontTools.ttLib import TTFont
 
 source = Path(sys.argv[1])
-target = Path(__file__).resolve().parents[1] / "public/shop/type/EverydayCarved-Demo.woff2"
+target = Path(__file__).resolve().parents[1] / "public/shop/type/v1.600/EverydayCarved-Demo.woff2"
 font = TTFont(source)
 options = subset.Options()
 options.layout_features = ["kern", "tnum"]
@@ -14,7 +14,7 @@ subsetter = subset.Subsetter(options=options)
 subsetter.populate(unicodes=range(0x20, 0x7f))
 subsetter.subset(font)
 for entry in font["name"].names:
-    value = {1: "Everyday Carved Demo", 2: "Bold", 3: "MonosythType:EverydayCarvedDemo:1.400", 4: "Everyday Carved Demo Bold", 6: "EverydayCarvedDemo-Bold", 13: "Limited web preview for the Monosyth Type storefront. No license to install or use in other projects."}.get(entry.nameID)
+    value = {1: "Everyday Carved Demo", 2: "Bold", 3: "MonosythType:EverydayCarvedDemo:1.600", 4: "Everyday Carved Demo Bold", 6: "EverydayCarvedDemo-Bold", 13: "Limited web preview for the Monosyth Type storefront. No license to install or use in other projects."}.get(entry.nameID)
     if value is not None:
         entry.string = value.encode(entry.getEncoding())
 font.flavor = "woff2"
