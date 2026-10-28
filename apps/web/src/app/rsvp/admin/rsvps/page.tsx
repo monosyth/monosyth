@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { useEventStore } from "@/components/rsvp/event-store";
-import { isMonosythAdminEmail } from "@/lib/auth/admin";
 import {
   listRsvpResponsesDetailedFromClient,
   type RSVPClientResponseDetail,
@@ -69,7 +68,7 @@ export default function RsvpsAdminPage() {
   const { isConfigured, isWorking, signInWithGoogle, status, user, error: authError } =
     useAuth();
   const { event, content } = useEventStore();
-  const canEdit = status === "signed_in" && isMonosythAdminEmail(user?.email);
+  const canEdit = status === "signed_in";
 
   const [responses, setResponses] = useState<RSVPClientResponseDetail[]>([]);
   const [loadState, setLoadState] = useState<LoadState>("idle");

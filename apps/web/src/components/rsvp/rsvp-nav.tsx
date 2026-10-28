@@ -6,7 +6,6 @@ import { useRef, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { useIdentity } from "@/components/rsvp/identity";
-import { isMonosythAdminEmail } from "@/lib/auth/admin";
 
 type NavItem = {
   label: string;
@@ -51,10 +50,10 @@ function isActive(pathname: string, item: NavItem) {
 
 export function RsvpNav() {
   const pathname = usePathname() ?? "/rsvp";
-  const { status, user } = useAuth();
+  const { status } = useAuth();
   const identity = useIdentity();
   const canEdit =
-    status === "signed_in" && isMonosythAdminEmail(user?.email);
+    status === "signed_in";
   const [daysOpen, setDaysOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 

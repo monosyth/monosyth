@@ -4,7 +4,7 @@ Scott approved sharing the existing Monosyth Firebase App Hosting backend on
 October 9, 2026, while keeping vtmultifamily.com in the visitor's address bar.
 Later that day he requested a generic splash page and a separate Michelle site.
 
-- Account: monosyth@gmail.com; Firebase project/backend: monosyth, us-east4.
+- Account: the owner's Google account; Firebase project/backend: monosyth, us-east4.
 - Current editable splash and Michelle source: /Users/scottwaite/Desktop/Vermont Properties/marketing-2026/firebase-hosting/source/vtmultifamily/.
 - Historical fallback: apps/web/public/vtmultifamily/.
 - Share Michelle's site: https://monosyth.com/vtmultifamily/michellehebert.

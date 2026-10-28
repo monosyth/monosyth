@@ -15,7 +15,6 @@ import {
   signOut as firebaseSignOut,
 } from "firebase/auth";
 
-import { isMonosythAdminEmail } from "@/lib/auth/admin";
 import { getFirebaseAuth, getGoogleProvider } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import {
@@ -104,17 +103,53 @@ export function AuthProvider({
       return;
     }
 
-    return onAuthStateChanged(auth, (nextUser) => {
-      if (nextUser && !isMonosythAdminEmail(nextUser.email)) {
-        setError("This Google account is not approved for Monosyth admin access.");
-        setIsWorking(false);
-        void firebaseSignOut(auth);
+    let active = true;
+    let checkVersion = 0;
+    const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+      const version = ++checkVersion;
+      if (!nextUser) {
         applyUser(null);
         return;
       }
 
-      applyUser(nextUser);
+      startTransition(() => {
+        setUser(null);
+        setStatus("loading");
+        setError(null);
+      });
+
+      // Only server-approved users reach signed_in; all UI gates share that state.
+      // The server keeps the existing administrator allowlist private.
+      void (async () => {
+        try {
+          const token = await nextUser.getIdToken();
+          const response = await fetch("/api/auth/admin", {
+            headers: { Authorization: `Bearer ${token}` },
+            cache: "no-store",
+          });
+          if (!active || version !== checkVersion) return;
+          if (response.status === 401 || response.status === 403) {
+            await firebaseSignOut(auth);
+            if (active) setError("This Google account is not approved for Monosyth admin access.");
+            return;
+          }
+          if (!response.ok) throw new Error("Administrator access could not be checked. Please try again.");
+          const result = await response.json();
+          if (!active || version !== checkVersion) return;
+          if (result.isAdmin !== true) throw new Error("Administrator access could not be checked. Please try again.");
+          applyUser(nextUser);
+        } catch (nextError) {
+          if (!active || version !== checkVersion) return;
+          applyUser(null);
+          setError(nextError instanceof Error ? nextError.message : "Administrator access could not be checked.");
+        }
+      })();
     });
+    return () => {
+      active = false;
+      checkVersion++;
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -190,12 +225,7 @@ export function AuthProvider({
     setError(null);
 
     try {
-      const credential = await signInWithPopup(auth, getGoogleProvider());
-
-      if (!isMonosythAdminEmail(credential.user.email)) {
-        await firebaseSignOut(auth);
-        setError("This Google account is not approved for Monosyth admin access.");
-      }
+      await signInWithPopup(auth, getGoogleProvider());
     } catch (nextError) {
       const message =
         nextError instanceof Error

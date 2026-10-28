@@ -39,7 +39,7 @@ export function CartPage({ available, checkout = false }: { available: boolean; 
         {available ? <Link className={styles.primaryButton} href="/shop/checkout"><LockIcon /> Secure checkout <span>→</span></Link> : <p className={styles.notice}>Checkout is temporarily unavailable. Your cart is saved.</p>}
         <p className={styles.cartReassurance}>One-time payment · No account needed</p>
         <div className={styles.cartStripe}>Payments securely processed by <strong>stripe</strong></div>
-        <p className={styles.small}>Need a hand? <a href="mailto:scott@monosyth.com">scott@monosyth.com</a></p>
+        <p className={styles.small}>Need a hand? <a href="mailto:support@monosyth.com">support@monosyth.com</a></p>
       </aside>}
     </div>
   </div>;

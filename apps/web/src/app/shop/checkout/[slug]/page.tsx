@@ -27,7 +27,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ slug:
         <Link className={styles.buyNowLink} href="/shop/cart">Buying more than one? Go to your cart →</Link>
         <ul>{product.files.map(file => <li key={file.id}>{file.label}</li>)}</ul>
         <p className={styles.small}>Digital files only. Your private download link will appear after payment and arrive by email. Electric Quilt 8 is required only for the editable project.</p>
-        <p className={styles.small}>Need help? <a href="mailto:scott@monosyth.com">scott@monosyth.com</a></p>
+        <p className={styles.small}>Need help? <a href="mailto:support@monosyth.com">support@monosyth.com</a></p>
       </section>
       <CheckoutTrust>
         {formCheckoutEnabled() ? <CheckoutForm slugs={[product.slug]} /> : <p role="status" className={styles.notice}>Our direct shop is opening soon. Please check back for purchases.</p>}

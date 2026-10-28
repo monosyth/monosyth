@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
-import { isMonosythAdminEmail } from "@/lib/auth/admin";
 import {
   createBlankEvent,
   createBlankQuestion,
@@ -712,7 +711,7 @@ export function RSVPApp(props: RSVPAppProps = {}) {
     status,
     user,
   } = useAuth();
-  const canEdit = status === "signed_in" && isMonosythAdminEmail(user?.email);
+  const canEdit = status === "signed_in";
 
   const [studio, setStudio] = useState<RSVPStudio>(seededStudio);
   const [savedStudio, setSavedStudio] = useState<RSVPStudio>(seededStudio);

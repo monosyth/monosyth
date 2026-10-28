@@ -9,7 +9,7 @@
     "audit:shop": "node --conditions=react-server --import tsx --test scripts/audit-shop.ts",
     "shop:files": "node --import tsx scripts/shop-files.ts",
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && npm run verify:public-email",
     "start": "next start",
     "lint": "eslint",
     "audit:bag-studio": "tsx scripts/audit-bag-pattern-math.ts && tsx scripts/audit-bag-studio-storage.ts",
@@ -21,7 +21,9 @@
     "audit:weather": "node --import tsx --test scripts/audit-weather-observatory.ts scripts/audit-weather-rain.ts scripts/audit-weather-air-quality.ts",
     "birds:sync": "node --import tsx scripts/sync-birdnet.ts",
     "birds:install": "node scripts/install-birdnet-agents.mjs",
-    "audit:birds": "node --import tsx --test scripts/audit-birds.ts"
+    "audit:birds": "node --import tsx --test scripts/audit-birds.ts",
+    "verify:public-email": "node scripts/verify-public-email.mjs",
+    "audit:admin-access": "node --conditions=react-server --import tsx --test scripts/audit-admin-access.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",

@@ -1,16 +1,13 @@
-const MONOSYTH_ADMIN_EMAILS = [
-  "monosyth@gmail.com",
-  "dallas.shinkle@gmail.com",
-] as const;
+import "server-only";
 
-const ADMIN_EMAIL_SET = new Set(
-  MONOSYTH_ADMIN_EMAILS.map((email) => email.toLowerCase()),
-);
-
-export function getMonosythAdminEmails() {
-  return [...MONOSYTH_ADMIN_EMAILS];
+// Runtime configuration keeps administrator addresses out of this public repository.
+export function getMonosythAdminEmails(): string[] {
+  return (process.env.MONOSYTH_ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
 }
 
 export function isMonosythAdminEmail(email: string | null | undefined) {
-  return Boolean(email && ADMIN_EMAIL_SET.has(email.trim().toLowerCase()));
+  return Boolean(email && getMonosythAdminEmails().includes(email.trim().toLowerCase()));
 }

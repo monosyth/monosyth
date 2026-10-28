@@ -11,7 +11,6 @@ import {
 } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
-import { isMonosythAdminEmail } from "@/lib/auth/admin";
 import {
   createSeededStudio,
   normalizeStudio,
@@ -323,8 +322,7 @@ export function EventStoreProvider({
   /* ----- Admin content editing ----- */
   const auth = useAuth();
   const canEditContent =
-    auth.status === "signed_in" &&
-    isMonosythAdminEmail(auth.user?.email);
+    auth.status === "signed_in";
 
   // Debounced server write so rapid blur events (e.g. admin is tab-hopping
   // across fields) batch into one PUT.

@@ -6,6 +6,10 @@ runConfig:
   memoryMiB: 512
 
 env:
+  - variable: MONOSYTH_ADMIN_EMAILS
+    secret: MONOSYTH_ADMIN_EMAILS@1
+    availability:
+      - RUNTIME
   - variable: SHOP_ENABLED
     value: "true"
     availability:
@@ -35,7 +39,7 @@ env:
     availability:
       - RUNTIME
   - variable: SHOP_SUPPORT_EMAIL
-    value: scott@monosyth.com
+    value: support@monosyth.com
     availability:
       - RUNTIME
   - variable: RESEND_API_KEY
@@ -43,7 +47,7 @@ env:
     availability:
       - RUNTIME
   - variable: SHOP_FROM_EMAIL
-    value: Monosyth Patterns <scott@monosyth.com>
+    value: Monosyth Patterns <support@monosyth.com>
     availability:
       - RUNTIME
   - variable: NEXT_PUBLIC_SITE_URL

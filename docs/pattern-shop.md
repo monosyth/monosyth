@@ -51,7 +51,7 @@ documents and private administration records belong in that Git-ignored folder.
   been confirmed complete. Official instructions:
   <https://www.shorelinewa.gov/government/departments/city-clerk-s-office/business-licenses>.
 - On September 24, 2026, Scott requested an email check for approval. The
-  connected `monosyth@gmail.com` search returned no recent DOR/license mail.
+  connected owner's Gmail search returned no recent DOR/license mail.
   Apple Mail's All Mailboxes searches for `dor.wa.gov` and the exact phrase
   `"business license"` found September 22 account-access messages and older
   LLC formation messages, but no business-license approval. This is a mail
@@ -81,7 +81,7 @@ documents and private administration records belong in that Git-ignored folder.
 - Live restricted Stripe key stored as `STRIPE_SECRET_KEY` version 1 in Google Secret Manager; Checkout Sessions write, Payment Intents read, Charges and Refunds read; all three read-only API checks passed
 - Live webhook `we_1UIhuL9FGEoNhiRQZnOSCNkz` targets `https://monosyth.com/api/shop/webhook` for `checkout.session.completed` and `checkout.session.async_payment_succeeded`, using API version `2026-08-26.dahlia`
 - Webhook signing secret and stable download-link signing secret stored as `STRIPE_WEBHOOK_SECRET` and `SHOP_DOWNLOAD_SECRET`, each version 1; Firebase backend access granted
-- Runtime configuration references these secret versions and uses owner-confirmed `scott@monosyth.com` for customer support
+- Runtime configuration references these secret versions and uses `support@monosyth.com` for customer support
 - Resend verified `monosyth.com` after three DNS records were added at GoDaddy; existing Google mail records remain in place
 - Sending-only Resend key scoped to `monosyth.com` stored as `RESEND_API_KEY` version 1, with Firebase backend access granted; runtime sender is `Monosyth Patterns <scott@monosyth.com>`
 - Resend accepted the owner-authorized sender test to `scott@monosyth.com` on September 22, 2026 (Pacific); this test did not create a payment or a customer download link
@@ -383,3 +383,22 @@ same verified payment/download pipeline and private bucket, with their own
 catalog, live prices, `fonts/` object namespace and font delivery email. The
 pattern collection, cart and historic download paths are retained. See
 [Monosyth Type setup](monosyth-type.md) for the $8/$12 catalog and verification.
+
+
+### Support address and administrator privacy (2026-10-28)
+
+Shop contact links, order reply-to, and the configured sender use
+`support@monosyth.com`. This Workspace alias delivers to the existing owner
+mailbox and has a tested Gmail send-as identity, Monosyth Support. Incoming and
+outgoing delivery were verified before switching the shop configuration.
+
+The server reads its administrator email allowlist from the runtime-only
+`MONOSYTH_ADMIN_EMAILS` Secret Manager secret. Preserve the existing approved
+accounts when rotating this configuration. The browser checks `/api/auth/admin`
+with a Firebase ID token and receives only the access decision. Missing private
+configuration denies access. Do not move the list into public environment
+variables, client code, fixtures, or documentation.
+
+`npm run audit:admin-access` checks configured and denied accounts. Every
+production build runs `verify:public-email` over generated browser assets and
+public HTML to catch personal Gmail addresses before release.

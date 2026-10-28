@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
-import { isMonosythAdminEmail } from "@/lib/auth/admin";
 import {
   ActivitiesEditor,
   DepositsEditor,
@@ -66,7 +65,7 @@ export default function AdminPage() {
     error: authError,
   } = useAuth();
   const { event, content: liveContent, ready } = useEventStore();
-  const canEdit = status === "signed_in" && isMonosythAdminEmail(user?.email);
+  const canEdit = status === "signed_in";
 
   const [draft, setDraft] = useState<EventContent | null>(null);
   const [tab, setTab] = useState<TabId>("overview");

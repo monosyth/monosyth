@@ -190,3 +190,15 @@ Validation: `npm run audit:birds` covers local-date boundaries, invalid archive
 paths, confidence filtering, duplicate records, public-field filtering, stale
 listener status, and empty versus unavailable data. Fixture birds are used only in
 tests; never seed them into the live database or cloud feed.
+
+
+## Private administrator configuration
+
+Set `MONOSYTH_ADMIN_EMAILS` to the existing approved administrator addresses as a
+comma-separated, server-only runtime value. Production binds Secret Manager
+version 1 in `apphosting.yaml`; local development can use `.env.local`. An empty
+value denies administrator access. Keep addresses out of this public repository.
+The authenticated `/api/auth/admin` endpoint returns an access decision only.
+
+Run `npm run audit:admin-access` after authentication changes. `npm run build`
+also checks generated public assets for personal Gmail addresses.
