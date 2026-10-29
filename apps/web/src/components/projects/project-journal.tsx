@@ -147,6 +147,7 @@ function JournalContent() {
         {([{ id: "projects", label: "Projects", icon: "grid", count: projects.length }, { id: "recent", label: "Recent work", icon: "clock" }, { id: "waiting", label: "Waiting on me", icon: "circle", count: waiting.length }] as const).map(item =>
           <button key={item.id} className={s.navButton} aria-current={view === item.id && !selectedId ? "page" : undefined} onClick={() => navigate(item.id)}><Icon name={item.icon} /><span>{item.label}</span>{"count" in item && <small>{item.count}</small>}</button>)}
       </nav>
+      <Link href="/projects/connections" className={s.navButton}><Icon name="link" /><span>Connections</span></Link>
       <div className={s.sideNote}><span className={s.syncDot} /><strong>A little progress adds up</strong><p>Keep the work, the decisions,<br />and the way forward together.</p></div>
       <div className={s.sideBottom}><Link href="/app"><Icon name="arrow" size={16} /> Back to studio</Link><button onClick={() => void auth.signOut()} disabled={auth.isWorking}>Sign out</button></div>
     </aside>

@@ -1,5 +1,6 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
+import type { Firestore, Transaction } from "firebase-admin/firestore";
 import { getFirebaseAdminDb } from "../firebase/admin";
 import { parseEntry, parseProject, validId, validRevision, TrackerError, type Board, type EntryInput, type Project, type WorkEntry } from "./model";
 
@@ -70,11 +71,14 @@ function fingerprint(input: EntryInput) {
   delete content.expectedRevision;
   return createHash("sha256").update(JSON.stringify(content)).digest("hex");
 }
-export async function recordEntry(projectId: string, value: unknown, author: string) {
+export function journalRecorder(database: Firestore) {
+ return async (projectId: string, value: unknown, author: string, guard?: (tx: Transaction) => Promise<void>) => {
   validId(projectId);
   const input = parseEntry(value), hash = fingerprint(input);
-  return getFirebaseAdminDb().runTransaction(async tx => {
-    const projectRef = projects().doc(projectId), entryRef = entries().doc(input.id);
+  const tracker = database.collection("privateProjectTracker").doc("owner");
+  return database.runTransaction(async tx => {
+    if (guard) await guard(tx);
+    const projectRef = tracker.collection("projects").doc(projectId), entryRef = tracker.collection("workEntries").doc(input.id);
     const [projectDoc, existing] = await Promise.all([tx.get(projectRef), tx.get(entryRef)]);
     if (!projectDoc.exists) throw new TrackerError("This project could not be found.", 404);
     if (existing.exists) {
@@ -95,6 +99,10 @@ export async function recordEntry(projectId: string, value: unknown, author: str
     tx.set(projectRef, next);
     return { entry, duplicate: false };
   });
+ };
+}
+export async function recordEntry(projectId: string, value: unknown, author: string, guard?: (tx: Transaction) => Promise<void>) {
+  return journalRecorder(getFirebaseAdminDb())(projectId, value, author, guard);
 }
 export async function exportJournal() {
   // An explicit owner export includes the entire journal, not just the recent view.

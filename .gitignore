@@ -12,3 +12,5 @@
 # Committing this would leak your token. Only secrets.env.example is
 # tracked.
 .claude/secrets.env
+# Python client test bytecode
+apps/web/scripts/__pycache__/

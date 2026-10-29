@@ -2,6 +2,11 @@
 
 Production URL: `https://monosyth.com/projects`
 
+For Claude's isolated Linux environment, use the portable client and explicit
+owner-approved, project-scoped connections described in
+[`JOURNAL_AGENT_ACCESS.md`](JOURNAL_AGENT_ACCESS.md). Manage access at
+`https://monosyth.com/projects/connections`. Do not copy the Mac's credentials.
+
 The journal is part of the existing Next.js/Firebase app. It stores projects and
 append-only work entries beneath `privateProjectTracker/owner` in the default
 Monosyth Firestore database. The existing catch-all Firestore rule denies client
