@@ -20,11 +20,24 @@ folder as `project-journal-linux.py`). In Claude's Linux terminal, run:
 python3 project-journal-linux.py connect krowshea --label "Claude Krowshea"
 ```
 
-The script prints a 12-character code and waits. In the signed-in owner browser,
+The script prints a 12-character code and returns immediately, so Claude can
+show you the code without holding a tool call open. In the signed-in owner browser,
 open `https://monosyth.com/projects/connections`, enter the code, and review the
 requested project and connection name. Approve only a request just initiated by
 you, after comparing those details with the Linux terminal. Choose 1, 7 (default),
 or 30 days. No approval is implied by receiving a code or opening the page.
+
+After approval, ask Claude to complete the connection in a second tool call:
+
+```sh
+python3 project-journal-linux.py finish krowshea
+```
+
+The pairing must finish within ten minutes of `connect`. For an interactive
+terminal, `connect --wait` can instead keep polling until approval. A pending
+pairing's device secret is saved privately in the same protected client file
+and replaced by the connection token after approval. Declining or expiry removes
+the pending secret when `finish` next runs; `disconnect` also clears it.
 
 The Linux client saves its dedicated token in
 `~/.config/monosyth-journal/connections.json` with mode `0600`, inside a `0700`

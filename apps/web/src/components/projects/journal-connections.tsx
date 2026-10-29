@@ -52,7 +52,7 @@ function ConnectionsContent() {
     try {
       await api({ action: approve ? "approve" : "deny", code: reviewedCode, ...(approve ? { lifetimeDays: days } : {}) });
       setPending(null); setCode(""); setReviewedCode("");
-      setMessage(approve ? "Approved — your Linux client will finish connecting. Keep it running until it confirms." : "Connection declined");
+      setMessage(approve ? "Approved — return to Claude and run the client's finish command. A waiting client will confirm automatically." : "Connection declined");
       await refresh();
     } catch (err) { setError(err instanceof Error ? err.message : "Could not handle this request."); }
     finally { setWorking(false); }

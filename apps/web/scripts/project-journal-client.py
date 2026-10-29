@@ -18,7 +18,9 @@ MAX_RESPONSE = 2_000_000
 
 
 class ClientError(Exception):
-    pass
+    def __init__(self, message, status=None):
+        super().__init__(message)
+        self.status = status
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -54,7 +56,7 @@ def request(path, body=None, token=None, method=None):
             message = None
         if 300 <= error.code < 400:
             raise ClientError("The service redirected this request. No credential was forwarded.") from None
-        raise ClientError(message if isinstance(message, str) and len(message) < 500 else "Journal request failed (HTTP %d)." % error.code) from None
+        raise ClientError(message if isinstance(message, str) and len(message) < 500 else "Journal request failed (HTTP %d)." % error.code, error.code) from None
     except (urllib.error.URLError, TimeoutError, ValueError):
         raise ClientError("Could not reach the journal over HTTPS. Check network access and try again.") from None
 
@@ -108,27 +110,49 @@ def valid_project(value):
 
 def credential(project):
     value = load_config().get(project)
+    if isinstance(value, dict) and value.get("pending"):
+        raise ClientError("Approve the connection in your browser, then run finish for this project.")
     if not isinstance(value, dict) or not isinstance(value.get("token"), str):
         raise ClientError("Run connect for this project first.")
     return value["token"]
 
 
-def connect(project, label):
+def connect(project, label, wait=False):
     config = load_config()
     if project in config:
-        raise ClientError("This project already has a saved connection. Disconnect it before connecting again.")
+        value = config[project]
+        if not isinstance(value, dict) or not isinstance(value.get("pending"), dict) or value["pending"].get("expiresAt", 0) > time.time():
+            raise ClientError("This project already has a saved connection or pending approval. Run finish or disconnect first.")
     # Check private storage before beginning approval, not after receiving a token.
     save_config(config)
     result = request("/api/projects/agent-connect", {"action": "start", "projectId": project, "label": label})
+    config[project] = {"pending": {"deviceCode": result["deviceCode"], "expiresAt": time.time() + min(result["expiresIn"], 600), "nextPollAt": time.time() + max(result["interval"], 5)}}
+    save_config(config)
     print("Open %s in your signed-in browser." % result["verificationUri"], flush=True)
     print("Enter code: %s" % result["userCode"], flush=True)
     print("Approve only if the page shows project %s and connection %s." % (project, label), flush=True)
-    print("Waiting for your approval (up to 10 minutes)…", flush=True)
-    deadline = time.monotonic() + min(result["expiresIn"], 600)
-    interval = max(result["interval"], 5)
-    while time.monotonic() < deadline:
-        time.sleep(interval)
-        status = request("/api/projects/agent-connect", {"action": "poll", "deviceCode": result["deviceCode"]})
+    if wait:
+        print("Waiting for your approval (up to 10 minutes)…", flush=True)
+        finish(project, wait=True)
+    else:
+        print("After approval, run: python3 project-journal-linux.py finish %s" % project, flush=True)
+
+
+def finish(project, wait=False):
+    config = load_config()
+    pending = config.get(project, {}).get("pending")
+    if not isinstance(pending, dict) or not isinstance(pending.get("deviceCode"), str):
+        raise ClientError("No pending connection for this project. Run connect first.")
+    while time.time() < pending["expiresAt"]:
+        time.sleep(min(max(pending["nextPollAt"] - time.time(), 0), 10))
+        try:
+            status = request("/api/projects/agent-connect", {"action": "poll", "deviceCode": pending["deviceCode"]})
+        except ClientError as error:
+            if error.status == 401:
+                config = load_config()
+                config.pop(project, None)
+                save_config(config)
+            raise
         if status["status"] == "connected":
             token = status.get("token")
             if not isinstance(token, str) or not re.fullmatch(r"mjp_[A-Za-z0-9_-]{43}", token) or status["connection"]["projectId"] != project:
@@ -144,25 +168,45 @@ def connect(project, label):
             return
         if status["status"] not in ("pending", "slow_down"):
             raise ClientError("The service returned an unexpected connection status.")
-        interval = max(status.get("interval", 5), 5)
+        pending["nextPollAt"] = time.time() + max(status.get("interval", 5), 5)
+        config = load_config()
+        config[project] = {"pending": pending}
+        save_config(config)
+        if not wait:
+            raise ClientError("Waiting for owner approval. Approve the code in your browser, then run finish again.")
+    config = load_config()
+    config.pop(project, None)
+    save_config(config)
     raise ClientError("Approval timed out. Start connect again.")
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("connect", "get", "record", "disconnect"):
+    for name in ("connect", "finish", "get", "record", "disconnect"):
         command = commands.add_parser(name)
         command.add_argument("project", help="Approved project ID, for example krowshea")
         if name == "connect":
             command.add_argument("--label", default="Claude Linux", help="Name to compare on the approval page")
+        if name in ("connect", "finish"):
+            command.add_argument("--wait", action="store_true", help="Wait for approval in this process (optional)")
         if name == "get":
             command.add_argument("--cursor", help="Read the next history page")
     args = parser.parse_args(argv)
     project = valid_project(args.project)
     if args.command == "connect":
-        connect(project, args.label)
+        connect(project, args.label, args.wait)
         return
+    if args.command == "finish":
+        finish(project, args.wait)
+        return
+    if args.command == "disconnect":
+        config = load_config()
+        if isinstance(config.get(project), dict) and config[project].get("pending"):
+            config.pop(project)
+            save_config(config)
+            print(json.dumps({"pendingRequestRemoved": True, "message": "The uncompleted server request expires after ten minutes."}))
+            return
     token = credential(project)
     if args.command == "get":
         query = {"project": project}

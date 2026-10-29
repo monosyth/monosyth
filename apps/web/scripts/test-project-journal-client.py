@@ -54,11 +54,42 @@ class ClientTests(unittest.TestCase):
         ]
         output = io.StringIO()
         with patch.object(journal, "request", side_effect=responses), patch.object(journal.time, "sleep"), contextlib.redirect_stdout(output):
-            journal.connect("krowshea", "Claude Krowshea")
+            journal.connect("krowshea", "Claude Krowshea", wait=True)
         self.assertIn("ABCD-EFGH-JKLM", output.getvalue())
         self.assertNotIn(TOKEN, output.getvalue())
         self.assertNotIn("secret-device-code", output.getvalue())
         self.assertEqual(journal.credential("krowshea"), TOKEN)
+
+    def test_pairing_can_finish_in_a_separate_tool_call(self):
+        start = {"verificationUri": "https://monosyth.com/projects/connections", "userCode": "ABCD-EFGH-JKLM", "deviceCode": "private-device-secret", "expiresIn": 600, "interval": 5}
+        output = io.StringIO()
+        with patch.object(journal, "request", return_value=start) as request, contextlib.redirect_stdout(output):
+            journal.connect("krowshea", "Claude Krowshea")
+            self.assertEqual(request.call_count, 1)
+        self.assertIn("finish krowshea", output.getvalue())
+        self.assertNotIn("private-device-secret", output.getvalue())
+        self.assertIn("pending", journal.load_config()["krowshea"])
+        with self.assertRaisesRegex(journal.ClientError, "run finish"):
+            journal.credential("krowshea")
+        result = {"status": "connected", "token": TOKEN, "connection": {"projectId": "krowshea", "expiresAt": "2026-11-05T00:00:00Z"}}
+        with patch.object(journal, "request", return_value=result), patch.object(journal.time, "sleep"), contextlib.redirect_stdout(io.StringIO()):
+            journal.main(["finish", "krowshea"])
+        self.assertEqual(journal.credential("krowshea"), TOKEN)
+        self.assertNotIn("pending", journal.load_config()["krowshea"])
+
+    def test_declined_pairing_removes_its_local_device_secret(self):
+        journal.save_config({"krowshea": {"pending": {"deviceCode": "private", "expiresAt": journal.time.time() + 600, "nextPollAt": journal.time.time()}}})
+        with patch.object(journal, "request", side_effect=journal.ClientError("Declined", 401)):
+            with self.assertRaisesRegex(journal.ClientError, "Declined"):
+                journal.finish("krowshea")
+        self.assertNotIn("krowshea", journal.load_config())
+
+    def test_pending_request_can_be_disconnected_without_a_token(self):
+        journal.save_config({"krowshea": {"pending": {"deviceCode": "private", "expiresAt": journal.time.time() + 600, "nextPollAt": journal.time.time()}}})
+        with patch.object(journal, "request") as request, contextlib.redirect_stdout(io.StringIO()):
+            journal.main(["disconnect", "krowshea"])
+            request.assert_not_called()
+        self.assertEqual(journal.load_config(), {})
 
     def test_record_has_no_project_edit_or_attribution_override(self):
         journal.save_config({"krowshea": {"token": TOKEN}})
