@@ -51,6 +51,9 @@ function JournalContent() {
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const [toast, setToast] = useState("");
+  const [reviewing, setReviewing] = useState(false);
+  const [reviewNotice, setReviewNotice] = useState<{ text: string; before: Project; after: Project } | null>(null);
+  const reviewLock = useRef(false);
   const currentLoad = useRef(0);
   const api = useCallback(async (url = "/api/projects", body?: unknown) => {
     if (!auth.user) throw new Error("Sign in to open your projects.");
@@ -120,8 +123,38 @@ function JournalContent() {
     } catch (err) { setError(err instanceof Error ? err.message : "Export failed."); }
     finally { setWorking(false); }
   }
+  useEffect(() => {
+    if (!reviewNotice) return;
+    const timer = window.setTimeout(() => setReviewNotice(null), 15000);
+    return () => window.clearTimeout(timer);
+  }, [reviewNotice]);
+  async function acknowledge(project: Project, decisionIndex?: number) {
+    if (reviewLock.current) return;
+    reviewLock.current = true; setReviewing(true); setError(null);
+    try {
+      const result = await api("/api/projects", { action: "review", projectId: project.id, review: { id: crypto.randomUUID(), expectedRevision: project.revision, ...(decisionIndex !== undefined ? { decisionIndex } : {}) } });
+      setToast("");
+      setReviewNotice({ text: decisionIndex === undefined ? "Review cleared · In progress" : "Decision approved", before: project, after: result.project });
+      await refresh();
+    } catch (err) {
+      await refresh();
+      setError(err instanceof Error ? err.message : "Could not clear this review.");
+    } finally { reviewLock.current = false; setReviewing(false); }
+  }
+  async function undoReview() {
+    if (!reviewNotice || reviewLock.current) return;
+    reviewLock.current = true; setReviewing(true);
+    const { before, after } = reviewNotice;
+    try {
+      await api("/api/projects", { action: "update", id: after.id, expectedRevision: after.revision, project: { ...after, status: before.status, decisions: before.decisions } });
+      setReviewNotice(null); setToast("Review restored"); await refresh();
+    } catch (err) {
+      setReviewNotice(null); await refresh();
+      setError(err instanceof Error ? err.message : "Could not undo this review.");
+    } finally { reviewLock.current = false; setReviewing(false); }
+  }
   const projects = board?.projects ?? [];
-  const waiting = projects.filter(project => project.status === "waiting" || project.decisions.length > 0);
+  const waiting = projects.filter(project => project.status === "waiting" || project.status === "review" || project.decisions.length > 0);
   const search = query.trim().toLowerCase();
   const visible = (view === "waiting" ? waiting : projects).filter(project =>
     (filter === "all" || project.status === filter) && [project.name, project.summary, project.area, project.nextStep, ...project.decisions].join(" ").toLowerCase().includes(search));
@@ -167,8 +200,8 @@ function JournalContent() {
               {!historyReady || historyProject !== selectedId ? <p className={s.muted} role="status">Loading project history…</p> : history.length ? <div className={s.timeline}>{history.map(entry => <Entry key={entry.id} entry={entry} />)}</div> : !historyError && <Empty title="The story starts here">Add an update when you take the next step.</Empty>}
               {cursor && <button className={s.secondary} onClick={() => void loadMore()} disabled={moreWorking}>{moreWorking ? "Loading…" : "Load older entries"}</button>}
             </section>
-            <aside className={s.detailAside}><div className={s.detailCard}><Badge status={selected.status} /><p className={s.eyebrow}>NEXT USEFUL STEP</p><h3>{selected.nextStep || "Choose a next step when you’re ready"}</h3><div className={s.detailFoot}>Updated {time(selected.updatedAt, true)}</div></div>
-              <div className={s.detailCard}><div className={s.sectionHeading}><h2>Open decisions</h2><span>{selected.decisions.length}</span></div>{selected.decisions.length ? <ul className={s.decisions}>{selected.decisions.map((decision, index) => <li key={index}><span />{decision}</li>)}</ul> : <p className={s.muted}>Nothing waiting for a decision.</p>}</div>
+            <aside className={s.detailAside}><div className={s.detailCard}><Badge status={selected.status} /><p className={s.eyebrow}>NEXT USEFUL STEP</p><h3>{selected.nextStep || "Choose a next step when you’re ready"}</h3>{selected.status === "review" && <button className={s.reviewAction} aria-label={`Mark ${selected.name} reviewed`} onClick={() => void acknowledge(selected)} disabled={reviewing}><Icon name="check" size={16} />Reviewed</button>}<div className={s.detailFoot}>Updated {time(selected.updatedAt, true)}</div></div>
+              <div className={s.detailCard}><div className={s.sectionHeading}><h2>Open decisions</h2><span>{selected.decisions.length}</span></div>{selected.decisions.length ? <ul className={s.decisions}>{selected.decisions.map((decision, index) => <li key={index}><p>{decision}</p><button className={s.reviewAction} aria-label={`Approve decision: ${decision}`} onClick={() => void acknowledge(selected, index)} disabled={reviewing}><Icon name="check" size={15} />OK</button></li>)}</ul> : <p className={s.muted}>Nothing waiting for a decision.</p>}</div>
               <div className={s.detailCard}><div className={s.sectionHeading}><h2>Files & links</h2><Icon name="link" size={17} /></div><ProjectLinks links={selected.links} onCopied={() => setToast("File path copied")} /></div>
             </aside>
           </div>
@@ -182,19 +215,20 @@ function JournalContent() {
             <label className={s.search}><Icon name="search" size={17} /><input aria-label={view === "recent" ? "Search recent work" : "Search projects"} placeholder={view === "recent" ? "Search recent work…" : "Find a project…"} value={query} onChange={event => setQuery(event.target.value)} /></label>
           </div>
           {view === "recent" ? recent.length ? <div className={s.recentList}>{recent.map(entry => <Entry key={entry.id} entry={entry} project={projects.find(project => project.id === entry.projectId)} onOpen={openProject} />)}</div> : <Empty title={search ? "No matching work" : "Your progress will appear here"}>{search ? "Try a different word or project name." : "Project updates will build a record as you work."}</Empty>
-            : visible.length ? <div className={s.cards}>{visible.map((project, index) => <button key={project.id} className={s.projectCard} onClick={() => openProject(project.id)}>
+            : visible.length ? <div className={s.cards}>{visible.map((project, index) => <article key={project.id} className={s.projectCard}><button className={s.cardOpen} aria-label={`Open ${project.name}`} onClick={() => openProject(project.id)}>
               <div className={s.cardTop}><span className={s.projectMonogram} data-color={index % 4}>{project.name.split(/\s+/).map(word => word[0]).slice(0, 2).join("")}</span><Badge status={project.status} /></div>
               <p className={s.cardArea}>{project.area}</p><h2>{project.name}</h2><p className={s.cardSummary}>{project.summary}</p>
               <div className={s.nextStep}><span>UP NEXT</span><p>{project.nextStep || "A little room for your next idea"}</p></div>
               {view === "waiting" && project.decisions.length > 0 && <p className={s.decisionCount}>{project.decisions.length} open {project.decisions.length === 1 ? "decision" : "decisions"}</p>}
-              <div className={s.cardFooter}><span>{project.lastWorkedAt ? `Worked on ${time(project.lastWorkedAt)}` : "Starting context saved"}</span><Icon name="arrow" size={17} /></div>
-            </button>)}</div> : <Empty title={search || filter !== "all" ? "No matching projects" : view === "waiting" ? "A clear working table" : "Make room for your first project"}>{search || filter !== "all" ? "Try another search or choose All projects." : view === "waiting" ? "Nothing needs your attention right now." : "Add a project and one useful next step."}</Empty>}
+              </button><div className={s.cardFooter}><span>{project.lastWorkedAt ? `Worked on ${time(project.lastWorkedAt)}` : "Starting context saved"}</span><div className={s.cardActions}>{project.status === "review" && <button className={s.reviewAction} aria-label={`Mark ${project.name} reviewed`} onClick={() => void acknowledge(project)} disabled={reviewing}><Icon name="check" size={15} />Reviewed</button>}<button className={s.openAction} aria-label={`View ${project.name}`} onClick={() => openProject(project.id)}><Icon name="arrow" size={17} /></button></div></div>
+            </article>)}</div> : <Empty title={search || filter !== "all" ? "No matching projects" : view === "waiting" ? "A clear working table" : "Make room for your first project"}>{search || filter !== "all" ? "Try another search or choose All projects." : view === "waiting" ? "Nothing needs your attention right now." : "Add a project and one useful next step."}</Empty>}
         </>}
         <footer className={s.footer}><span>Monosyth / A record of the work</span><span>{board ? `Synced ${time(board.loadedAt, true)} · Pacific time` : "Private studio"}</span></footer>
       </main>
     </div>
     {editor && <EditorModal editor={editor} api={api} onClose={() => setEditor(null)} onSaved={async message => { setEditor(null); setToast(message); await refresh(); }} />}
-    {toast && <div className={s.toast} role="status"><Icon name="check" size={17} />{toast}</div>}
+    {reviewNotice && <div className={s.toast}><span role="status">{reviewNotice.text}</span><button onClick={() => void undoReview()} disabled={reviewing}>Undo</button><button aria-label="Dismiss review message" onClick={() => setReviewNotice(null)} disabled={reviewing}><Icon name="close" size={16} /></button></div>}
+    {!reviewNotice && toast && <div className={s.toast} role="status"><Icon name="check" size={17} />{toast}</div>}
   </div>;
 }
 

@@ -80,7 +80,7 @@ Do not log WebListers work or sensitive health/business details into this journa
 Run the focused checks from `apps/web`:
 
 ```sh
-node --conditions=react-server --import tsx --test scripts/audit-project-tracker.ts
+node --conditions=react-server --import tsx --test scripts/audit-project-tracker.ts scripts/audit-project-reviews.ts
 npm run lint
 npm run build
 ```
@@ -115,6 +115,28 @@ at 13–14px. Use dark navy body text and dark slate secondary text; avoid resto
 the original 8–12px captions or shrinking important controls on phones.
 
 Balance that readability with compact spacing: Scott found the enlarged layout
-a little magnified. Prefer 16px reading text, 24px card headings, 32–38px page
+a little magnified. Prefer 16px reading text, 20px card headings, 26–30px page
 headings, and restrained card/header padding. Keep the stronger contrast and
 comfortable phone touch targets rather than restoring tiny captions.
+
+
+## Clearing reviews
+
+The owner can choose **Reviewed** on a project with Review status, from its card
+or detail page. This records a dated decision and returns its status to In
+progress. It does not mark the project complete, approve other open decisions,
+or claim its next step has been performed. Review projects are included in the
+Waiting on me queue until acknowledged.
+
+Each open decision has an **OK** action in the project detail page. It records
+the approved text in history and removes only that decision. Clearing the last
+decision returns Waiting on me or Review status to In progress. Other statuses
+and the next step are preserved. A 15-second Undo restores the prior status and
+decision list through the normal audited project edit. Both the initial action
+and Undo require the current revision, so concurrent agent updates cannot be
+overwritten. The owner-only API action is `review`, with `projectId` and
+`review: {id, expectedRevision, decisionIndex?}`; stable IDs make retries safe.
+
+Scott requested another reduction in oversized text: keep large summary numbers
+at 24px, history headings at 18px, and sidebar next-step text at 16px. Body and
+form text retain their readable 16px size and stronger contrast.
