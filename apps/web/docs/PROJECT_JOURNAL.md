@@ -102,3 +102,9 @@ actions. Keep the journal in this light palette, including its sign-in page and
 edit dialogs. Use green for completion and successful verification, amber for
 items needing attention, red for errors and blockers, and restrained violet for
 review or decision cues. Preserve readable text contrast and visible focus states.
+
+Scott also prefers substantially larger type and stronger contrast in this
+working tool. Keep project descriptions, next steps, and history at 16–17px or
+larger, form controls and primary actions at least 16px, and supporting metadata
+at 13–14px. Use dark navy body text and dark slate secondary text; avoid restoring
+the original 8–12px captions or shrinking important controls on phones.
