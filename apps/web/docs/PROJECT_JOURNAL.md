@@ -108,3 +108,8 @@ working tool. Keep project descriptions, next steps, and history at 16–17px or
 larger, form controls and primary actions at least 16px, and supporting metadata
 at 13–14px. Use dark navy body text and dark slate secondary text; avoid restoring
 the original 8–12px captions or shrinking important controls on phones.
+
+Balance that readability with compact spacing: Scott found the enlarged layout
+a little magnified. Prefer 16px reading text, 24px card headings, 32–38px page
+headings, and restrained card/header padding. Keep the stronger contrast and
+comfortable phone touch targets rather than restoring tiny captions.
