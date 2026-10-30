@@ -31,6 +31,36 @@ Company administration records also live in this workspace, as local files.
 
 For work inside `apps/web`, also follow `apps/web/AGENTS.md`.
 
+## Monosyth Labs business tracker
+
+Scott explicitly requested that this company project and meaningful future
+business updates be included in his private tracker at
+`https://monosyth.com/projects`. Use project ID `monosythlabs`, named
+**Monosyth Labs, LLC**, for company administration, registration, licensing,
+filing deadlines, renewals, payment-account readiness, business decisions,
+blockers, and follow-ups needing Scott's attention. This is an explicit
+extension of the personal journal workflow to Scott's own company business.
+
+- Use the `monosyth-project-journal` skill at
+  `/Users/scottwaite/.codex/skills/monosyth-project-journal/SKILL.md` and the
+  existing `/Users/scottwaite/monosyth/tools/project-journal` helper.
+- Read `get monosythlabs` when resuming substantive business work. Before
+  handing off, record meaningful completed work, decisions, checks actually
+  performed, unresolved items, and the next useful action. Use stable entry IDs
+  and the current revision when changing status or next steps.
+- Import dated source records as historical context, not new accomplishments
+  or fresh verification. Keep filing, payment, renewal, and approval statuses
+  unconfirmed unless evidence establishes completion.
+- Keep original documents and sensitive details in the Git-ignored
+  `business-records/` directory. The private tracker may hold concise business
+  status summaries and local source links; omit tax/account identifiers,
+  credentials, private financial details, and third-party business information.
+- Continue recording website implementation and deployments under
+  `monosyth-website`; record material company implications under `monosythlabs`.
+- This standing request covers logging during future participating work
+  sessions. It does not authorize background monitoring, scheduled reminders,
+  filings, payments, deployments, or messaging other chats.
+
 ## Standing design and copy preference
 
 Scott does not want decorative terminal periods after standalone words, short
