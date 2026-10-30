@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Firestore } from "firebase-admin/firestore";
-import { journalReviewer } from "../src/lib/projects/review";
+import { journalReviewer, journalStatusChanger } from "../src/lib/projects/review";
 import { POST } from "../src/app/api/projects/route";
 
 const projectPath = "privateProjectTracker/owner/projects/proof";
@@ -75,7 +75,39 @@ test("invalid and obsolete review actions do not change the journal", async () =
   await assert.rejects(review("proof", { id: "not-review", expectedRevision: 4 }, "you"), /no longer needs a review/);
   assert.equal(db.rows.size, 1); assert.equal(db.rows.get(projectPath)!.revision, 4);
 });
+test("Answer and Drop resolve one decision with distinct, idempotent history", async () => {
+  const { db, review } = setup("waiting", ["Pick a name", "Pick a color"]);
+  const answered = await review("proof", { id: "answer-1", expectedRevision: 4, decisionIndex: 1, resolution: "answer", answer: " Teal " }, "you");
+  assert.deepEqual(answered.project.decisions, ["Pick a name"]); assert.equal(answered.project.status, "waiting");
+  const entry = db.rows.get("privateProjectTracker/owner/workEntries/answer-1")!;
+  assert.equal(entry.title, "Decision answered"); assert.equal(entry.body, "Q: Pick a color\nA: Teal");
+  assert.equal((await review("proof", { id: "answer-1", expectedRevision: 4, decisionIndex: 1, resolution: "answer", answer: " Teal " }, "you")).duplicate, true);
+  await assert.rejects(review("proof", { id: "answer-1", expectedRevision: 5, decisionIndex: 1, resolution: "answer", answer: "Navy" }, "you"), /another update/);
+  const dropped = await review("proof", { id: "drop-1", expectedRevision: 5, decisionIndex: 0, resolution: "drop" }, "you");
+  assert.deepEqual(dropped.project.decisions, []); assert.equal(dropped.project.status, "active");
+  assert.equal(db.rows.get("privateProjectTracker/owner/workEntries/drop-1")!.title, "Decision dropped");
+  for (const bad of [{ resolution: "answer", answer: "" }, { resolution: "answer", answer: "x".repeat(3001) }, { resolution: "maybe" }]) {
+    await assert.rejects(review("proof", { id: "bad-resolution", expectedRevision: 6, decisionIndex: 0, ...bad }, "you"));
+  }
+  await assert.rejects(review("proof", { id: "bad-resolution", expectedRevision: 6, resolution: "drop" }, "you"), /open decision/);
+});
+test("status quick actions are revision-checked, recorded, and not counted as work", async () => {
+  const { db, before } = setup("active");
+  const change = journalStatusChanger(db as unknown as Firestore);
+  const paused = await change("proof", { id: "status-1", expectedRevision: 4, status: "paused" }, "you");
+  assert.equal(paused.project.status, "paused"); assert.equal(paused.project.revision, 5); assert.equal(paused.project.lastWorkedAt, null);
+  for (const key of ["nextStep", "decisions", "summary", "links"] as const) assert.deepEqual(paused.project[key], before[key]);
+  const entry = db.rows.get("privateProjectTracker/owner/workEntries/status-1")!;
+  assert.equal(entry.title, "Status changed to Paused"); assert.equal(entry.body, "In progress → Paused");
+  assert.equal((await change("proof", { id: "status-1", expectedRevision: 4, status: "paused" }, "you")).duplicate, true);
+  await assert.rejects(change("proof", { id: "status-2", expectedRevision: 4, status: "complete" }, "you"), /changed in another session/);
+  await assert.rejects(change("proof", { id: "status-3", expectedRevision: 5, status: "paused" }, "you"), /already Paused/);
+  await assert.rejects(change("proof", { id: "status-4", expectedRevision: 5, status: "done" }, "you"), /valid project status/);
+  assert.equal(db.rows.get(projectPath)!.revision, 5);
+});
 test("the review action requires the owner session", async () => {
   const response = await POST(new Request("https://monosyth.com/api/projects", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "review", projectId: "proof", review: { id: "anonymous", expectedRevision: 4 } }) }));
   assert.equal(response.status, 401);
+  const status = await POST(new Request("https://monosyth.com/api/projects", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "status", projectId: "proof", change: { id: "anonymous", expectedRevision: 4, status: "paused" } }) }));
+  assert.equal(status.status, 401);
 });

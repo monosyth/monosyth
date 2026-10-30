@@ -53,8 +53,17 @@ No access to Google token services or private Mac folders is needed by this clie
 
 ```sh
 python3 project-journal-linux.py get krowshea
+python3 project-journal-linux.py entry krowshea ENTRY_ID
+python3 project-journal-linux.py history krowshea --cursor CURSOR
 python3 project-journal-linux.py record krowshea < update.json
 ```
+
+`get` returns a compact brief: project fields, open decisions, links, and the
+five most recent entries clipped to a few lines (`--limit` up to 20). Read it
+once when resuming. `entry` returns one entry in full; `history` pages older
+entries, clipped, from `olderCursor` or `nextCursor`. `get --full` returns the
+previous 50-entry page; it is large and can push an agent into context
+compaction, so avoid it at session start.
 
 An entry is one JSON object. Use a stable, unique ID for retries:
 
@@ -73,8 +82,8 @@ Kinds are `progress`, `milestone`, `decision`, `blocker`, `note`, and `import`.
 Use `import` for historical context rather than work newly completed. Read first
 to avoid recording work already saved through the browser. An identical ID and
 content returns `duplicate: true`; changed content with an existing ID is rejected.
-If a response is lost, retry with the same ID and exact content. A connection can
-read older history using `get krowshea --cursor CURSOR` from `nextCursor`.
+If a response is lost, retry with the same ID and exact content. Keep the body to
+about 600 characters; every later session reads recent entries.
 
 The token permits reading that project's details/history and appending entries.
 It cannot create projects, change status/next steps/details, rewrite or delete

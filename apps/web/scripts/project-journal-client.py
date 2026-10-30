@@ -183,14 +183,21 @@ def finish(project, wait=False):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("connect", "finish", "get", "record", "disconnect"):
+    for name in ("connect", "finish", "get", "history", "entry", "record", "disconnect"):
         command = commands.add_parser(name)
         command.add_argument("project", help="Approved project ID, for example krowshea")
+        if name == "entry":
+            command.add_argument("entry_id", help="Entry ID from the brief or history")
         if name == "connect":
             command.add_argument("--label", default="Claude Linux", help="Name to compare on the approval page")
         if name in ("connect", "finish"):
             command.add_argument("--wait", action="store_true", help="Wait for approval in this process (optional)")
         if name == "get":
+            command.add_argument("--limit", type=int, help="Recent entries in the brief, 1-20 (default 5)")
+            command.add_argument("--full", action="store_true", help="Old behavior: 50 full entries. Large; avoid at session start")
+            command.add_argument("--cursor", help="Read the next full history page (implies --full)")
+        if name == "history":
+            command.add_argument("--limit", type=int, help="Entries per page, 1-20 (default 10)")
             command.add_argument("--cursor", help="Read the next history page")
     args = parser.parse_args(argv)
     project = valid_project(args.project)
@@ -208,10 +215,19 @@ def main(argv=None):
             print(json.dumps({"pendingRequestRemoved": True, "message": "The uncompleted server request expires after ten minutes."}))
             return
     token = credential(project)
-    if args.command == "get":
+    if args.command in ("get", "history", "entry"):
         query = {"project": project}
-        if args.cursor:
-            query["cursor"] = args.cursor
+        if args.command == "entry":
+            query.update(view="entry", entry=valid_project(args.entry_id))
+        elif args.command == "history" or args.full or args.cursor:
+            query["view"] = "history" if args.command == "history" else "full"
+            if args.cursor:
+                query["cursor"] = args.cursor
+        else:
+            query["view"] = "brief"
+        limit = getattr(args, "limit", None)
+        if limit is not None and query["view"] in ("brief", "history"):
+            query["limit"] = str(limit)
         result = request("/api/projects/agent?" + urllib.parse.urlencode(query), token=token)
     elif args.command == "record":
         try:

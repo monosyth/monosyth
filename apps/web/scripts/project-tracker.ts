@@ -1,23 +1,49 @@
 import { applicationDefault, initializeApp } from "firebase-admin/app";
 import { loadEnvConfig } from "@next/env";
 
+const COMMANDS = ["list", "get", "history", "entry", "create", "update", "record", "export", "seed"];
+function parseArgs(argv: string[]) {
+  const positional: string[] = [], flags: Record<string, string | true> = {};
+  for (let index = 0; index < argv.length; index++) {
+    const value = argv[index];
+    if (!value.startsWith("--")) { positional.push(value); continue; }
+    const split = value.indexOf("="), name = split < 0 ? value.slice(2) : value.slice(2, split), inline = split < 0 ? undefined : value.slice(split + 1);
+    if (name === "full" || name === "help") flags[name] = true;
+    else if (["limit", "cursor", "author"].includes(name)) {
+      const next = inline ?? argv[++index];
+      if (next === undefined || next.startsWith("--")) throw new Error(`--${name} needs a value.`);
+      flags[name] = next;
+    } else throw new Error(`Unknown option --${name}. Use --help.`);
+  }
+  return { positional, flags };
+}
+
 async function main() {
-  const [command = "help", id] = process.argv.slice(2);
-  if (command === "help" || command === "--help") {
+  const { positional, flags } = parseArgs(process.argv.slice(2));
+  const [command = "help", id, entryId] = flags.help ? ["help"] : positional;
+  if (command === "help") {
     console.log(`Monosyth project journal — https://monosyth.com/projects
 Run from apps/web: node --conditions=react-server --import tsx scripts/project-tracker.ts <command>
-  list                  List projects and their current revisions
-  get <project-id>      Read a project and its latest 50 entries
-  create <project-id>   Read a ProjectInput JSON object from stdin
-  update <project-id>   Read {project: ProjectInput, expectedRevision: number} from stdin
-  record <project-id>   Read an EntryInput JSON object from stdin
-  export                Write a complete portable JSON export to stdout
-  seed                  Add initial projects from verified local notes; preserve existing records
+  list                          List projects, statuses, revisions, and next steps
+  get <project-id>              Compact brief: project fields plus the 5 most recent entries, clipped
+      [--limit N]               Include up to 20 recent entries in the brief
+      [--full]                  Old behavior: 50 full entries. Large; avoid at session start
+  history <project-id>          Older entries, clipped, 10 per page [--limit N] [--cursor ID]
+  entry <project-id> <entry-id> One entry in full
+  create <project-id>           Read a ProjectInput JSON object from stdin
+  update <project-id>           Read {project: ProjectInput, expectedRevision: number} from stdin
+  record <project-id>           Read an EntryInput JSON object from stdin
+  export                        Write a complete portable JSON export to stdout
+  seed                          Add initial projects from verified local notes; preserve existing records
+Writes accept --author NAME (default Codex), for example --author Claude.
 Record entries need a stable id for safe retries. Optional status/nextStep changes need expectedRevision.
+Keep entry bodies short (about 600 characters); every future session reads them.
 Authentication uses Scott's existing Google Cloud Application Default Credentials; no tracker API key is stored.`);
     return;
   }
-  if (!["list", "get", "create", "update", "record", "export", "seed"].includes(command)) throw new Error("Unknown command. Use --help.");
+  if (!COMMANDS.includes(command)) throw new Error("Unknown command. Use --help.");
+  const author = typeof flags.author === "string" ? flags.author.trim() : "Codex";
+  if (!/^[A-Za-z0-9][A-Za-z0-9 ._·-]{0,39}$/.test(author) || author.includes("@")) throw new Error("Use a short --author name such as Claude or Codex.");
   loadEnvConfig(process.cwd());
   const owner = process.env.MONOSYTH_PROJECT_OWNER_EMAIL?.trim().toLowerCase();
   if (!owner) throw new Error("The private tracker owner setting is missing from the local environment.");
@@ -33,7 +59,9 @@ Authentication uses Scott's existing Google Cloud Application Default Credential
   initializeApp({ projectId: "monosyth", credential });
   const store = await import("../src/lib/projects/store");
   const { validId } = await import("../src/lib/projects/model");
-  const projectId = ["get", "create", "update", "record"].includes(command) ? validId(id) : "";
+  const brief = await import("../src/lib/projects/brief");
+  const projectId = ["get", "history", "entry", "create", "update", "record"].includes(command) ? validId(id) : "";
+  const cursor = typeof flags.cursor === "string" ? validId(flags.cursor) : undefined;
   const input = async () => {
     let text = "";
     for await (const chunk of process.stdin) {
@@ -45,15 +73,30 @@ Authentication uses Scott's existing Google Cloud Application Default Credential
   let result: unknown;
   if (command === "list") {
     const board = await store.listBoard();
-    result = board.projects.map(({ id, name, status, revision, nextStep, updatedAt }) => ({ id, name, status, revision, nextStep, updatedAt }));
+    result = board.projects.map(({ id, name, status, revision, nextStep, decisions, updatedAt }) => ({ id, name, status, revision, nextStep, openDecisions: decisions.length, updatedAt }));
   }
-  if (command === "get") result = { project: await store.getProject(projectId), ...await store.listEntries(projectId) };
-  if (command === "create") result = await store.createProject(projectId, await input(), "Codex");
-  if (command === "update") { const data = await input(); result = await store.updateProject(projectId, data.project, data.expectedRevision, "Codex"); }
+  const helper = "/Users/scottwaite/monosyth/tools/project-journal";
+  if (command === "get" && flags.full) result = { project: await store.getProject(projectId), ...await store.listEntries(projectId, cursor) };
+  else if (command === "get") {
+    const limit = brief.validLimit(flags.limit);
+    const [project, history] = await Promise.all([store.getProject(projectId), store.listEntries(projectId, undefined, limit)]);
+    result = brief.projectBrief(project, history.entries, history.nextCursor, {
+      entry: `${helper} entry ${projectId} <entry-id>`,
+      history: `${helper} history ${projectId} --cursor ${history.nextCursor}`,
+    });
+  }
+  if (command === "history") {
+    const history = await store.listEntries(projectId, cursor, brief.validLimit(flags.limit, 10));
+    result = brief.summarizeHistory(history.entries, history.nextCursor);
+  }
+  if (command === "entry") result = await store.getEntry(projectId, validId(entryId));
+  if (command === "create") result = await store.createProject(projectId, await input(), author);
+  if (command === "update") { const data = await input(); result = await store.updateProject(projectId, data.project, data.expectedRevision, author); }
   if (command === "record") {
     const data = await input();
     if (!data.id) throw new Error("Supply a stable entry id so interrupted writes can be retried safely.");
-    result = await store.recordEntry(projectId, data, "Codex");
+    if (typeof data.body === "string" && data.body.length > 1200) console.error("Note: this entry body is long. Future sessions read recent entries, so prefer about 600 characters and link details in source.");
+    result = await store.recordEntry(projectId, data, author);
   }
   if (command === "export") result = await store.exportJournal();
   if (command === "seed") {

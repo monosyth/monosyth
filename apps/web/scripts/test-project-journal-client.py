@@ -109,6 +109,21 @@ class ClientTests(unittest.TestCase):
             journal.main(["record", "krowshea"])
             request.assert_called_once_with("/api/projects/agent", {"projectId": "krowshea", "entry": entry}, token=TOKEN)
 
+    def test_reads_default_to_compact_views(self):
+        journal.save_config({"krowshea": {"token": TOKEN}})
+        cases = [
+            (["get", "krowshea"], "project=krowshea&view=brief"),
+            (["get", "krowshea", "--limit", "8"], "project=krowshea&view=brief&limit=8"),
+            (["get", "krowshea", "--full"], "project=krowshea&view=full"),
+            (["get", "krowshea", "--cursor", "older"], "project=krowshea&view=full&cursor=older"),
+            (["history", "krowshea", "--cursor", "older", "--limit", "3"], "project=krowshea&view=history&cursor=older&limit=3"),
+            (["entry", "krowshea", "work-20261029"], "project=krowshea&view=entry&entry=work-20261029"),
+        ]
+        for argv, query in cases:
+            with patch.object(journal, "request", return_value={}) as request, contextlib.redirect_stdout(io.StringIO()):
+                journal.main(argv)
+                request.assert_called_once_with("/api/projects/agent?" + query, token=TOKEN)
+
     def test_disconnect_revokes_before_removing_local_credential(self):
         journal.save_config({"krowshea": {"token": TOKEN}})
         with patch.object(journal, "request", return_value={"revoked": True}) as request, contextlib.redirect_stdout(io.StringIO()):

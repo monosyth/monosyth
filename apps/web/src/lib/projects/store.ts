@@ -3,6 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { Firestore, Transaction } from "firebase-admin/firestore";
 import { getFirebaseAdminDb } from "../firebase/admin";
 import { parseEntry, parseProject, validId, validRevision, TrackerError, type Board, type EntryInput, type Project, type WorkEntry } from "./model";
+import { stripEntry } from "./brief";
 
 const root = () => getFirebaseAdminDb().collection("privateProjectTracker").doc("owner");
 const projects = () => root().collection("projects");
@@ -18,18 +19,25 @@ export async function listBoard(): Promise<Board> {
     projects().orderBy("updatedAt", "desc").limit(500).get(),
     entries().orderBy("createdAt", "desc").limit(100).get(),
   ]);
-  return { projects: projectRows.docs.map(row => row.data() as Project), entries: entryRows.docs.map(row => row.data() as WorkEntry), loadedAt: now() };
+  return { projects: projectRows.docs.map(row => row.data() as Project), entries: entryRows.docs.map(row => stripEntry(row.data() as WorkEntry)), loadedAt: now() };
 }
-export async function listEntries(projectId: string, cursor?: string) {
+export async function listEntries(projectId: string, cursor?: string, limit = 50) {
   validId(projectId);
-  let query = entries().where("projectId", "==", projectId).orderBy("createdAt", "desc").orderBy("__name__", "desc").limit(51);
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 50) throw new TrackerError("Use a history page size from 1 to 50.");
+  let query = entries().where("projectId", "==", projectId).orderBy("createdAt", "desc").orderBy("__name__", "desc").limit(limit + 1);
   if (cursor) {
     const doc = await entries().doc(validId(cursor)).get();
     if (!doc.exists || doc.data()?.projectId !== projectId) throw new TrackerError("The history page is no longer available. Refresh the project.");
     query = query.startAfter(doc);
   }
   const rows = await query.get();
-  return { entries: rows.docs.slice(0, 50).map(row => row.data() as WorkEntry), nextCursor: rows.docs.length > 50 ? rows.docs[49].id : null };
+  return { entries: rows.docs.slice(0, limit).map(row => stripEntry(row.data() as WorkEntry)), nextCursor: rows.docs.length > limit ? rows.docs[limit - 1].id : null };
+}
+export async function getEntry(projectId: string, entryId: string) {
+  validId(projectId);
+  const doc = await entries().doc(validId(entryId)).get();
+  if (!doc.exists || doc.data()?.projectId !== projectId) throw new TrackerError("This entry could not be found in the project.", 404);
+  return stripEntry(doc.data() as WorkEntry);
 }
 export async function createProject(id: string, value: unknown, author: string) {
   validId(id);
@@ -107,7 +115,5 @@ export async function recordEntry(projectId: string, value: unknown, author: str
 export async function exportJournal() {
   // An explicit owner export includes the entire journal, not just the recent view.
   const [projectRows, entryRows] = await Promise.all([projects().get(), entries().get()]);
-  return { format: "monosyth-project-journal", version: 1, exportedAt: now(), projects: projectRows.docs.map(doc => doc.data() as Project), entries: entryRows.docs.map(doc => {
-    const entry = { ...doc.data() }; delete entry.fingerprint; return entry as WorkEntry;
-  }) };
+  return { format: "monosyth-project-journal", version: 1, exportedAt: now(), projects: projectRows.docs.map(doc => doc.data() as Project), entries: entryRows.docs.map(doc => stripEntry(doc.data() as WorkEntry)) };
 }

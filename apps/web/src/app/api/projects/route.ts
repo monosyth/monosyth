@@ -2,7 +2,7 @@ import { requireTrackerOwner } from "@/lib/projects/auth";
 import { TrackerError } from "@/lib/projects/model";
 import { createProject, exportJournal, getProject, listBoard, listEntries, recordEntry, updateProject } from "@/lib/projects/store";
 
-import { reviewProject } from "@/lib/projects/review";
+import { changeStatus, reviewProject } from "@/lib/projects/review";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,7 +41,8 @@ export async function POST(request: Request) {
       case "update": return Response.json(await updateProject(body.id, body.project, body.expectedRevision, author), { headers });
       case "record": return Response.json(await recordEntry(body.projectId, body.entry, author), { headers });
       case "review": return Response.json(await reviewProject(body.projectId, body.review, author), { headers });
-      default: throw new TrackerError("Choose create, update, record, or review.");
+      case "status": return Response.json(await changeStatus(body.projectId, body.change, author), { headers });
+      default: throw new TrackerError("Choose create, update, record, review, or status.");
     }
   } catch (error) { return fail(error); }
 }

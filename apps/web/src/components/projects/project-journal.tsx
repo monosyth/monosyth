@@ -7,8 +7,10 @@ import { ENTRY_KINDS, PROJECT_STATUSES, STATUS_LABELS, type Board, type EntryKin
 import s from "./project-journal.module.css";
 
 type View = "projects" | "recent" | "waiting";
-type Editor = { type: "project"; project?: Project } | { type: "entry"; project: Project } | null;
-function Icon({ name, size = 20 }: { name: "grid" | "clock" | "circle" | "plus" | "arrow" | "search" | "download" | "refresh" | "close" | "link" | "check"; size?: number }) {
+type Prefill = { title: string; nextStep: string };
+type Editor = { type: "project"; project?: Project } | { type: "entry"; project: Project; prefill?: Prefill } | null;
+type Notice = { text: string; before: Project; after: Project };
+function Icon({ name, size = 20 }: { name: "grid" | "clock" | "circle" | "plus" | "arrow" | "search" | "download" | "refresh" | "close" | "link" | "check" | "copy" | "pause" | "play"; size?: number }) {
   const paths = {
     grid: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>,
     clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
@@ -20,6 +22,8 @@ function Icon({ name, size = 20 }: { name: "grid" | "clock" | "circle" | "plus" 
     close: <path d="m6 6 12 12M6 18 18 6" />,
     link: <><path d="m10 13 4-4m-5 7-2 2a4 4 0 0 1-6-6l5-5a4 4 0 0 1 6 0m0 10a4 4 0 0 0 6 0l5-5a4 4 0 0 0-6-6l-2 2" transform="translate(1 0) scale(.9)" /></>,
     check: <path d="m5 12 4 4L19 6" />,
+    copy: <><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" /></>,
+    pause: <path d="M9 6v12m6-12v12" />, play: <path d="m8 5 11 7-11 7z" />,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
@@ -28,6 +32,27 @@ function time(value: string, full = false) {
 }
 function Badge({ status }: { status: ProjectStatus }) { return <span className={s.badge} data-status={status}><i />{STATUS_LABELS[status]}</span>; }
 function Empty({ title, children }: { title: string; children: ReactNode }) { return <div className={s.empty}><span className={s.emptyMark}><Icon name="circle" size={28} /></span><h3>{title}</h3><p>{children}</p></div>; }
+
+const clipText = (text: string, max: number) => text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
+// A short hand-off for a new agent chat; the brief command keeps its first read small.
+export function resumePrompt(project: Project) {
+  const folder = project.links.find(link => link.url.startsWith("/Users/"));
+  return [
+    `Resume ${project.name} (tracker project id: ${project.id}).`,
+    `Context: run \`/Users/scottwaite/monosyth/tools/project-journal get ${project.id}\` once. It returns a compact brief; do not export or page the full history unless a specific older entry is needed.`,
+    `Next step: ${clipText(project.nextStep || "Confirm the next priority with Scott", 400)}`,
+    ...(project.decisions.length ? [`Open decisions: ${project.decisions.length} (listed in the brief)`] : []),
+    ...(folder ? [`Folder: ${folder.url}`] : []),
+  ].join("\n");
+}
+const STATUS_MOVES: Record<ProjectStatus, { status: ProjectStatus; label: string; icon: "play" | "pause" | "circle" | "check" }[]> = {
+  active: [{ status: "paused", label: "Pause", icon: "pause" }, { status: "waiting", label: "Waiting on me", icon: "circle" }, { status: "complete", label: "Mark complete", icon: "check" }],
+  waiting: [{ status: "active", label: "Resume", icon: "play" }, { status: "paused", label: "Pause", icon: "pause" }, { status: "complete", label: "Mark complete", icon: "check" }],
+  review: [{ status: "paused", label: "Pause", icon: "pause" }, { status: "complete", label: "Mark complete", icon: "check" }],
+  paused: [{ status: "active", label: "Resume", icon: "play" }, { status: "complete", label: "Mark complete", icon: "check" }],
+  idea: [{ status: "active", label: "Start", icon: "play" }, { status: "paused", label: "Pause", icon: "pause" }],
+  complete: [{ status: "active", label: "Reopen", icon: "play" }],
+};
 
 export function ProjectJournal() {
   const auth = useAuth();
@@ -52,7 +77,11 @@ function JournalContent() {
   const [working, setWorking] = useState(false);
   const [toast, setToast] = useState("");
   const [reviewing, setReviewing] = useState(false);
-  const [reviewNotice, setReviewNotice] = useState<{ text: string; before: Project; after: Project } | null>(null);
+  const [reviewNotice, setReviewNotice] = useState<Notice | null>(null);
+  // An open answer is tied to its decision text, so a shifting list cannot redirect it.
+  const [answering, setAnswering] = useState<{ projectId: string; decision: string; text: string } | null>(null);
+  const [copyFallback, setCopyFallback] = useState<{ projectId: string; text: string } | null>(null);
+  const [copiedId, setCopiedId] = useState("");
   const reviewLock = useRef(false);
   const currentLoad = useRef(0);
   const api = useCallback(async (url = "/api/projects", body?: unknown) => {
@@ -97,6 +126,8 @@ function JournalContent() {
     return () => { active = false; };
   }, [selectedId, api, selected?.revision, auth.user]);
   useEffect(() => { if (!toast) return; const timer = window.setTimeout(() => setToast(""), 4500); return () => window.clearTimeout(timer); }, [toast]);
+  useEffect(() => { setAnswering(null); setCopyFallback(null); }, [selectedId]);
+  useEffect(() => { if (!copiedId) return; const timer = window.setTimeout(() => setCopiedId(""), 2500); return () => window.clearTimeout(timer); }, [copiedId]);
   function openProject(id: string | null) {
     setHistory([]); setHistoryReady(false); setHistoryError(null); setCursor(null);
     window.location.hash = id ?? "";
@@ -128,18 +159,41 @@ function JournalContent() {
     const timer = window.setTimeout(() => setReviewNotice(null), 15000);
     return () => window.clearTimeout(timer);
   }, [reviewNotice]);
-  async function acknowledge(project: Project, decisionIndex?: number) {
-    if (reviewLock.current) return;
+  // Quick actions run one at a time and offer the same 15-second Undo.
+  async function quickAction(project: Project, body: Record<string, unknown>, text: string, failure: string) {
+    if (reviewLock.current) return false;
     reviewLock.current = true; setReviewing(true); setError(null);
     try {
-      const result = await api("/api/projects", { action: "review", projectId: project.id, review: { id: crypto.randomUUID(), expectedRevision: project.revision, ...(decisionIndex !== undefined ? { decisionIndex } : {}) } });
+      const result = await api("/api/projects", body);
       setToast("");
-      setReviewNotice({ text: decisionIndex === undefined ? "Review cleared · In progress" : "Decision approved", before: project, after: result.project });
+      setReviewNotice({ text, before: project, after: result.project });
       await refresh();
+      return true;
     } catch (err) {
       await refresh();
-      setError(err instanceof Error ? err.message : "Could not clear this review.");
+      setError(err instanceof Error ? err.message : failure);
+      return false;
     } finally { reviewLock.current = false; setReviewing(false); }
+  }
+  function acknowledge(project: Project, decisionIndex?: number, resolution?: { kind: "answer"; answer: string } | { kind: "drop" }) {
+    const review = { id: crypto.randomUUID(), expectedRevision: project.revision, ...(decisionIndex !== undefined ? { decisionIndex } : {}), ...(resolution ? { resolution: resolution.kind, ...(resolution.kind === "answer" ? { answer: resolution.answer } : {}) } : {}) };
+    const text = decisionIndex === undefined ? "Review cleared · In progress" : resolution?.kind === "answer" ? "Answer recorded" : resolution?.kind === "drop" ? "Decision dropped" : "Decision approved";
+    return quickAction(project, { action: "review", projectId: project.id, review }, text, "Could not clear this review.");
+  }
+  async function answerDecision(project: Project) {
+    if (!answering || answering.projectId !== project.id || !answering.text.trim()) return;
+    const index = project.decisions.indexOf(answering.decision);
+    if (index < 0) { setAnswering(null); setError("That decision was already resolved. Your answer was not saved."); return; }
+    if (await acknowledge(project, index, { kind: "answer", answer: answering.text.trim() })) setAnswering(null);
+  }
+  function moveStatus(project: Project, status: ProjectStatus) {
+    if (status === "complete" && !window.confirm(`Mark ${project.name} complete? Its next step and open decisions stay in the record.`)) return;
+    return quickAction(project, { action: "status", projectId: project.id, change: { id: crypto.randomUUID(), expectedRevision: project.revision, status } }, `Status · ${STATUS_LABELS[status]}`, "Could not change the status.");
+  }
+  async function copyPrompt(project: Project) {
+    const text = resumePrompt(project);
+    try { await navigator.clipboard.writeText(text); setCopyFallback(null); setCopiedId(project.id); }
+    catch { setCopyFallback({ projectId: project.id, text }); }
   }
   async function undoReview() {
     if (!reviewNotice || reviewLock.current) return;
@@ -147,10 +201,10 @@ function JournalContent() {
     const { before, after } = reviewNotice;
     try {
       await api("/api/projects", { action: "update", id: after.id, expectedRevision: after.revision, project: { ...after, status: before.status, decisions: before.decisions } });
-      setReviewNotice(null); setToast("Review restored"); await refresh();
+      setReviewNotice(null); setToast("Change undone"); await refresh();
     } catch (err) {
       setReviewNotice(null); await refresh();
-      setError(err instanceof Error ? err.message : "Could not undo this review.");
+      setError(err instanceof Error ? err.message : "Could not undo this change.");
     } finally { reviewLock.current = false; setReviewing(false); }
   }
   const projects = board?.projects ?? [];
@@ -200,8 +254,19 @@ function JournalContent() {
               {!historyReady || historyProject !== selectedId ? <p className={s.muted} role="status">Loading project history…</p> : history.length ? <div className={s.timeline}>{history.map(entry => <Entry key={entry.id} entry={entry} />)}</div> : !historyError && <Empty title="The story starts here">Add an update when you take the next step.</Empty>}
               {cursor && <button className={s.secondary} onClick={() => void loadMore()} disabled={moreWorking}>{moreWorking ? "Loading…" : "Load older entries"}</button>}
             </section>
-            <aside className={s.detailAside}><div className={s.detailCard}><Badge status={selected.status} /><p className={s.eyebrow}>NEXT USEFUL STEP</p><h3>{selected.nextStep || "Choose a next step when you’re ready"}</h3>{selected.status === "review" && <button className={s.reviewAction} aria-label={`Mark ${selected.name} reviewed`} onClick={() => void acknowledge(selected)} disabled={reviewing}><Icon name="check" size={16} />Reviewed</button>}<div className={s.detailFoot}>Updated {time(selected.updatedAt, true)}</div></div>
-              <div className={s.detailCard}><div className={s.sectionHeading}><h2>Open decisions</h2><span>{selected.decisions.length}</span></div>{selected.decisions.length ? <ul className={s.decisions}>{selected.decisions.map((decision, index) => <li key={index}><p>{decision}</p><button className={s.reviewAction} aria-label={`Approve decision: ${decision}`} onClick={() => void acknowledge(selected, index)} disabled={reviewing}><Icon name="check" size={15} />OK</button></li>)}</ul> : <p className={s.muted}>Nothing waiting for a decision.</p>}</div>
+            <aside className={s.detailAside}><div className={s.detailCard}><Badge status={selected.status} /><p className={s.eyebrow}>NEXT USEFUL STEP</p><h3>{selected.nextStep || "Choose a next step when you’re ready"}</h3>
+                <div className={s.quickActions}>
+                  {selected.status === "review" && <button className={s.reviewAction} aria-label={`Mark ${selected.name} reviewed`} onClick={() => void acknowledge(selected)} disabled={reviewing}><Icon name="check" size={16} />Reviewed</button>}
+                  {selected.nextStep && <button className={s.reviewAction} onClick={() => setEditor({ type: "entry", project: selected, prefill: { title: `Done: ${clipText(selected.nextStep, 160)}`, nextStep: "" } })} disabled={reviewing}><Icon name="check" size={16} />Next step done</button>}
+                  <button className={s.quickAction} onClick={() => void copyPrompt(selected)}><Icon name={copiedId === selected.id ? "check" : "copy"} size={16} /><span aria-live="polite">{copiedId === selected.id ? "Prompt copied" : "Copy resume prompt"}</span></button>
+                </div>
+                <div className={s.statusActions} role="group" aria-label={`Change ${selected.name} status`}>{STATUS_MOVES[selected.status].map(move => <button key={move.status} className={s.statusAction} data-status={move.status} onClick={() => void moveStatus(selected, move.status)} disabled={reviewing}><Icon name={move.icon} size={15} />{move.label}</button>)}</div>
+                {copyFallback?.projectId === selected.id && <div className={s.copyFallback} role="status"><p id="copy-fallback-detail">Copy is unavailable here. Select the prompt below.</p><textarea readOnly rows={6} value={copyFallback.text} autoFocus onFocus={event => event.currentTarget.select()} aria-label="Resume prompt" aria-describedby="copy-fallback-detail" /><button className={s.quickAction} onClick={() => setCopyFallback(null)}>Close</button></div>}
+                <div className={s.detailFoot}>Updated {time(selected.updatedAt, true)}</div></div>
+              <div className={s.detailCard}><div className={s.sectionHeading}><h2>Open decisions</h2><span>{selected.decisions.length}</span></div>{selected.decisions.length ? <ul className={s.decisions}>{selected.decisions.map((decision, index) => { const open = answering?.projectId === selected.id && answering.decision === decision; return <li key={`${selected.revision}-${index}`}><p>{decision}</p>
+                <div className={s.decisionActions}><button className={s.reviewAction} aria-label={`Approve decision: ${decision}`} onClick={() => void acknowledge(selected, index)} disabled={reviewing}><Icon name="check" size={15} />OK</button><button className={s.quickAction} aria-expanded={open} aria-label={`Answer decision: ${decision}`} onClick={() => setAnswering(open ? null : { projectId: selected.id, decision, text: "" })} disabled={reviewing}>Answer…</button><button className={s.dropAction} aria-label={`Drop decision without approving: ${decision}`} onClick={() => void acknowledge(selected, index, { kind: "drop" })} disabled={reviewing}>Drop</button></div>
+                {open && <form className={s.answerForm} onSubmit={event => { event.preventDefault(); void answerDecision(selected); }}><textarea autoFocus rows={3} maxLength={3000} aria-label={`Your answer to: ${decision}`} placeholder="Your answer or direction" value={answering.text} onChange={event => setAnswering({ ...answering, text: event.target.value })} /><div><button type="button" className={s.quickAction} onClick={() => setAnswering(null)} disabled={reviewing}>Cancel</button><button type="submit" className={s.reviewAction} disabled={reviewing || !answering.text.trim()}><Icon name="check" size={15} />Save answer</button></div></form>}
+              </li>; })}</ul> : <p className={s.muted}>Nothing waiting for a decision.</p>}</div>
               <div className={s.detailCard}><div className={s.sectionHeading}><h2>Files & links</h2><Icon name="link" size={17} /></div><ProjectLinks links={selected.links} onCopied={() => setToast("File path copied")} /></div>
             </aside>
           </div>
@@ -220,15 +285,16 @@ function JournalContent() {
               <p className={s.cardArea}>{project.area}</p><h2>{project.name}</h2><p className={s.cardSummary}>{project.summary}</p>
               <div className={s.nextStep}><span>UP NEXT</span><p>{project.nextStep || "A little room for your next idea"}</p></div>
               {view === "waiting" && project.decisions.length > 0 && <p className={s.decisionCount}>{project.decisions.length} open {project.decisions.length === 1 ? "decision" : "decisions"}</p>}
-              </button><div className={s.cardFooter}><span>{project.lastWorkedAt ? `Worked on ${time(project.lastWorkedAt)}` : "Starting context saved"}</span><div className={s.cardActions}>{project.status === "review" && <button className={s.reviewAction} aria-label={`Mark ${project.name} reviewed`} onClick={() => void acknowledge(project)} disabled={reviewing}><Icon name="check" size={15} />Reviewed</button>}<button className={s.openAction} aria-label={`View ${project.name}`} onClick={() => openProject(project.id)}><Icon name="arrow" size={17} /></button></div></div>
+              </button><div className={s.cardFooter}><span>{project.lastWorkedAt ? `Worked on ${time(project.lastWorkedAt)}` : "Starting context saved"}</span><div className={s.cardActions}>{project.status === "review" && <button className={s.reviewAction} aria-label={`Mark ${project.name} reviewed`} onClick={() => void acknowledge(project)} disabled={reviewing}><Icon name="check" size={15} />Reviewed</button>}<button className={s.openAction} aria-label={`Add an update to ${project.name}`} title="Add update" onClick={() => setEditor({ type: "entry", project })}><Icon name="plus" size={17} /></button><button className={s.openAction} aria-label={`Copy a resume prompt for ${project.name}`} title={copiedId === project.id ? "Prompt copied" : "Copy resume prompt"} onClick={() => void copyPrompt(project)}><Icon name={copiedId === project.id ? "check" : "copy"} size={17} /></button><button className={s.openAction} aria-label={`View ${project.name}`} onClick={() => openProject(project.id)}><Icon name="arrow" size={17} /></button></div></div>
             </article>)}</div> : <Empty title={search || filter !== "all" ? "No matching projects" : view === "waiting" ? "A clear working table" : "Make room for your first project"}>{search || filter !== "all" ? "Try another search or choose All projects." : view === "waiting" ? "Nothing needs your attention right now." : "Add a project and one useful next step."}</Empty>}
         </>}
         <footer className={s.footer}><span>Monosyth / A record of the work</span><span>{board ? `Synced ${time(board.loadedAt, true)} · Pacific time` : "Private studio"}</span></footer>
       </main>
     </div>
-    {editor && <EditorModal editor={editor} api={api} onClose={() => setEditor(null)} onSaved={async message => { setEditor(null); setToast(message); await refresh(); }} />}
+    {editor && <EditorModal editor={editor} api={api} onClose={() => setEditor(null)} onSaved={async message => { setEditor(null); setReviewNotice(null); setToast(message); await refresh(); }} />}
     {reviewNotice && <div className={s.toast}><span role="status">{reviewNotice.text}</span><button onClick={() => void undoReview()} disabled={reviewing}>Undo</button><button aria-label="Dismiss review message" onClick={() => setReviewNotice(null)} disabled={reviewing}><Icon name="close" size={16} /></button></div>}
     {!reviewNotice && toast && <div className={s.toast} role="status"><Icon name="check" size={17} />{toast}</div>}
+    {copyFallback && !selected && <div className={`${s.copyFallback} ${s.copyFloating}`} role="dialog" aria-labelledby="copy-fallback-board" onKeyDown={event => { if (event.key === "Escape") setCopyFallback(null); }}><p id="copy-fallback-board">Copy is unavailable here. Select the resume prompt below.</p><textarea readOnly rows={6} value={copyFallback.text} autoFocus onFocus={event => event.currentTarget.select()} aria-label="Resume prompt" aria-describedby="copy-fallback-board" /><button className={s.quickAction} onClick={() => setCopyFallback(null)}>Close</button></div>}
   </div>;
 }
 
@@ -236,7 +302,7 @@ function Entry({ entry, project, onOpen }: { entry: WorkEntry; project?: Project
   return <article className={s.entry} data-kind={entry.kind}><div className={s.entryDot}><Icon name={entry.kind === "milestone" ? "check" : entry.kind === "blocker" ? "circle" : entry.kind === "import" ? "download" : "clock"} size={15} /></div><div className={s.entryContent}>
     <div className={s.entryMeta}>{project && <button onClick={() => onOpen?.(project.id)}>{project.name}</button>}<span>{entry.kind === "import" ? "Imported reference" : entry.kind}</span><time dateTime={entry.createdAt}>{time(entry.createdAt, true)}</time></div>
     <h3>{entry.title}</h3>{entry.body && <p>{entry.body}</p>}{entry.verification && <div className={s.verification}><Icon name="check" size={14} /><span>{entry.verification}</span></div>}
-    {entry.source && <p className={s.source}>Source: {entry.source}</p>}<small className={s.entryAuthor}>{entry.author === "Codex" ? "Recorded by Codex" : "Recorded by you"}</small>
+    {entry.source && <p className={s.source}>Source: {entry.source}</p>}<small className={s.entryAuthor}>{entry.author.includes("@") ? "Recorded by you" : `Recorded by ${entry.author}`}</small>
   </div></article>;
 }
 function ProjectLinks({ links, onCopied }: { links: ProjectInput["links"]; onCopied: () => void }) {
@@ -253,8 +319,14 @@ function EditorModal({ editor, api, onClose, onSaved }: { editor: NonNullable<Ed
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [entryId] = useState(() => crypto.randomUUID());
-  const project = editor.project;
-  useEffect(() => { const element = dialog.current; element?.showModal(); return () => { if (element?.open) element.close(); }; }, []);
+  const project = editor.project, prefill = editor.type === "entry" ? editor.prefill : undefined;
+  useEffect(() => {
+    const element = dialog.current;
+    element?.showModal();
+    // React's autoFocus runs before showModal opens the dialog, so focus the intended field afterwards.
+    element?.querySelector<HTMLElement>(prefill ? '[name="nextStep"]' : '[name="title"], [name="name"]')?.focus();
+    return () => { if (element?.open) element.close(); };
+  }, [prefill]);
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving(true); setError("");
     const form = new FormData(event.currentTarget), text = (key: string) => String(form.get(key) ?? "").trim();
@@ -273,7 +345,7 @@ function EditorModal({ editor, api, onClose, onSaved }: { editor: NonNullable<Ed
     finally { setSaving(false); }
   }
   return <dialog ref={dialog} className={s.dialog} aria-labelledby="journal-editor-title" onCancel={event => { if (saving) event.preventDefault(); else onClose(); }} onClose={onClose}>
-    <div className={s.dialogHeader}><div><p className={s.eyebrow}>{editor.type === "entry" ? project?.name : "PROJECT JOURNAL"}</p><h2 id="journal-editor-title">{editor.type === "entry" ? "Record a little progress" : project ? "Edit project" : "Start something new"}</h2></div><button type="button" aria-label="Close editor" onClick={onClose} disabled={saving}><Icon name="close" /></button></div>
+    <div className={s.dialogHeader}><div><p className={s.eyebrow}>{editor.type === "entry" ? project?.name : "PROJECT JOURNAL"}</p><h2 id="journal-editor-title">{editor.type === "entry" ? prefill ? "Next step done" : "Record a little progress" : project ? "Edit project" : "Start something new"}</h2></div><button type="button" aria-label="Close editor" onClick={onClose} disabled={saving}><Icon name="close" /></button></div>
     <form onSubmit={event => void submit(event)} className={s.form}>
       {editor.type === "project" ? <>
         <label>Project name<input name="name" required maxLength={120} defaultValue={project?.name} autoFocus /></label>
@@ -283,12 +355,12 @@ function EditorModal({ editor, api, onClose, onSaved }: { editor: NonNullable<Ed
         <label>Open decisions<span>One per line</span><textarea name="decisions" rows={3} defaultValue={project?.decisions.join("\n")} /></label>
         <label>Files & links<span>One per line: Label | URL or local file path</span><textarea name="links" rows={3} defaultValue={project?.links.map(link => `${link.label} | ${link.url}`).join("\n")} placeholder="Latest proof | https://…" /></label>
       </> : <>
-        <label>What changed?<input name="title" required maxLength={180} autoFocus placeholder="A short headline for the work" /></label>
+        <label>What changed?<input name="title" required maxLength={180} defaultValue={prefill?.title} placeholder="A short headline for the work" /></label>
         <div className={s.formRow}><label>Type of update<select name="kind" defaultValue="progress">{ENTRY_KINDS.filter(kind => kind !== "import").map(kind => <option key={kind} value={kind}>{kind.charAt(0).toUpperCase() + kind.slice(1)}</option>)}</select></label><label>Project status<select name="status" defaultValue={project?.status}>{PROJECT_STATUSES.map(status => <option key={status} value={status}>{STATUS_LABELS[status]}</option>)}</select></label></div>
         <label>Work notes<textarea name="body" rows={4} maxLength={10000} placeholder="What you finished, learned, or decided" /></label>
         <label>What was checked?<textarea name="verification" rows={2} maxLength={3000} placeholder="Proof reviewed, tests passed, files inspected…" /></label>
         <label>Source or reference<input name="source" maxLength={1500} placeholder="A chat link, file path, or commit" /></label>
-        <label>Next useful step<textarea name="nextStep" rows={2} maxLength={1500} defaultValue={project?.nextStep} /></label>
+        <label>{prefill ? "What comes next?" : "Next useful step"}<textarea name="nextStep" rows={2} maxLength={1500} defaultValue={prefill ? prefill.nextStep : project?.nextStep} placeholder="One clear action to pick this back up" /></label>
       </>}
       {error && <div className={s.error} role="alert">{error}</div>}
       <div className={s.formFooter}><button type="button" className={s.secondary} onClick={onClose} disabled={saving}>Cancel</button><button type="submit" className={s.primary} disabled={saving}>{saving ? "Saving…" : editor.type === "entry" ? "Save update" : "Save project"}<Icon name="check" size={17} /></button></div>

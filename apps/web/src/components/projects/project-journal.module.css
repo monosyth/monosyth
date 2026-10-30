@@ -1804,3 +1804,82 @@
   .toast { width:calc(100% - 32px); max-width:480px; padding:10px 12px; font-size:14px; }
   .toast button { min-height:44px; min-width:44px; }
 }
+
+/* Quick actions: one-click moves on the next-step card, decisions, and cards */
+.quickActions,.statusActions,.decisionActions {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.quickActions { margin-top:12px; }
+.statusActions {
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px dashed var(--line);
+}
+.quickAction,.statusAction,.dropAction {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  min-height:36px;
+  border:1px solid #9fb2c5;
+  border-radius:5px;
+  padding:5px 9px;
+  color:#2f4a65!important;
+  background:#ffffff;
+  font-size:14px!important;
+  font-weight:500;
+  white-space:nowrap;
+}
+.quickAction:hover,.statusAction:hover { background:#edf2f7; }
+.statusAction[data-status="complete"] { border-color:#8ba897; color:#24543c!important; background:#f0f7f3; }
+.statusAction[data-status="complete"]:hover { background:#dfeee5; }
+.statusAction[data-status="waiting"] { border-color:#d3b27a; color:#7a4d0b!important; }
+.statusAction[data-status="waiting"]:hover { background:#fbf3e4; }
+.dropAction { border-color:#d9b3b3; color:#8a2a2a!important; }
+.dropAction:hover { background:#fbeeee; }
+.quickAction:disabled,.statusAction:disabled,.dropAction:disabled { opacity:.55; cursor:not-allowed; }
+.decisions li { flex-wrap:wrap; }
+.decisions li>p { flex-basis:100%; }
+.answerForm {
+  flex-basis:100%;
+  display:grid;
+  gap:8px;
+}
+.answerForm textarea,.copyFallback textarea {
+  width:100%;
+  font:inherit;
+  font-size:16px;
+  color:#13263a;
+  border:1px solid #9fb2c5;
+  border-radius:6px;
+  padding:8px 10px;
+  background:#ffffff;
+  resize:vertical;
+}
+.answerForm>div { display:flex; justify-content:flex-end; gap:8px; }
+.copyFallback {
+  margin-top:12px;
+  display:grid;
+  gap:8px;
+  font-size:14px;
+  color:#41566c;
+}
+.copyFallback>button { justify-self:end; }
+.copyFloating {
+  position:fixed;
+  right:24px;
+  bottom:24px;
+  z-index:60;
+  width:min(480px,calc(100% - 32px));
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:var(--panel);
+  box-shadow:0 12px 32px rgba(19,38,58,.18);
+}
+@media(max-width:900px) {
+  .quickAction,.statusAction,.dropAction { min-height:44px; }
+  .copyFloating { right:16px; bottom:16px; }
+}

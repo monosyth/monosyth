@@ -36,8 +36,24 @@ credential in browser code. Local network access may require tool escalation.
 ```sh
 /Users/scottwaite/monosyth/tools/project-journal list
 /Users/scottwaite/monosyth/tools/project-journal get font-foundry
-/Users/scottwaite/monosyth/tools/project-journal record font-foundry < /private/tmp/project-update.json
+/Users/scottwaite/monosyth/tools/project-journal entry font-foundry ENTRY_ID
+/Users/scottwaite/monosyth/tools/project-journal history font-foundry --cursor CURSOR
+/Users/scottwaite/monosyth/tools/project-journal record font-foundry --author Claude < /private/tmp/project-update.json
 ```
+
+### Compact reads
+
+Agents read the journal when a session starts. A busy project's 50 full entries
+exceeded 100 KB, enough to push a fresh session into repeated context
+compaction. `get` therefore returns a brief (`src/lib/projects/brief.ts`):
+working project fields, open decisions, links, and the five most recent entries
+with body, verification, and source clipped (`clipped: true` marks shortened
+entries; `--limit` allows up to 20). It omits bookkeeping such as `latestEntry`.
+Use `entry` for one full entry and `history` for clipped older pages.
+`get --full` keeps the previous 50-entry response for recovery work. The Linux
+agent API uses the same views (`view=brief|history|entry|full`); a request with
+only a cursor keeps the old full page for older clients. Internal retry
+fingerprints are never returned. Writes accept `--author` (default Codex).
 
 Example entry (use a stable ID for retries):
 
@@ -54,7 +70,10 @@ Example entry (use a stable ID for retries):
 }
 ```
 
-Kinds: progress, milestone, decision, blocker, note, import. A repeated entry ID
+Kinds: progress, milestone, decision, blocker, note, import. Keep bodies near
+600 characters and link longer notes in `source`; the CLI warns above 1,200.
+The `decisions` field lists open questions for Scott, not decisions already
+made; record made decisions as `decision` entries. A repeated entry ID
 with identical content returns `duplicate: true`. A reused ID with different
 content returns 409. Entries and project summary changes commit atomically.
 Changing a project's fields, status, or next step requires the revision returned
@@ -80,7 +99,8 @@ Do not log WebListers work or sensitive health/business details into this journa
 Run the focused checks from `apps/web`:
 
 ```sh
-node --conditions=react-server --import tsx --test scripts/audit-project-tracker.ts scripts/audit-project-reviews.ts
+node --conditions=react-server --import tsx --test scripts/audit-project-tracker.ts scripts/audit-project-reviews.ts scripts/audit-project-brief.ts scripts/audit-project-agent.ts
+python3 -I scripts/test-project-journal-client.py
 npm run lint
 npm run build
 ```
@@ -136,6 +156,31 @@ decision list through the normal audited project edit. Both the initial action
 and Undo require the current revision, so concurrent agent updates cannot be
 overwritten. The owner-only API action is `review`, with `projectId` and
 `review: {id, expectedRevision, decisionIndex?}`; stable IDs make retries safe.
+
+## Quick actions
+
+The next-step card on each project offers one-click actions. Every one uses the
+current revision, records a dated history entry, and offers the 15-second Undo:
+
+- **Next step done** opens the update form with a "Done: …" title and an empty
+  next step, so finishing work and choosing what follows is one save.
+- **Status moves** (Pause, Resume, Start, Waiting on me, Mark complete, Reopen)
+  use the owner-only `status` action with `projectId` and
+  `change: {id, expectedRevision, status}`. They record "Status changed to …"
+  but do not count as project work (`lastWorkedAt` is unchanged). Mark complete
+  asks for confirmation and preserves the next step and open decisions.
+- **Open decisions** offer OK, **Answer…**, and **Drop**. Answer records
+  `Q:`/`A:` text from Scott; Drop removes the item without approving it. Both use
+  the `review` action with `resolution: "answer"` (plus `answer`, up to 3,000
+  characters) or `resolution: "drop"`, and follow the same last-decision status
+  rule as OK.
+- **Copy resume prompt**, on the detail page and each card, copies a short
+  hand-off for a new agent chat: the project ID, the compact `get` command, the
+  next step, open decision count, and the project folder. Cards also offer
+  **Add update** without opening the project.
+
+Entries show "Recorded by you" for the owner and the recorded agent name
+otherwise, such as `Claude · Claude Linux`.
 
 Scott requested another reduction in oversized text: keep large summary numbers
 at 24px, history headings at 18px, and sidebar next-step text at 16px. Body and
