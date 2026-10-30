@@ -99,7 +99,7 @@ Do not log WebListers work or sensitive health/business details into this journa
 Run the focused checks from `apps/web`:
 
 ```sh
-node --conditions=react-server --import tsx --test scripts/audit-project-tracker.ts scripts/audit-project-reviews.ts scripts/audit-project-brief.ts scripts/audit-project-agent.ts
+node --conditions=react-server --import tsx --test scripts/audit-project-tracker.ts scripts/audit-project-reviews.ts scripts/audit-project-brief.ts scripts/audit-project-agent.ts scripts/audit-project-insights.ts
 python3 -I scripts/test-project-journal-client.py
 npm run lint
 npm run build
@@ -185,3 +185,46 @@ otherwise, such as `Claude · Claude Linux`.
 Scott requested another reduction in oversized text: keep large summary numbers
 at 24px, history headings at 18px, and sidebar next-step text at 16px. Body and
 form text retain their readable 16px size and stronger contrast.
+
+## Websites and Google summaries
+
+Projects have an optional `sites` list (`{label,url}`, at most 10), edited under
+**Websites** in the project form (one per line: `domain` or `Label | URL`). A
+URL path such as `https://monosyth.com/weather` scopes summaries to that
+section. Updates that omit `sites` keep the stored list, so older clients and
+the CLI cannot erase it. The compact `get` brief includes `sites`.
+
+The project page shows a Websites panel from the owner-only
+`/api/projects/insights?project=ID` (`src/lib/projects/insights.ts`): uptime and
+response time, and quick links (site, Google Analytics, Search Console,
+PageSpeed). Its Google Analytics table matches MenuToEat's Mission Control
+dashboard: users, sessions, page views, and engagement for Today, Yesterday,
+7 days, and 30 days, with the 30-day change against the previous 30 days, plus
+users on the site now, daily users, top pages today and over 30 days, and
+channels. Search Console shows clicks, impressions, click rate, position, daily
+clicks, top searches and pages, and sitemap errors over 28 days.
+`/api/projects/insights` without a project returns the compact line shown on
+cards. Results are cached in memory for 30 minutes (users now for 2 minutes);
+**Refresh** bypasses the cache.
+
+Every GA4 report filters on the site's host name (with and without `www.`), so
+local test traffic (127.0.0.1) and other sites sharing a property are excluded.
+Krowshea reports through its own stream inside the `monosyth` property, and
+FunParty's streams have no website address; both are found because discovery
+matches each host to the property that recorded the most traffic for it over 90
+days, falling back to stream addresses for new sites. A property that serves
+several sites shows no "now" count, because the Realtime API cannot filter by
+host.
+
+GA4 properties and Search Console listings are discovered by host name, so no IDs
+are stored. The server uses the App Hosting runtime service account
+(`firebase-app-hosting-compute@monosyth.iam.gserviceaccount.com`, overridable
+with `MONOSYTH_INSIGHTS_SERVICE_ACCOUNT`) with read-only analytics and webmasters
+scopes. The Analytics Data, Analytics Admin, and Search Console APIs are enabled
+in the `monosyth` Cloud project. Google numbers appear only after the owner adds
+that account as a **Viewer** in GA4 Account access management and as a
+**Restricted** user in each Search Console property; until then each section
+shows a setup note and uptime still works. Locally, the owner's ADC lacks these
+scopes, so the panel shows setup notes in development.
+
+Check with `node --conditions=react-server --import tsx --test scripts/audit-project-insights.ts`.

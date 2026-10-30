@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parseEntry, parseProject, validId, validLink } from "../src/lib/projects/model";
+import { parseEntry, parseProject, validId, validLink, validSite } from "../src/lib/projects/model";
 import { isTrackerOwner, requireTrackerOwner } from "../src/lib/projects/auth";
 import { GET, POST } from "../src/app/api/projects/route";
 import { isPublicAnalyticsPath } from "../src/lib/analytics";
@@ -46,4 +46,12 @@ test("a missing owner setting fails closed", () => {
   delete process.env.MONOSYTH_PROJECT_OWNER_EMAIL;
   assert.equal(isTrackerOwner({ email: "owner@example.com", email_verified: true }), false);
   process.env.MONOSYTH_PROJECT_OWNER_EMAIL = owner;
+});
+test("project websites normalize bare domains, keep section paths, and are preserved when omitted", () => {
+  assert.deepEqual(validSite({ url: "www.example.com" }), { label: "example.com", url: "https://www.example.com/" });
+  assert.deepEqual(validSite({ label: "Weather", url: "https://monosyth.com/weather" }), { label: "Weather", url: "https://monosyth.com/weather" });
+  for (const url of ["https://example.com/?ref=1", "https://user:pw@example.com", "ftp://example.com", "localhost", "javascript:alert(1)"]) assert.throws(() => validSite({ url }));
+  assert.equal("sites" in parseProject(project), false);
+  assert.deepEqual(parseProject({ ...project, sites: [{ label: "", url: "example.com" }] }).sites, [{ label: "example.com", url: "https://example.com/" }]);
+  assert.throws(() => parseProject({ ...project, sites: Array.from({ length: 11 }, (_, index) => ({ url: `site${index}.com` })) }));
 });

@@ -42,7 +42,7 @@ export async function getEntry(projectId: string, entryId: string) {
 export async function createProject(id: string, value: unknown, author: string) {
   validId(id);
   const data = parseProject(value), timestamp = now();
-  const project: Project = { ...data, id, revision: 1, createdAt: timestamp, updatedAt: timestamp, latestEntry: "Project added to the journal", lastWorkedAt: null };
+  const project: Project = { sites: [], ...data, id, revision: 1, createdAt: timestamp, updatedAt: timestamp, latestEntry: "Project added to the journal", lastWorkedAt: null };
   const entry: WorkEntry = { id: randomUUID(), projectId: id, title: "Project added to the journal", body: data.summary, kind: "note", verification: "", source: "", author, createdAt: timestamp };
   await getFirebaseAdminDb().runTransaction(async tx => {
     const ref = projects().doc(id);

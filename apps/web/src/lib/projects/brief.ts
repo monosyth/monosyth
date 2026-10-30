@@ -34,9 +34,9 @@ export function summarizeHistory(entries: WorkEntry[], nextCursor: string | null
   return { entries: entries.map(summarizeEntry), nextCursor };
 }
 export function projectBrief(project: Project, entries: WorkEntry[], nextCursor: string | null, commands: { entry: string; history: string }) {
-  const { id, name, area, status, revision, summary, nextStep, decisions, links, updatedAt, lastWorkedAt } = project;
+  const { id, name, area, status, revision, summary, nextStep, decisions, links, updatedAt, lastWorkedAt } = project, sites = project.sites ?? [];
   return {
-    project: { id, name, area, status, revision, summary, nextStep, decisions, links, updatedAt, lastWorkedAt },
+    project: { id, name, area, status, revision, summary, nextStep, decisions, links, sites, updatedAt, lastWorkedAt },
     recent: entries.map(summarizeEntry),
     note: `Compact brief: the ${entries.length} most recent entries, clipped. Read one in full with \`${commands.entry}\`${nextCursor ? `; page older work with \`${commands.history}\`` : ""}. Use history only when a specific earlier detail is needed.`,
     ...(nextCursor ? { olderCursor: nextCursor } : {}),

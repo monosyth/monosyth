@@ -1,0 +1,369 @@
+/* Website summaries follow the journal's white surface, slate-blue accent, and status colors. */
+.panel {
+  margin-bottom:24px;
+}
+
+.panelHead {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+}
+
+.panelHead h2 {
+  font-size:18px;
+  font-weight:600;
+}
+
+.panelHead>span {
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  font-size:14px;
+  color:#41566c;
+}
+
+.sites {
+  display:grid;
+  gap:12px;
+}
+
+.site {
+  border:1px solid #afc0d0;
+  border-radius:7px;
+  padding:16px;
+  background:#ffffff;
+}
+
+.siteHead {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.siteHead h3 {
+  font-size:18px;
+  font-weight:600;
+  line-height:1.3;
+}
+
+.siteHead a {
+  color:#2f4a65;
+  font-size:15px;
+  text-decoration:underline;
+  text-underline-offset:3px;
+}
+
+.uptime,.live,.sitemap {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-size:14px;
+  color:#1c2f43;
+  border:1px solid #b9c9d8;
+  border-radius:999px;
+  padding:3px 10px;
+  white-space:nowrap;
+}
+
+.uptime i,.live i {
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#2f7a4f;
+}
+
+.uptime[data-ok="false"] {
+  border-color:#d9a3a3;
+  background:#fbeeee;
+}
+
+.uptime[data-ok="false"] i {
+  background:#b42318;
+}
+
+.sitemap[data-tone="good"] { background:#eef7f1; border-color:#b7d8c3; }
+.sitemap[data-tone="warn"] { background:#fbf4e6; border-color:#e2c58c; }
+.sitemap[data-tone="bad"] { background:#fbeeee; border-color:#d9a3a3; }
+
+.tools {
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin:12px 0 4px;
+}
+
+.tools a {
+  display:inline-flex;
+  align-items:center;
+  min-height:36px;
+  border:1px solid #9fb2c5;
+  border-radius:5px;
+  padding:5px 10px;
+  color:#2f4a65;
+  font-size:14px;
+  font-weight:500;
+  text-decoration:none;
+}
+
+.tools a:hover { background:#edf2f7; }
+
+.block {
+  border-top:1px solid #d3dde7;
+  margin-top:14px;
+  padding-top:12px;
+}
+
+.blockHead {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-bottom:8px;
+}
+
+.blockHead h4 {
+  font-size:16px;
+  font-weight:600;
+}
+
+.blockHead h4 small {
+  font-weight:400;
+  font-size:14px;
+  color:#41566c;
+  margin-left:6px;
+}
+
+.stats {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+}
+
+.stat {
+  background:#f4f7fa;
+  border-radius:5px;
+  padding:8px 10px;
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+}
+
+.stat span {
+  font-size:13px;
+  color:#41566c;
+}
+
+.stat strong {
+  font-size:22px;
+  font-weight:600;
+  line-height:1.25;
+  color:#1c2f43;
+  font-variant-numeric:tabular-nums;
+}
+
+.delta {
+  font-size:13px;
+  color:#41566c;
+  font-variant-numeric:tabular-nums;
+}
+
+.delta[data-tone="up"] { color:#22603d; }
+.delta[data-tone="down"] { color:#9a2a1f; }
+
+.periods {
+  width:100%;
+  border-collapse:collapse;
+  font-variant-numeric:tabular-nums;
+}
+
+.periods th,.periods td {
+  text-align:right;
+  padding:6px 8px;
+  border-bottom:1px solid #e3e9ef;
+  font-size:15px;
+  vertical-align:top;
+}
+
+.periods thead th {
+  font-size:13px;
+  font-weight:500;
+  color:#41566c;
+}
+
+.periods th[scope="row"] {
+  text-align:left;
+  font-weight:500;
+  color:#243e56;
+}
+
+.periods td {
+  font-weight:600;
+  color:#1c2f43;
+}
+
+.periods td .delta {
+  display:block;
+  font-weight:400;
+}
+
+.periods tr[data-today] td,.periods tr[data-today] th[scope="row"] {
+  background:#eef7f1;
+}
+
+.note {
+  font-size:13px;
+  color:#41566c;
+  margin:6px 0 0;
+}
+
+.spark {
+  margin-top:10px;
+}
+
+.spark figcaption {
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  font-size:13px;
+  color:#41566c;
+  margin-bottom:2px;
+}
+
+.spark figcaption b {
+  color:#1c2f43;
+  font-weight:600;
+}
+
+.spark svg {
+  display:block;
+  width:100%;
+  height:56px;
+  overflow:visible;
+  touch-action:none;
+}
+
+.line {
+  fill:none;
+  stroke:#3e5b78;
+  stroke-width:2;
+  stroke-linejoin:round;
+  stroke-linecap:round;
+}
+
+.area { fill:#3e5b78; opacity:.08; }
+.baseline { stroke:#c4d0dd; stroke-width:1; }
+.crosshair { stroke:#1c2f43; stroke-width:1; opacity:.5; }
+
+.lists {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:14px;
+  margin-top:10px;
+}
+
+.list h4 {
+  font-size:13px;
+  font-weight:500;
+  color:#41566c;
+  margin-bottom:2px;
+}
+
+.list ol {
+  list-style:none;
+  padding:0;
+  margin:0;
+}
+
+.list li {
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  font-size:14px;
+  padding:3px 0;
+  border-bottom:1px solid #e3e9ef;
+}
+
+.list li span {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  min-width:0;
+}
+
+.list li b {
+  font-weight:500;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+
+.setup {
+  margin-top:12px;
+  border:1px solid #e2c58c;
+  background:#fbf4e6;
+  border-radius:5px;
+  padding:9px 12px;
+  font-size:14px;
+  color:#4b3407;
+}
+
+.setup p { margin:0; }
+
+.linkButton {
+  border:0;
+  background:none;
+  padding:0;
+  color:#2f4a65;
+  font-size:14px;
+  font-weight:500;
+  text-decoration:underline;
+  text-underline-offset:3px;
+}
+
+.setup .linkButton { margin-top:4px; }
+
+.loading,.error {
+  font-size:14px;
+  margin-top:10px;
+  color:#41566c;
+}
+
+.error { color:#9a2a1f; }
+
+.cardInsights {
+  display:flex;
+  flex-wrap:wrap;
+  gap:4px 14px;
+  font-size:14px;
+  color:#243e56;
+  margin-top:10px;
+}
+
+.cardInsights em {
+  font-style:normal;
+  font-size:13px;
+  color:#22603d;
+}
+
+.cardInsights em[data-tone="down"] { color:#9a2a1f; }
+.cardDown { color:#9a2a1f; font-weight:500; }
+
+.visuallyHidden {
+  position:absolute;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+  clip:rect(0 0 0 0);
+  white-space:nowrap;
+}
+
+@media(max-width:520px) {
+  .stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .periods th,.periods td { padding:5px 4px; font-size:14px; }
+  .site { padding:12px; }
+}

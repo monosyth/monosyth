@@ -6,9 +6,11 @@ export const STATUS_LABELS: Record<ProjectStatus, string> = {
 export const ENTRY_KINDS = ["progress", "milestone", "decision", "blocker", "note", "import"] as const;
 export type EntryKind = (typeof ENTRY_KINDS)[number];
 export type ProjectLink = { label: string; url: string };
+// Public website addresses; a path (monosyth.com/weather) scopes Google summaries to that section.
+export type ProjectSite = { label: string; url: string };
 export type ProjectInput = {
   name: string; area: string; summary: string; status: ProjectStatus;
-  nextStep: string; decisions: string[]; links: ProjectLink[];
+  nextStep: string; decisions: string[]; links: ProjectLink[]; sites?: ProjectSite[];
 };
 export type Project = ProjectInput & {
   id: string; revision: number; createdAt: string; updatedAt: string;
@@ -59,16 +61,31 @@ export function validLink(value: unknown): ProjectLink {
   } catch { /* Report a useful validation message below. */ }
   throw new TrackerError("Links must be web URLs or local /Users/ file paths, without embedded credentials.");
 }
+export function validSite(value: unknown): ProjectSite {
+  const data = object(value);
+  const label = string(data.label ?? "", "Website label", 100), url = string(data.url, "Website address", 300, true);
+  let parsed: URL;
+  try { parsed = new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`); } catch { throw new TrackerError("Websites must be web addresses such as https://example.com."); }
+  // The server checks uptime for these addresses, so only public host names on default ports are accepted.
+  const privateHost = /^[\d.]+$|^\[|(^|\.)(localhost|local|internal|lan|home|arpa)$/i.test(parsed.hostname);
+  if (!/^https?:$/.test(parsed.protocol) || parsed.username || parsed.password || parsed.search || parsed.hash || parsed.port || privateHost || !parsed.hostname.includes(".")) {
+    throw new TrackerError("Websites must be plain web addresses such as https://example.com or https://example.com/section.");
+  }
+  return { label: label || parsed.hostname.replace(/^www\./, ""), url: parsed.toString() };
+}
 export function parseProject(value: unknown): ProjectInput {
   const data = object(value);
   if (!Array.isArray(data.decisions) || data.decisions.length > 30) throw new TrackerError("Use at most 30 open decisions.");
   if (!Array.isArray(data.links) || data.links.length > 30) throw new TrackerError("Use at most 30 project links.");
+  if (data.sites !== undefined && (!Array.isArray(data.sites) || data.sites.length > 10)) throw new TrackerError("Use at most 10 project websites.");
   return {
     name: string(data.name, "Project name", 120, true), area: string(data.area, "Area", 80, true),
     summary: string(data.summary, "Summary", 1500), status: validStatus(data.status),
     nextStep: string(data.nextStep, "Next step", 1500),
     decisions: data.decisions.map(item => string(item, "Decision", 1000, true)),
     links: data.links.map(validLink),
+    // Older clients omit websites; leaving the key out preserves the stored list on update.
+    ...(Array.isArray(data.sites) ? { sites: data.sites.map(validSite) } : {}),
   };
 }
 export function parseEntry(value: unknown): EntryInput {

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { ENTRY_KINDS, PROJECT_STATUSES, STATUS_LABELS, type Board, type EntryKind, type Project, type ProjectInput, type ProjectStatus, type WorkEntry } from "@/lib/projects/model";
+import type { InsightsSummary } from "@/lib/projects/insights-model";
+import { CardInsights, WebsiteInsights } from "./website-insights";
 import s from "./project-journal.module.css";
 
 type View = "projects" | "recent" | "waiting";
@@ -82,6 +84,7 @@ function JournalContent() {
   const [answering, setAnswering] = useState<{ projectId: string; decision: string; text: string } | null>(null);
   const [copyFallback, setCopyFallback] = useState<{ projectId: string; text: string } | null>(null);
   const [copiedId, setCopiedId] = useState("");
+  const [summaries, setSummaries] = useState<Record<string, InsightsSummary>>({});
   const reviewLock = useRef(false);
   const currentLoad = useRef(0);
   const api = useCallback(async (url = "/api/projects", body?: unknown) => {
@@ -117,6 +120,16 @@ function JournalContent() {
     return () => window.removeEventListener("hashchange", change);
   }, []);
   const selected = board?.projects.find(project => project.id === selectedId);
+  // Card summaries come from Google, so load them separately and rarely; the server caches for 30 minutes.
+  const siteKey = (board?.projects ?? []).flatMap(project => (project.sites ?? []).map(site => `${project.id}:${site.url}`)).join(" ");
+  useEffect(() => {
+    if (!siteKey || !auth.user) return;
+    let active = true;
+    const load = () => void api("/api/projects/insights").then(result => { if (active) setSummaries(result.summaries ?? {}); }).catch(() => { /* Cards simply omit summaries. */ });
+    load();
+    const interval = window.setInterval(load, 30 * 60000);
+    return () => { active = false; window.clearInterval(interval); };
+  }, [siteKey, api, auth.user]);
   useEffect(() => {
     if (!selectedId || !auth.user) return;
     let active = true;
@@ -211,7 +224,7 @@ function JournalContent() {
   const waiting = projects.filter(project => project.status === "waiting" || project.status === "review" || project.decisions.length > 0);
   const search = query.trim().toLowerCase();
   const visible = (view === "waiting" ? waiting : projects).filter(project =>
-    (filter === "all" || project.status === filter) && [project.name, project.summary, project.area, project.nextStep, ...project.decisions].join(" ").toLowerCase().includes(search));
+    (filter === "all" || project.status === filter) && [project.name, project.summary, project.area, project.nextStep, ...project.decisions, ...(project.sites ?? []).map(site => site.url)].join(" ").toLowerCase().includes(search));
   const recent = (board?.entries ?? []).filter(entry => [entry.title, entry.body, entry.verification, projects.find(project => project.id === entry.projectId)?.name].join(" ").toLowerCase().includes(search));
   function navigate(next: View) { setView(next); setFilter("all"); setQuery(""); openProject(null); }
 
@@ -249,7 +262,7 @@ function JournalContent() {
         {!board ? !error && <div className={s.empty} role="status">Opening your journal…</div> : selectedId && !selected ? <Empty title="Project not found">Choose Projects to return to your journal.</Empty> : selected ? <>
           <button className={s.back} onClick={() => openProject(null)}>← All projects</button>
           <div className={s.projectLayout}>
-            <section><div className={s.sectionHeading}><h2>Work history</h2><span>{selected.lastWorkedAt ? `Last worked ${time(selected.lastWorkedAt)}` : "Ready for the next session"}</span></div>
+            <section><WebsiteInsights projectId={selected.id} sites={selected.sites ?? []} api={api} /><div className={s.sectionHeading}><h2>Work history</h2><span>{selected.lastWorkedAt ? `Last worked ${time(selected.lastWorkedAt)}` : "Ready for the next session"}</span></div>
               {historyError && <p className={s.error} role="alert">{historyError}</p>}
               {!historyReady || historyProject !== selectedId ? <p className={s.muted} role="status">Loading project history…</p> : history.length ? <div className={s.timeline}>{history.map(entry => <Entry key={entry.id} entry={entry} />)}</div> : !historyError && <Empty title="The story starts here">Add an update when you take the next step.</Empty>}
               {cursor && <button className={s.secondary} onClick={() => void loadMore()} disabled={moreWorking}>{moreWorking ? "Loading…" : "Load older entries"}</button>}
@@ -284,6 +297,7 @@ function JournalContent() {
               <div className={s.cardTop}><span className={s.projectMonogram} data-color={index % 4}>{project.name.split(/\s+/).map(word => word[0]).slice(0, 2).join("")}</span><Badge status={project.status} /></div>
               <p className={s.cardArea}>{project.area}</p><h2>{project.name}</h2><p className={s.cardSummary}>{project.summary}</p>
               <div className={s.nextStep}><span>UP NEXT</span><p>{project.nextStep || "A little room for your next idea"}</p></div>
+              <CardInsights summary={summaries[project.id]} />
               {view === "waiting" && project.decisions.length > 0 && <p className={s.decisionCount}>{project.decisions.length} open {project.decisions.length === 1 ? "decision" : "decisions"}</p>}
               </button><div className={s.cardFooter}><span>{project.lastWorkedAt ? `Worked on ${time(project.lastWorkedAt)}` : "Starting context saved"}</span><div className={s.cardActions}>{project.status === "review" && <button className={s.reviewAction} aria-label={`Mark ${project.name} reviewed`} onClick={() => void acknowledge(project)} disabled={reviewing}><Icon name="check" size={15} />Reviewed</button>}<button className={s.openAction} aria-label={`Add an update to ${project.name}`} title="Add update" onClick={() => setEditor({ type: "entry", project })}><Icon name="plus" size={17} /></button><button className={s.openAction} aria-label={`Copy a resume prompt for ${project.name}`} title={copiedId === project.id ? "Prompt copied" : "Copy resume prompt"} onClick={() => void copyPrompt(project)}><Icon name={copiedId === project.id ? "check" : "copy"} size={17} /></button><button className={s.openAction} aria-label={`View ${project.name}`} onClick={() => openProject(project.id)}><Icon name="arrow" size={17} /></button></div></div>
             </article>)}</div> : <Empty title={search || filter !== "all" ? "No matching projects" : view === "waiting" ? "A clear working table" : "Make room for your first project"}>{search || filter !== "all" ? "Try another search or choose All projects." : view === "waiting" ? "Nothing needs your attention right now." : "Add a project and one useful next step."}</Empty>}
@@ -332,7 +346,7 @@ function EditorModal({ editor, api, onClose, onSaved }: { editor: NonNullable<Ed
     const form = new FormData(event.currentTarget), text = (key: string) => String(form.get(key) ?? "").trim();
     try {
       if (editor.type === "project") {
-        const data: ProjectInput = { name: text("name"), area: text("area"), summary: text("summary"), status: text("status") as ProjectStatus, nextStep: text("nextStep"), decisions: text("decisions").split("\n").filter(Boolean), links: text("links").split("\n").filter(Boolean).map(line => { const index = line.indexOf(" | "); if (index < 1) throw new Error("For each link, use Label | URL or file path."); return { label: line.slice(0, index).trim(), url: line.slice(index + 3).trim() }; }) };
+        const data: ProjectInput = { name: text("name"), area: text("area"), summary: text("summary"), status: text("status") as ProjectStatus, nextStep: text("nextStep"), decisions: text("decisions").split("\n").filter(Boolean), links: text("links").split("\n").filter(Boolean).map(line => { const index = line.indexOf(" | "); if (index < 1) throw new Error("For each link, use Label | URL or file path."); return { label: line.slice(0, index).trim(), url: line.slice(index + 3).trim() }; }), sites: text("sites").split("\n").filter(Boolean).map(line => { const index = line.indexOf(" | "); return index > 0 ? { label: line.slice(0, index).trim(), url: line.slice(index + 3).trim() } : { label: "", url: line.trim() }; }) };
         const id = project?.id ?? `${data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 54) || "project"}-${entryId.slice(0, 8)}`;
         await api("/api/projects", { action: project ? "update" : "create", id, project: data, expectedRevision: project?.revision });
         await onSaved(project ? "Project updated" : "Project added");
@@ -353,6 +367,7 @@ function EditorModal({ editor, api, onClose, onSaved }: { editor: NonNullable<Ed
         <label>What is this project about?<textarea name="summary" rows={2} maxLength={1500} defaultValue={project?.summary} /></label>
         <label>Next useful step<textarea name="nextStep" rows={2} maxLength={1500} defaultValue={project?.nextStep} placeholder="One clear action to pick this back up" /></label>
         <label>Open decisions<span>One per line</span><textarea name="decisions" rows={3} defaultValue={project?.decisions.join("\n")} /></label>
+        <label>Websites<span>One per line: domain, or Label | https://domain/section</span><textarea name="sites" rows={2} defaultValue={project?.sites?.map(site => `${site.label} | ${site.url}`).join("\n")} placeholder="example.com" /></label>
         <label>Files & links<span>One per line: Label | URL or local file path</span><textarea name="links" rows={3} defaultValue={project?.links.map(link => `${link.label} | ${link.url}`).join("\n")} placeholder="Latest proof | https://…" /></label>
       </> : <>
         <label>What changed?<input name="title" required maxLength={180} defaultValue={prefill?.title} placeholder="A short headline for the work" /></label>
