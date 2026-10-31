@@ -159,7 +159,7 @@ export function ProfileEditor() {
           <button
             type="submit"
             disabled={profileSaveState === "saving"}
-            className="rounded-full bg-[var(--pine)] px-5 py-3 text-sm font-medium text-stone-50 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-full bg-[var(--pine)] px-5 py-3 text-sm font-medium text-stone-50 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {profileSaveState === "saving" ? "Saving..." : "Save settings"}
           </button>

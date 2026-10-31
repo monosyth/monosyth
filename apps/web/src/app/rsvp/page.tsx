@@ -145,7 +145,7 @@ export default function RSVPHomePage() {
               </div>
               <span
                 aria-hidden="true"
-                className="text-xl text-[var(--rsvp-ink-dim)] transition group-hover:translate-x-0.5 group-hover:text-[var(--rsvp-pink)]"
+                className="text-xl text-[var(--rsvp-ink-dim)] transition-colors group-hover:text-[var(--rsvp-pink)]"
               >
                 →
               </span>

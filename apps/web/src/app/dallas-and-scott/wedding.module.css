@@ -302,10 +302,6 @@
   height:100%;
   object-fit:cover;
   display:block;
-  transition:transform .45s;
-}
-.photo:hover img {
-  transform:scale(1.025);
 }
 .landscape {
   grid-column:span 2;
@@ -776,8 +772,5 @@
   .page * {
     transition:none!important;
     scroll-behavior:auto!important;
-  }
-  .photo:hover img {
-    transform:none;
   }
 }

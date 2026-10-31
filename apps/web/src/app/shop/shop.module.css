@@ -44,8 +44,7 @@
 .noticeDot { width: 7px; height: 7px; border-radius: 50%; background: #8a7040; flex-shrink: 0; }
 .productGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 37px 26px; }
 .productImage { display: block; position: relative; aspect-ratio: 4/3; border-radius: 3px; overflow: hidden; background: #e9e5d8; }
-.productImage img { object-fit: cover; transition: transform .25s ease; }
-.productImage:hover img { transform: scale(1.025); }
+.productImage img { object-fit: cover; }
 .productNumber { position: absolute; left: 12px; top: 12px; background: #fcfaf0ee; font: 500 10px var(--font-ibm-plex-mono), monospace; padding: 5px 8px; border-radius: 2px; }
 .productMeta { display: flex; justify-content: space-between; font-size: 11px; margin-top: 15px; color: var(--muted); }
 .productMeta span:last-child { color: var(--ink); font-weight: 700; }

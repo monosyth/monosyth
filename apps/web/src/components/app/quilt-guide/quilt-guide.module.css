@@ -214,11 +214,6 @@
 .guideBrand svg {
   flex: 0 0 auto;
   filter: drop-shadow(0 5px 8px rgba(48, 43, 40, 0.12));
-  transition: transform 180ms ease;
-}
-
-.guideBrand:hover svg {
-  transform: rotate(-3deg) scale(1.03);
 }
 
 .guideBrand span {
@@ -335,9 +330,8 @@
   left: 0;
   height: 3px;
   background: var(--q-teal);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 160ms ease;
+  opacity: 0;
+  transition: opacity 160ms ease;
 }
 
 .guideNavLink:hover {
@@ -347,7 +341,7 @@
 
 .guideNavLink:hover::after,
 .guideNavLinkActive::after {
-  transform: scaleX(1);
+  opacity: 1;
 }
 
 .guideNavLinkActive {
@@ -577,7 +571,7 @@
   padding: 0.85rem 1.2rem;
   border-radius: 0.45rem;
   font-weight: 700;
-  transition: transform 160ms ease, box-shadow 160ms ease, color 160ms ease, background 160ms ease;
+  transition: box-shadow 160ms ease, color 160ms ease, background 160ms ease;
 }
 
 .primaryAction {
@@ -595,7 +589,6 @@
 
 .primaryAction:hover,
 .secondaryAction:hover {
-  transform: translateY(-2px);
   box-shadow: var(--q-shadow-small);
 }
 
@@ -739,7 +732,7 @@
   border: 1px solid var(--q-line);
   border-radius: 0.85rem;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.75) inset;
-  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  transition: box-shadow 180ms ease, border-color 180ms ease;
 }
 
 .guideLinkCard::before {
@@ -763,17 +756,11 @@
   color: var(--q-white);
   background: var(--card-accent);
   border-radius: 50%;
-  transition: transform 180ms ease;
 }
 
 .guideLinkCard:hover {
-  transform: translateY(-4px);
   border-color: var(--card-accent);
   box-shadow: var(--q-shadow);
-}
-
-.guideLinkCard:hover > b {
-  transform: rotate(45deg);
 }
 
 .cardAccentTeal { --card-accent: var(--q-teal); }
@@ -2567,11 +2554,10 @@
   background: rgba(255, 254, 249, 0.76);
   border: 1px solid var(--q-line);
   border-radius: 0.7rem;
-  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  transition: box-shadow 180ms ease, border-color 180ms ease;
 }
 
 .blockCard:hover {
-  transform: translateY(-3px);
   border-color: var(--q-teal);
   box-shadow: var(--q-shadow);
 }

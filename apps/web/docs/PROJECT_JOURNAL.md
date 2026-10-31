@@ -128,9 +128,10 @@ edit dialogs. Use green for completion and successful verification, amber for
 items needing attention, red for errors and blockers, and restrained violet for
 review or decision cues. Preserve readable text contrast and visible focus states.
 
-Scott prefers tiles to stay still on hover. Do not lift, slide, scale, or rotate
-project cards, summary tiles, or other tracker tiles when hovered; use border or
-color changes for feedback.
+Scott prefers tiles to stay still on hover across all of monosyth.com. Do not
+lift, slide, scale, rotate, or zoom tiles, cards, their images, or related
+controls when hovered; use border, color, opacity, or shadow feedback instead.
+This site-wide preference is also recorded in the repository AGENTS.md.
 
 Scott also prefers substantially larger type and stronger contrast in this
 working tool. Keep project descriptions, next steps, and history at 16–17px or

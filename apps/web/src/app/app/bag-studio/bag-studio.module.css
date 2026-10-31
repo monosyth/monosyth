@@ -216,11 +216,11 @@
   background: linear-gradient(145deg, rgba(23, 38, 56, .74), rgba(12, 24, 36, .72));
   cursor: pointer;
   text-align: left;
-  transition: border-color .2s ease, transform .2s ease, background .2s ease;
+  transition: border-color .2s ease, background .2s ease;
 }
-.closureChoices button:hover { transform: translateY(-1px); border-color: rgba(79, 227, 230, .46); }
+.closureChoices button:hover { border-color: rgba(79, 227, 230, .46); }
 .closureChoices button:disabled { opacity: 1; cursor: default; }
-.closureChoices button:disabled:hover { transform: none; border-color: var(--cyan); }
+.closureChoices button:disabled:hover { border-color: var(--cyan); }
 .closureChoices button > i {
   position: absolute;
   top: .7rem;

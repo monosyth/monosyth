@@ -209,11 +209,6 @@
   height: 100%;
   width: 100%;
   object-fit: cover;
-  transition: transform 180ms ease;
-}
-
-.frameCard:hover .frameImage {
-  transform: scale(1.02);
 }
 
 .frameTime {

@@ -1064,12 +1064,11 @@
   background: linear-gradient(135deg, #fff 0%, #f1f5ff 100%);
   border: 1px solid rgba(15, 23, 42, 0.08);
   cursor: pointer;
-  transition: transform 120ms ease, box-shadow 160ms ease, background 160ms ease;
+  transition: box-shadow 160ms ease, background 160ms ease;
   text-decoration: none;
 }
 
 .periodNavButton:hover {
-  transform: translateY(-1px);
   box-shadow: 0 8px 18px -10px rgba(37, 99, 235, 0.45);
   background: linear-gradient(135deg, #ffffff 0%, #dbe6ff 100%);
 }
@@ -1116,11 +1115,6 @@
   letter-spacing: 0.16em;
   text-transform: uppercase;
   text-decoration: none;
-  transition: transform 120ms ease;
-}
-
-.periodNavTodayLink:hover {
-  transform: translateY(-1px);
 }
 
 /* ---------- Calendar grid ---------- */
@@ -1466,11 +1460,10 @@
   text-transform: uppercase;
   color: #634d32;
   text-decoration: none;
-  transition: transform 120ms ease, background 160ms ease;
+  transition: background 160ms ease;
 }
 
 .dayDetailClose:hover {
-  transform: translateY(-1px);
   background: #fff;
 }
 

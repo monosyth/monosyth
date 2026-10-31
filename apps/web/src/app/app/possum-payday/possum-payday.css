@@ -176,11 +176,10 @@
   font-size: 0.68rem;
   font-weight: 900;
   letter-spacing: 0.12em;
-  transition: border-color 150ms ease, color 150ms ease, transform 150ms ease;
+  transition: border-color 150ms ease, color 150ms ease;
 }
 
 .possum-payday-route .utility-button:hover {
-  transform: translateY(-1px);
   border-color: var(--gold);
   color: var(--gold);
 }
@@ -1182,7 +1181,6 @@
 
 .possum-payday-route .spin-button:hover:not(:disabled) {
   filter: brightness(1.18);
-  transform: translateY(-2px) scale(1.02);
 }
 
 .possum-payday-route .spin-button:active:not(:disabled) {
@@ -1292,7 +1290,7 @@
     inset 0 -18px 28px rgba(0, 0, 0, 0.22),
     0 0 0 1px rgba(0, 0, 0, 0.18);
   text-align: center;
-  transition: border-color 160ms ease, transform 160ms ease;
+  transition: border-color 160ms ease;
 }
 
 .possum-payday-route .roster-card:hover {
@@ -1302,7 +1300,6 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.16),
     0 8px 25px rgba(0, 0, 0, 0.45),
     0 0 18px color-mix(in srgb, var(--symbol-glow) 75%, transparent);
-  transform: translateY(-4px) rotate(-1deg);
 }
 
 .possum-payday-route .rarity-tag {
@@ -2996,7 +2993,6 @@
 }
 
 .possum-payday-route .game-gate-link:hover {
-  transform: translateY(-1px);
   filter: brightness(1.08);
 }
 

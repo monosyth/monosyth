@@ -519,7 +519,6 @@ a {
 }
 
 .rsvp-btn-primary:hover:not(:disabled) {
-  transform: translateY(-1px);
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.2) inset,
     0 14px 34px rgba(255, 61, 154, 0.5),
@@ -612,7 +611,7 @@ a {
   border: 1px solid var(--rsvp-border-soft);
   background: rgba(10, 4, 18, 0.5);
   cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
   align-items: flex-start;
 }
 
@@ -1097,11 +1096,10 @@ a {
   font-weight: 500;
   letter-spacing: 0.02em;
   cursor: pointer;
-  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+  transition: border-color 160ms ease, background 160ms ease;
 }
 
 .studio-chip-link:hover:not(:disabled) {
-  transform: translateY(-1px);
   border-color: rgba(77, 225, 255, 0.55);
   background: rgba(28, 22, 60, 0.8);
 }
@@ -1293,11 +1291,10 @@ a {
   text-decoration: none;
   color: var(--studio-ink);
   overflow: hidden;
-  transition: transform 200ms ease, border-color 200ms ease, box-shadow 220ms ease;
+  transition: border-color 200ms ease, box-shadow 220ms ease;
 }
 
 .studio-project-tile:hover {
-  transform: translateY(-2px);
   border-color: var(--tile-accent, var(--studio-cyan));
   box-shadow: 0 18px 40px -22px var(--tile-accent-shadow, rgba(77, 225, 255, 0.55));
 }
@@ -1600,7 +1597,6 @@ a {
 }
 
 .studio-cta--primary:hover:not(:disabled) {
-  transform: translateY(-1px);
   box-shadow:
     0 18px 38px -14px rgba(167, 139, 250, 0.8),
     0 0 0 1px rgba(255, 255, 255, 0.25) inset;
