@@ -477,12 +477,11 @@
   background:var(--panel);
   padding:16px 16px 0;
   overflow:hidden;
-  transition:transform .15s,border-color .15s;
+  transition:border-color .15s;
 }
 
 .projectCard:hover {
   border-color:#8aa3bb;
-  transform:translateY(-2px);
 }
 
 .cardTop {
