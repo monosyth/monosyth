@@ -202,3 +202,21 @@ The authenticated `/api/auth/admin` endpoint returns an access decision only.
 
 Run `npm run audit:admin-access` after authentication changes. `npm run build`
 also checks generated public assets for personal Gmail addresses.
+
+## Dallas's Kitchen
+
+`/kitchen` is a private meal planner for Scott and Dallas. It reads recipe blogs,
+plans the week, and builds one combined shopping list. Code lives in
+`src/app/kitchen`, `src/components/kitchen`, `src/lib/kitchen`, and
+`src/app/api/kitchen`. The original lab copy is at `~/monosyth/dallaskitchen`.
+
+- Sign-in uses the site's Firebase Google login. Only accounts in
+  `KITCHEN_ALLOWED_EMAILS` get in, and they share one Firestore document,
+  `dallasKitchen/household`, written only by the server.
+- The store finder uses `GOOGLE_MAPS_API_KEY`, a server key restricted to Places
+  API (New). Without it the route falls back to OpenStreetMap.
+- Both values are Secret Manager version 1 in `apphosting.yaml`. Keep the
+  addresses out of this public repository.
+
+Run `npm run audit:kitchen` after changing the ingredient parser, shopping list,
+or recipe extractor.

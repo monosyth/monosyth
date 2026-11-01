@@ -14,6 +14,14 @@ env:
     secret: MONOSYTH_ADMIN_EMAILS@1
     availability:
       - RUNTIME
+  - variable: KITCHEN_ALLOWED_EMAILS
+    secret: KITCHEN_ALLOWED_EMAILS@1
+    availability:
+      - RUNTIME
+  - variable: GOOGLE_MAPS_API_KEY
+    secret: GOOGLE_MAPS_API_KEY@1
+    availability:
+      - RUNTIME
   - variable: SHOP_ENABLED
     value: "true"
     availability:

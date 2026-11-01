@@ -74,6 +74,11 @@ const nextConfig: NextConfig = {
         { key: "Referrer-Policy", value: "no-referrer" },
       ],
     }, {
+      source: "/kitchen",
+      headers: [
+        { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive, noimageindex" },
+      ],
+    }, {
       source: "/shop/order",
       headers: [
         { key: "Cache-Control", value: "private, no-store, max-age=0" },

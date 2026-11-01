@@ -23,6 +23,7 @@
     "birds:install": "node scripts/install-birdnet-agents.mjs",
     "audit:birds": "node --import tsx --test scripts/audit-birds.ts",
     "verify:public-email": "node scripts/verify-public-email.mjs",
+    "audit:kitchen": "node --import tsx --test scripts/audit-kitchen.ts",
     "audit:admin-access": "node --conditions=react-server --import tsx --test scripts/audit-admin-access.ts"
   },
   "dependencies": {
@@ -35,6 +36,7 @@
     "firebase-admin": "^13.7.0",
     "google-auth-library": "^10.6.2",
     "next": "16.2.0",
+    "node-html-parser": "^9.0.6",
     "playwright-core": "^1.58.2",
     "react": "19.2.4",
     "react-dom": "19.2.4",

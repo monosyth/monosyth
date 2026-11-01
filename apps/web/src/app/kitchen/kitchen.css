@@ -1,0 +1,965 @@
+/*
+ * Dallas's Kitchen (/kitchen). Every rule is scoped under .dk so the app keeps
+ * its own look inside the site layout without touching other pages.
+ */
+
+html:has(.dk),
+body:has(.dk) {
+  background: #fbf7f0;
+}
+
+.dk {
+  --bg: #fbf7f0;
+  --card: #ffffff;
+  --ink: #2b2620;
+  --muted: #6f665b;
+  --line: #e7dfd2;
+  --green: #2f6b4a;
+  --green-dark: #24543a;
+  --green-soft: #e6f0e9;
+  --gold: #f2b84b;
+  --gold-soft: #fdf3dc;
+  --red: #b4432b;
+  --radius: 16px;
+  --tabbar: 68px;
+  /* The lab app used a 17px root size; the site root is 16px. */
+  --rem: 17px;
+  color-scheme: light;
+}
+
+.dk,
+.dk * {
+  box-sizing: border-box;
+}
+
+.dk {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.45;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 100dvh;
+}
+
+.dk h1,
+.dk h2,
+.dk h3 {
+  margin: 0;
+  line-height: 1.2;
+}
+
+.dk h2 {
+  font-size: calc(1.25 * var(--rem));
+}
+
+.dk h3 {
+  font-size: calc(1.05 * var(--rem));
+}
+
+.dk button,
+.dk input,
+.dk select,
+.dk textarea {
+  font: inherit;
+  color: inherit;
+}
+
+.dk button {
+  cursor: pointer;
+}
+
+.dk hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 20px 0 12px;
+}
+
+.dk .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.dk .shell {
+  max-width: 640px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  padding-bottom: calc(var(--tabbar) + env(safe-area-inset-bottom) + 24px);
+}
+
+.dk .topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: calc(16px + env(safe-area-inset-top)) 18px 10px;
+}
+
+.dk .brand {
+  font-size: calc(1.5 * var(--rem));
+  letter-spacing: -0.01em;
+}
+
+.dk .tagline {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: calc(0.92 * var(--rem));
+}
+
+.dk .content {
+  padding: 8px 16px;
+}
+
+.dk .stack {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.dk .stack-tight {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dk .card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: 0 1px 2px rgb(60 40 20 / 0.04);
+}
+
+.dk .add-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dk .big-label {
+  font-weight: 650;
+  font-size: calc(1.05 * var(--rem));
+}
+
+.dk .input {
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  font-size: calc(1 * var(--rem));
+}
+
+.dk .input:focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px var(--green-soft);
+}
+
+.dk .textarea {
+  min-height: 140px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.dk .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 52px;
+  padding: 12px 20px;
+  border: 1.5px solid var(--green);
+  border-radius: 12px;
+  background: var(--green);
+  color: #fff;
+  font-weight: 650;
+  text-decoration: none;
+  text-align: center;
+}
+
+.dk .btn:active {
+  background: var(--green-dark);
+}
+
+.dk .btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.dk .btn-ghost {
+  background: #fff;
+  color: var(--green);
+}
+
+.dk .btn-ghost:active {
+  background: var(--green-soft);
+}
+
+.dk .btn-small {
+  min-height: 40px;
+  padding: 8px 14px;
+  font-size: calc(0.95 * var(--rem));
+}
+
+.dk .btn-block {
+  width: 100%;
+}
+
+.dk .button-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (min-width: 520px) {
+  .dk .button-row {
+    flex-direction: row;
+  }
+}
+
+.dk .link-button {
+  background: none;
+  border: 0;
+  padding: 8px 4px;
+  color: var(--green);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.dk .link-button.center {
+  align-self: center;
+}
+
+.dk .link-button.danger {
+  color: var(--red);
+}
+
+.dk .muted {
+  color: var(--muted);
+}
+
+.dk .small {
+  font-size: calc(0.88 * var(--rem));
+}
+
+.dk .center {
+  text-align: center;
+}
+
+.dk .signin-banner,
+.dk .error-banner {
+  margin: 4px 16px 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: calc(0.95 * var(--rem));
+}
+
+.dk .signin-banner {
+  background: var(--gold-soft);
+  border: 1px solid #f1dfb3;
+}
+
+.dk .signin-banner p {
+  margin: 0;
+  flex: 1;
+}
+
+.dk .error-banner {
+  background: #fbe9e5;
+  color: var(--red);
+}
+
+.dk .form-error {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fbe9e5;
+  color: #8a2f1c;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.dk .form-error p {
+  margin: 0;
+}
+
+.dk .account {
+  position: relative;
+}
+
+.dk .account-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: none;
+  padding: 4px;
+}
+
+.dk .avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.dk .avatar-letter {
+  display: grid;
+  place-items: center;
+  background: var(--green);
+  color: #fff;
+  font-weight: 700;
+}
+
+.dk .save-status {
+  font-size: calc(0.8 * var(--rem));
+  color: var(--muted);
+}
+
+.dk .account-menu {
+  position: absolute;
+  right: 0;
+  top: 48px;
+  z-index: 20;
+  width: 260px;
+  padding: 14px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgb(60 40 20 / 0.15);
+  font-size: calc(0.92 * var(--rem));
+}
+
+.dk .account-menu p {
+  margin: 0 0 10px;
+  overflow-wrap: anywhere;
+}
+
+.dk .section-head,
+.dk .section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dk .section-toggle {
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  text-align: left;
+}
+
+.dk .chevron {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: calc(0.8 * var(--rem));
+}
+
+.dk .count {
+  min-width: 26px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--green-soft);
+  color: var(--green-dark);
+  font-weight: 700;
+  font-size: calc(0.85 * var(--rem));
+  text-align: center;
+}
+
+.dk .empty {
+  padding: 26px 18px;
+  border: 2px dashed var(--line);
+  border-radius: var(--radius);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.dk .empty p {
+  margin: 0;
+}
+
+.dk .empty-title {
+  font-weight: 700;
+  font-size: calc(1.05 * var(--rem));
+}
+
+.dk .meal-list,
+.dk .box-list,
+.dk .store-list,
+.dk .items,
+.dk .ingredient-preview,
+.dk .ingredient-full {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dk .meal-list,
+.dk .box-list,
+.dk .store-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dk .meal,
+.dk .box-item,
+.dk .store {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+
+.dk .box-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dk .meal-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+}
+
+.dk .box-item .meal-main {
+  flex: 1;
+}
+
+.dk .thumb {
+  flex: none;
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--gold-soft);
+}
+
+.dk .thumb-empty {
+  display: grid;
+  place-items: center;
+  font-size: calc(1.6 * var(--rem));
+}
+
+.dk .meal-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dk .meal-title {
+  font-weight: 650;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.dk .meal-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.dk .meal-controls .link-button {
+  margin-left: auto;
+}
+
+.dk .select-chip select {
+  appearance: none;
+  min-height: 40px;
+  padding: 6px 30px 6px 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  background: #fff
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236f665b' stroke-width='2' fill='none'/%3E%3C/svg%3E")
+    no-repeat right 12px center;
+  font-size: calc(0.92 * var(--rem));
+  font-weight: 600;
+}
+
+.dk .select-chip-small select {
+  min-height: 34px;
+  font-size: calc(0.82 * var(--rem));
+  padding: 4px 26px 4px 10px;
+  max-width: 150px;
+}
+
+.dk .preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dk .preview-image {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.dk .preview-title {
+  font-size: calc(1.35 * var(--rem));
+}
+
+.dk .preview p {
+  margin: 0;
+}
+
+.dk .story-badge {
+  align-self: flex-start;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--gold-soft);
+  font-weight: 600;
+  font-size: calc(0.92 * var(--rem));
+}
+
+.dk .ingredient-preview {
+  max-height: 280px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px 12px;
+}
+
+.dk .ingredient-preview li,
+.dk .ingredient-full li {
+  padding: 7px 0;
+  border-bottom: 1px solid #f2ece2;
+}
+
+.dk .ingredient-preview li:last-child,
+.dk .ingredient-full li:last-child {
+  border-bottom: 0;
+}
+
+.dk .steps {
+  padding-left: 22px;
+  margin: 8px 0 0;
+}
+
+.dk .steps li {
+  margin-bottom: 12px;
+}
+
+.dk .sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgb(30 25 20 / 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.dk .sheet {
+  width: 100%;
+  max-width: 640px;
+  max-height: 100dvh;
+  overflow: auto;
+  background: var(--bg);
+  border-radius: 20px 20px 0 0;
+  padding: calc(12px + env(safe-area-inset-top)) 18px calc(28px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dk .sheet h3 {
+  margin-top: 10px;
+}
+
+.dk .sheet p {
+  margin: 0;
+}
+
+.dk .sheet-top {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+@media (min-width: 680px) {
+  .dk .sheet-backdrop {
+    align-items: center;
+  }
+  .dk .sheet {
+    max-height: 90dvh;
+    border-radius: 20px;
+  }
+}
+
+.dk .list-summary p {
+  margin: 0 0 8px;
+  font-size: calc(1.05 * var(--rem));
+}
+
+.dk .progress {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.dk .progress-fill {
+  height: 100%;
+  background: var(--green);
+  transition: width 0.25s ease;
+}
+
+.dk .chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.dk .chip {
+  flex: none;
+  min-height: 42px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: #fff;
+  font-weight: 600;
+}
+
+.dk .chip-active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+
+.dk .hint-card {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px dashed #d8cbb4;
+  background: #fff;
+  text-align: left;
+  font-size: calc(0.92 * var(--rem));
+  color: var(--muted);
+}
+
+.dk .tips {
+  background: var(--gold-soft);
+  border-color: #f1dfb3;
+}
+
+.dk .tips ul {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dk .aisle {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dk .aisle-title {
+  font-size: calc(0.85 * var(--rem));
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.dk .staples p {
+  margin: 0;
+}
+
+.dk .items {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.dk .item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  border-bottom: 1px solid #f2ece2;
+  padding-right: 10px;
+}
+
+.dk .item:last-child {
+  border-bottom: 0;
+}
+
+.dk .item-check {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 4px 14px 14px;
+  background: none;
+  border: 0;
+  text-align: left;
+}
+
+.dk .checkbox {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin-top: 1px;
+  border-radius: 50%;
+  border: 2px solid #c9bda9;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  color: #fff;
+}
+
+.dk .checkbox-on {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.dk .item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dk .item-name {
+  font-weight: 650;
+}
+
+.dk .item-amount {
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.dk .buy-tip {
+  font-size: calc(0.88 * var(--rem));
+  font-weight: 600;
+  color: var(--green-dark);
+}
+
+.dk .item-for {
+  font-size: calc(0.85 * var(--rem));
+  color: var(--muted);
+}
+
+.dk .shared-badge {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--gold-soft);
+  color: #8a5a00;
+  font-weight: 700;
+  font-size: calc(0.78 * var(--rem));
+}
+
+.dk .item-side {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: -6px;
+  padding: 0 0 12px 54px;
+}
+
+.dk .item-done .item-name {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.dk .add-item {
+  display: flex;
+  gap: 8px;
+}
+
+.dk .add-item .input {
+  flex: 1;
+}
+
+.dk .more-options summary {
+  cursor: pointer;
+  color: var(--green);
+  font-weight: 600;
+  padding: 6px 0;
+}
+
+.dk .store {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dk .store-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dk .store-name {
+  font-weight: 650;
+}
+
+.dk .store-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.dk .tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  justify-content: center;
+  background: rgb(255 255 255 / 0.96);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+  backdrop-filter: blur(8px);
+}
+
+.dk .tab {
+  flex: 1;
+  max-width: 214px;
+  height: var(--tabbar);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: calc(0.8 * var(--rem));
+  font-weight: 600;
+}
+
+.dk .tab-icon {
+  position: relative;
+  font-size: calc(1.45 * var(--rem));
+  line-height: 1;
+  filter: grayscale(0.7);
+  opacity: 0.75;
+}
+
+.dk .tab-active {
+  color: var(--green-dark);
+}
+
+.dk .tab-active .tab-icon {
+  filter: none;
+  opacity: 1;
+}
+
+.dk .tab-badge {
+  position: absolute;
+  top: -6px;
+  right: -14px;
+  min-width: 20px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--red);
+  color: #fff;
+  font-size: calc(0.7 * var(--rem));
+  font-weight: 800;
+  line-height: 1.4;
+  filter: none;
+}
+
+.dk .help {
+  margin: -6px 0 0;
+}
+
+.dk .gate {
+  display: grid;
+  place-items: center;
+  padding: 24px 20px;
+}
+
+.dk .gate-card {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+
+.dk .gate-card p {
+  margin: 0;
+}
+
+.dk .gate-card .tagline {
+  font-size: calc(1.05 * var(--rem));
+  margin-bottom: 10px;
+}
+
+.dk .gate-icon {
+  width: 96px;
+  height: 96px;
+  border-radius: 22px;
+  box-shadow: 0 6px 20px rgb(47 107 74 / 0.25);
+}
+
+.dk .btn-google {
+  background: #fff;
+  color: var(--ink);
+  border-color: var(--line);
+  gap: 10px;
+}
+
+.dk .btn-google:active {
+  background: #f5f1ea;
+}
+
+
+/* The site's Tailwind preflight resets these; restore what the kitchen expects. */
+.dk h1,
+.dk h2,
+.dk h3 {
+  font-weight: 700;
+}
+
+.dk .steps {
+  list-style: decimal;
+}
