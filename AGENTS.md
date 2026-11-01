@@ -66,3 +66,7 @@ extension of the personal journal workflow to Scott's own company business.
 Scott does not want decorative terminal periods after standalone words, short
 phrases, headings, labels, or slogans. Never use that treatment in new designs
 or copy. Normal sentence punctuation in explanatory body text is appropriate.
+
+Scott prefers stationary tiles across all of `monosyth.com`. Do not add hover
+lifts, slides, scaling, rotation, image zoom, or icon nudges to tiles, cards,
+or related controls. Use border, color, opacity, or shadow feedback instead.
