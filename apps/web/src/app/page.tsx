@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/brand/monosyth-social-card.png",
+        url: "/brand/monosyth-social-card-v2.png",
         width: 1200,
         height: 630,
         alt: "Monosyth Labs — Curiosity, made tangible",
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: pageTitle,
     description: pageDescription,
-    images: ["/brand/monosyth-social-card.png"],
+    images: ["/brand/monosyth-social-card-v2.png"],
   },
 };
 
