@@ -131,6 +131,17 @@ const products: Product[] = [
     imageAlt: "For a Quieter Life homepage with a mossy forest banner",
     cta: "Visit For a Quieter Life",
   },
+  {
+    name: "Everyday Measure",
+    category: "Craft calculators",
+    status: "Live",
+    description:
+      "Free calculators, size charts, and printables for quilting, sewing, knitting, crochet, and cross-stitch, plus a few garden and home tools.",
+    href: "https://everydaymeasure.com/",
+    image: "/brand/products/everydaymeasure.jpg",
+    imageAlt: "The Everyday Measure homepage: practical tools for creative projects",
+    cta: "Visit Everyday Measure",
+  },
 ];
 
 const workbench: Product[] = [

@@ -393,6 +393,73 @@
   aspect-ratio: 2 / 1;
 }
 
+/* A last card that would sit alone on its row spans the row instead */
+@media (min-width: 40.0625rem) {
+  .productGrid > li:last-child:nth-child(3n + 1) {
+    grid-column: 1 / -1;
+  }
+
+  .productGrid > li:last-child:nth-child(3n + 1) .productCard {
+    flex-direction: row;
+  }
+
+  .productGrid > li:last-child:nth-child(3n + 1) .productImage {
+    flex: 0 0 calc((200% - 1.25rem) / 3);
+    border-right: 1px solid var(--line);
+    border-bottom: 0;
+  }
+
+  .productGrid > li:last-child:nth-child(3n + 1) .productImage img {
+    height: 100%;
+    aspect-ratio: 2 / 1;
+  }
+
+  .productGrid > li:last-child:nth-child(3n + 1) .productBody {
+    justify-content: center;
+  }
+
+  .productGrid > li:last-child:nth-child(3n + 1) .productDescription {
+    flex: none;
+  }
+}
+
+@media (min-width: 40.0625rem) and (max-width: 68rem) {
+  .productGrid > li:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .productGrid > li:last-child:nth-child(odd) .productCard {
+    flex-direction: row;
+  }
+
+  .productGrid > li:last-child:nth-child(odd) .productImage {
+    flex: 0 0 calc((100% - 1.25rem) / 2);
+    border-right: 1px solid var(--line);
+    border-bottom: 0;
+  }
+
+  .productGrid > li:last-child:nth-child(odd) .productImage img {
+    height: 100%;
+    aspect-ratio: 2 / 1;
+  }
+
+  .productGrid > li:last-child:nth-child(odd) .productBody {
+    justify-content: center;
+  }
+
+  .productGrid > li:last-child:nth-child(odd) .productDescription {
+    flex: none;
+  }
+}
+
+.productBody {
+  justify-content: center;
+}
+
+.productGrid > li:last-child:nth-child(3n + 1) .productDescription {
+  flex: none;
+}
+
 .productBody {
   display: flex;
   flex: 1;
