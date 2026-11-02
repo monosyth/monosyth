@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/brand/monosyth-social-card-v3.png",
+        url: "/brand/monosyth-social-card-v4.png",
         width: 1200,
         height: 630,
         alt: "Monosyth Labs: Curious things, carefully made",
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: pageTitle,
     description: pageDescription,
-    images: ["/brand/monosyth-social-card-v3.png"],
+    images: ["/brand/monosyth-social-card-v4.png"],
   },
 };
 
@@ -216,12 +216,17 @@ function isExternal(href: string) {
 
 function BrandMark() {
   return (
-    <span className={styles.brandMark} aria-hidden="true">
-      <span className={styles.markNodeOne} />
-      <span className={styles.markNodeTwo} />
-      <span className={styles.markNodeThree} />
-      <span className={styles.markCore} />
-    </span>
+    <svg className={styles.brandMark} viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <circle cx="32" cy="32" r="32" fill="currentColor" />
+      <path
+        d="M32 13v38M13 32h38M18.6 18.6l26.8 26.8M18.6 45.4l26.8-26.8"
+        fill="none"
+        stroke="var(--paper)"
+        strokeWidth="5.5"
+        strokeLinecap="round"
+      />
+      <circle cx="32" cy="32" r="7" fill="var(--teal)" stroke="currentColor" strokeWidth="3" />
+    </svg>
   );
 }
 
