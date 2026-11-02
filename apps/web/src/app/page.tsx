@@ -7,17 +7,19 @@ import styles from "./page.module.css";
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://monosyth.com";
 
+const pageTitle = "Monosyth Labs | Curiosity, made tangible";
+const pageDescription =
+  "Monosyth Labs is an independent product studio turning questions worth exploring into apps, websites, quilt patterns, and type.";
+
 export const metadata: Metadata = {
-  title: "Monosyth Labs | Curiosity, made tangible.",
-  description:
-    "Monosyth Labs is an independent creative lab building useful, playful things from questions worth exploring.",
+  title: pageTitle,
+  description: pageDescription,
   alternates: {
     canonical: siteUrl,
   },
   openGraph: {
-    title: "Monosyth Labs | Curiosity, made tangible.",
-    description:
-      "An independent creative lab building useful, playful things from questions worth exploring.",
+    title: pageTitle,
+    description: pageDescription,
     url: siteUrl,
     siteName: "Monosyth Labs",
     type: "website",
@@ -26,20 +28,146 @@ export const metadata: Metadata = {
         url: "/brand/monosyth-social-card.png",
         width: 1200,
         height: 630,
-        alt: "Monosyth Labs — Curiosity, made tangible.",
+        alt: "Monosyth Labs — Curiosity, made tangible",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Monosyth Labs | Curiosity, made tangible.",
-    description:
-      "An independent creative lab building useful, playful things from questions worth exploring.",
+    title: pageTitle,
+    description: pageDescription,
     images: ["/brand/monosyth-social-card.png"],
   },
 };
 
-const processSteps = ["Observe", "Connect", "Make", "Learn"] as const;
+type Product = {
+  name: string;
+  category: string;
+  status: "Live" | "Beta" | "Early access";
+  description: string;
+  href: string;
+  domain: string;
+  image: string;
+  imageAlt: string;
+  cta: string;
+};
+
+const featuredProduct: Product & { details: string[] } = {
+  name: "FunParty",
+  category: "Party photo wall",
+  status: "Live",
+  description:
+    "Guests scan one QR code and their photos join a live party wall and TV slideshow. The host decides what appears, and nobody needs an app or an account.",
+  details: ["One QR code", "Live photo wall", "TV slideshow"],
+  href: "https://funpartyapp.com",
+  domain: "funpartyapp.com",
+  image: "/brand/products/funparty.jpg",
+  imageAlt: "The FunParty homepage showing a live party photo screen",
+  cta: "Visit FunParty",
+};
+
+const products: Product[] = [
+  {
+    name: "MenuToEat",
+    category: "Restaurant discovery",
+    status: "Live",
+    description:
+      "Complete restaurant menus with prices, photos, and ratings. Browse by dish, cuisine, or neighborhood.",
+    href: "https://menutoeat.com/",
+    domain: "menutoeat.com",
+    image: "/brand/products/menutoeat.jpg",
+    imageAlt: "The MenuToEat homepage with a restaurant menu search",
+    cta: "Visit MenuToEat",
+  },
+  {
+    name: "Monosyth Patterns",
+    category: "Quilt patterns",
+    status: "Live",
+    description:
+      "Original quilts with a playful spirit. The Trellis collection includes illustrated PDF instructions and editable EQ8 projects.",
+    href: "/shop",
+    domain: "monosyth.com/shop",
+    image: "/brand/products/patterns.jpg",
+    imageAlt: "Seaside Trellis quilt with sailboat and seashell blocks",
+    cta: "Shop quilt patterns",
+  },
+  {
+    name: "Monosyth Type",
+    category: "Fonts",
+    status: "Live",
+    description:
+      "Everyday Carved, a warm and weighty display serif with a little carved character. Commercial licenses from $8.",
+    href: "/shop/type",
+    domain: "monosyth.com/shop/type",
+    image: "/brand/products/type.jpg",
+    imageAlt: "Everyday Carved type specimen",
+    cta: "Try Everyday Carved",
+  },
+  {
+    name: "Fog, Salt & Pine",
+    category: "Home goods",
+    status: "Live",
+    description:
+      "Thoughtfully crafted home goods inspired by the forests and coastlines of the Pacific Northwest.",
+    href: "https://fogsaltpine.com/",
+    domain: "fogsaltpine.com",
+    image: "/brand/products/fogsaltpine.jpg",
+    imageAlt: "Fog, Salt & Pine badge over a misty Pacific Northwest coastline",
+    cta: "Visit Fog, Salt & Pine",
+  },
+  {
+    name: "For a Quieter Life",
+    category: "Slow living journal",
+    status: "Live",
+    description:
+      "Quiet hobbies, small outings, and everyday rituals for a slower, more intentional life.",
+    href: "https://foraquieterlife.com/",
+    domain: "foraquieterlife.com",
+    image: "/brand/products/foraquieterlife.jpg",
+    imageAlt: "For a Quieter Life homepage with a mossy forest banner",
+    cta: "Visit For a Quieter Life",
+  },
+];
+
+const workbench: Product[] = [
+  {
+    name: "Krowshea",
+    category: "Crochet programming language",
+    status: "Beta",
+    description:
+      "Write crochet patterns as code, check every stitch count, and get charts, written instructions, and yarn estimates from one pattern. No AI inside.",
+    href: "https://krowshea.com/",
+    domain: "krowshea.com",
+    image: "/brand/products/krowshea.jpg",
+    imageAlt: "The Krowshea homepage with its crow and teal yarn logo",
+    cta: "Join the Krowshea beta",
+  },
+  {
+    name: "MoveMorrow",
+    category: "Moving planner",
+    status: "Early access",
+    description:
+      "A tailored checklist, timeline, and budget for your next move. Preview your plan, then sign in to save it.",
+    href: "/move",
+    domain: "monosyth.com/move",
+    image: "/brand/products/movemorrow.jpg",
+    imageAlt: "The MoveMorrow planner homepage",
+    cta: "Plan a move",
+  },
+];
+
+const allProducts = [featuredProduct, ...products, ...workbench];
+
+const processSteps = [
+  ["Observe", "Start with a question from everyday life."],
+  ["Connect", "Pull from design, code, craft, and data."],
+  ["Make", "Ship something real people can use."],
+  ["Learn", "Watch how it is used and keep refining."],
+] as const;
+
+function isExternal(href: string) {
+  return href.startsWith("http");
+}
 
 function BrandMark() {
   return (
@@ -138,6 +266,111 @@ function CuriosityEngine() {
   );
 }
 
+function BrowserFrame({
+  domain,
+  image,
+  imageAlt,
+  sizes,
+}: Pick<Product, "domain" | "image" | "imageAlt"> & { sizes: string }) {
+  return (
+    <figure className={styles.frame}>
+      <figcaption className={styles.frameBar}>
+        <span className={styles.frameDots} aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
+        <span className={styles.frameUrl}>{domain}</span>
+      </figcaption>
+      <Image
+        className={styles.frameImage}
+        src={image}
+        alt={imageAlt}
+        width={1200}
+        height={750}
+        sizes={sizes}
+      />
+    </figure>
+  );
+}
+
+function StatusTag({ status, category }: Pick<Product, "status" | "category">) {
+  return (
+    <p className={styles.productMeta}>
+      <span
+        className={
+          status === "Live" ? styles.statusLive : styles.statusEarly
+        }
+      >
+        {status}
+      </span>
+      <span>{category}</span>
+    </p>
+  );
+}
+
+function ProductLink({
+  href,
+  className,
+  label,
+  children,
+}: {
+  href: string;
+  className: string;
+  label: string;
+  children: React.ReactNode;
+}) {
+  if (isExternal(href)) {
+    return (
+      <a
+        className={className}
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`${label} (opens in a new tab)`}
+      >
+        {children}
+      </a>
+    );
+  }
+
+  return (
+    <Link className={className} href={href} aria-label={label}>
+      {children}
+    </Link>
+  );
+}
+
+function ProductCard({ product }: { product: Product }) {
+  return (
+    <li>
+      <ProductLink
+        className={styles.productCard}
+        href={product.href}
+        label={`${product.name}: ${product.cta}`}
+      >
+        <BrowserFrame
+          domain={product.domain}
+          image={product.image}
+          imageAlt={product.imageAlt}
+          sizes="(max-width: 40rem) 100vw, (max-width: 68rem) 50vw, 26rem"
+        />
+        <div className={styles.productBody}>
+          <StatusTag status={product.status} category={product.category} />
+          <h3>{product.name}</h3>
+          <p className={styles.productDescription}>{product.description}</p>
+          <span className={styles.textLink}>
+            {product.cta}
+            <span aria-hidden="true">
+              {isExternal(product.href) ? "↗" : "→"}
+            </span>
+          </span>
+        </div>
+      </ProductLink>
+    </li>
+  );
+}
+
 export default function Home() {
   return (
     <main className={styles.page}>
@@ -152,7 +385,14 @@ export default function Home() {
           <span className={styles.labs}>Labs</span>
         </Link>
 
-        <p className={styles.headerLabel}>Independent creative lab</p>
+        <nav className={styles.nav} aria-label="Primary">
+          <a href="#products">Products</a>
+          <Link href="/shop">Patterns</Link>
+          <Link href="/shop/type">Type</Link>
+          <a className={styles.navContact} href="mailto:support@monosyth.com">
+            Contact
+          </a>
+        </nav>
       </header>
 
       <div id="main-content">
@@ -160,32 +400,46 @@ export default function Home() {
           <div className={styles.heroCopy}>
             <p className={styles.eyebrow}>
               <span className={styles.eyebrowSignal} />
-              Inquiry / making
+              Independent product studio
             </p>
 
             <h1 id="hero-title">
               Curiosity,
-              <span>made tangible.</span>
+              <span>made tangible</span>
             </h1>
 
             <p className={styles.heroIntro}>
-              Monosyth Labs builds useful, playful things from questions worth
-              exploring.
+              Monosyth Labs turns questions worth exploring into things people
+              actually use: apps, websites, quilt patterns, and type.
             </p>
 
-            <ol className={styles.process} aria-label="Our creative process">
-              {processSteps.map((step, index) => (
-                <li key={step}>
-                  <span>{String(index + 1).padStart(2, "0")}</span>
-                  {step}
-                </li>
-              ))}
-            </ol>
+            <div className={styles.heroActions}>
+              <a className={styles.primaryButton} href="#products">
+                <span>See what we make</span>
+                <span aria-hidden="true">↓</span>
+              </a>
+              <Link className={styles.secondaryButton} href="/shop">
+                <span>Shop patterns</span>
+                <span aria-hidden="true">→</span>
+              </Link>
+            </div>
 
-            <p className={styles.heroBelief}>
-              <span>Serious curiosity.</span>
-              <span>Playful results.</span>
-            </p>
+            <dl className={styles.heroStats}>
+              <div>
+                <dt>Live products</dt>
+                <dd>{products.length + 1}</dd>
+              </div>
+              <div>
+                <dt>On the workbench</dt>
+                <dd>{workbench.length}</dd>
+              </div>
+              <div>
+                <dt>Approach</dt>
+                <dd className={styles.heroBelief}>
+                  Serious curiosity / Playful results
+                </dd>
+              </div>
+            </dl>
           </div>
 
           <div className={styles.heroVisual}>
@@ -193,137 +447,142 @@ export default function Home() {
           </div>
         </section>
 
-        <section className={styles.productSection} aria-labelledby="product-title">
+        <section
+          id="products"
+          className={styles.productSection}
+          aria-labelledby="product-title"
+        >
           <div className={styles.sectionHeading}>
-            <p className={styles.sectionEyebrow}>From the lab</p>
-            <h2 id="product-title">
-              <span>Out in the world.</span>
-              <span>And on the workbench.</span>
-            </h2>
+            <div>
+              <p className={styles.sectionEyebrow}>From the lab</p>
+              <h2 id="product-title">Out in the world</h2>
+            </div>
+            <p>
+              Every product here started as a question. These are the ones that
+              grew into something you can use today.
+            </p>
           </div>
 
-          <article className={styles.productCard}>
-            <div className={styles.productIdentity}>
-              <p>A product of Monosyth Labs</p>
-              <div className={styles.logoStage}>
-                <Image
-                  className={styles.funPartyLogo}
-                  src="/brand/funparty-logo.svg"
-                  alt="FunParty"
-                  width={434}
-                  height={132}
-                  unoptimized
-                />
-                <span className={styles.logoGrid} aria-hidden="true" />
-              </div>
-            </div>
-
-            <div className={styles.productCopy}>
-              <p>
-                FunParty turns guest photos into a host-controlled live wall
-                and TV slideshow through one QR code—no guest app or account
-                required.
+          <article className={styles.featured}>
+            <div className={styles.featuredCopy}>
+              <StatusTag
+                status={featuredProduct.status}
+                category={featuredProduct.category}
+              />
+              <Image
+                className={styles.funPartyLogo}
+                src="/brand/funparty-logo.svg"
+                alt="FunParty"
+                width={434}
+                height={132}
+                unoptimized
+              />
+              <p className={styles.featuredDescription}>
+                {featuredProduct.description}
               </p>
-
-              <p className={styles.productDetail}>
-                One QR code&nbsp;&nbsp;/&nbsp;&nbsp;Live photo wall&nbsp;&nbsp;/&nbsp;&nbsp;TV slideshow
-              </p>
-
-              <a
-                className={styles.productLink}
-                href="https://funpartyapp.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Visit FunParty (opens in a new tab)"
+              <ul className={styles.featuredDetails}>
+                {featuredProduct.details.map((detail) => (
+                  <li key={detail}>{detail}</li>
+                ))}
+              </ul>
+              <ProductLink
+                className={styles.primaryButton}
+                href={featuredProduct.href}
+                label={featuredProduct.cta}
               >
-                <span>Visit FunParty</span>
+                <span>{featuredProduct.cta}</span>
                 <span aria-hidden="true">↗</span>
-              </a>
+              </ProductLink>
+            </div>
+
+            <div className={styles.featuredVisual}>
+              <BrowserFrame
+                domain={featuredProduct.domain}
+                image={featuredProduct.image}
+                imageAlt={featuredProduct.imageAlt}
+                sizes="(max-width: 56rem) 100vw, 42rem"
+              />
             </div>
           </article>
 
-          <article className={styles.upcomingProduct}>
-            <div>
-              <p className={styles.upcomingLabel}>Out in the world / Restaurant discovery</p>
-              <h3>MenuToEat</h3>
-              <p>Find your next meal with complete restaurant menus, prices, photos, and ratings. Browse by dish, cuisine, or neighborhood.</p>
-            </div>
-            <a
-              className={styles.productLink}
-              href="https://menutoeat.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Visit MenuToEat (opens in a new tab)"
-            >
-              <span>Visit MenuToEat</span><span aria-hidden="true">↗</span>
-            </a>
-          </article>
+          <ul className={styles.productGrid}>
+            {products.map((product) => (
+              <ProductCard key={product.name} product={product} />
+            ))}
+          </ul>
 
-          <article className={styles.upcomingProduct}>
-            <div>
-              <p className={styles.upcomingLabel}>From the journal / Slow living</p>
-              <h3>For a Quieter Life</h3>
-              <p>Quiet hobbies, small outings, and everyday rituals for a slower, more intentional life. A companion to Fog, Salt &amp; Pine.</p>
-            </div>
-            <a
-              className={styles.productLink}
-              href="https://foraquieterlife.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Visit For a Quieter Life (opens in a new tab)"
-            >
-              <span>Visit For a Quieter Life</span><span aria-hidden="true">↗</span>
-            </a>
-          </article>
+          <div className={styles.workbenchHeading}>
+            <h3 id="workbench-title">On the workbench</h3>
+            <p>In beta and early access. Try them now and help shape what comes next.</p>
+          </div>
 
-          <article className={styles.upcomingProduct}>
-            <div>
-              <p className={styles.upcomingLabel}>From the studio / Home goods</p>
-              <h3>Fog, Salt &amp; Pine</h3>
-              <p>Thoughtfully crafted home goods inspired by the forests and
-                coastlines of the Pacific Northwest.</p>
-            </div>
-            <a
-              className={styles.productLink}
-              href="https://fogsaltpine.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Visit Fog, Salt & Pine (opens in a new tab)"
-            >
-              <span>Visit Fog, Salt &amp; Pine</span><span aria-hidden="true">↗</span>
-            </a>
-          </article>
+          <ul className={styles.workbenchGrid} aria-labelledby="workbench-title">
+            {workbench.map((product) => (
+              <ProductCard key={product.name} product={product} />
+            ))}
+          </ul>
+        </section>
 
-          <article className={styles.upcomingProduct}>
-            <div>
-              <p className={styles.upcomingLabel}>From the sewing studio / Quilt patterns</p>
-              <h3>Monosyth Patterns</h3>
-              <p>Original quilts with a playful spirit. Explore the Trellis collection,
-                with illustrated PDF instructions and editable EQ8 projects.</p>
-            </div>
-            <Link className={styles.productLink} href="/shop">
-              <span>Explore quilt patterns</span><span aria-hidden="true">→</span>
-            </Link>
-          </article>
+        <section className={styles.approach} aria-labelledby="approach-title">
+          <div className={styles.approachHeading}>
+            <p className={styles.sectionEyebrow}>How the lab works</p>
+            <h2 id="approach-title">Questions become things here</h2>
+          </div>
 
-          <article className={styles.upcomingProduct}>
-            <div>
-              <p className={styles.upcomingLabel}>On the workbench / Early planner</p>
-              <h3>MoveMorrow</h3>
-              <p>A tailored checklist, timeline, and budget for your next move.
-                Preview your plan, then sign in to save it.</p>
-            </div>
-            <Link className={styles.productLink} href="/move">
-              <span>Explore MoveMorrow</span><span aria-hidden="true">→</span>
-            </Link>
-          </article>
+          <ol className={styles.process}>
+            {processSteps.map(([step, detail], index) => (
+              <li key={step}>
+                <span className={styles.processNumber}>
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <strong>{step}</strong>
+                <span>{detail}</span>
+              </li>
+            ))}
+          </ol>
         </section>
       </div>
 
       <footer className={styles.footer}>
-        <p>© 2026 Monosyth Labs, LLC</p>
-        <p>Questions become things here.</p>
-        <Link href="/app">Studio access</Link>
+        <div className={styles.footerBrand}>
+          <Link className={styles.brand} href="/" aria-label="Monosyth Labs home">
+            <BrandMark />
+            <span className={styles.wordmark}>monosyth</span>
+            <span className={styles.labs}>Labs</span>
+          </Link>
+          <p>
+            An independent product studio making useful, playful things.
+          </p>
+        </div>
+
+        <nav className={styles.footerLinks} aria-label="Products">
+          <p>Products</p>
+          {allProducts.map((product) =>
+            isExternal(product.href) ? (
+              <a
+                key={product.name}
+                href={product.href}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {product.name}
+              </a>
+            ) : (
+              <Link key={product.name} href={product.href}>
+                {product.name}
+              </Link>
+            ),
+          )}
+        </nav>
+
+        <nav className={styles.footerLinks} aria-label="Studio">
+          <p>Studio</p>
+          <Link href="/processvision">Process Vision essay</Link>
+          <a href="mailto:support@monosyth.com">support@monosyth.com</a>
+          <Link href="/app">Studio access</Link>
+        </nav>
+
+        <p className={styles.copyright}>© 2026 Monosyth Labs, LLC</p>
       </footer>
     </main>
   );
