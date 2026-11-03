@@ -100,6 +100,20 @@
       "priceId": "price_1UVLMs9FGEoNhiRQ7p5Uff2z",
       "unitAmount": 1200,
       "currency": "usd"
+    },
+    {
+      "sku": "cornerwell-desktop@1.004",
+      "productId": "prod_MonosythCornerwellDesktop1004",
+      "priceId": "price_1UXVKB9FGEoNhiRQ5TlhJQqG",
+      "unitAmount": 800,
+      "currency": "usd"
+    },
+    {
+      "sku": "cornerwell-desktop-web@1.004",
+      "productId": "prod_MonosythCornerwellDesktopWeb1004",
+      "priceId": "price_1UXVKC9FGEoNhiRQcRk8GnPq",
+      "unitAmount": 1200,
+      "currency": "usd"
     }
   ]
 }

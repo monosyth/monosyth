@@ -29,7 +29,7 @@ export default function ShopPage() {
 
     <div className={styles.ribbon}><span><ShopStar />Designed by Monosyth</span><span><ShopStar />Made with your favorite fabrics</span><span><ShopStar />Ready for your own color story</span></div>
 
-    <Link className={styles.foundryBanner} href="/shop/type"><div><span>Introducing Monosyth Type / Release No. 001</span><h2>Everyday Carved</h2><p>A bold display serif with a little irregular charm</p></div><strong>Try the font · From $8 <DiagonalArrow /></strong></Link>
+    <Link className={styles.foundryBanner} href="/shop/type/cornerwell"><div><span>New from Monosyth Type / Release No. 002</span><h2>Cornerwell</h2><p>A friendly, squared-off sans in ten styles</p></div><strong>Try the font · From $8 <DiagonalArrow /></strong></Link>
 
     <section className={styles.collection} id="patterns" aria-labelledby="collection-title">
       <div className={styles.sectionHeading}><div><p className={styles.eyebrow}>The Trellis collection</p><h2 id="collection-title">Which one feels like you?</h2></div><p>{shopProducts.length} patterns · {formatPrice(featured.priceCents)} each<br />PDF + editable EQ8 project</p></div>

@@ -103,11 +103,11 @@ const products: Product[] = [
     category: "Fonts",
     status: "Live",
     description:
-      "Everyday Carved, a warm and weighty display serif with a little carved character. Commercial licenses from $8.",
+      "Everyday Carved, a warm display serif, and Cornerwell, a friendly sans in ten styles. Commercial licenses from $8.",
     href: "/shop/type",
     image: "/brand/products/type.jpg",
     imageAlt: "Everyday Carved type specimen",
-    cta: "Try Everyday Carved",
+    cta: "Browse the fonts",
   },
   {
     name: "Fog, Salt & Pine",

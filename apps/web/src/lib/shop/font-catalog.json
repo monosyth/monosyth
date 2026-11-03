@@ -48,5 +48,55 @@
         "source": "fonts/everyday-carved/dist/EverydayCarved-Desktop-Web-v1.600.zip"
       }
     ]
+  },
+  {
+    "slug": "cornerwell-desktop",
+    "name": "Cornerwell \u2014 Desktop",
+    "version": "1.004",
+    "priceCents": 800,
+    "currency": "usd",
+    "family": "cornerwell",
+    "edition": "Desktop",
+    "description": "A friendly, squared-off sans from Monosyth Type. Desktop edition, ten styles, commercial use included.",
+    "licenseSummary": "One named desktop user \u00b7 Personal, business and client work",
+    "formats": "OTF + TTF",
+    "taxCode": "txcd_10202003",
+    "image": "/shop/type/cornerwell/v1.004/social-card.png",
+    "imageAlt": "Cornerwell, a sans family in ten styles",
+    "files": [
+      {
+        "id": "font-kit",
+        "name": "Cornerwell-Desktop-v1.004.zip",
+        "label": "Desktop family kit, ten styles + guide, specimen and licenses",
+        "bytes": 1695548,
+        "sha256": "c8883bf9a34f511f6b739d413664e75f061f305b9fccad9fb93c5a10f83286b2",
+        "source": "fonts/label-sans/family-v1.004/dist/Cornerwell-Desktop-v1.004.zip"
+      }
+    ]
+  },
+  {
+    "slug": "cornerwell-desktop-web",
+    "name": "Cornerwell \u2014 Desktop + Web",
+    "version": "1.004",
+    "priceCents": 1200,
+    "currency": "usd",
+    "family": "cornerwell",
+    "edition": "Desktop + Web",
+    "description": "A friendly, squared-off sans from Monosyth Type. Desktop + Web edition, ten styles, commercial use included.",
+    "licenseSummary": "One named desktop user + one website project",
+    "formats": "OTF + TTF + WOFF2 + CSS",
+    "taxCode": "txcd_10202003",
+    "image": "/shop/type/cornerwell/v1.004/social-card.png",
+    "imageAlt": "Cornerwell, a sans family in ten styles",
+    "files": [
+      {
+        "id": "font-kit",
+        "name": "Cornerwell-Desktop-Web-v1.004.zip",
+        "label": "Desktop + Web family kit, ten styles + guide, specimen and licenses",
+        "bytes": 2384463,
+        "sha256": "0713fa5cf51a52213a05e3ee4022327b5a520a826a7e8c1b1fa158508511ab5d",
+        "source": "fonts/label-sans/family-v1.004/dist/Cornerwell-Desktop-Web-v1.004.zip"
+      }
+    ]
   }
 ]

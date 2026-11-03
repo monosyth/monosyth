@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import Stripe from "stripe";
 import { getStorage } from "firebase-admin/storage";
 import { getFirebaseAdminApp } from "../src/lib/firebase/admin";
-import { shopProducts, fontProducts, shopReleases, releaseId, storagePath } from "../src/lib/shop/catalog";
+import { shopProducts, fontProducts, fontFamily, fontPage, shopReleases, releaseId, storagePath } from "../src/lib/shop/catalog";
 import { paidRelease, paidReleases } from "../src/lib/shop/orders";
 import { cartProducts } from "../src/lib/shop/cart";
 import { orderEmail } from "../src/lib/shop/email";
@@ -425,20 +425,29 @@ test("branded order email escapes display data and provides a plain-text alterna
 
 
 test("font checkout uses the approved server prices, exact license SKU, software tax code and private namespace", async () => {
-  for (const [index, font] of fontProducts.entries()) {
+  for (const font of fontProducts) {
     mock.restoreAll(); mockBucket(); const requests = mockNetwork();
     await createCheckout(font.slug, orderId);
     const params = new URLSearchParams(requests[0].body);
-    assert.equal(params.get("line_items[0][price_data][unit_amount]"), String(index ? 1200 : 800));
+    assert.equal(params.get("line_items[0][price_data][unit_amount]"), String(font.edition === "Desktop + Web" ? 1200 : 800));
     assert.equal(params.get("line_items[0][price_data][product_data][tax_code]"), "txcd_10202003");
     assert.equal(params.get("metadata[sku]"), releaseId(font));
     assert.equal(params.get("payment_method_types[0]"), null);
-    assert.match(storagePath(font, font.files[0]), /^fonts\/everyday-carved-/);
+    assert.ok(storagePath(font, font.files[0]).startsWith(`fonts/${font.family}-`));
     assert.equal(font.files.length, 1);
     assert.match(font.files[0].sha256, /^[0-9a-f]{64}$/);
     assert.match(params.get("integration_identifier") || "", /^monosyth_hosted_[a-z]{8}$/);
   }
-  assert.throws(() => cartProducts(fontProducts.map(product => product.slug)), /Choose one Everyday Carved edition/);
+  assert.throws(() => cartProducts(fontFamily("everyday-carved").map(product => product.slug)), /Choose one Everyday Carved edition/);
+  assert.throws(() => cartProducts(fontFamily("cornerwell").map(product => product.slug)), /Choose one Cornerwell edition/);
+  assert.deepEqual(cartProducts(["cornerwell-desktop", "everyday-carved-desktop-web"]).map(product => product.slug), ["cornerwell-desktop", "everyday-carved-desktop-web"]);
+});
+
+test("each font family has two editions and returns cancelled checkouts to its own page", () => {
+  assert.deepEqual(fontFamily("everyday-carved").map(product => product.edition), ["Desktop", "Desktop + Web"]);
+  assert.deepEqual(fontFamily("cornerwell").map(product => product.edition), ["Desktop", "Desktop + Web"]);
+  assert.equal(fontPage(fontFamily("everyday-carved")[0]), "/shop/type");
+  assert.equal(fontPage(fontFamily("cornerwell")[1]), "/shop/type/cornerwell");
 });
 
 function fontFixture(index = 0) {
@@ -478,7 +487,7 @@ test("paid font webhook sends one font delivery email and duplicate notification
 
 
 test("updated font releases keep the earlier paid font kits resolvable", () => {
-  for (const font of fontProducts) {
+  for (const font of fontFamily("everyday-carved")) {
     assert.equal(font.version, "1.600");
     const previous = shopReleases.find(product => product.slug === font.slug && product.version === "1.400");
     assert.ok(previous);

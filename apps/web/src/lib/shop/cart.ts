@@ -1,4 +1,4 @@
-import { findProduct, type ShopProduct } from "./catalog";
+import { findProduct, fontFamilyName, type ShopProduct } from "./catalog";
 import { ShopError } from "./security";
 
 export const MAX_CART_PATTERNS = 10;
@@ -16,8 +16,9 @@ export function cartProducts(selection: unknown): ShopProduct[] {
     return product;
   });
   const fonts = products.filter(product => product.kind === "font");
-  if (new Set(fonts.map(product => product.family)).size !== fonts.length) {
-    throw new ShopError(400, "Choose one Everyday Carved edition. Desktop + Web already includes the desktop license.");
+  const repeated = fonts.find((product, index) => fonts.findIndex(other => other.family === product.family) !== index);
+  if (repeated) {
+    throw new ShopError(400, `Choose one ${fontFamilyName(repeated)} edition. Desktop + Web already includes the desktop license.`);
   }
   return products;
 }
