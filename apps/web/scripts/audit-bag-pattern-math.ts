@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import {
+  boxedCornerTaperMismatch,
   calculateBagPatternPlan,
   calculateFatQuarterPieceLayout,
   calculateInterfacingPlan,
@@ -19,6 +20,7 @@ import {
 import { calculateRecessedZipperKit } from "../src/lib/sewing/recessed-zipper";
 import { calculateToteHandlePlan } from "../src/lib/sewing/tote-handle";
 import { calculateFrenchCornerPlan } from "../src/lib/sewing/corner-construction";
+import { boxyBagSewingSteps, frenchBoxyMeasurements } from "../src/components/app/bag-studio/utils";
 
 let checks = 0;
 const near = (actual: number, expected: number, message: string) => {
@@ -377,6 +379,29 @@ const dividedPocket = calculatePocketPlan(plan, "divided-slip");
 yes(dividedPocket.valid, "divided slip pocket is valid");
 yes(dividedPocket.notes.some((n) => n.includes("center")), "divided pocket includes center divider instruction");
 
+const tinyTote = calculateBagPatternPlan(
+  draftFromFinishedSize({ baseWidth: 3, height: 3, depth: 2, seamAllowance: 0.25 }),
+);
+const tinyPocket = calculatePocketPlan(tinyTote, "single-slip");
+yes(!tinyPocket.valid && tinyPocket.cutWidth === 0, "pocket is unavailable when it cannot fit the bag face");
+const shortTote = calculateBagPatternPlan(
+  draftFromFinishedSize({ baseWidth: 8, height: 5, depth: 2, seamAllowance: 0.25 }),
+);
+const shortPocket = calculatePocketPlan(shortTote, "single-slip");
+yes(shortPocket.valid, "short tote still gets a pocket");
+yes(shortPocket.finishedHeight <= shortTote.finishedHeight - 2, "pocket keeps 1″ clearance above and below");
+yes(shortPocket.finishedWidth <= shortTote.finishedBaseWidth - 2, "pocket keeps 1″ clearance at the sides");
+
+near(boxedCornerTaperMismatch(plan), 0, "straight sides meet the boxed corner square");
+near(
+  boxedCornerTaperMismatch(calculateBagPatternPlan({
+    cutWidth: 12, cutHeight: 6, cornerCut: 1, seamAllowance: 0.5,
+    topTakeUp: 0.5, leftTopInset: 4, rightTopInset: 4, fabricWidth: 44,
+  })),
+  0.140312,
+  "steep taper reports the boxed-corner edge mismatch",
+);
+
 const noPocket = calculatePocketPlan(plan, "none");
 yes(noPocket.cutWidth === 0 && noPocket.cutHeight === 0, "no pocket returns zero dimensions");
 
@@ -430,6 +455,12 @@ const frenchPlanHalfInch = calculateFrenchCornerPlan(5, 0.5);
 yes(frenchPlanHalfInch.valid, "french corner plan with 5 inch target and 1/2 inch seam is valid");
 near(frenchPlanHalfInch.firstPassSpan, 4, "5 inch target with 1/2 inch seam has 4 inch first pass span");
 near(frenchPlanHalfInch.firstPassHeight, 2, "5 inch target with 1/2 inch seam has 2 inch first pass height");
+
+const caddy = calculateBoxyBagPlan(draftFromFinishedBoxyBag({ length: 11, width: 6, height: 5, seamAllowance: 0.25, fabricWidth: 44 }));
+const caddyFrench = frenchBoxyMeasurements(caddy);
+yes(caddyFrench.pinchLine === "5 1/2″", `French pinch line follows box width: ${caddyFrench.pinchLine}`);
+yes(boxyBagSewingSteps(caddy).some((step) => step.includes(`mark a ${caddyFrench.pinchLine} line`)), "French steps use the computed pinch line");
+yes(boxyBagSewingSteps(caddy).some((step) => step.includes(caddyFrench.panel)), "French steps use the panel size for fleece");
 
 process.stdout.write(`${checks} sewing-math checks passed\n`);
 

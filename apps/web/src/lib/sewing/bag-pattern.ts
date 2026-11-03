@@ -162,6 +162,20 @@ function pointOnLineAtY(
   };
 }
 
+// With tapered sides, the angled side seam meets the boxed-corner notch off
+// square, so its two edges no longer match. Returns the larger per-corner gap.
+export function boxedCornerTaperMismatch(plan: BagPatternPlan) {
+  if (plan.cornerCut <= plan.seamAllowance) return 0;
+  const verticalRun = plan.cutHeight - plan.cornerCut;
+  const left = offsetSideLine("left", plan.leftTopInset, plan.cutWidth, verticalRun, plan.seamAllowance);
+  const right = offsetSideLine("right", plan.rightTopInset, plan.cutWidth, verticalRun, plan.seamAllowance);
+  return Math.max(
+    0,
+    pointOnLineAtY(left, verticalRun).x - plan.seamAllowance,
+    plan.cutWidth - plan.seamAllowance - pointOnLineAtY(right, verticalRun).x,
+  );
+}
+
 export function calculatePanelStitchGeometry(
   plan: BagPatternPlan,
 ): PanelStitchGeometry {
@@ -527,13 +541,27 @@ export function calculatePocketPlan(
 
   const availableWidth = Math.max(0, plan.finishedBaseWidth);
   const availableHeight = Math.max(0, plan.finishedHeight);
-  const targetFinishedWidth = snapMeasurement(
-    clamp(availableWidth * 0.72, 4, Math.max(4, availableWidth - 2)),
-    0.25,
+  // Keep at least 1" of clearance on each side of the pocket.
+  const maxFinishedWidth = availableWidth - 2;
+  const maxFinishedHeight = availableHeight - 2;
+  if (maxFinishedWidth < 2 || maxFinishedHeight < 1.5) {
+    return {
+      style,
+      finishedWidth: 0,
+      finishedHeight: 0,
+      cutWidth: 0,
+      cutHeight: 0,
+      valid: false,
+      notes: ["This bag is too small for a slip pocket. Leave the pocket off or enlarge the bag."],
+    };
+  }
+  const targetFinishedWidth = Math.min(
+    maxFinishedWidth,
+    snapMeasurement(clamp(availableWidth * 0.72, Math.min(4, maxFinishedWidth), maxFinishedWidth), 0.25),
   );
-  const targetFinishedHeight = snapMeasurement(
-    clamp(availableHeight * 0.52, 3.5, Math.max(3.5, availableHeight - 2)),
-    0.25,
+  const targetFinishedHeight = Math.min(
+    maxFinishedHeight,
+    snapMeasurement(clamp(availableHeight * 0.52, Math.min(3.5, maxFinishedHeight), maxFinishedHeight), 0.25),
   );
   // Double-fold top hem (1/2" + 1/2" = 1") + 1/2" bottom turn-under
   const cutHeight = targetFinishedHeight + 1.5;

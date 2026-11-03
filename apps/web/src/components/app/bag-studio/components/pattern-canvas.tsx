@@ -1,20 +1,19 @@
-import Link from "next/link";
-import { memo, startTransition, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
+import { useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import styles from "@/app/app/bag-studio/bag-studio.module.css";
-import { BagOutcomePreview } from "@/components/app/bag-outcome-preview/bag-outcome-preview";
-import { BagPanelComposer } from "@/components/app/bag-panel-composer";
-import { useAuth } from "@/components/auth/auth-provider";
-import { calculateBagPatternPlan, calculateBodyFabricLayout, calculateFatQuarterPieceLayout, calculateInterfacingPlan, calculatePanelStitchGeometry, calculatePocketPlan, clamp, draftFromFinishedSize, formatDecimal, formatInches, formatYards, snapMeasurement, type BagBodyRecipe, type BagClosure, type BagPatternDraft, type BagPatternPlan, type InterfacingPlan, type PocketPlan } from "@/lib/sewing/bag-pattern";
-import { boxyBagFormulaText, calculateBoxyBagKit, calculateBoxyBagPlan, draftFromFinishedBoxyBag } from "@/lib/sewing/boxy-bag";
-import { calculateOuterPanelComposition, defaultOuterPanelDesign, type OuterPanelComposition, type OuterPanelDesign } from "@/lib/sewing/panel-composition";
-import { calculateToteHandlePlan, handlePlacementInstruction, type ToteHandleOptions, type ToteHandlePlan } from "@/lib/sewing/tote-handle";
-import { BAG_STUDIO_SCHEMA_VERSION, MAX_SAVED_BAGS, createSavedBagId, decodeBagStudioShare, encodeBagStudioShare, readBagStudioState, writeBagStudioState, type BagBoxyBoxingMethod, type BagBoxyHandleStyle, type BagPocketStyle, type BagStructureFeel, type BagStudioClosureOptions, type BagStudioFabricSettings, type BagStudioSizeBasis, type BagStudioSnapshot, type BagStudioSnapStep, type BagStudioStoredState, type BagStudioTab, type BagStudioToolMode, type SavedBagDesign } from "@/lib/sewing/bag-studio-storage";
-import { calculateRecessedZipperKit, recessedPanelFinishedLength } from "@/lib/sewing/recessed-zipper";
-import { calculateFrenchCornerPlan } from "@/lib/sewing/corner-construction";
-import { closureChoices, bodyRecipeChoices, seamPresets, cornerPresets, sizePresets, structureChoices, pocketChoices, boxyHandleChoices, boxyBoxingChoices, studioSteps, defaultDraft, defaultBoxyDraft, defaultClosureOptions, defaultFabricSettings, defaultStudioSnapshot, SizeBasis, BodyRecipe, ToolMode, SnapStep, StudioStep, DragHandle, ClosureOptions, CutPiece } from "../constants";
-import { outerDesignForBody, cleanInput, savedBagCopyName, formatSavedBagTime, standingTopRimWidth, finishedSideSeamLength, getCutPieces, zipperNote, closureTeaching, boxyBagSewingSteps, toteBagSewingSteps, buildPlanText, downloadPatternSvg, downloadBoxyPatternSvg } from "../utils";
-import { MeasurementField } from "./measurement-field";
+import { calculatePanelStitchGeometry, clamp, formatInches, snapMeasurement, type BagClosure, type BagPatternDraft, type BagPatternPlan } from "@/lib/sewing/bag-pattern";
+import { type OuterPanelComposition } from "@/lib/sewing/panel-composition";
+import { type ToteHandlePlan } from "@/lib/sewing/tote-handle";
+import { ToolMode, SnapStep, DragHandle } from "../constants";
 import { Handle } from "./handle";
+
+// Shared by pointer drags and keyboard nudges so both stop at the same sizes.
+function dragLimits(draft: BagPatternDraft) {
+  return {
+    minWidth: draft.cornerCut * 2 + draft.seamAllowance * 2 + 2,
+    minHeight: draft.cornerCut + draft.seamAllowance + draft.topTakeUp + 2,
+    maxCorner: Math.min(draft.cutWidth / 2 - draft.seamAllowance - 1, draft.cutHeight / 2 - 0.5),
+  };
+}
 
 export function PatternCanvas({
       draft,
@@ -128,8 +127,7 @@ export function PatternCanvas({
         const applySnap = (value: number) =>
                   snapStep === 0 ? value : snapMeasurement(value, snapStep);
         const mirrorFactor = mirror ? 2 : 1;
-        const minWidth = start.cornerCut * 2 + start.seamAllowance * 2 + 2;
-        const minHeight = start.cornerCut + start.seamAllowance + start.topTakeUp + 2;
+        const { minWidth, minHeight, maxCorner } = dragLimits(start);
         let next = start;
         if (active.handle === "left") {
           const delta = applySnap(dx);
@@ -217,10 +215,6 @@ export function PatternCanvas({
 
         if (active.handle === "corner") {
           const delta = applySnap((-dx - dy) / 2);
-          const maxCorner = Math.min(
-            start.cutWidth / 2 - start.seamAllowance - 1,
-            start.cutHeight / 2 - 0.5,
-          );
           next = {
             ...start,
             cornerCut: clamp(
@@ -276,28 +270,29 @@ export function PatternCanvas({
         const xDirection = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
         const yDirection = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0;
         const factor = mirror ? 2 : 1;
+        const { minWidth, minHeight, maxCorner } = dragLimits(draft);
         let next = draft;
         if (handle === "left" && horizontal) {
-          next = { ...draft, cutWidth: Math.max(3, draft.cutWidth - xDirection * step * factor) };
+          next = { ...draft, cutWidth: clamp(draft.cutWidth - xDirection * step * factor, minWidth, 60) };
         }
 
         if (handle === "right" && horizontal) {
-          next = { ...draft, cutWidth: Math.max(3, draft.cutWidth + xDirection * step * factor) };
+          next = { ...draft, cutWidth: clamp(draft.cutWidth + xDirection * step * factor, minWidth, 60) };
         }
 
         if (handle === "top" && vertical) {
-          next = { ...draft, cutHeight: Math.max(3, draft.cutHeight - yDirection * step * factor) };
+          next = { ...draft, cutHeight: clamp(draft.cutHeight - yDirection * step * factor, minHeight, 50) };
         }
 
         if (handle === "bottom" && vertical) {
-          next = { ...draft, cutHeight: Math.max(3, draft.cutHeight + yDirection * step * factor) };
+          next = { ...draft, cutHeight: clamp(draft.cutHeight + yDirection * step * factor, minHeight, 50) };
         }
 
         if (handle === "corner" && (horizontal || vertical)) {
           const direction = xDirection || yDirection;
           next = {
             ...draft,
-            cornerCut: clamp(draft.cornerCut + direction * step, 0.5, draft.cutHeight / 2 - 0.5),
+            cornerCut: clamp(draft.cornerCut + direction * step, 0.5, maxCorner),
           };
         }
 

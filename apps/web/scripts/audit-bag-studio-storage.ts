@@ -189,6 +189,13 @@ const legacyTote = normalizeBagStudioSnapshot(
 );
 same(legacyTote.bodyRecipe, "two-panel-tote", "older saves without a body recipe remain tote bodies");
 same(legacyTote.boxyDraft, fallback.boxyDraft, "older saves receive a safe boxy starter draft without changing their tote");
+same(legacyTote.boxyHandleStyle, "grab-tabs", "older saves keep the grab tabs they were designed with");
+same(legacyTote.boxyBoxingMethod, "four-corner-cut", "older saves keep pre-cut corners");
+same(
+  normalizeBagStudioSnapshot(fallback, fallback).boxyBoxingMethod,
+  fallback.boxyBoxingMethod,
+  "current saves keep their chosen boxing method",
+);
 
 const legacyRecessed = normalizeBagStudioSnapshot(
   {

@@ -1,8 +1,3 @@
-import { startTransition, useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
-import styles from "@/components/app/bag-outcome-preview.module.css";
-import { calculatePanelStitchGeometry, clamp, formatDecimal, formatInches, type BagBodyRecipe, type BagClosure, type BagPatternPlan } from "@/lib/sewing/bag-pattern";
-import type { OuterPanelComposition } from "@/lib/sewing/panel-composition";
-import type { HandleMaterial } from "@/lib/sewing/tote-handle";
 
 export const ORBIT_STEP = 10;
 export const ORBIT_STEPS = 360 / ORBIT_STEP;

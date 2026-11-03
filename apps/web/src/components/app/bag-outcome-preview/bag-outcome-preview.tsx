@@ -35,10 +35,8 @@ import { ZipperLine } from "./components/zipper-line";
 import { DimensionLine } from "./components/dimension-line";
 import { add } from "./isometric-math";
 import { lerp } from "./isometric-math";
-import { midpoint } from "./isometric-math";
 import { points } from "./isometric-math";
 import { pointOnQuad } from "./isometric-math";
-import { shiftedSegment } from "./isometric-math";
 import { normalizeYaw } from "./isometric-math";
 import { quantizeYaw } from "./isometric-math";
 import { circularAngleDistance } from "./isometric-math";
@@ -572,20 +570,14 @@ export function SvgBagOutcomePreview({
   // Boxy Bag short end faces: horizontal midpoint seam (flattened tube seam)
   const boxyLeftMidSeamFront = project({ x: -safeWidth / 2, y: safeHeight / 2, z: -safeDepth / 2 });
   const boxyLeftMidSeamBack = project({ x: -safeWidth / 2, y: safeHeight / 2, z: safeDepth / 2 });
-  const boxyLeftMidSeamCenter = project({ x: -safeWidth / 2, y: safeHeight / 2, z: 0 });
 
   const boxyRightMidSeamFront = project({ x: safeWidth / 2, y: safeHeight / 2, z: -safeDepth / 2 });
   const boxyRightMidSeamBack = project({ x: safeWidth / 2, y: safeHeight / 2, z: safeDepth / 2 });
-  const boxyRightMidSeamCenter = project({ x: safeWidth / 2, y: safeHeight / 2, z: 0 });
 
   // Boxy Side Carry Handle (curves out on the left end face)
   const boxyHandleFront = project({ x: -safeWidth / 2, y: safeHeight / 2, z: -safeDepth / 2 + 0.6 });
   const boxyHandleBack = project({ x: -safeWidth / 2, y: safeHeight / 2, z: safeDepth / 2 - 0.6 });
   const boxyHandleApex = project({ x: -safeWidth / 2 - 2.8, y: safeHeight / 2, z: 0 });
-
-  // Boxy Pull Tab (right end face)
-  const boxyTabStart = project({ x: safeWidth / 2, y: safeHeight / 2, z: 0 });
-  const boxyTabEnd = project({ x: safeWidth / 2 + 1.2, y: safeHeight / 2, z: 0 });
 
   const zipperOnLeft = options.sideZipperSide === "left";
   const sideTop3 = zipperOnLeft ? leftMidTop3 : rightMidTop3;

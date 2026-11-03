@@ -1,16 +1,6 @@
-import { lerp, calculateDistance } from "../isometric-math";
-import { startTransition, useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { lerp } from "../isometric-math";
 import styles from "@/components/app/bag-outcome-preview.module.css";
-import { calculatePanelStitchGeometry, clamp, formatDecimal, formatInches, type BagBodyRecipe, type BagClosure, type BagPatternPlan } from "@/lib/sewing/bag-pattern";
-import type { OuterPanelComposition } from "@/lib/sewing/panel-composition";
-import type { HandleMaterial } from "@/lib/sewing/tote-handle";
-import { ORBIT_STEP } from "../isometric-math";
-import { ORBIT_STEPS } from "../isometric-math";
-import { PROJECTION_PITCH } from "../isometric-math";
-import { ANGLE_EPSILON } from "../isometric-math";
-import { Point3, Point, midpoint, points, pointOnQuad, shiftedSegment, projectPoint3, projectQuad, add } from "../isometric-math";
-import { ProjectedPoint } from "../isometric-math";
-import { SurfaceBuild } from "./surface-build";
+import { Point, midpoint, shiftedSegment } from "../isometric-math";
 
 export function ZipperLine({
       from,

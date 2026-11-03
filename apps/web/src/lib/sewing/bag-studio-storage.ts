@@ -348,12 +348,14 @@ export function normalizeBagStudioSnapshot(
     boxyHandleStyle: enumValue(
       input.boxyHandleStyle,
       boxyHandleStyles,
-      input.pullTabs === false ? "none" : fallback.boxyHandleStyle ?? "grab-tabs",
+      // Designs saved before this option existed used grab tabs.
+      input.pullTabs === false ? "none" : "grab-tabs",
     ),
     boxyBoxingMethod: enumValue(
       input.boxyBoxingMethod,
       boxyBoxingMethods,
-      fallback.boxyBoxingMethod ?? "four-corner-cut",
+      // Designs saved before this option existed used pre-cut corners.
+      "four-corner-cut",
     ),
     mirror: booleanValue(input.mirror, fallback.mirror),
     toolMode: enumValue(input.toolMode, toolModes, fallback.toolMode),

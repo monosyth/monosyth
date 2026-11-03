@@ -2,15 +2,12 @@
 
 import Link from "next/link";
 import {
-  memo,
   startTransition,
   useEffect,
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
   type KeyboardEvent,
-  type PointerEvent,
 } from "react";
 
 import styles from "@/app/app/bag-studio/bag-studio.module.css";
@@ -18,42 +15,27 @@ import { BagOutcomePreview } from "@/components/app/bag-outcome-preview/bag-outc
 import { BagPanelComposer } from "@/components/app/bag-panel-composer";
 import { useAuth } from "@/components/auth/auth-provider";
 import {
+  boxedCornerTaperMismatch,
   calculateBagPatternPlan,
-  calculateBodyFabricLayout,
-  calculateFatQuarterPieceLayout,
-  calculateInterfacingPlan,
-  calculatePanelStitchGeometry,
   calculatePocketPlan,
   clamp,
   draftFromFinishedSize,
-  formatDecimal,
   formatInches,
-  formatYards,
   snapMeasurement,
-  type BagBodyRecipe,
   type BagClosure,
   type BagPatternDraft,
-  type BagPatternPlan,
-  type InterfacingPlan,
-  type PocketPlan,
 } from "@/lib/sewing/bag-pattern";
 import {
-  boxyBagFormulaText,
-  calculateBoxyBagKit,
   calculateBoxyBagPlan,
   draftFromFinishedBoxyBag,
 } from "@/lib/sewing/boxy-bag";
 import {
   calculateOuterPanelComposition,
   defaultOuterPanelDesign,
-  type OuterPanelComposition,
   type OuterPanelDesign,
 } from "@/lib/sewing/panel-composition";
 import {
   calculateToteHandlePlan,
-  handlePlacementInstruction,
-  type ToteHandleOptions,
-  type ToteHandlePlan,
 } from "@/lib/sewing/tote-handle";
 import {
   BAG_STUDIO_SCHEMA_VERSION,
@@ -67,14 +49,10 @@ import {
   type BagBoxyHandleStyle,
   type BagPocketStyle,
   type BagStructureFeel,
-  type BagStudioClosureOptions,
   type BagStudioFabricSettings,
-  type BagStudioSizeBasis,
   type BagStudioSnapshot,
-  type BagStudioSnapStep,
   type BagStudioStoredState,
   type BagStudioTab,
-  type BagStudioToolMode,
   type SavedBagDesign,
 } from "@/lib/sewing/bag-studio-storage";
 import {
@@ -82,13 +60,11 @@ import {
   recessedPanelFinishedLength,
 } from "@/lib/sewing/recessed-zipper";
 import { calculateFrenchCornerPlan } from "@/lib/sewing/corner-construction";
-import { closureChoices, bodyRecipeChoices, seamPresets, cornerPresets, sizePresets, structureChoices, pocketChoices, boxyHandleChoices, boxyBoxingChoices, studioSteps, defaultDraft, defaultBoxyDraft, defaultClosureOptions, defaultFabricSettings, defaultStudioSnapshot, SizeBasis, BodyRecipe, ToolMode, SnapStep, StudioStep, DragHandle, ClosureOptions, CutPiece } from "./constants";
+import { closureChoices, bodyRecipeChoices, seamPresets, cornerPresets, sizePresets, structureChoices, pocketChoices, boxyHandleChoices, boxyBoxingChoices, studioSteps, defaultDraft, defaultBoxyDraft, defaultClosureOptions, defaultFabricSettings, defaultStudioSnapshot, SizeBasis, BodyRecipe, ToolMode, SnapStep, StudioStep, ClosureOptions } from "./constants";
 import { outerDesignForBody, cleanInput, savedBagCopyName, formatSavedBagTime, standingTopRimWidth, finishedSideSeamLength, getCutPieces, zipperNote, closureTeaching, boxyBagSewingSteps, toteBagSewingSteps, buildPlanText, downloadPatternSvg, downloadBoxyPatternSvg } from "./utils";
 import { MeasurementField } from "./components/measurement-field";
-import { Handle } from "./components/handle";
 import { PatternCanvas } from "./components/pattern-canvas";
 import { BoxyPatternCanvas } from "./components/boxy-pattern-canvas";
-import { FatQuarterLayoutDiagram } from "./components/fat-quarter-layout-diagram";
 import { FabricLayoutPanel } from "./components/fabric-layout-panel";
 import { RecessedZipperCutPlan } from "./components/recessed-zipper-cut-plan";
 import { BoxyBagCutPlan } from "./components/boxy-bag-cut-plan";
@@ -138,6 +114,7 @@ export function BagPatternStudio() {
   const [savedSearch, setSavedSearch] = useState("");
   const [storageReady, setStorageReady] = useState(false);
   const [hydratedOwnerId, setHydratedOwnerId] = useState<string | null>(null);
+  const sharedLink = useRef<ReturnType<typeof decodeBagStudioShare> | undefined>(undefined);
   const [saveState, setSaveState] = useState<
     "idle" | "saved" | "error" | "limit"
   >("idle");
@@ -224,44 +201,46 @@ export function BagPatternStudio() {
       .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
   }, [savedBags, savedSearch]);
 
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.location.hash.startsWith("#bag=")) {
-      const encoded = window.location.hash.slice(5);
-      const decoded = decodeBagStudioShare(encoded, defaultStudioSnapshot);
-      if (decoded) {
-        applySnapshot(decoded.snapshot);
-        if (decoded.name) setBagName(decoded.name);
-      }
-    }
-  }, []);
+  function applySnapshot(snapshot: BagStudioSnapshot) {
+    setBodyRecipe(snapshot.bodyRecipe);
+    setClosure(snapshot.closure);
+    setBasis(snapshot.basis);
+    setToteDraft(snapshot.draft);
+    setBoxyDraft(snapshot.boxyDraft);
+    setClosureOptions(snapshot.closureOptions);
+    setOuterDesign(snapshot.outerDesign);
+    setStructureFeel(snapshot.structureFeel ?? "woven-interfaced");
+    setPocketStyle(snapshot.pocketStyle ?? "none");
+    setPullTabs(snapshot.pullTabs ?? true);
+    setBoxyHandleStyle(snapshot.boxyHandleStyle ?? (snapshot.pullTabs === false ? "none" : "side-handle"));
+    setBoxyBoxingMethod(snapshot.boxyBoxingMethod ?? "pinch-french-seam");
+    setMirror(snapshot.mirror);
+    setToolMode(snapshot.toolMode);
+    setSnapStep(snapshot.snapStep);
+    setFabricSettings(snapshot.fabricSettings);
+    setPreviewYaw(snapshot.previewYaw);
+    setCopyState("idle");
+  }
 
   useEffect(() => {
     if (status !== "signed_in" || !user?.uid) return;
     const ownerId = user.uid;
     const persisted = readBagStudioState(defaultStudioSnapshot, ownerId);
+    // A shared #bag= link replaces the stored working copy once, after sign-in.
+    // Kept in a ref so a re-run of this effect still sees it after the hash is cleared.
+    if (sharedLink.current === undefined) {
+      sharedLink.current = window.location.hash.startsWith("#bag=")
+        ? decodeBagStudioShare(window.location.hash.slice(5), defaultStudioSnapshot)
+        : null;
+      if (sharedLink.current) window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+    const shared = sharedLink.current;
 
     startTransition(() => {
-      const snapshot = persisted.workingCopy.snapshot;
-      setBodyRecipe(snapshot.bodyRecipe);
-      setClosure(snapshot.closure);
-      setBasis(snapshot.basis);
-      setToteDraft(snapshot.draft);
-      setBoxyDraft(snapshot.boxyDraft);
-      setClosureOptions(snapshot.closureOptions);
-      setOuterDesign(snapshot.outerDesign);
-      setStructureFeel(snapshot.structureFeel ?? "woven-interfaced");
-      setPocketStyle(snapshot.pocketStyle ?? "none");
-      setPullTabs(snapshot.pullTabs ?? true);
-      setBoxyHandleStyle(snapshot.boxyHandleStyle ?? (snapshot.pullTabs === false ? "none" : "side-handle"));
-      setBoxyBoxingMethod(snapshot.boxyBoxingMethod ?? "pinch-french-seam");
-      setMirror(snapshot.mirror);
-      setToolMode(snapshot.toolMode);
-      setSnapStep(snapshot.snapStep);
-      setFabricSettings(snapshot.fabricSettings);
-      setPreviewYaw(snapshot.previewYaw);
-      setBagName(persisted.workingCopy.name);
-      setActiveSavedBagId(persisted.workingCopy.activeSavedBagId);
-      setActiveTab(persisted.workingCopy.activeTab);
+      applySnapshot(shared?.snapshot ?? persisted.workingCopy.snapshot);
+      setBagName(shared ? shared.name ?? "" : persisted.workingCopy.name);
+      setActiveSavedBagId(shared ? null : persisted.workingCopy.activeSavedBagId);
+      setActiveTab(shared ? "studio" : persisted.workingCopy.activeTab);
       setSavedBags(persisted.savedBags);
       setStorageReady(true);
       setHydratedOwnerId(ownerId);
@@ -482,6 +461,12 @@ export function BagPatternStudio() {
   const handleBuildAdvisories = useMemo(() => {
     if (closure !== "open-tote") return [];
     const advisories = [...handlePlan.advisories];
+    const cornerMismatch = boxedCornerTaperMismatch(plan);
+    if (cornerMismatch > 1 / 16) {
+      advisories.push(
+        `The tapered sides meet the boxed corners off square, so each corner's edges differ by about ${formatInches(cornerMismatch)}. Ease them together when boxing, or reduce the taper.`,
+      );
+    }
     if (
       composition.design.contrastEnabled &&
       closureOptions.handleAttachmentDepth >=
@@ -528,25 +513,6 @@ export function BagPatternStudio() {
     }
     return advisories;
   }, [closure, closureOptions.handleAttachmentDepth, composition, handlePlan, plan]);
-
-  function applySnapshot(snapshot: BagStudioSnapshot) {
-    setBodyRecipe(snapshot.bodyRecipe);
-    setClosure(snapshot.closure);
-    setBasis(snapshot.basis);
-    setToteDraft(snapshot.draft);
-    setBoxyDraft(snapshot.boxyDraft);
-    setClosureOptions(snapshot.closureOptions);
-    setOuterDesign(snapshot.outerDesign);
-    setStructureFeel(snapshot.structureFeel ?? "woven-interfaced");
-    setPocketStyle(snapshot.pocketStyle ?? "none");
-    setPullTabs(snapshot.pullTabs ?? true);
-    setMirror(snapshot.mirror);
-    setToolMode(snapshot.toolMode);
-    setSnapStep(snapshot.snapStep);
-    setFabricSettings(snapshot.fabricSettings);
-    setPreviewYaw(snapshot.previewYaw);
-    setCopyState("idle");
-  }
 
   function applySizePreset(preset: BagSizePreset) {
     if (preset.bodyRecipe === "four-corner-boxy") {
@@ -883,10 +849,7 @@ export function BagPatternStudio() {
 
   function chooseCorner(value: number) {
     if (basis === "finished") {
-      updateFinished(
-        bodyRecipe === "four-corner-boxy" ? "height" : "depth",
-        value * 2,
-      );
+      updateFinished("depth", value * 2);
     } else {
       updateDraft({ ...draft, cornerCut: value });
     }
@@ -960,6 +923,8 @@ export function BagPatternStudio() {
           structureFeel,
           pocketStyle,
           pullTabs,
+          boxyHandleStyle,
+          boxyBoxingMethod,
         ),
       );
       setCopyState("copied");
@@ -1367,9 +1332,9 @@ export function BagPatternStudio() {
               <input
                 className={styles.range}
                 type="range"
-                min="0.5"
+                min={snapStep === 1 ? 1 : 0.5}
                 max={Math.max(
-                  0.5,
+                  snapStep === 1 ? 1 : 0.5,
                   Math.min(
                     5,
                     draft.cutHeight / 2 - draft.seamAllowance - 0.5,
@@ -1578,6 +1543,7 @@ export function BagPatternStudio() {
                 <div className={styles.pocketDetailCard}>
                   {(() => {
                     const pocket = calculatePocketPlan(plan, pocketStyle);
+                    if (!pocket.valid) return <p>{pocket.notes[0]}</p>;
                     return (
                       <>
                         <div className={styles.pocketDetailHeader}>

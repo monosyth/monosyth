@@ -1,16 +1,5 @@
-import { startTransition, useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import styles from "@/components/app/bag-outcome-preview.module.css";
-import { calculatePanelStitchGeometry, clamp, formatDecimal, formatInches, type BagBodyRecipe, type BagClosure, type BagPatternPlan } from "@/lib/sewing/bag-pattern";
-import type { OuterPanelComposition } from "@/lib/sewing/panel-composition";
-import type { HandleMaterial } from "@/lib/sewing/tote-handle";
-import { ORBIT_STEP } from "../isometric-math";
-import { ORBIT_STEPS } from "../isometric-math";
-import { PROJECTION_PITCH } from "../isometric-math";
-import { ANGLE_EPSILON } from "../isometric-math";
-import { Point3, Point, midpoint, points, pointOnQuad, shiftedSegment, projectPoint3, projectQuad, add } from "../isometric-math";
-import { ProjectedPoint } from "../isometric-math";
-import { SurfaceBuild } from "./surface-build";
-import { ZipperLine } from "./zipper-line";
+import { Point, midpoint } from "../isometric-math";
 
 export function DimensionLine({
       from,

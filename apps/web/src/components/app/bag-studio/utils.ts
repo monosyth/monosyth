@@ -1,62 +1,31 @@
 
 import {
-  calculateBagPatternPlan,
-  calculateBodyFabricLayout,
-  calculateFatQuarterPieceLayout,
   calculateInterfacingPlan,
   calculatePanelStitchGeometry,
   calculatePocketPlan,
-  clamp,
-  draftFromFinishedSize,
   formatDecimal,
   formatInches,
-  formatYards,
-  snapMeasurement,
-  type BagBodyRecipe,
   type BagClosure,
-  type BagPatternDraft,
   type BagPatternPlan,
-  type InterfacingPlan,
-  type PocketPlan,
 } from "@/lib/sewing/bag-pattern";
 import {
   boxyBagFormulaText,
   calculateBoxyBagKit,
-  calculateBoxyBagPlan,
-  draftFromFinishedBoxyBag,
 } from "@/lib/sewing/boxy-bag";
 import {
-  calculateOuterPanelComposition,
-  defaultOuterPanelDesign,
   type OuterPanelComposition,
   type OuterPanelDesign,
 } from "@/lib/sewing/panel-composition";
 import {
   calculateToteHandlePlan,
   handlePlacementInstruction,
-  type ToteHandleOptions,
   type ToteHandlePlan,
 } from "@/lib/sewing/tote-handle";
 import {
-  BAG_STUDIO_SCHEMA_VERSION,
-  MAX_SAVED_BAGS,
-  createSavedBagId,
-  decodeBagStudioShare,
-  encodeBagStudioShare,
-  readBagStudioState,
-  writeBagStudioState,
   type BagBoxyBoxingMethod,
   type BagBoxyHandleStyle,
   type BagPocketStyle,
   type BagStructureFeel,
-  type BagStudioClosureOptions,
-  type BagStudioFabricSettings,
-  type BagStudioSizeBasis,
-  type BagStudioSnapshot,
-  type BagStudioSnapStep,
-  type BagStudioStoredState,
-  type BagStudioTab,
-  type BagStudioToolMode,
   type SavedBagDesign,
 } from "@/lib/sewing/bag-studio-storage";
 import {
@@ -64,7 +33,7 @@ import {
   recessedPanelFinishedLength,
 } from "@/lib/sewing/recessed-zipper";
 import { calculateFrenchCornerPlan } from "@/lib/sewing/corner-construction";
-import { SizeBasis, BodyRecipe, ToolMode, SnapStep, StudioStep, DragHandle, ClosureOptions, CutPiece, BagSizePreset, closureChoices, bodyRecipeChoices, structureChoices, pocketChoices, boxyHandleChoices, boxyBoxingChoices, studioSteps } from "./constants";
+import { BodyRecipe, ClosureOptions, CutPiece, closureChoices, bodyRecipeChoices, structureChoices } from "./constants";
 
 export function outerDesignForBody(bodyRecipe: BodyRecipe, design: OuterPanelDesign): OuterPanelDesign {
     return bodyRecipe === "four-corner-boxy"
@@ -137,7 +106,7 @@ export function getCutPieces(plan: BagPatternPlan, bodyRecipe: BodyRecipe, closu
     });
     }
 
-    if (pocket.style !== "none") {
+    if (pocket.style !== "none" && pocket.valid) {
     pieces.push({
       material: "lining",
       name: pocket.style === "divided-slip" ? "Divided slip pocket" : "Interior slip pocket",
@@ -323,17 +292,29 @@ export function closureTeaching(bodyRecipe: BodyRecipe, closure: BagClosure, opt
     }
 }
 
+// Shannon's pinch & French-seam method: sizes that scale with the bag.
+// The pinch line is the compensated first pass, so the enclosing pass lands on the box depth.
+export function frenchBoxyMeasurements(plan: BagPatternPlan) {
+    const kit = calculateBoxyBagKit(plan);
+    return {
+      panel: `${formatInches(kit.panelCutLength)} × ${formatInches(kit.panelCutWidth)}`,
+      zipper: formatInches(Math.ceil(kit.panelCutLength) + 4),
+      pinchLine: formatInches(calculateFrenchCornerPlan(plan.cornerCut * 2, plan.seamAllowance).firstPassSpan),
+    };
+}
+
 export function boxyBagSewingSteps(plan: BagPatternPlan, structureFeel: BagStructureFeel = "woven-interfaced", pocketStyle: BagPocketStyle = "none", pullTabs = true, boxyHandleStyle: BagBoxyHandleStyle = "side-handle", boxyBoxingMethod: BagBoxyBoxingMethod = "pinch-french-seam") {
     if (boxyBoxingMethod === "pinch-french-seam") {
+    const { panel, zipper, pinchLine } = frenchBoxyMeasurements(plan);
     return [
-      "1. Fuse fleece & quilt outer: Fuse 11″ × 14″ fusible fleece to the wrong side of both outer fabric rectangles. Use a fabric pen to mark quilting lines and quilt as desired (e.g. 1″ vertical channel lines). If using a brand label, stitch it centered 1.5″ below the top zipper edge now.",
-      "2. Tape & layer zipper: Apply double-sided wash-away fabric tape along the top raw edge of Outer A. Separate your 16″ nylon zipper; stick one half teeth face-down on the tape. Apply another strip of fabric tape over the zipper tape, place Lining A face-down on top, and sew across using the fabric edge as a guide (ensures an even margin of zipper tape).",
+      `1. Fuse fleece & quilt outer: Fuse ${panel} fusible fleece to the wrong side of both outer fabric rectangles. Use a fabric pen to mark quilting lines and quilt as desired (e.g. 1″ vertical channel lines). If using a brand label, stitch it centered 1.5″ below the top zipper edge now.`,
+      `2. Tape & layer zipper: Apply double-sided wash-away fabric tape along the top raw edge of Outer A. Separate your ${zipper} nylon zipper; stick one half teeth face-down on the tape. Apply another strip of fabric tape over the zipper tape, place Lining A face-down on top, and sew across using the fabric edge as a guide (ensures an even margin of zipper tape).`,
       "3. Press & topstitch: Press both pieces nice and flat along the seam line, then topstitch along the zipper. Press lining down. Repeat the exact same taping and sewing steps for Outer B and Lining B.",
       "4. Zipper slider & end tabs: Re-thread the zipper slider onto both halves to zip the two panels together. Fold the 3″ × 3″ fabric tabs over both zipper ends, sew across, and trim excess zipper ends flush with the fabric edges.",
       "5. Outer & lining bottom seams: Fold outer panels right sides together, clip, and sew the bottom seam all the way across. Fold lining panels right sides together, clip, and sew across the bottom seam leaving a 4″ space in the center for turning.",
       "6. Tube fold & end seams (CRITICAL): OPEN YOUR ZIPPER AT LEAST HALFWAY NOW! Flatten the bag tube so the outer and lining bottom seams align directly with the center zipper line. Clip both short ends and sew all the way across both ends through all layers.",
       "7. Clip corners & turn: Clip the 4 outer corner points at 45° (do not cut thread stitches) and trim excess seam allowance. Pull the bag right-side out through the lining turning hole. Fold the raw edges of the opening inward and sew the lining opening closed.",
-      `8. The "Pinch & Measure" triangles: Turn right-side out, smooth out the lining, and poke all corners out completely. From the outside, pinch each of the 4 corners into an isosceles triangle with the seam centered down the middle. Use an acrylic ruler to measure and mark a 3″ line straight across the triangle base on all four corners. Check for wrinkles, then sew across all four marked lines.`,
+      `8. The "Pinch & Measure" triangles: Turn right-side out, smooth out the lining, and poke all corners out completely. From the outside, pinch each of the 4 corners into an isosceles triangle with the seam centered down the middle. Use an acrylic ruler to measure and mark a ${pinchLine} line straight across the triangle base on all four corners. Check for wrinkles, then sew across all four marked lines.`,
       "9. Trim & attach carry handle: Trim the excess triangle fabric super close to the stitching line (approx. 1/8″, do not cut your threads!). Fold the 4″ × 9″ handle piece lengthwise in fourths to create a 1″ wide strap, edgestitch both sides, and baste it looped across one boxed end seam.",
       "10. Enclosed French seams & final turn: Turn the bag wrong-side out again through the open zipper and push the four corners out. Sew a second enclosing seam (approx. 1/4″ to 3/8″ inside the fold) on all four corners to completely encase the raw edges. Turn right-side out — all four boxed corners are cleanly enclosed with zero exposed raw edges!",
     ];
@@ -345,7 +326,7 @@ export function boxyBagSewingSteps(plan: BagPatternPlan, structureFeel: BagStruc
               : "Label every panel and its zipper edge. Fuse or baste interfacing/stabilizer to the two unnotched outer rectangles first.",
             `After piecing, quilting, and final trimming, remove a ${formatInches(plan.cornerCut)} square from all four corners of every panel.`,
           ];
-    if (pocketStyle !== "none") {
+    if (pocketStyle !== "none" && calculatePocketPlan(plan, pocketStyle).valid) {
     steps.push(
       `Prepare pocket: press top hem under 1/2″ twice and topstitch. Turn under remaining 3 raw edges 1/2″, center on Lining A panel 1.5″ above lower corner notches, and topstitch sides and bottom${pocketStyle === "divided-slip" ? " (sew vertical center divider line)" : ""}.`,
     );
@@ -390,7 +371,7 @@ export function toteBagSewingSteps(plan: BagPatternPlan, closure: BagClosure, op
               ? "Label outer and lining panels and mark centerlines."
               : "Label outer and lining panels; fuse or baste interfacing/stabilizer to outer panels first.",
           ];
-    if (pocketStyle !== "none") {
+    if (pocketStyle !== "none" && calculatePocketPlan(plan, pocketStyle).valid) {
     steps.push(
       `Prepare pocket: press top hem under 1/2″ twice and topstitch. Turn under side and bottom edges 1/2″, center on Lining A panel, and topstitch sides and bottom${pocketStyle === "divided-slip" ? " with center divider line" : ""}.`,
     );
