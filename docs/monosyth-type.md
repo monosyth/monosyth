@@ -1,7 +1,8 @@
 # Monosyth Type storefront
 
-Everyday Carved is sold at https://monosyth.com/shop/type, linked from the main
-/shop page and shared shop navigation. The production Firebase project is
+Everyday Carved is sold at https://monosyth.com/shop/type and Cornerwell at
+https://monosyth.com/shop/type/cornerwell, linked from the main /shop page,
+the homepage and shared shop navigation. The production Firebase project is
 `monosyth`, backend `monosyth`, in `us-east4`. Deploy through the repository's
 normal main-branch App Hosting rollout.
 
@@ -27,6 +28,22 @@ catalog and downloaded-software tax code (`txcd_10202003`, business use), rather
 than the digital-document code used for quilt patterns. Washington's existing
 Stripe Tax registration was verified active on October 27. Existing runtime
 automatic tax settings and registration were retained.
+
+## Cornerwell (Release No. 002)
+
+Owner-approved November 2, 2026, at the same prices as Everyday Carved. All ten
+styles (Light to Bold, each with a 9° oblique) ship in both editions.
+
+| Edition | Price | Release SKU | Stripe product / price |
+| --- | --- | --- | --- |
+| Desktop | $8 | cornerwell-desktop@1.004 | prod_MonosythCornerwellDesktop1004 / price_1UXVKB9FGEoNhiRQ5TlhJQqG |
+| Desktop + Web | $12 | cornerwell-desktop-web@1.004 | prod_MonosythCornerwellDesktopWeb1004 / price_1UXVKC9FGEoNhiRQcRk8GnPq |
+
+Kits are built from the foundry's `fonts/label-sans/family-v1.004/dist` and
+stored under `fonts/cornerwell-…` in the private download bucket. Public demo
+fonts, specimen, licenses and the social card live in
+`apps/web/public/shop/type/cornerwell/v1.004/`; regenerate demos with
+`scripts/build-type-preview.py`. Krowshea Loop is not for sale.
 
 ## Payment and delivery
 
