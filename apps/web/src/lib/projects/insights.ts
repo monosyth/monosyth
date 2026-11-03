@@ -14,6 +14,20 @@ const LIST_TTL = 60 * 60_000;
 const DAY = 86_400_000;
 
 class SetupError extends Error {}
+class RetryableError extends Error {}
+const RETRY_DELAYS = [600, 1800, 4000];
+// Temporary failures (rate limits, timeouts) are retried on the next load after two minutes instead of sticking for half an hour.
+const FAILURE_TTL = 2 * 60_000;
+const transient = (value: SiteInsights) => [value.analytics, value.search].some(part => "error" in part && !part.setup);
+// Sites sharing a GA4 property (monosyth.com, its sections and Krowshea) load one after another, keeping under its concurrency limit.
+const propertyQueues = new Map<string, Promise<unknown>>();
+function inPropertyQueue<T>(propertyId: string, run: () => Promise<T>): Promise<T> {
+  const result = (propertyQueues.get(propertyId) ?? Promise.resolve()).catch(() => undefined).then(run);
+  const tail = result.catch(() => undefined);
+  propertyQueues.set(propertyId, tail);
+  void tail.then(() => { if (propertyQueues.get(propertyId) === tail) propertyQueues.delete(propertyId); });
+  return result;
+}
 
 const insightsCache = new Map<string, { at: number; value: SiteInsights }>();
 let propertyCache: { at: number; map: Map<string, Property> } | null = null;
@@ -34,7 +48,17 @@ const setupMessage = (what: string, where: string) =>
 
 class Google {
   constructor(private fetcher: typeof fetch, private token: () => Promise<string>) {}
+  // GA4 limits concurrent requests per property, so rate limits and brief server errors are retried with backoff.
   async call(url: string, body?: unknown): Promise<Json> {
+    for (let attempt = 0; ; attempt++) {
+      try { return await this.once(url, body); }
+      catch (error) {
+        if (!(error instanceof RetryableError) || attempt >= RETRY_DELAYS.length) throw error;
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[attempt] + Math.random() * 250));
+      }
+    }
+  }
+  private async once(url: string, body?: unknown): Promise<Json> {
     let token: string;
     try { token = await this.token(); } catch { throw new SetupError("Google credentials are missing the analytics/search scopes."); }
     const response = await this.fetcher(url, {
@@ -44,6 +68,7 @@ class Google {
       cache: "no-store",
     });
     if (response.status === 401 || response.status === 403) throw new SetupError(`HTTP ${response.status}`);
+    if (response.status === 429 || response.status >= 500) throw new RetryableError(response.status === 429 ? "Google Analytics is rate-limiting requests right now. Refresh in a minute." : `Google returned HTTP ${response.status}.`);
     if (!response.ok) throw new Error(`Google returned HTTP ${response.status}.`);
     return (await response.json()) as Json;
   }
@@ -252,7 +277,7 @@ export async function inBatches<T, R>(items: T[], size: number, run: (item: T) =
 }
 export async function siteInsights(url: string, options: Options = {}): Promise<SiteInsights> {
   const cached = insightsCache.get(url);
-  if (!options.refresh && cached && Date.now() - cached.at < INSIGHTS_TTL) {
+  if (!options.refresh && cached && Date.now() - cached.at < (transient(cached.value) ? FAILURE_TTL : INSIGHTS_TTL)) {
     const analytics = cached.value.analytics;
     if ("error" in analytics || cached.value.path) return cached.value;
     const google = new Google(options.fetcher ?? fetch, options.token ?? defaultToken);
@@ -271,7 +296,8 @@ export async function siteInsights(url: string, options: Options = {}): Promise<
       try {
         property = await findProperty(google, host);
         if (!property) return { error: `No GA4 property found for ${host}. Add ${INSIGHTS_SERVICE_ACCOUNT} as a Viewer on its GA4 property.`, setup: true };
-        return await analyticsSummary(google, host, path, property);
+        const found = property;
+        return await inPropertyQueue(found.propertyId, () => analyticsSummary(google, host, path, found));
       } catch (error) { return failure(error, "Google Analytics", "the GA4 property"); }
     })(),
     (async (): Promise<SearchSummary | Unavailable> => {

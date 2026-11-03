@@ -154,3 +154,32 @@ test("properties are found by recorded host traffic when streams have no address
   // The property also serves another site, so a property-wide "now" count would mislead.
   assert.ok(!isUnavailable(result.analytics) && result.analytics.realtimeUsers === null);
 });
+
+test("a rate-limited GA4 report is retried instead of shown as an error", async () => {
+  const { fetcher } = mock({ domain: "retry.test" });
+  let limited = 0;
+  const flaky = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).endsWith(":batchRunReports") && limited++ === 0) return json({ error: { status: "RESOURCE_EXHAUSTED" } }, 429);
+    return fetcher(input, init);
+  }) as typeof fetch;
+  const result = await siteInsights("https://retry.test/", { fetcher: flaky, token, refresh: true });
+  assert.equal(limited, 2);
+  assert.ok(!isUnavailable(result.analytics), JSON.stringify(result.analytics));
+});
+
+test("sites sharing a GA4 property load one at a time", async () => {
+  const { fetcher } = mock({ domain: "shared.test" });
+  let inFlight = 0, peak = 0;
+  const slow = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (!String(input).endsWith(":batchRunReports")) return fetcher(input, init);
+    inFlight++; peak = Math.max(peak, inFlight);
+    await new Promise(resolve => setTimeout(resolve, 30));
+    try { return await fetcher(input, init); } finally { inFlight--; }
+  }) as typeof fetch;
+  const [root, section] = await Promise.all([
+    siteInsights("https://shared.test/", { fetcher: slow, token, refresh: true }),
+    siteInsights("https://shared.test/weather", { fetcher: slow, token, refresh: true }),
+  ]);
+  assert.equal(peak, 1);
+  assert.ok(!isUnavailable(root.analytics) && !isUnavailable(section.analytics));
+});
