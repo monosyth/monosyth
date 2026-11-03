@@ -6,14 +6,16 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { ENTRY_KINDS, PROJECT_STATUSES, STATUS_LABELS, type Board, type EntryKind, type Project, type ProjectInput, type ProjectStatus, type WorkEntry } from "@/lib/projects/model";
 import type { InsightsSummary } from "@/lib/projects/insights-model";
 import { CardInsights, WebsiteInsights } from "./website-insights";
+import { AnalyticsView } from "./analytics-view";
 import s from "./project-journal.module.css";
 
-type View = "projects" | "recent" | "waiting";
+type View = "projects" | "recent" | "waiting" | "analytics";
 type Prefill = { title: string; nextStep: string };
 type Editor = { type: "project"; project?: Project } | { type: "entry"; project: Project; prefill?: Prefill } | null;
 type Notice = { text: string; before: Project; after: Project };
-function Icon({ name, size = 20 }: { name: "grid" | "clock" | "circle" | "plus" | "arrow" | "search" | "download" | "refresh" | "close" | "link" | "check" | "copy" | "pause" | "play"; size?: number }) {
+function Icon({ name, size = 20 }: { name: "chart" | "grid" | "clock" | "circle" | "plus" | "arrow" | "search" | "download" | "refresh" | "close" | "link" | "check" | "copy" | "pause" | "play"; size?: number }) {
   const paths = {
+    chart: <><path d="M4 20V10m6 10V4m6 16v-7m4 7H3" /></>,
     grid: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>,
     clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
     circle: <><circle cx="12" cy="12" r="9" /><path d="M12 7v6m0 3v.5" /></>,
@@ -244,7 +246,7 @@ function JournalContent() {
       <Link href="/app" className={s.wordmark}><span className={s.mark}>M</span>monosyth</Link>
       <span className={s.sideEyebrow}>THE WORKING STUDIO</span>
       <nav className={s.nav} aria-label="Project journal">
-        {([{ id: "projects", label: "Projects", icon: "grid", count: projects.length }, { id: "recent", label: "Recent work", icon: "clock" }, { id: "waiting", label: "Waiting on me", icon: "circle", count: waiting.length }] as const).map(item =>
+        {([{ id: "projects", label: "Projects", icon: "grid", count: projects.length }, { id: "recent", label: "Recent work", icon: "clock" }, { id: "waiting", label: "Waiting on me", icon: "circle", count: waiting.length }, { id: "analytics", label: "Analytics", icon: "chart" }] as const).map(item =>
           <button key={item.id} className={s.navButton} aria-current={view === item.id && !selectedId ? "page" : undefined} onClick={() => navigate(item.id)}><Icon name={item.icon} /><span>{item.label}</span>{"count" in item && <small>{item.count}</small>}</button>)}
       </nav>
       <Link href="/projects/connections" className={s.navButton}><Icon name="link" /><span>Connections</span></Link>
@@ -255,8 +257,8 @@ function JournalContent() {
       <header className={s.topbar}><span>STUDIO / PROJECT JOURNAL</span><span className={s.topbarRight}><i className={s.syncDot} />Private journal<button title="Refresh projects" aria-label="Refresh projects" onClick={() => void refresh()}><Icon name="refresh" size={17} /></button><button className={s.mobileSignOut} onClick={() => void auth.signOut()} disabled={auth.isWorking}>Sign out</button></span></header>
       <main className={s.main}>
         <header className={s.heading}>
-          <div><p className={s.eyebrow}>{selected ? selected.area : "The things you’re making"}</p><h1>{selected ? selected.name : view === "recent" ? "Recent work" : view === "waiting" ? "Waiting on you" : "Your projects"}</h1><p className={s.subtitle}>{selected ? selected.summary : view === "recent" ? "The steps, decisions, and small wins along the way." : view === "waiting" ? "A few decisions that will help the work move forward." : "A home for what’s happening, what’s done, and what comes next."}</p></div>
-          <div className={s.headingActions}>{selected ? <><button className={s.secondary} onClick={() => setEditor({ type: "project", project: selected })}>Edit project</button><button className={s.primary} onClick={() => setEditor({ type: "entry", project: selected })}><Icon name="plus" size={17} />Add update</button></> : <><button className={s.secondary} onClick={() => void exportData()} disabled={!board || working}><Icon name="download" size={17} />Export</button><button className={s.primary} onClick={() => setEditor({ type: "project" })} disabled={!board}><Icon name="plus" size={17} />New project</button></>}</div>
+          <div><p className={s.eyebrow}>{selected ? selected.area : view === "analytics" ? "How the work is landing" : "The things you’re making"}</p><h1>{selected ? selected.name : view === "analytics" ? "Analytics" : view === "recent" ? "Recent work" : view === "waiting" ? "Waiting on you" : "Your projects"}</h1><p className={s.subtitle}>{selected ? selected.summary : view === "analytics" ? "Every website’s Google numbers in one table, with sales and studio activity." : view === "recent" ? "The steps, decisions, and small wins along the way." : view === "waiting" ? "A few decisions that will help the work move forward." : "A home for what’s happening, what’s done, and what comes next."}</p></div>
+          {(selected || view !== "analytics") && <div className={s.headingActions}>{selected ? <><button className={s.secondary} onClick={() => setEditor({ type: "project", project: selected })}>Edit project</button><button className={s.primary} onClick={() => setEditor({ type: "entry", project: selected })}><Icon name="plus" size={17} />Add update</button></> : <><button className={s.secondary} onClick={() => void exportData()} disabled={!board || working}><Icon name="download" size={17} />Export</button><button className={s.primary} onClick={() => setEditor({ type: "project" })} disabled={!board}><Icon name="plus" size={17} />New project</button></>}</div>}
         </header>
         {error && <div className={s.errorBanner} role="alert"><span>{error}</span><button onClick={() => void refresh()}>Try again</button></div>}
         {!board ? !error && <div className={s.empty} role="status">Opening your journal…</div> : selectedId && !selected ? <Empty title="Project not found">Choose Projects to return to your journal.</Empty> : selected ? <>
@@ -283,7 +285,7 @@ function JournalContent() {
               <div className={s.detailCard}><div className={s.sectionHeading}><h2>Files & links</h2><Icon name="link" size={17} /></div><ProjectLinks links={selected.links} onCopied={() => setToast("File path copied")} /></div>
             </aside>
           </div>
-        </> : <>
+        </> : view === "analytics" ? <AnalyticsView api={api} onOpenProject={openProject} /> : <>
           {view === "projects" && <div className={s.stats}>
             <button onClick={() => setFilter("active")}><span><i data-tone="mint" />In progress</span><strong>{projects.filter(project => project.status === "active").length.toString().padStart(2, "0")}</strong><small>Ideas taking shape</small></button>
             <button onClick={() => navigate("waiting")}><span><i data-tone="amber" />Waiting on you</span><strong>{waiting.length.toString().padStart(2, "0")}</strong><small>A decision or a fresh look</small></button>

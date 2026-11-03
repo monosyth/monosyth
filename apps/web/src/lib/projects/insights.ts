@@ -51,7 +51,8 @@ class Google {
 
 const iso = (time: number) => new Date(time).toISOString().slice(0, 10);
 // GA4 dates follow the property's time zone; Scott's properties report in Pacific time.
-const pacificDay = (offset: number) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles" }).format(Date.now() + offset * DAY);
+// Count calendar days from today's Pacific date, so a daylight-saving change cannot drop or repeat a day near midnight.
+const pacificDay = (offset: number) => iso(Date.parse(`${new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles" }).format(Date.now())}T00:00:00Z`) + offset * DAY);
 // Google omits days without data; charts need every day of the range.
 function fillDays(values: Map<string, number>, start: string, end: string): [string, number][] {
   const days: [string, number][] = [];
@@ -243,6 +244,12 @@ async function checkUptime(url: string, fetcher: typeof fetch): Promise<SiteInsi
   }
 }
 
+// Several sites share one pass, a few at a time, over the 30-minute cache.
+export async function inBatches<T, R>(items: T[], size: number, run: (item: T) => Promise<R>) {
+  const results: R[] = [];
+  for (let index = 0; index < items.length; index += size) results.push(...await Promise.all(items.slice(index, index + size).map(run)));
+  return results;
+}
 export async function siteInsights(url: string, options: Options = {}): Promise<SiteInsights> {
   const cached = insightsCache.get(url);
   if (!options.refresh && cached && Date.now() - cached.at < INSIGHTS_TTL) {

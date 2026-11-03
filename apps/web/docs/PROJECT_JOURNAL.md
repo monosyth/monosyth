@@ -233,3 +233,21 @@ shows a setup note and uptime still works. Locally, the owner's ADC lacks these
 scopes, so the panel shows setup notes in development.
 
 Check with `node --conditions=react-server --import tsx --test scripts/audit-project-insights.ts`.
+
+## Analytics view
+
+The sidebar's **Analytics** item (`/api/projects/analytics`) puts every project
+website in one sortable Google Analytics table: users now, today, yesterday,
+7 and 30 days (switchable to sessions or page views), the 30-day change,
+engagement, a daily-users trend, top source and top page, with an all-sites
+totals row. A Search Console table (clicks, impressions, click rate, position,
+top search, sitemaps) and a site-health table (status, response time, GA4
+property) follow. Rows reuse the per-site insights cache; Refresh bypasses it.
+
+Internal numbers come from the journal and Stripe: journal updates per day over
+30 days against the 30 before (imports and automatic notes excluded), most
+active projects, updates by author, project status counts, open decisions, and
+active projects with no update for 14 days. Shop sales list paid
+`monosyth-patterns-v1` Checkout Sessions from Stripe for 60 days (revenue,
+orders, best sellers, latest orders), cached for 15 minutes; refunds are not
+subtracted.

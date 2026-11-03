@@ -1,5 +1,5 @@
 import { requireTrackerOwner } from "@/lib/projects/auth";
-import { INSIGHTS_SERVICE_ACCOUNT, siteInsights } from "@/lib/projects/insights";
+import { INSIGHTS_SERVICE_ACCOUNT, inBatches, siteInsights } from "@/lib/projects/insights";
 import { isUnavailable, type InsightsSummary, type ProjectInsights, type SiteInsights } from "@/lib/projects/insights-model";
 import { TrackerError } from "@/lib/projects/model";
 import { getProject, listBoard } from "@/lib/projects/store";
@@ -8,12 +8,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "private, no-store, max-age=0", "Vary": "Authorization", "X-Robots-Tag": "noindex, nofollow, noarchive" };
 
-// Summaries for every card share one pass, a few sites at a time, over the 30-minute cache.
-async function inBatches<T, R>(items: T[], size: number, run: (item: T) => Promise<R>) {
-  const results: R[] = [];
-  for (let index = 0; index < items.length; index += size) results.push(...await Promise.all(items.slice(index, index + size).map(run)));
-  return results;
-}
 function summarize(sites: SiteInsights[]): InsightsSummary {
   const add = (values: (number | null | undefined)[]) => values.some(value => typeof value === "number") ? values.reduce<number>((sum, value) => sum + (value ?? 0), 0) : null;
   const analytics = sites.flatMap(site => isUnavailable(site.analytics) ? [] : [site.analytics]);
