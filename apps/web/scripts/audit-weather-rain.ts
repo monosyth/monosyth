@@ -11,9 +11,9 @@ test("rain totals preserve measured zero and missing values", () => {
   assert.equal(result.week, .25);
   assert.equal(result.month, null);
   assert.equal(result.year, null);
-  assert.equal(result.peakHour, 0);
+  assert.equal(result.peakRate, 0);
   assert.equal(result.reports, 1);
-  assert.equal(result.timeline[0].amount, null);
+  assert.equal(result.timeline[0].rate, null);
 });
 
 test("latest valid observation wins and future reports are excluded", () => {
@@ -36,7 +36,7 @@ test("a previous local day's counters are not labelled as today's totals", () =>
   assert.equal(result.year, null);
 });
 
-test("rolling hourly reports are never summed into a period total", () => {
+test("rain rate samples are never summed into a period total", () => {
   const result = buildRainSummary([
     {timestamp: now - hour, hourlyrainin: .2, dailyrainin: .4},
     {timestamp: now, hourlyrainin: .3, dailyrainin: .5, monthlyrainin: 2.1},
@@ -44,8 +44,19 @@ test("rolling hourly reports are never summed into a period total", () => {
   assert.equal(result.today, .5);
   assert.equal(result.month, 2.1);
   assert.equal(result.week, null);
-  assert.equal(result.peakHour, .3);
+  assert.equal(result.peakRate, .3);
   assert.equal(result.reports, 2);
+});
+
+test("the screenshot's rain rate can exceed the accumulated daily rainfall", () => {
+  const result = buildRainSummary([
+    {timestamp: now, dailyrainin: .17, hourlyrainin: .47},
+  ], now);
+  assert.equal(result.today, .17);
+  assert.equal(result.currentRate, .47);
+  assert.equal(result.peakRate, .47);
+  assert.equal(result.timeline[23].rate, .47);
+  assert.ok(!("pastHour" in result));
 });
 
 test("timeline uses one latest nonmissing report per hour and keeps gaps", () => {
@@ -56,17 +67,17 @@ test("timeline uses one latest nonmissing report per hour and keeps gaps", () =>
     {timestamp: now - 25 * hour, hourlyrainin: 10},
   ], now);
   assert.equal(result.timeline.length, 24);
-  assert.equal(result.timeline[23].amount, .2);
+  assert.equal(result.timeline[23].rate, .2);
   assert.equal(result.timeline[23].timestamp, now - 10 * 60_000);
   assert.equal(result.reports, 1);
-  assert.equal(result.timeline[22].amount, null);
+  assert.equal(result.timeline[22].rate, null);
 });
 
 test("an empty station history has no invented rainfall", () => {
   const result = buildRainSummary([], now);
   assert.equal(result.today, null);
-  assert.equal(result.peakHour, null);
+  assert.equal(result.peakRate, null);
   assert.equal(result.timestamp, null);
   assert.equal(result.reports, 0);
-  assert.ok(result.timeline.every(point => point.amount === null));
+  assert.ok(result.timeline.every(point => point.rate === null));
 });

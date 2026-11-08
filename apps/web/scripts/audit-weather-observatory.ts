@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildObservatory, cloudCoverFromForecast, compassPoint, reading } from "../src/lib/weather/observatory";
+import { buildWeatherOverview } from "../src/lib/weather/overview";
+import { buildWeatherStory } from "../src/lib/weather/story";
 import type { WeatherOverview, WeatherForecastPeriod } from "../src/lib/weather/types";
 
 const now=Date.parse("2026-10-16T21:00:00Z");
@@ -43,6 +45,25 @@ test("missing forecast uses no invented cloud measurement",()=>{
 test("rain depiction uses observed recent rainfall, not forecast rain",()=>{
   const data=overview();data.forecast=[period(now,"Rain")];assert.equal(build(data).rainRate,0);
   data.observations.at(-1)!.hourlyrainin=.1;assert.equal(build(data).rainRate,.1);
+});
+test("rain cards and story describe a rate separately from today's accumulation",()=>{
+  const data=overview();
+  Object.assign(data.observations.at(-1)!, {dailyrainin:.17,hourlyrainin:.47});
+  const result=build(data);
+  assert.equal(result.rain,.17);
+  assert.equal(result.rainRate,.47);
+  assert.equal(result.rainSummary.currentRate,.47);
+  const story=buildWeatherStory(buildWeatherOverview({},data.observations.map(row=>({...row,dateutc:row.timestamp}))));
+  const rain=story.categories.find(category=>category.id==="rain")!;
+  assert.match(rain.summary,/rain rate of 0\.47 inches per hour/);
+  assert.ok(rain.details.includes("Rain rate: 0.47 in/hr"));
+  assert.match(story.visuals.rain.subtext,/0\.47 in\/hr rain rate/);
+});
+test("rain cards use the same local-midnight boundary as the rain journal",()=>{
+  const data=overview();data.fetchedAt="2026-10-17T07:05:00Z";
+  data.observations=[{timestamp:Date.parse("2026-10-17T06:55:00Z"),dailyrainin:.8,hourlyrainin:.1}];
+  assert.equal(build(data).rain,null);
+  assert.equal(build(data).rainSummary.today,null);
 });
 test("pressure change compares the current reading with the earlier report",()=>{
   assert.ok(Math.abs(build().pressureChange!+.1)<.00001);

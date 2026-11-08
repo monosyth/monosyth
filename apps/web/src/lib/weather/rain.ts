@@ -22,20 +22,22 @@ export function buildRainSummary(observations: WeatherObservation[], now: number
     const from = start + index * HOUR;
     const to = from + HOUR;
     const report = rows.findLast(row => row.timestamp! > from && row.timestamp! <= to && amount(row, "hourlyrainin") !== null);
-    return { timestamp: report?.timestamp ?? to, amount: amount(report, "hourlyrainin") };
+    return { timestamp: report?.timestamp ?? to, rate: amount(report, "hourlyrainin") };
   });
-  // Hourlyrainin is a rolling past-hour amount. Never sum overlapping reports.
-  const available = timeline.filter(point => point.amount !== null);
+  // Ambient documents hourlyrainin as a rain rate in in/hr, not an accumulation.
+  // https://github.com/ambient-weather/api-docs/wiki/Device-Data-Specs
+  // Each timeline slot samples a rate; never add these into rainfall totals.
+  const available = timeline.filter(point => point.rate !== null);
   return {
     timestamp,
     today: amount(current, "dailyrainin"),
-    pastHour: amount(latest, "hourlyrainin"),
+    currentRate: amount(latest, "hourlyrainin"),
     week: amount(current, "weeklyrainin"),
     month: amount(current, "monthlyrainin"),
     year: amount(current, "yearlyrainin"),
     timeline,
     reports: available.length,
-    peakHour: available.length ? Math.max(...available.map(point => point.amount!)) : null,
+    peakRate: available.length ? Math.max(...available.map(point => point.rate!)) : null,
   };
 }
 

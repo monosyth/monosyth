@@ -35,7 +35,8 @@ export function buildObservatory(data: WeatherOverview, latitude: number, longit
   const currentForecast = data.forecast.find(period => Date.parse(period.startTime) <= now && Date.parse(period.endTime) > now);
   const temperature = reading(latest, "tempf");
   const wind = reading(latest, "windspeedmph");
-  const rainRate = reading(latest, "hourlyrainin");
+  const rainSummary = buildRainSummary(rows, now);
+  const rainRate = rainSummary.currentRate;
   const sun = SunCalc.getTimes(new Date(now), latitude, longitude);
   const sunPosition = SunCalc.getPosition(new Date(now), latitude, longitude);
   const moon = SunCalc.getMoonIllumination(new Date(now));
@@ -54,8 +55,8 @@ export function buildObservatory(data: WeatherOverview, latitude: number, longit
     wind, windDirection: reading(latest, "winddir"), gust: reading(latest, "windgustmph"),
     humidity: reading(latest, "humidity"), dewpoint: reading(latest, "dewPoint", "dewpointf"),
     pressure, pressureChange: pressure !== null && priorPressure !== null ? pressure - priorPressure : null,
-    rain: reading(latest, "dailyrainin"), rainRate,
-    rainSummary: buildRainSummary(rows, now),
+    rain: rainSummary.today, rainRate,
+    rainSummary,
     airQuality,
     uv: reading(latest, "uv"), solar: reading(latest, "solarradiation"),
     high: temperatures.length ? Math.max(...temperatures.map(p => p.value)) : null,

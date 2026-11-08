@@ -111,7 +111,7 @@ export function buildWeatherStory(data: WeatherOverview): WeatherStory {
   const solar = metricValue(data, "solar");
   const pressure = metricValue(data, "pressure");
   const dewPoint = snapshotNumber(data.snapshot, "dewPoint");
-  const hourlyRain = snapshotNumber(data.snapshot, "hourlyrainin");
+  const rainRate = snapshotNumber(data.snapshot, "hourlyrainin");
   const windDegrees = snapshotNumber(data.snapshot, "winddir");
   const windDirection = cardinalDirection(snapshotNumber(data.snapshot, "winddir"));
   const pressureStory = buildPressureStory(pressure, findSeries(data.series, "pressure"));
@@ -143,7 +143,7 @@ export function buildWeatherStory(data: WeatherOverview): WeatherStory {
       chips: [
         comfortChip(temperature, humidity),
         windChip(wind, gust),
-        rainChip(rainToday, hourlyRain),
+        rainChip(rainToday, rainRate),
         sunChip(uv, solar),
         pressureChip(pressureStory.direction),
       ].filter(Boolean),
@@ -162,12 +162,12 @@ export function buildWeatherStory(data: WeatherOverview): WeatherStory {
       },
       rain: {
         fillPercent: clamp(percentOf(rainToday, 1.25), 0, 100),
-        label: rainChip(rainToday, hourlyRain) || "Dry ground",
+        label: rainChip(rainToday, rainRate) || "Dry ground",
         subtext:
-          (hourlyRain ?? 0) > 0
-            ? `${numberWithUnit(hourlyRain, "in", 2)} this hour`
+          (rainRate ?? 0) > 0
+            ? `${numberWithUnit(rainRate, "in/hr", 2)} rain rate`
             : `${numberWithUnit(rainToday, "in", 2)} today`,
-        tone: pickRainTone(rainToday, hourlyRain),
+        tone: pickRainTone(rainToday, rainRate),
       },
     },
     categories: [
@@ -204,14 +204,14 @@ export function buildWeatherStory(data: WeatherOverview): WeatherStory {
       {
         id: "rain",
         title: "Rain & Ground",
-        eyebrow: rainChip(rainToday, hourlyRain) || "Ground moisture",
-        summary: rainSummary(rainToday, hourlyRain),
+        eyebrow: rainChip(rainToday, rainRate) || "Ground moisture",
+        summary: rainSummary(rainToday, rainRate),
         value: numberWithUnit(rainToday, "in", 2),
         meterLabel: "Rain today",
         meterValue: clamp(percentOf(rainToday, 1), 0, 100),
-        tone: pickRainTone(rainToday, hourlyRain),
+        tone: pickRainTone(rainToday, rainRate),
         details: [
-          formatDetail("This hour", numberWithUnit(hourlyRain, "in", 2)),
+          formatDetail("Rain rate", numberWithUnit(rainRate, "in/hr", 2)),
           formatDetail("Today", numberWithUnit(rainToday, "in", 2)),
           formatDetail("Ground story", rainPhrase(rainToday)),
         ],
@@ -657,15 +657,15 @@ function windSummary(
   return `${windPhrase(wind)}${directionText}. ${gustText}`;
 }
 
-function rainSummary(rainToday: number | null, hourlyRain: number | null) {
-  const hourlyText =
-    hourlyRain === null
-      ? "Hourly rainfall is not available."
-      : hourlyRain > 0
-        ? `${compact(hourlyRain, 2)} inches fell in the last hour.`
-        : "No measurable rain fell in the last hour.";
+function rainSummary(rainToday: number | null, rainRate: number | null) {
+  const rateText =
+    rainRate === null
+      ? "Rain rate is not available."
+      : rainRate > 0
+        ? `The station reports a rain rate of ${compact(rainRate, 2)} inches per hour.`
+        : "The station currently reports a zero rain rate.";
 
-  return `${rainPhrase(rainToday)} ${hourlyText}`;
+  return `${rainPhrase(rainToday)} ${rateText}`;
 }
 
 function skySummary(
@@ -1001,8 +1001,8 @@ function windChip(wind: number | null, gust: number | null) {
   return "Strong gusts";
 }
 
-function rainChip(rainToday: number | null, hourlyRain: number | null) {
-  if ((hourlyRain ?? 0) > 0) {
+function rainChip(rainToday: number | null, rainRate: number | null) {
+  if ((rainRate ?? 0) > 0) {
     return "Rain now";
   }
 
@@ -1082,8 +1082,8 @@ function pickWindTone(wind: number | null, gust: number | null): StoryTone {
   return Math.max(wind ?? 0, gust ?? 0) >= 12 ? "sky" : "pine";
 }
 
-function pickRainTone(rainToday: number | null, hourlyRain: number | null): StoryTone {
-  return (rainToday ?? 0) > 0 || (hourlyRain ?? 0) > 0 ? "rain" : "gold";
+function pickRainTone(rainToday: number | null, rainRate: number | null): StoryTone {
+  return (rainToday ?? 0) > 0 || (rainRate ?? 0) > 0 ? "rain" : "gold";
 }
 
 function pickSkyTone(uv: number | null, solar: number | null): StoryTone {

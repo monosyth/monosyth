@@ -76,7 +76,7 @@ export function WeatherObservatory({ data }: { data: ObservatoryData }) {
         </div>
         <div className={styles.skyBottom}>
           <span><i className={styles.smallSun} />{data.sunAltitude > 0 ? "Daylight in Shoreline" : "Night in Shoreline"}</span>
-          <details className={styles.sceneInfo}><summary>About this sky ⓘ</summary><p>A live illustration, not a camera image. Sunlight follows the station’s location and time. Clouds use the current NWS forecast; movement follows measured wind. Rain streaks indicate rainfall reported in the last hour. Terrain is illustrative.{stale ? " Station readings are delayed; wind and rain motion are paused." : ""}{data.cloudCover === null ? " Cloud data is unavailable; the sky uses a neutral backdrop." : ""}</p></details>
+          <details className={styles.sceneInfo}><summary>About this sky ⓘ</summary><p>A live illustration, not a camera image. Sunlight follows the station’s location and time. Clouds use the current NWS forecast; movement follows measured wind. Rain streaks follow the station’s reported rain rate. Terrain is illustrative.{stale ? " Station readings are delayed; wind and rain motion are paused." : ""}{data.cloudCover === null ? " Cloud data is unavailable; the sky uses a neutral backdrop." : ""}</p></details>
         </div>
       </section>
       <div className={styles.sideStack}>
@@ -103,7 +103,7 @@ export function WeatherObservatory({ data }: { data: ObservatoryData }) {
     </div>
     <div className={styles.metricGrid}>
       <Metric label="Humidity" value={format(data.humidity)} unit="%" detail={`Dew point ${format(data.dewpoint,1)}°F`} icon="humidity" />
-      <Metric label="Rain today" value={format(data.rain,2)} unit="in" detail={`${format(data.rainRate,2)} in · past hour`} icon="rain" />
+      <Metric label="Rain today" value={format(data.rain,2)} unit="in" detail={`Rain rate · ${format(data.rainRate,2)} in/hr`} icon="rain" />
       <Metric label="Pressure" value={format(data.pressure,3)} unit="inHg" detail={data.pressureChange === null ? "Trend unavailable" : `${data.pressureChange > .005 ? "↗ Rising" : data.pressureChange < -.005 ? "↘ Falling" : "→ Steady"} · ${Math.abs(data.pressureChange).toFixed(3)} inHg / ~3h`} icon="pressure" />
       <Metric label="UV index" value={format(data.uv,1)} unit="" detail={data.uv === null ? "Reading unavailable" : data.uv < 3 ? "Low exposure" : data.uv < 6 ? "Moderate exposure" : data.uv < 8 ? "High exposure" : "Very high exposure"} icon="sun" />
     </div>
