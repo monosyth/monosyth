@@ -46,6 +46,9 @@
 .cameraView:focus-visible {outline:3px solid #a7c490;outline-offset:-3px;}
 .cameraCaption {display:flex;justify-content:space-between;gap:8px;font-size: 14px;color:#708072;padding:12px 19px;}
 .windCard {border-radius:12px;background:#233f37;color:#e9f0df;display:flex;align-items:center;justify-content:space-between;padding:16px 24px;overflow:hidden;}
+.windCard {text-decoration:none;transition:background-color .2s;}
+.windCard:hover {background:#2b4b40;}
+.windCard:focus-visible,.metric:focus-visible {outline:2px solid #6f966e;outline-offset:3px;}
 .windCard .eyebrow {color:#b4c8b9;font-size: 14px;}
 .windValue {font-size:38px;font-weight: 400;letter-spacing:-.045em;margin-top:9px;line-height:1.2;}
 .windValue>span {font-size: 14px;letter-spacing:0;margin-left:8px;color:#b6c7ba;}
@@ -61,6 +64,8 @@
 .compass>span {position:absolute;bottom:22%;left:0;width:100%;text-align:center;font-size: 14px;color:#aac4af;}
 .metricGrid {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:20px 0;}
 .metric {padding:19px 22px;background:#fafcf8;border:1px solid var(--line);border-radius:10px;}
+.metric {display:block;color:inherit;text-decoration:none;transition:border-color .2s,background-color .2s;}
+.metric:hover {border-color:#9aaa94;background:#f2f6ee;}
 .metricTop {display:flex;align-items:center;justify-content:space-between;font-size: 14px;color:#64796b;}
 .metricTop svg {height:20px;width:20px;color:#79917c;}
 .metricValue {font-size:32px;letter-spacing:-.055em;font-weight:400;margin:12px 0 6px;font-variant-numeric:tabular-nums;white-space:nowrap;}

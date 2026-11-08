@@ -85,7 +85,7 @@ export function WeatherObservatory({ data }: { data: ObservatoryData }) {
           <Link className={styles.cameraView} href="/weather?tab=cameras" aria-label="Open station camera and daylight archive"><StationCameraPreview src="/api/weather/station-camera?variant=thumbnail" showTimestamp /></Link>
           <div className={styles.cameraCaption}><span>Shoreline station camera</span><span>Daylight · every 5 min</span></div>
         </section>
-        <section className={styles.windCard}>
+        <Link href="/weather?tab=graphs#graph-wind" className={styles.windCard} aria-label="Wind graph for today">
           <div><p className={styles.eyebrow}>Wind at the station</p><p className={styles.windValue}>{format(data.wind,1)}<span>mph</span></p><p className={styles.windDetail}>{data.wind === null ? "Reading unavailable" : data.wind < .5 ? "Nearly calm" : `From ${compassPoint(data.windDirection)}`}<span>Gusts {format(data.gust,1)} mph</span></p></div>
           <div className={styles.compass} style={{"--wind-angle": `${data.windDirection ?? 0}deg`, "--flow-duration": `${Math.max(1, 7-(data.wind ?? 0)*.4)}s`} as CSSProperties}>
             <svg viewBox="0 0 160 160" role="img" aria-label={data.windDirection === null ? "Wind direction unavailable" : `Wind from ${compassPoint(data.windDirection)}, ${Math.round(data.windDirection)} degrees`}>
@@ -98,14 +98,14 @@ export function WeatherObservatory({ data }: { data: ObservatoryData }) {
             </svg>
             <span>{data.windDirection === null ? "—" : `${Math.round(data.windDirection)}°`}</span>
           </div>
-        </section>
+        </Link>
       </div>
     </div>
     <div className={styles.metricGrid}>
-      <Metric label="Humidity" value={format(data.humidity)} unit="%" detail={`Dew point ${format(data.dewpoint,1)}°F`} icon="humidity" />
-      <Metric label="Rain today" value={format(data.rain,2)} unit="in" detail={`Rain rate · ${format(data.rainRate,2)} in/hr`} icon="rain" />
-      <Metric label="Pressure" value={format(data.pressure,3)} unit="inHg" detail={data.pressureChange === null ? "Trend unavailable" : `${data.pressureChange > .005 ? "↗ Rising" : data.pressureChange < -.005 ? "↘ Falling" : "→ Steady"} · ${Math.abs(data.pressureChange).toFixed(3)} inHg / ~3h`} icon="pressure" />
-      <Metric label="UV index" value={format(data.uv,1)} unit="" detail={data.uv === null ? "Reading unavailable" : data.uv < 3 ? "Low exposure" : data.uv < 6 ? "Moderate exposure" : data.uv < 8 ? "High exposure" : "Very high exposure"} icon="sun" />
+      <Metric label="Humidity" value={format(data.humidity)} unit="%" detail={`Dew point ${format(data.dewpoint,1)}°F`} icon="humidity" graphId="humidity" />
+      <Metric label="Rain today" value={format(data.rain,2)} unit="in" detail={`Rain rate · ${format(data.rainRate,2)} in/hr`} icon="rain" graphId="rain" />
+      <Metric label="Pressure" value={format(data.pressure,3)} unit="inHg" detail={data.pressureChange === null ? "Trend unavailable" : `${data.pressureChange > .005 ? "↗ Rising" : data.pressureChange < -.005 ? "↘ Falling" : "→ Steady"} · ${Math.abs(data.pressureChange).toFixed(3)} inHg / ~3h`} icon="pressure" graphId="barometer" />
+      <Metric label="UV index" value={format(data.uv,1)} unit="" detail={data.uv === null ? "Reading unavailable" : data.uv < 3 ? "Low exposure" : data.uv < 6 ? "Moderate exposure" : data.uv < 8 ? "High exposure" : "Very high exposure"} icon="sun" graphId="uv" />
     </div>
     <RainSummary data={data.rainSummary} paused={motionOff} />
     <div className={styles.exploreGrid}>
@@ -126,8 +126,8 @@ export function WeatherObservatory({ data }: { data: ObservatoryData }) {
   </div>;
 }
 
-function Metric({label,value,unit,detail,icon}: {label:string;value:string;unit:string;detail:string;icon:string}) {
-  return <section className={styles.metric}><div className={styles.metricTop}><p>{label}</p><MetricIcon name={icon}/></div><p className={styles.metricValue}>{value}<span>{unit}</span></p><p className={styles.metricDetail}>{detail}</p></section>;
+function Metric({label,value,unit,detail,icon,graphId}: {label:string;value:string;unit:string;detail:string;icon:string;graphId:string}) {
+  return <Link href={`/weather?tab=graphs#graph-${graphId}`} className={styles.metric} aria-label={`${label} graph for today`}><div className={styles.metricTop}><p>{label}</p><MetricIcon name={icon}/></div><p className={styles.metricValue}>{value}<span>{unit}</span></p><p className={styles.metricDetail}>{detail}</p></Link>;
 }
 
 function TemperatureTrace({points,now}: {points: ObservatoryData["temperatures"];now:number}) {

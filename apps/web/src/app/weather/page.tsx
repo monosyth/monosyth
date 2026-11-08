@@ -2051,7 +2051,7 @@ function StationTrendPanel({
       : top + plotHeight;
 
   return (
-    <article className={styles.stationTrendCard}>
+    <article id={`graph-${panel.id}`} className={styles.stationTrendCard} tabIndex={-1}>
       <div className="border-b border-stone-200 bg-white px-3 py-2">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>

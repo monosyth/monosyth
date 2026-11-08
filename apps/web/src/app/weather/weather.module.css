@@ -25,6 +25,7 @@
 }
 
 .stationTrendCard {
+  scroll-margin-top:24px;
   overflow: hidden;
   border: 1px solid var(--weather-plot-card-border);
   background: var(--weather-plot-card-background);
