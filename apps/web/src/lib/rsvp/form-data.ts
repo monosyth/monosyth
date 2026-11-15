@@ -394,7 +394,7 @@ const vegasStudio: RSVPEvent = {
       "What name should appear on this RSVP?",
       "This is the lead guest name we should use for reservations and follow-up.",
       "short_text",
-      "Scott Waite",
+      "First and last name",
     ),
     createTextQuestion(
       "vegas-guest-email",

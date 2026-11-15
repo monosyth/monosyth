@@ -17,7 +17,8 @@ postscript = f"{family.replace(' ', '')}-{style.replace(' ', '')}"
 font = TTFont(source)
 options = subset.Options()
 options.layout_features = ["kern", "tnum"]
-options.name_IDs = [0, 1, 2, 3, 4, 5, 6, 13]
+# Only retain storefront naming and terms in the public preview.
+options.name_IDs = [1, 2, 3, 4, 5, 6, 13]
 subsetter = subset.Subsetter(options=options)
 subsetter.populate(unicodes=range(0x20, 0x7f))
 subsetter.subset(font)

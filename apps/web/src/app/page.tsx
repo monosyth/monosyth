@@ -22,7 +22,7 @@ const siteUrl =
 
 const pageTitle = "Monosyth Labs | Curious things, carefully made";
 const pageDescription =
-  "Monosyth Labs is an independent studio by Scott Waite making apps, websites, quilt patterns, and type.";
+  "Monosyth Labs is an independent studio making apps, websites, quilt patterns, and type.";
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -350,7 +350,7 @@ export default function Home() {
       <div id="main-content">
         <section className={styles.hero} aria-labelledby="hero-title">
           <div className={styles.heroCopy}>
-            <p className={styles.kicker}>An independent studio by Scott Waite</p>
+            <p className={styles.kicker}>An independent studio</p>
 
             <h1 id="hero-title">
               Curious things,
