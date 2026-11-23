@@ -34,6 +34,14 @@ env:
     value: monosyth-pattern-downloads
     availability:
       - RUNTIME
+  - variable: ETSY_KEYSTRING
+    secret: ETSY_KEYSTRING
+    availability:
+      - RUNTIME
+  - variable: ETSY_SHARED_SECRET
+    secret: ETSY_SHARED_SECRET
+    availability:
+      - RUNTIME
   - variable: STRIPE_SECRET_KEY
     secret: STRIPE_SECRET_KEY@1
     availability:
