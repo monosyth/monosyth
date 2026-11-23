@@ -5,6 +5,7 @@ import { findRelease, productTitle } from "../shop/catalog";
 import { shopConfig } from "../shop/config";
 import { stripeClient } from "../shop/server";
 import type { AnalyticsOverview, JournalStats, OverviewSite, ShopStats } from "./analytics-model";
+import { etsyStats } from "./etsy";
 import { INSIGHTS_SERVICE_ACCOUNT, inBatches, siteInsights } from "./insights";
 import type { Unavailable } from "./insights-model";
 import type { Project, ProjectStatus } from "./model";
@@ -109,10 +110,11 @@ export async function analyticsOverview(refresh = false): Promise<AnalyticsOverv
     seen.add(site.url);
     return [{ project, site }];
   }));
-  const [sites, journal, shop] = await Promise.all([
+  const [sites, journal, shop, etsy] = await Promise.all([
     inBatches(targets, 4, async ({ project, site }): Promise<OverviewSite> => ({ projectId: project.id, projectName: project.name, projectStatus: project.status, label: site.label, insights: await siteInsights(site.url, { refresh }) })),
     journalStats(projects, now).catch(error => { console.error("Analytics journal stats failed", error instanceof Error ? error.name : "Unknown"); return unavailable(null, "Journal activity could not be loaded."); }),
     shopStats(now, refresh).catch(error => { console.error("Analytics shop stats failed", error instanceof Error ? error.name : "Unknown"); return unavailable(null, "Stripe sales could not be loaded."); }),
+    etsyStats(days(now), now, pacificDay, refresh).catch(error => { console.error("Analytics Etsy stats failed", error instanceof Error ? error.name : "Unknown"); return unavailable(null, "Etsy sales could not be loaded."); }),
   ]);
-  return { fetchedAt: new Date(now).toISOString(), serviceAccount: INSIGHTS_SERVICE_ACCOUNT, sites, journal, shop };
+  return { fetchedAt: new Date(now).toISOString(), serviceAccount: INSIGHTS_SERVICE_ACCOUNT, sites, journal, shop, etsy };
 }

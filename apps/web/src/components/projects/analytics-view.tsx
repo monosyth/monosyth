@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import type { AnalyticsOverview, JournalStats, OverviewSite, ShopStats } from "@/lib/projects/analytics-model";
+import { isEtsySetup, type AnalyticsOverview, type EtsySetup, type EtsyStats, type JournalStats, type OverviewSite, type ShopStats } from "@/lib/projects/analytics-model";
 import { isUnavailable, type AnalyticsSummary, type SearchSummary, type Unavailable } from "@/lib/projects/insights-model";
 import s from "./analytics-view.module.css";
 
-type Api = (url?: string) => Promise<unknown>;
+type Api = (url?: string, body?: unknown) => Promise<unknown>;
 type Measure = "users" | "sessions" | "views";
 type Sort = { key: string; desc: boolean };
 type Column = { key: string; label: string; title?: string; value: (site: OverviewSite) => number | string | null; render: (site: OverviewSite) => ReactNode; total?: (sites: OverviewSite[]) => ReactNode };
@@ -196,8 +196,49 @@ function Shop({ data }: { data: ShopStats }) {
   </article>;
 }
 
+const ETSY_RESULTS: Record<string, string> = {
+  connected: "Etsy is connected.",
+  denied: "Etsy access was not approved, so nothing changed.",
+  expired: "That Etsy connection link expired. Please try again.",
+  "no-shop": "That Etsy account does not have a shop.",
+  failed: "Etsy could not be connected. Please try again.",
+};
+function Etsy({ data }: { data: EtsyStats }) {
+  const cash = new Intl.NumberFormat("en-US", { style: "currency", currency: data.currency });
+  const facts = [`${number.format(data.activeListings)} active listings`, `${number.format(data.favorites)} shop favorites`, data.reviewCount && data.reviewAverage !== null ? `${data.reviewAverage.toFixed(1)} stars from ${number.format(data.reviewCount)} reviews` : "No reviews yet", `${number.format(data.soldAllTime)} sold all time`];
+  return <article className={`${s.card} ${s.wide}`}>
+    <header><h3>Etsy sales</h3><span>{cash.format(data.revenueCents / 100)} · {data.orders} {data.orders === 1 ? "order" : "orders"} · 30 days <Delta value={data.revenueCents} previous={data.previousRevenueCents} label="vs the previous 30 days" /></span></header>
+    <div className={s.shopGrid}>
+      <Bars label="Sales per day" points={data.daily.map(point => ({ date: point.date, value: point.cents }))} format={value => cash.format(value / 100)} />
+      <div><h4>Best sellers</h4>{data.topItems.length ? <Meter rows={data.topItems.map(item => ({ label: item.name, value: item.count, detail: `${item.count} · ${cash.format(item.cents / 100)}` }))} /> : <p className={s.note}>No sales in the last 30 days.</p>}</div>
+      <div><h4>Most favorited</h4>{data.mostFavorited.length ? <Meter rows={data.mostFavorited.map(item => ({ label: item.name, value: item.favorites }))} /> : <p className={s.note}>No favorites yet.</p>}</div>
+    </div>
+    <p className={s.note}>{facts.join(" · ")}{data.capped ? " · showing the latest 1,000 orders" : ""}</p>
+    <p className={s.note}>Sales are after coupons and refunds, before Etsy fees. Etsy does not share visits or traffic sources with apps. <a href="https://www.etsy.com/your/shops/me/stats" target="_blank" rel="noopener noreferrer">Open Etsy stats ↗</a></p>
+  </article>;
+}
+function EtsyConnect({ state, api }: { state: EtsySetup; api: Api }) {
+  const [working, setWorking] = useState(false);
+  const [problem, setProblem] = useState("");
+  const connect = async () => {
+    setWorking(true); setProblem("");
+    try { window.location.assign((await api("/api/projects/etsy/connect", { action: "start" }) as { url: string }).url); }
+    catch (err) { setProblem(err instanceof Error ? err.message : "Etsy could not be connected."); setWorking(false); }
+  };
+  return <article className={`${s.card} ${s.wide}`}>
+    <header><h3>Etsy sales</h3></header>
+    {state.connection === "keys" ? <p className={s.note}>Waiting for your Etsy app keys on this host.</p> : <>
+      <p className={s.note}>{state.connection === "reconnect" ? "Etsy access has lapsed. Reconnect to keep your sales current." : "Connect your shop to see orders, sales, best sellers and favorites. Access is read-only."}</p>
+      <div><button className={s.refresh} onClick={() => void connect()} disabled={working}>{working ? "Opening Etsy…" : state.connection === "reconnect" ? "Reconnect Etsy" : "Connect Etsy"}</button></div>
+      {problem && <p className={s.note} role="alert">{problem}</p>}
+    </>}
+  </article>;
+}
+
 export function AnalyticsView({ api, onOpenProject }: { api: Api; onOpenProject: (id: string) => void }) {
   const [data, setData] = useState<AnalyticsOverview | null>(null);
+  const [etsyResult] = useState(() => ETSY_RESULTS[new URLSearchParams(window.location.search).get("etsy") ?? ""] ?? "");
+  useEffect(() => { if (new URLSearchParams(window.location.search).has("etsy")) window.history.replaceState(null, "", "/projects"); }, []);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [measure, setMeasure] = useState<Measure>("users");
@@ -222,6 +263,7 @@ export function AnalyticsView({ api, onOpenProject }: { api: Api; onOpenProject:
   const live = sum(analytics.map(item => item?.realtimeUsers)), online = sites.filter(site => site.insights.uptime.ok).length;
   const today = sum(analytics.map(item => item?.periods[0].users));
   const shop = isUnavailable(data.shop) ? null : data.shop, journal = isUnavailable(data.journal) ? null : data.journal;
+  const etsy = data.etsy;
 
   return <div className={s.root} aria-busy={loading}>
     <div className={s.tiles}>
@@ -258,9 +300,11 @@ export function AnalyticsView({ api, onOpenProject }: { api: Api; onOpenProject:
     </section>}
 
     <section className={s.section}>
-      <header className={s.sectionHead}><div><h2>Inside the studio</h2><p>From the project journal and Stripe.</p></div></header>
+      <header className={s.sectionHead}><div><h2>Inside the studio</h2><p>From the project journal, Stripe and Etsy.</p></div></header>
+      {etsyResult && <p className={s.note} role="status">{etsyResult}</p>}
       <div className={s.cards}>
         {shop ? <Shop data={shop} /> : <article className={`${s.card} ${s.wide}`}><header><h3>Shop sales</h3></header><p className={s.note}>{(data.shop as Unavailable).error}</p></article>}
+        {isUnavailable(etsy) ? <article className={`${s.card} ${s.wide}`}><header><h3>Etsy sales</h3></header><p className={s.note}>{etsy.error}</p></article> : isEtsySetup(etsy) ? <EtsyConnect state={etsy} api={api} /> : <Etsy data={etsy} />}
         {journal ? <Journal data={journal} now={Date.parse(data.fetchedAt)} onOpen={onOpenProject} /> : <article className={s.card}><header><h3>Studio activity</h3></header><p className={s.note}>{(data.journal as Unavailable).error}</p></article>}
       </div>
     </section>

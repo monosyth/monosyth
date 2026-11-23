@@ -28,9 +28,26 @@ export type ShopStats = {
   recent: { at: string; cents: number; items: string[] }[];
 };
 
+export type EtsyStats = {
+  shopName: string; shopUrl: string; currency: string;
+  // Items after coupons and refunds, before Etsy's fees; tax and shipping are excluded.
+  orders: number; previousOrders: number;
+  revenueCents: number; previousRevenueCents: number;
+  daily: { date: string; cents: number }[];
+  topItems: { name: string; count: number; cents: number }[];
+  mostFavorited: { name: string; favorites: number }[];
+  activeListings: number; favorites: number;
+  reviewCount: number; reviewAverage: number | null; soldAllTime: number;
+  capped: boolean;
+};
+// Why there are no numbers yet: keys missing on the host, never connected, or Etsy access has lapsed.
+export type EtsySetup = { connection: "keys" | "connect" | "reconnect" };
+export const isEtsySetup = (value: object): value is EtsySetup => "connection" in value;
+
 export type AnalyticsOverview = {
   fetchedAt: string; serviceAccount: string;
   sites: OverviewSite[];
   journal: JournalStats | Unavailable;
   shop: ShopStats | Unavailable;
+  etsy: EtsyStats | EtsySetup | Unavailable;
 };

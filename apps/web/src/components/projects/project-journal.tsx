@@ -66,7 +66,8 @@ export function ProjectJournal() {
 function JournalContent() {
   const auth = useAuth();
   const [board, setBoard] = useState<Board | null>(null);
-  const [view, setView] = useState<View>("projects");
+  // Returning from Etsy's sign-in lands back on Analytics. Before sign-in the page looks the same in every view.
+  const [view, setView] = useState<View>(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("view") === "analytics" ? "analytics" : "projects");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);

@@ -24,6 +24,7 @@
     "audit:birds": "node --import tsx --test scripts/audit-birds.ts",
     "verify:public-email": "node scripts/verify-public-email.mjs",
     "audit:kitchen": "node --import tsx --test scripts/audit-kitchen.ts",
+    "audit:etsy": "node --import tsx --test scripts/audit-etsy.ts",
     "audit:admin-access": "node --conditions=react-server --import tsx --test scripts/audit-admin-access.ts"
   },
   "dependencies": {
