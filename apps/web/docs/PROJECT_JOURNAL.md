@@ -8,7 +8,7 @@ owner-approved, project-scoped connections described in
 `https://monosyth.com/projects/connections`. Do not copy the Mac's credentials.
 
 The journal is part of the existing Next.js/Firebase app. It stores projects and
-append-only work entries beneath `privateProjectTracker/owner` in the default
+work entries beneath `privateProjectTracker/owner` in the default
 Monosyth Firestore database. The existing catch-all Firestore rule denies client
 access. All browser reads, writes, and exports pass through `/api/projects`, which
 requires a non-revoked Firebase token with the verified owner email from the private `MONOSYTH_PROJECT_OWNER_EMAIL` runtime setting.
@@ -20,6 +20,12 @@ Responses are private and uncached. The database holds the records; server
 restarts and deployments do not clear the journal. Full JSON exports are available
 in the UI and CLI. Exports are portable recovery copies; there is no automatic
 restore command or scheduled backup in this first version.
+
+The owner can edit or delete individual entries in Work history and Recent work.
+Edits preserve the original author and date. Deleting an entry requires
+confirmation and removes it from history, recent work, and subsequent exports.
+These controls act on entry content. Use Edit project to change the project's
+status, next step, or open decisions.
 
 ## Updating during project work
 
@@ -78,7 +84,9 @@ with identical content returns `duplicate: true`. A reused ID with different
 content returns 409. Entries and project summary changes commit atomically.
 Changing a project's fields, status, or next step requires the revision returned
 by `get`; stale revisions return 409 instead of overwriting another session.
-Appending a history-only entry does not require a revision.
+Appending a history-only entry does not require a revision. Owner entry changes
+use the individual entry revision, with zero for older entries. Deleted entry
+IDs remain reserved so a delayed agent retry cannot recreate a removed entry.
 
 `create` accepts name, area, summary, status, nextStep, decisions (text array), and
 links (`{label,url}` array). Status values are active, waiting, paused, idea,

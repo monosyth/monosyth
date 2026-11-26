@@ -18,9 +18,11 @@ export type Project = ProjectInput & {
 };
 export type WorkEntry = {
   id: string; projectId: string; title: string; body: string; kind: EntryKind;
-  verification: string; source: string; author: string; createdAt: string;
+  verification: string; source: string; author: string; createdAt: string; revision?: number;
 };
-export type EntryInput = Pick<WorkEntry, "id" | "title" | "body" | "kind" | "verification" | "source"> & {
+type EntryFields = Pick<WorkEntry, "title" | "body" | "kind" | "verification" | "source">;
+export type EntryInput = EntryFields & {
+  id: string;
   status?: ProjectStatus; nextStep?: string; expectedRevision?: number;
 };
 export type Board = { projects: Project[]; entries: WorkEntry[]; loadedAt: string };
@@ -88,15 +90,19 @@ export function parseProject(value: unknown): ProjectInput {
     ...(Array.isArray(data.sites) ? { sites: data.sites.map(validSite) } : {}),
   };
 }
-export function parseEntry(value: unknown): EntryInput {
+export function parseEntryFields(value: unknown): EntryFields {
   const data = object(value);
   if (!ENTRY_KINDS.includes(data.kind as EntryKind)) throw new TrackerError("Choose a valid work entry kind.");
-  const result: EntryInput = {
-    id: validId(data.id), title: string(data.title, "Entry title", 180, true),
+  return {
+    title: string(data.title, "Entry title", 180, true),
     body: string(data.body, "Work notes", 10000), kind: data.kind as EntryKind,
     verification: string(data.verification ?? "", "Verification", 3000),
     source: string(data.source ?? "", "Source", 1500),
   };
+}
+export function parseEntry(value: unknown): EntryInput {
+  const data = object(value);
+  const result: EntryInput = { id: validId(data.id), ...parseEntryFields(data) };
   if (data.status !== undefined) result.status = validStatus(data.status);
   if (data.nextStep !== undefined) result.nextStep = string(data.nextStep, "Next step", 1500);
   if (data.expectedRevision !== undefined) result.expectedRevision = validRevision(data.expectedRevision);

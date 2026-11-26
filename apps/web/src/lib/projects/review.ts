@@ -22,6 +22,9 @@ function quickAction(database: Firestore, projectId: string, id: string, revisio
       if (existing.data()?.projectId !== projectId || existing.data()?.fingerprint !== fingerprint) throw new TrackerError("This review ID already belongs to another update.", 409);
       return { project: before, duplicate: true };
     }
+    if ((await tx.get(tracker.collection("deletedWorkEntries").doc(id))).exists) {
+      throw new TrackerError("This review ID was deleted. Use a new ID for a new update.", 409);
+    }
     if (before.revision !== revision) throw new TrackerError("This project changed in another session. Refresh and review the latest version.", 409);
     const { title, body, changes, worked } = plan(before), timestamp = new Date().toISOString();
     const next: Project = { ...before, ...changes, revision: before.revision + 1, updatedAt: timestamp, latestEntry: title, ...(worked ? { lastWorkedAt: timestamp } : {}) };

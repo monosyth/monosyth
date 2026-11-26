@@ -2,13 +2,15 @@ import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import type { Firestore, Transaction } from "firebase-admin/firestore";
 import { getFirebaseAdminDb } from "../firebase/admin";
-import { parseEntry, parseProject, validId, validRevision, TrackerError, type Board, type EntryInput, type Project, type WorkEntry } from "./model";
+import { parseEntry, parseEntryFields, parseProject, validId, validRevision, TrackerError, type Board, type EntryInput, type Project, type WorkEntry } from "./model";
 import { stripEntry } from "./brief";
 
 const root = () => getFirebaseAdminDb().collection("privateProjectTracker").doc("owner");
 const projects = () => root().collection("projects");
 const entries = () => root().collection("workEntries");
 const now = () => new Date().toISOString();
+const projectHistory = (tracker: ReturnType<typeof root>, projectId: string) =>
+  tracker.collection("workEntries").where("projectId", "==", projectId).orderBy("createdAt", "desc").orderBy("__name__", "desc");
 export async function getProject(id: string) {
   const doc = await projects().doc(validId(id)).get();
   if (!doc.exists) throw new TrackerError("This project could not be found.", 404);
@@ -24,11 +26,14 @@ export async function listBoard(): Promise<Board> {
 export async function listEntries(projectId: string, cursor?: string, limit = 50) {
   validId(projectId);
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 50) throw new TrackerError("Use a history page size from 1 to 50.");
-  let query = entries().where("projectId", "==", projectId).orderBy("createdAt", "desc").orderBy("__name__", "desc").limit(limit + 1);
+  const tracker = root();
+  let query = projectHistory(tracker, projectId).limit(limit + 1);
   if (cursor) {
-    const doc = await entries().doc(validId(cursor)).get();
-    if (!doc.exists || doc.data()?.projectId !== projectId) throw new TrackerError("The history page is no longer available. Refresh the project.");
-    query = query.startAfter(doc);
+    const ref = tracker.collection("workEntries").doc(validId(cursor));
+    const active = (await ref.get()).data();
+    const position = active ?? (await tracker.collection("deletedWorkEntries").doc(cursor).get()).data();
+    if (position?.projectId !== projectId) throw new TrackerError("The history page is no longer available. Refresh the project.");
+    query = query.startAfter(position.createdAt, ref);
   }
   const rows = await query.get();
   return { entries: rows.docs.slice(0, limit).map(row => stripEntry(row.data() as WorkEntry)), nextCursor: rows.docs.length > limit ? rows.docs[limit - 1].id : null };
@@ -93,7 +98,10 @@ export function journalRecorder(database: Firestore) {
       if (existing.data()?.projectId !== projectId || existing.data()?.fingerprint !== hash) {
         throw new TrackerError("This entry ID already belongs to different content. Use a new ID for a new update.", 409);
       }
-      return { entry: existing.data() as WorkEntry, duplicate: true };
+      return { entry: stripEntry(existing.data() as WorkEntry), duplicate: true };
+    }
+    if ((await tx.get(tracker.collection("deletedWorkEntries").doc(input.id))).exists) {
+      throw new TrackerError("This entry ID was deleted. Use a new ID for a new update.", 409);
     }
     const project = projectDoc.data() as Project;
     if (input.expectedRevision && project.revision !== input.expectedRevision) throw new TrackerError("This project changed in another session. Refresh before changing its status or next step.", 409);
@@ -112,6 +120,52 @@ export function journalRecorder(database: Firestore) {
 export async function recordEntry(projectId: string, value: unknown, author: string, guard?: (tx: Transaction) => Promise<void>) {
   return journalRecorder(getFirebaseAdminDb())(projectId, value, author, guard);
 }
+
+type EntryChange = { action: "edit"; fields: unknown } | { action: "delete" };
+
+export function journalEntryChanger(database: Firestore) {
+  return async (projectValue: unknown, entryValue: unknown, expectedRevision: unknown, change: EntryChange) => {
+    const projectId = validId(projectValue), entryId = validId(entryValue);
+    // Entries created before editing was added start at revision zero.
+    const revision = expectedRevision === 0 ? 0 : validRevision(expectedRevision);
+    const fields = change.action === "edit" ? parseEntryFields(change.fields) : null;
+    const tracker = database.collection("privateProjectTracker").doc("owner");
+    return database.runTransaction(async tx => {
+      const projectRef = tracker.collection("projects").doc(projectId);
+      const entryRef = tracker.collection("workEntries").doc(entryId);
+      const deletedRef = tracker.collection("deletedWorkEntries").doc(entryId);
+      const [projectDoc, entryDoc] = await Promise.all([tx.get(projectRef), tx.get(entryRef)]);
+      const project = projectDoc.data() as Project | undefined;
+      const entry = entryDoc.data() as WorkEntry | undefined;
+      if (!project) throw new TrackerError("This project could not be found.", 404);
+      if (!entry || entry.projectId !== projectId) {
+        if (!entry && change.action === "delete" && (await tx.get(deletedRef)).data()?.projectId === projectId) return { entry: null };
+        throw new TrackerError("This entry could not be found in the project.", 404);
+      }
+      if ((entry.revision ?? 0) !== revision) throw new TrackerError("This entry changed in another session. Reopen it to see the latest version.", 409);
+
+      let latestEntry = project.latestEntry;
+      if (!fields || fields.title !== entry.title) {
+        const [latest, previous] = (await tx.get(projectHistory(tracker, projectId).limit(2))).docs;
+        if (latest?.id === entryId) latestEntry = fields?.title ?? previous?.data().title ?? "";
+      }
+      if (fields) {
+        tx.update(entryRef, { ...fields, revision: revision + 1 });
+      } else {
+        // Keep the ID reserved against delayed append retries and retain its pagination position.
+        tx.create(deletedRef, { projectId, createdAt: entry.createdAt });
+        tx.delete(entryRef);
+      }
+      tx.update(projectRef, { latestEntry, revision: project.revision + 1, updatedAt: now() });
+      return { entry: fields ? stripEntry({ ...entry, ...fields, revision: revision + 1 }) : null };
+    });
+  };
+}
+
+export async function changeEntry(projectId: unknown, entryId: unknown, revision: unknown, change: EntryChange) {
+  return journalEntryChanger(getFirebaseAdminDb())(projectId, entryId, revision, change);
+}
+
 export async function exportJournal() {
   // An explicit owner export includes the entire journal, not just the recent view.
   const [projectRows, entryRows] = await Promise.all([projects().get(), entries().get()]);

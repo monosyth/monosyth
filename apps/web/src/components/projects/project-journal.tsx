@@ -11,7 +11,10 @@ import s from "./project-journal.module.css";
 
 type View = "projects" | "recent" | "waiting" | "analytics";
 type Prefill = { title: string; nextStep: string };
-type Editor = { type: "project"; project?: Project } | { type: "entry"; project: Project; prefill?: Prefill } | null;
+type Editor = { type: "project"; project?: Project }
+  | { type: "entry"; project: Project; prefill?: Prefill }
+  | { type: "edit-entry" | "delete-entry"; entry: WorkEntry; project?: Project };
+type HistoryPage = { entries: WorkEntry[]; nextCursor: string | null };
 type Notice = { text: string; before: Project; after: Project };
 function Icon({ name, size = 20 }: { name: "chart" | "grid" | "clock" | "circle" | "plus" | "arrow" | "search" | "download" | "refresh" | "close" | "link" | "check" | "copy" | "pause" | "play"; size?: number }) {
   const paths = {
@@ -77,7 +80,7 @@ function JournalContent() {
   const [historyProject, setHistoryProject] = useState<string | null>(null);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [moreWorking, setMoreWorking] = useState(false);
-  const [editor, setEditor] = useState<Editor>(null);
+  const [editor, setEditor] = useState<Editor | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const [toast, setToast] = useState("");
@@ -90,6 +93,8 @@ function JournalContent() {
   const [summaries, setSummaries] = useState<Record<string, InsightsSummary>>({});
   const reviewLock = useRef(false);
   const currentLoad = useRef(0);
+  const historyLoad = useRef(0);
+  const historyRange = useRef({ projectId: "", pages: 1 });
   const api = useCallback(async (url = "/api/projects", body?: unknown) => {
     if (!auth.user) throw new Error("Sign in to open your projects.");
     const token = await auth.user.getIdToken();
@@ -136,15 +141,42 @@ function JournalContent() {
   useEffect(() => {
     if (!selectedId || !auth.user) return;
     let active = true;
-    void api(`/api/projects?project=${encodeURIComponent(selectedId)}`).then(result => {
-      if (active) { setHistoryProject(selectedId); setHistory(result.entries); setCursor(result.nextCursor); setHistoryError(null); setHistoryReady(true); }
-    }).catch(err => { if (active) { setHistoryProject(selectedId); setHistory([]); setHistoryError(err.message); setHistoryReady(true); } });
+    const version = ++historyLoad.current;
+    if (historyRange.current.projectId !== selectedId) historyRange.current = { projectId: selectedId, pages: 1 };
+    const { pages } = historyRange.current;
+    const url = `/api/projects?project=${encodeURIComponent(selectedId)}`;
+    async function loadHistory() {
+      const entries: WorkEntry[] = [];
+      let page = await api(url) as HistoryPage;
+      entries.push(...page.entries);
+      for (let index = 1; index < pages && page.nextCursor && active && version === historyLoad.current; index++) {
+        page = await api(`${url}&cursor=${encodeURIComponent(page.nextCursor)}`) as HistoryPage;
+        entries.push(...page.entries);
+      }
+      if (!active || version !== historyLoad.current) return;
+      setHistoryProject(selectedId);
+      setHistory(entries);
+      setCursor(page.nextCursor);
+      setHistoryError(null);
+      setHistoryReady(true);
+    }
+    void loadHistory().catch(err => {
+      if (!active || version !== historyLoad.current) return;
+      setHistoryProject(selectedId);
+      setHistory([]);
+      setCursor(null);
+      setHistoryError(err instanceof Error ? err.message : "Could not load project history.");
+      setHistoryReady(true);
+    });
     return () => { active = false; };
   }, [selectedId, api, selected?.revision, auth.user]);
   useEffect(() => { if (!toast) return; const timer = window.setTimeout(() => setToast(""), 4500); return () => window.clearTimeout(timer); }, [toast]);
   useEffect(() => { setAnswering(null); setCopyFallback(null); }, [selectedId]);
   useEffect(() => { if (!copiedId) return; const timer = window.setTimeout(() => setCopiedId(""), 2500); return () => window.clearTimeout(timer); }, [copiedId]);
   function openProject(id: string | null) {
+    if (id === selectedId) return;
+    historyLoad.current++;
+    historyRange.current = { projectId: id ?? "", pages: 1 };
     setHistory([]); setHistoryReady(false); setHistoryError(null); setCursor(null);
     window.location.hash = id ?? "";
     setSelectedId(id);
@@ -152,12 +184,16 @@ function JournalContent() {
   }
   async function loadMore() {
     if (!cursor || !selectedId) return;
+    const version = historyLoad.current;
     setMoreWorking(true);
     try {
-      const result = await api(`/api/projects?project=${encodeURIComponent(selectedId)}&cursor=${encodeURIComponent(cursor)}`);
-      if (window.location.hash.slice(1) !== selectedId) return;
+      const result = await api(`/api/projects?project=${encodeURIComponent(selectedId)}&cursor=${encodeURIComponent(cursor)}`) as HistoryPage;
+      if (version !== historyLoad.current || window.location.hash.slice(1) !== selectedId) return;
+      historyRange.current.pages++;
       setHistory(previous => [...previous, ...result.entries]); setCursor(result.nextCursor); setHistoryError(null);
-    } catch (err) { setHistoryError(err instanceof Error ? err.message : "Could not load older entries."); }
+    } catch (err) {
+      if (version === historyLoad.current) setHistoryError(err instanceof Error ? err.message : "Could not load older entries.");
+    }
     finally { setMoreWorking(false); }
   }
   async function exportData() {
@@ -267,8 +303,8 @@ function JournalContent() {
           <div className={s.projectLayout}>
             <section><WebsiteInsights projectId={selected.id} sites={selected.sites ?? []} api={api} /><div className={s.sectionHeading}><h2>Work history</h2><span>{selected.lastWorkedAt ? `Last worked ${time(selected.lastWorkedAt)}` : "Ready for the next session"}</span></div>
               {historyError && <p className={s.error} role="alert">{historyError}</p>}
-              {!historyReady || historyProject !== selectedId ? <p className={s.muted} role="status">Loading project history…</p> : history.length ? <div className={s.timeline}>{history.map(entry => <Entry key={entry.id} entry={entry} />)}</div> : !historyError && <Empty title="The story starts here">Add an update when you take the next step.</Empty>}
-              {cursor && <button className={s.secondary} onClick={() => void loadMore()} disabled={moreWorking}>{moreWorking ? "Loading…" : "Load older entries"}</button>}
+              {!historyReady || historyProject !== selectedId ? <p className={s.muted} role="status">Loading project history…</p> : history.length ? <div className={s.timeline}>{history.map(entry => <Entry key={entry.id} entry={entry} onManage={type => setEditor({ type, entry, project: selected })} />)}</div> : !historyError && <Empty title="The story starts here">Add an update when you take the next step.</Empty>}
+              {historyProject === selectedId && cursor && <button className={s.secondary} onClick={() => void loadMore()} disabled={moreWorking}>{moreWorking ? "Loading…" : "Load older entries"}</button>}
             </section>
             <aside className={s.detailAside}><div className={s.detailCard}><Badge status={selected.status} /><p className={s.eyebrow}>NEXT USEFUL STEP</p><h3>{selected.nextStep || "Choose a next step when you’re ready"}</h3>
                 <div className={s.quickActions}>
@@ -295,7 +331,10 @@ function JournalContent() {
           <div className={s.toolbar}><div className={s.tabs}>{view === "projects" ? <><button data-active={filter === "all"} onClick={() => setFilter("all")}>All projects <small>{projects.length}</small></button><button data-active={filter === "active"} onClick={() => setFilter("active")}>In progress</button><button data-active={filter === "complete"} onClick={() => setFilter("complete")}>Complete</button></> : <p>{view === "recent" ? "Latest 100 entries · Full history inside each project" : `${waiting.length} projects need your attention`}</p>}</div>
             <label className={s.search}><Icon name="search" size={17} /><input aria-label={view === "recent" ? "Search recent work" : "Search projects"} placeholder={view === "recent" ? "Search recent work…" : "Find a project…"} value={query} onChange={event => setQuery(event.target.value)} /></label>
           </div>
-          {view === "recent" ? recent.length ? <div className={s.recentList}>{recent.map(entry => <Entry key={entry.id} entry={entry} project={projects.find(project => project.id === entry.projectId)} onOpen={openProject} />)}</div> : <Empty title={search ? "No matching work" : "Your progress will appear here"}>{search ? "Try a different word or project name." : "Project updates will build a record as you work."}</Empty>
+          {view === "recent" ? recent.length ? <div className={s.recentList}>{recent.map(entry => {
+            const project = projects.find(project => project.id === entry.projectId);
+            return <Entry key={entry.id} entry={entry} project={project} onOpen={openProject} onManage={type => setEditor({ type, entry, project })} />;
+          })}</div> : <Empty title={search ? "No matching work" : "Your progress will appear here"}>{search ? "Try a different word or project name." : "Project updates will build a record as you work."}</Empty>
             : visible.length ? <div className={s.cards}>{visible.map((project, index) => <article key={project.id} className={s.projectCard}><button className={s.cardOpen} aria-label={`Open ${project.name}`} onClick={() => openProject(project.id)}>
               <div className={s.cardTop}><span className={s.projectMonogram} data-color={index % 4}>{project.name.split(/\s+/).map(word => word[0]).slice(0, 2).join("")}</span><Badge status={project.status} /></div>
               <p className={s.cardArea}>{project.area}</p><h2>{project.name}</h2><p className={s.cardSummary}>{project.summary}</p>
@@ -308,18 +347,22 @@ function JournalContent() {
         <footer className={s.footer}><span>Monosyth / A record of the work</span><span>{board ? `Synced ${time(board.loadedAt, true)} · Pacific time` : "Private studio"}</span></footer>
       </main>
     </div>
-    {editor && <EditorModal editor={editor} api={api} onClose={() => setEditor(null)} onSaved={async message => { setEditor(null); setReviewNotice(null); setToast(message); await refresh(); }} />}
+    {editor && <EditorModal editor={editor} api={api} onClose={() => setEditor(null)} onRefresh={refresh} onSaved={async message => { setEditor(null); setReviewNotice(null); setToast(message); await refresh(); }} />}
     {reviewNotice && <div className={s.toast}><span role="status">{reviewNotice.text}</span><button onClick={() => void undoReview()} disabled={reviewing}>Undo</button><button aria-label="Dismiss review message" onClick={() => setReviewNotice(null)} disabled={reviewing}><Icon name="close" size={16} /></button></div>}
     {!reviewNotice && toast && <div className={s.toast} role="status"><Icon name="check" size={17} />{toast}</div>}
     {copyFallback && !selected && <div className={`${s.copyFallback} ${s.copyFloating}`} role="dialog" aria-labelledby="copy-fallback-board" onKeyDown={event => { if (event.key === "Escape") setCopyFallback(null); }}><p id="copy-fallback-board">Copy is unavailable here. Select the resume prompt below.</p><textarea readOnly rows={6} value={copyFallback.text} autoFocus onFocus={event => event.currentTarget.select()} aria-label="Resume prompt" aria-describedby="copy-fallback-board" /><button className={s.quickAction} onClick={() => setCopyFallback(null)}>Close</button></div>}
   </div>;
 }
 
-function Entry({ entry, project, onOpen }: { entry: WorkEntry; project?: Project; onOpen?: (id: string) => void }) {
+function Entry({ entry, project, onOpen, onManage }: { entry: WorkEntry; project?: Project; onOpen?: (id: string) => void; onManage: (type: "edit-entry" | "delete-entry") => void }) {
   return <article className={s.entry} data-kind={entry.kind}><div className={s.entryDot}><Icon name={entry.kind === "milestone" ? "check" : entry.kind === "blocker" ? "circle" : entry.kind === "import" ? "download" : "clock"} size={15} /></div><div className={s.entryContent}>
     <div className={s.entryMeta}>{project && <button onClick={() => onOpen?.(project.id)}>{project.name}</button>}<span>{entry.kind === "import" ? "Imported reference" : entry.kind}</span><time dateTime={entry.createdAt}>{time(entry.createdAt, true)}</time></div>
     <h3>{entry.title}</h3>{entry.body && <p>{entry.body}</p>}{entry.verification && <div className={s.verification}><Icon name="check" size={14} /><span>{entry.verification}</span></div>}
     {entry.source && <p className={s.source}>Source: {entry.source}</p>}<small className={s.entryAuthor}>{entry.author.includes("@") ? "Recorded by you" : `Recorded by ${entry.author}`}</small>
+    <div className={s.entryActions}>
+      <button type="button" className={s.quickAction} aria-label={`Edit entry: ${entry.title}`} onClick={() => onManage("edit-entry")}>Edit</button>
+      <button type="button" className={s.dropAction} aria-label={`Delete entry: ${entry.title}`} onClick={() => onManage("delete-entry")}>Delete</button>
+    </div>
   </div></article>;
 }
 function ProjectLinks({ links, onCopied }: { links: ProjectInput["links"]; onCopied: () => void }) {
@@ -331,19 +374,24 @@ function ProjectLinks({ links, onCopied }: { links: ProjectInput["links"]; onCop
   if (!links.length) return <p className={s.muted}>Add a folder, preview, or useful reference.</p>;
   return <div className={s.links}>{links.map((link, index) => <div key={index}>{link.url.startsWith("/Users/") ? <><button onClick={() => void copy(link.url)}><Icon name="link" size={16} />{link.label}<span>Copy path</span></button><code>{link.url}</code></> : <a href={link.url} target="_blank" rel="noopener noreferrer"><Icon name="link" size={16} />{link.label}<span>↗</span></a>}</div>)}{copyError && <p className={s.error} role="alert">{copyError}</p>}</div>;
 }
-function EditorModal({ editor, api, onClose, onSaved }: { editor: NonNullable<Editor>; api: (url?: string, body?: unknown) => Promise<unknown>; onClose: () => void; onSaved: (message: string) => Promise<void> }) {
+function EditorModal({ editor, api, onClose, onRefresh, onSaved }: { editor: Editor; api: (url?: string, body?: unknown) => Promise<unknown>; onClose: () => void; onRefresh: () => Promise<void>; onSaved: (message: string) => Promise<void> }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [entryId] = useState(() => crypto.randomUUID());
   const project = editor.project, prefill = editor.type === "entry" ? editor.prefill : undefined;
+  const existing = "entry" in editor ? editor.entry : undefined;
+  const deleting = editor.type === "delete-entry";
+  const title = editor.type === "project" ? project ? "Edit project" : "Start something new"
+    : deleting ? "Delete entry?" : existing ? "Edit journal entry" : prefill ? "Next step done" : "Record a little progress";
+  const submitLabel = deleting ? "Delete entry" : editor.type === "project" ? "Save project" : "Save update";
   useEffect(() => {
     const element = dialog.current;
     element?.showModal();
     // React's autoFocus runs before showModal opens the dialog, so focus the intended field afterwards.
-    element?.querySelector<HTMLElement>(prefill ? '[name="nextStep"]' : '[name="title"], [name="name"]')?.focus();
+    element?.querySelector<HTMLElement>(deleting ? '[data-cancel]' : prefill ? '[name="nextStep"]' : '[name="title"], [name="name"]')?.focus();
     return () => { if (element?.open) element.close(); };
-  }, [prefill]);
+  }, [deleting, prefill]);
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving(true); setError("");
     const form = new FormData(event.currentTarget), text = (key: string) => String(form.get(key) ?? "").trim();
@@ -353,16 +401,28 @@ function EditorModal({ editor, api, onClose, onSaved }: { editor: NonNullable<Ed
         const id = project?.id ?? `${data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 54) || "project"}-${entryId.slice(0, 8)}`;
         await api("/api/projects", { action: project ? "update" : "create", id, project: data, expectedRevision: project?.revision });
         await onSaved(project ? "Project updated" : "Project added");
-      } else {
+      } else if (editor.type === "entry") {
         const nextStep = text("nextStep"), status = text("status");
         await api("/api/projects", { action: "record", projectId: editor.project.id, entry: { id: entryId, title: text("title"), body: text("body"), kind: text("kind") as EntryKind, verification: text("verification"), source: text("source"), ...(nextStep !== editor.project.nextStep ? { nextStep } : {}), ...(status !== editor.project.status ? { status } : {}), expectedRevision: editor.project.revision } });
         await onSaved("Work recorded");
+      } else {
+        const target = { projectId: editor.entry.projectId, entryId: editor.entry.id, expectedRevision: editor.entry.revision ?? 0 };
+        if (deleting) {
+          await api("/api/projects", { action: "delete-entry", ...target });
+        } else {
+          const entry = { title: text("title"), body: text("body"), kind: text("kind"), verification: text("verification"), source: text("source") };
+          await api("/api/projects", { action: "edit-entry", ...target, entry });
+        }
+        await onSaved(deleting ? "Entry deleted" : "Entry updated");
       }
-    } catch (err) { setError(err instanceof Error ? err.message : "Could not save this update."); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : deleting ? "Could not delete this entry." : "Could not save this update.");
+      if (existing) void onRefresh();
+    }
     finally { setSaving(false); }
   }
-  return <dialog ref={dialog} className={s.dialog} aria-labelledby="journal-editor-title" onCancel={event => { if (saving) event.preventDefault(); else onClose(); }} onClose={onClose}>
-    <div className={s.dialogHeader}><div><p className={s.eyebrow}>{editor.type === "entry" ? project?.name : "PROJECT JOURNAL"}</p><h2 id="journal-editor-title">{editor.type === "entry" ? prefill ? "Next step done" : "Record a little progress" : project ? "Edit project" : "Start something new"}</h2></div><button type="button" aria-label="Close editor" onClick={onClose} disabled={saving}><Icon name="close" /></button></div>
+  return <dialog ref={dialog} className={s.dialog} aria-labelledby="journal-editor-title" aria-describedby={deleting ? "journal-delete-message" : undefined} onCancel={event => { if (saving) event.preventDefault(); else onClose(); }} onClose={onClose}>
+    <div className={s.dialogHeader}><div><p className={s.eyebrow}>{editor.type === "project" ? "PROJECT JOURNAL" : project?.name ?? "PROJECT JOURNAL"}</p><h2 id="journal-editor-title">{title}</h2></div><button type="button" aria-label="Close editor" onClick={onClose} disabled={saving}><Icon name="close" /></button></div>
     <form onSubmit={event => void submit(event)} className={s.form}>
       {editor.type === "project" ? <>
         <label>Project name<input name="name" required maxLength={120} defaultValue={project?.name} autoFocus /></label>
@@ -372,16 +432,21 @@ function EditorModal({ editor, api, onClose, onSaved }: { editor: NonNullable<Ed
         <label>Open decisions<span>One per line</span><textarea name="decisions" rows={3} defaultValue={project?.decisions.join("\n")} /></label>
         <label>Websites<span>One per line: domain, or Label | https://domain/section</span><textarea name="sites" rows={2} defaultValue={project?.sites?.map(site => `${site.label} | ${site.url}`).join("\n")} placeholder="example.com" /></label>
         <label>Files & links<span>One per line: Label | URL or local file path</span><textarea name="links" rows={3} defaultValue={project?.links.map(link => `${link.label} | ${link.url}`).join("\n")} placeholder="Latest proof | https://…" /></label>
-      </> : <>
-        <label>What changed?<input name="title" required maxLength={180} defaultValue={prefill?.title} placeholder="A short headline for the work" /></label>
-        <div className={s.formRow}><label>Type of update<select name="kind" defaultValue="progress">{ENTRY_KINDS.filter(kind => kind !== "import").map(kind => <option key={kind} value={kind}>{kind.charAt(0).toUpperCase() + kind.slice(1)}</option>)}</select></label><label>Project status<select name="status" defaultValue={project?.status}>{PROJECT_STATUSES.map(status => <option key={status} value={status}>{STATUS_LABELS[status]}</option>)}</select></label></div>
-        <label>Work notes<textarea name="body" rows={4} maxLength={10000} placeholder="What you finished, learned, or decided" /></label>
-        <label>What was checked?<textarea name="verification" rows={2} maxLength={3000} placeholder="Proof reviewed, tests passed, files inspected…" /></label>
-        <label>Source or reference<input name="source" maxLength={1500} placeholder="A chat link, file path, or commit" /></label>
-        <label>{prefill ? "What comes next?" : "Next useful step"}<textarea name="nextStep" rows={2} maxLength={1500} defaultValue={prefill ? prefill.nextStep : project?.nextStep} placeholder="One clear action to pick this back up" /></label>
+      </> : deleting ? (
+        <p id="journal-delete-message" className={s.deleteMessage}>Permanently remove <strong>{existing?.title}</strong> from the project’s work history?</p>
+      ) : <>
+        <label>What changed?<input name="title" required maxLength={180} defaultValue={existing?.title ?? prefill?.title} placeholder="A short headline for the work" /></label>
+        <div className={existing ? undefined : s.formRow}>
+          <label>Type of update<select name="kind" defaultValue={existing?.kind ?? "progress"}>{ENTRY_KINDS.filter(kind => kind !== "import" || existing?.kind === "import").map(kind => <option key={kind} value={kind}>{kind === "import" ? "Imported reference" : kind.charAt(0).toUpperCase() + kind.slice(1)}</option>)}</select></label>
+          {!existing && <label>Project status<select name="status" defaultValue={project?.status}>{PROJECT_STATUSES.map(status => <option key={status} value={status}>{STATUS_LABELS[status]}</option>)}</select></label>}
+        </div>
+        <label>Work notes<textarea name="body" rows={4} maxLength={10000} defaultValue={existing?.body} placeholder="What you finished, learned, or decided" /></label>
+        <label>What was checked?<textarea name="verification" rows={2} maxLength={3000} defaultValue={existing?.verification} placeholder="Proof reviewed, tests passed, files inspected…" /></label>
+        <label>Source or reference<input name="source" maxLength={1500} defaultValue={existing?.source} placeholder="A chat link, file path, or commit" /></label>
+        {!existing && <label>{prefill ? "What comes next?" : "Next useful step"}<textarea name="nextStep" rows={2} maxLength={1500} defaultValue={prefill ? prefill.nextStep : project?.nextStep} placeholder="One clear action to pick this back up" /></label>}
       </>}
       {error && <div className={s.error} role="alert">{error}</div>}
-      <div className={s.formFooter}><button type="button" className={s.secondary} onClick={onClose} disabled={saving}>Cancel</button><button type="submit" className={s.primary} disabled={saving}>{saving ? "Saving…" : editor.type === "entry" ? "Save update" : "Save project"}<Icon name="check" size={17} /></button></div>
+      <div className={s.formFooter}><button type="button" className={s.secondary} data-cancel onClick={onClose} disabled={saving}>Cancel</button><button type="submit" className={deleting ? `${s.primary} ${s.deleteButton}` : s.primary} disabled={saving}>{saving ? deleting ? "Deleting…" : "Saving…" : submitLabel}{!deleting && <Icon name="check" size={17} />}</button></div>
     </form>
   </dialog>;
 }

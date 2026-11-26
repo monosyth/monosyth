@@ -1,6 +1,6 @@
 import { requireTrackerOwner } from "@/lib/projects/auth";
 import { TrackerError } from "@/lib/projects/model";
-import { createProject, exportJournal, getProject, listBoard, listEntries, recordEntry, updateProject } from "@/lib/projects/store";
+import { changeEntry, createProject, exportJournal, getProject, listBoard, listEntries, recordEntry, updateProject } from "@/lib/projects/store";
 
 import { changeStatus, reviewProject } from "@/lib/projects/review";
 
@@ -40,9 +40,11 @@ export async function POST(request: Request) {
       case "create": return Response.json(await createProject(body.id, body.project, author), { status: 201, headers });
       case "update": return Response.json(await updateProject(body.id, body.project, body.expectedRevision, author), { headers });
       case "record": return Response.json(await recordEntry(body.projectId, body.entry, author), { headers });
+      case "edit-entry": return Response.json(await changeEntry(body.projectId, body.entryId, body.expectedRevision, { action: "edit", fields: body.entry }), { headers });
+      case "delete-entry": return Response.json(await changeEntry(body.projectId, body.entryId, body.expectedRevision, { action: "delete" }), { headers });
       case "review": return Response.json(await reviewProject(body.projectId, body.review, author), { headers });
       case "status": return Response.json(await changeStatus(body.projectId, body.change, author), { headers });
-      default: throw new TrackerError("Choose create, update, record, review, or status.");
+      default: throw new TrackerError("Choose a supported journal action.");
     }
   } catch (error) { return fail(error); }
 }
